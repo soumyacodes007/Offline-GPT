@@ -20,16 +20,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { readDenSettings } from "@/app/lib/den";
-import { modelEquals, resolveProviderDisplayName } from "../../../../app/utils";
+import { dedupeGlmModelOptions, modelEquals, resolveProviderDisplayName } from "../../../../app/utils";
 import type { ModelOption, ModelRef } from "../../../../app/types";
 import { isRecommendedModel } from "../../../../app/defaults";
 import { ProviderIcon } from "../../../design-system/provider-icon";
 import { useDenAuth } from "../../cloud/den-auth-provider";
 import { usePlatform } from "../../../kernel/platform";
-import {
-  OPENWORK_MODELS_PROVIDER_ID,
-  OPENWORK_MODELS_PROVIDER_NAME,
-} from "../../cloud/openwork-models-promo";
 
 export const MODEL_PICKER_DEFAULT_SUBTITLE = "Select a model for this session.";
 export const MODEL_PICKER_UNAVAILABLE_SUBTITLE = "The model you were using is no longer available, please select a different model for this session.";
@@ -56,7 +52,7 @@ export type ModelPickerModalProps = {
   onClose: (options?: { restorePromptFocus?: boolean }) => void;
   /** Den entitlement present. Picker no longer upsells here; callers still pass it. */
   openWorkModelsEntitled?: boolean;
-  /** The server is waiting to reload this workspace with OpenWork Models. */
+  /** The server is waiting to reload managed models for this workspace. */
   openWorkModelsSyncing?: boolean;
   onRefreshOrganizationModels?: () => void | Promise<void>;
   restrictToCloud?: boolean;
@@ -64,6 +60,7 @@ export type ModelPickerModalProps = {
 
 type ProviderGroup = {
   id: string;
+  iconProviderId: string;
   name: string;
   isNew: boolean;
   isCloud: boolean;
@@ -146,8 +143,14 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
   // Filter by search
   const filteredOptions = useMemo(() => {
     const q = props.query.trim().toLowerCase();
-    if (!q) return props.options;
-    return props.options.filter(
+    const visibleOptions = dedupeGlmModelOptions(
+      props.options.filter(
+        (option) => option.providerID.trim().toLowerCase() !== "openwork",
+      ),
+      props.current,
+    );
+    if (!q) return visibleOptions;
+    return visibleOptions.filter(
       (o) =>
         o.title.toLowerCase().includes(q) ||
         o.providerID.toLowerCase().includes(q) ||
@@ -164,6 +167,7 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
       if (!group) {
         group = {
           id: opt.providerID,
+          iconProviderId: opt.description === "Z.ai" ? "z-ai" : opt.providerID,
           name: opt.description ?? resolveProviderDisplayName(opt.providerID),
           isNew: !!opt.isRecommended,
           isCloud: opt.source === "cloud",
@@ -203,7 +207,7 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
     }
   }, [props.query, providerGroups]);
 
-  // Expand current, organization-provided, and OpenWork groups once they appear
+  // Expand current and organization-provided groups once they appear
   // (options often load async).
   const autoExpandedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -220,8 +224,6 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
     for (const group of providerGroups) {
       if (group.isCloud) queueExpand(group.id);
     }
-    const openwork = providerGroups.find((group) => group.id === OPENWORK_MODELS_PROVIDER_ID);
-    if (openwork) queueExpand(openwork.id);
     if (toExpand.length === 0) return;
     for (const id of toExpand) autoExpandedRef.current.add(id);
     setExpandedProviders((prev) => {
@@ -300,22 +302,6 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
               onChange={(e) => props.setQuery(e.target.value)}
             />
           </div>
-
-          {props.openWorkModelsSyncing ? (
-            <div className="mb-3 flex shrink-0 items-center overflow-hidden rounded-2xl border border-amber-6/60 bg-amber-2/40">
-              <div className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5">
-                <ProviderIcon providerId={OPENWORK_MODELS_PROVIDER_ID} providerName={OPENWORK_MODELS_PROVIDER_NAME} size={18} className="shrink-0 text-amber-11" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-dls-text">
-                    <span>{OPENWORK_MODELS_PROVIDER_NAME}</span>
-                  </div>
-                  <div className="truncate text-[11px] text-dls-secondary">
-                    Included on your plan — pending workspace reload.
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
 
           {/* Content */}
           <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 -mr-1">
@@ -406,7 +392,7 @@ function ProviderAccordion({
           onClick={onToggleExpand}
         >
           <Chevron size={14} className="shrink-0 text-dls-secondary" />
-          <ProviderIcon providerId={group.id} size={18} className="shrink-0 text-dls-text" />
+          <ProviderIcon providerId={group.iconProviderId} providerName={group.name} size={18} className="shrink-0 text-dls-text" />
           <div className="min-w-0 flex-1">
             <span className="text-[13px] font-medium text-dls-text">{group.name}</span>
             {" "}

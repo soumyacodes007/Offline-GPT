@@ -9,7 +9,6 @@ import {
   MessageCircleMore,
   MoreHorizontal,
   Settings,
-  Sparkles,
   Stethoscope,
   UserRound,
 } from "lucide-react";
@@ -48,14 +47,6 @@ import {
   type OpenWorkConnectStatus,
 } from "../../connections/openwork-connect-status";
 import type { SessionCloudMcpMaintenanceState } from "../../connections/use-session-mcp-maintenance";
-import {
-  getOpenWorkModelsActionUrl,
-  hasOpenWorkModelsProvider,
-  hideOpenWorkModelsPromo,
-  isOpenWorkModelsPromoHidden,
-  openWorkModelsPromoChangedEvent,
-  useOpenWorkModelsPromoEligibility,
-} from "../../cloud/openwork-models-promo";
 
 const DOCS_URL = "https://openworklabs.com/docs";
 const BOOT_STARTED_AT = Date.now();
@@ -172,20 +163,6 @@ function accountInitials(name: string | null, email: string) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-function useOpenWorkModelsPromoVisible(hasOpenWorkModels: boolean) {
-  const { config } = useShellConfig();
-  const eligible = useOpenWorkModelsPromoEligibility();
-  const [hidden, setHidden] = useState(isOpenWorkModelsPromoHidden);
-
-  useEffect(() => {
-    const sync = () => setHidden(isOpenWorkModelsPromoHidden());
-    window.addEventListener(openWorkModelsPromoChangedEvent, sync);
-    return () => window.removeEventListener(openWorkModelsPromoChangedEvent, sync);
-  }, []);
-
-  return eligible && config.cloudSignin && !hasOpenWorkModels && !hidden;
-}
-
 export type AccountStatusMenuProps = {
   clientConnected: boolean;
   openworkServerStatus: OpenworkServerStatus;
@@ -219,12 +196,6 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
   const [initializing, setInitializing] = useState(
     () => Date.now() - BOOT_STARTED_AT < INITIALIZING_MS,
   );
-
-  const hasOpenWorkModels = useMemo(
-    () => hasOpenWorkModelsProvider(props.providerConnectedIds),
-    [props.providerConnectedIds],
-  );
-  const promoVisible = useOpenWorkModelsPromoVisible(hasOpenWorkModels);
 
   useEffect(() => {
     if (!initializing) return;
@@ -469,25 +440,7 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
             Run diagnostics
           </DropdownMenuItem>
         ) : null}
-        {promoVisible ? (
-          <DropdownMenuItem
-            onClick={() => {
-              hideOpenWorkModelsPromo();
-              if (!denAuth.isSignedIn) {
-                navigate("/settings/cloud-account");
-                markDesktopSignInInitiated();
-              }
-              platform.openLink(getOpenWorkModelsActionUrl(denAuth.isSignedIn));
-            }}
-          >
-            <Sparkles className="size-3.5 text-blue-11" />
-            <span className="flex min-w-0 flex-col">
-              <span>OpenWork Models</span>
-              <span className="text-[10.5px] text-muted-foreground">hosted frontier models</span>
-            </span>
-          </DropdownMenuItem>
-        ) : null}
-        {(connectNeedsAttention && !controlSettingsBlocked) || promoVisible ? <DropdownMenuSeparator /> : null}
+        {connectNeedsAttention && !controlSettingsBlocked ? <DropdownMenuSeparator /> : null}
 
         {props.showSettingsButton !== false ? (
           <DropdownMenuItem onClick={openSettings}>

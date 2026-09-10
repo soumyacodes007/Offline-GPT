@@ -44,6 +44,7 @@ export function ProviderIcon(props: ProviderIconProps) {
   const logoUrl = candidates[candidateIndex];
 
   const fallbackLetters = (() => {
+    if (normalizedId === "z-ai") return "Z";
     if (normalizedId === "openrouter") return "OR";
     if (normalizedId === "deepseek") return "DS";
     if (normalizedId === "google") return "GO";

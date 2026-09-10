@@ -41,7 +41,12 @@ import { denSettingsChangedEvent } from "@/app/lib/den-session-events";
 import { clearOrgSelectionPending, readOrgSelectionPending } from "@/app/lib/den-sign-in-intent";
 import { usePlatform } from "../../kernel/platform";
 import { useBootState } from "../../shell/boot-state";
-import { resolveModelDisplayName, resolveProviderDisplayName } from "@/app/utils";
+import {
+  resolveModelDisplayName,
+  resolveModelProviderDisplayName,
+  resolveModelProviderIconId,
+  resolveProviderDisplayName,
+} from "@/app/utils";
 import { ProviderIcon } from "../../design-system/provider-icon";
 import { writeStoredDefaultModel } from "../../kernel/model-config";
 import { orgOnboardingVisibilityEvent } from "../../shell/reload-coordinator";
@@ -1042,6 +1047,12 @@ function ProviderCard({ provider, selectedDefault, onSelectDefault }: ProviderCa
   const localProviderId = provider.id.trim();
   const firstModel = provider.models[0] ?? null;
   const isSelected = selectedDefault?.providerId === localProviderId;
+  const providerDisplayName = firstModel
+    ? resolveModelProviderDisplayName(provider.providerId, firstModel.id, provider.name, firstModel.name)
+    : resolveProviderDisplayName(provider.name || provider.providerId);
+  const providerIconId = firstModel
+    ? resolveModelProviderIconId(provider.providerId, firstModel.id, firstModel.name)
+    : provider.providerId;
 
   const handleUseAsDefault = () => {
     if (!firstModel) return;
@@ -1051,7 +1062,7 @@ function ProviderCard({ provider, selectedDefault, onSelectDefault }: ProviderCa
       onSelectDefault({
         providerId: localProviderId,
         modelId: firstModel.id,
-        label: `${resolveProviderDisplayName(provider.name || provider.providerId)} · ${firstModel.name || resolveModelDisplayName(firstModel.id)}`,
+        label: `${providerDisplayName} · ${resolveModelDisplayName(firstModel.id, firstModel.name)}`,
       });
     }
   };
@@ -1065,14 +1076,14 @@ function ProviderCard({ provider, selectedDefault, onSelectDefault }: ProviderCa
     >
       <div className="flex items-center gap-4.5">
         <ProviderIcon
-          providerId={provider.providerId}
-          providerName={provider.name}
+          providerId={providerIconId}
+          providerName={providerDisplayName}
           size={20}
           className="text-foreground"
         />
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-foreground">
-            {resolveProviderDisplayName(provider.name || provider.providerId)}
+            {providerDisplayName}
           </div>
           <div className="mt-0.5 text-xs text-muted-foreground">
             {provider.models.length === 1
@@ -1104,7 +1115,7 @@ function ProviderCard({ provider, selectedDefault, onSelectDefault }: ProviderCa
               key={model.id}
               className="inline-flex items-center rounded-md border border-border bg-hover px-2 py-0.5 font-mono text-xs text-muted-foreground"
             >
-              {model.name || resolveModelDisplayName(model.id)}
+              {resolveModelDisplayName(model.id, model.name)}
             </span>
           ))}
           {provider.models.length > 5 ? (

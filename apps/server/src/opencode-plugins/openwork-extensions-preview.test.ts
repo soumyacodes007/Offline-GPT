@@ -526,8 +526,10 @@ describe("OpenWorkExtensionsPreview session tools", () => {
 
     expect(requests).toEqual([{ query: { directory: "/tmp/archive" } }]);
     expect(output.system).toHaveLength(1);
-    // App-control mechanics lead; the live steering follows them.
-    expect(output.system[0].startsWith("## OpenWork app context")).toBe(true);
+    // Branded identity leads, followed by app-control mechanics and live steering.
+    expect(output.system[0].startsWith("## OfflineGPT identity")).toBe(true);
+    expect(output.system[0]).toContain("## OfflineGPT app context");
+    expect(output.system[0].indexOf("## OfflineGPT identity")).toBeLessThan(output.system[0].indexOf("## OfflineGPT app context"));
     expect(output.system[0]).toContain(OPENWORK_EXTENSION_DISCOVERY_INSTRUCTION);
     expect(output.system[0].indexOf("## Built-in Browser")).toBeLessThan(output.system[0].indexOf(OPENWORK_EXTENSION_DISCOVERY_INSTRUCTION));
     expect(output.system[0]).toContain(OPENWORK_LOCAL_SKILL_AUTHORING_INSTRUCTION);

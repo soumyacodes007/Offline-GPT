@@ -40,6 +40,7 @@ const SIMPLE_ICON_MISSES = new Set([
 
 /** Apex domains for providers whose id does not resolve to their own domain. */
 const PROVIDER_DOMAINS: Record<string, string> = {
+  "z-ai": "z.ai",
   openai: "openai.com",
   anthropic: "anthropic.com",
   google: "ai.google",

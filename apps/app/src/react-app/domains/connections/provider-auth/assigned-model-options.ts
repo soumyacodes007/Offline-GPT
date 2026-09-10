@@ -1,5 +1,6 @@
 import type { DenOrgLlmProvider } from "@/app/lib/den";
 import type { ModelOption } from "@/app/types";
+import { resolveModelDisplayName, resolveModelProviderDisplayName } from "@/app/utils";
 import {
   getCloudManagedProviderId,
   getCloudProviderEnv,
@@ -47,8 +48,13 @@ export function assignedModelOptions(
       const option: ModelOption = {
         providerID,
         modelID,
-        title: model.name.trim() || modelID,
-        description: provider.name.trim() || provider.providerId.trim() || providerID,
+        title: resolveModelDisplayName(modelID, model.name),
+        description: resolveModelProviderDisplayName(
+          providerID,
+          modelID,
+          provider.name.trim() || provider.providerId.trim() || providerID,
+          model.name,
+        ),
         behaviorTitle: "Reasoning",
         behaviorLabel: "Default",
         behaviorDescription: "",

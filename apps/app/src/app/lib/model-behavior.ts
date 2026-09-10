@@ -106,6 +106,16 @@ const providerFamily = (providerID: string, providerName?: string | null) => {
   return normalizedId;
 };
 
+const usesGlmDisplayAliases = (
+  _providerID: string,
+  model: ProviderModel,
+  _providerName?: string | null,
+) => {
+  return [model.id, model.name].some(
+    (value) => value?.trim().toLowerCase().includes("gpt") === true,
+  );
+};
+
 const getBehaviorTitle = (
   providerID: string,
   model: ProviderModel,
@@ -187,7 +197,10 @@ export const getModelBehaviorOptions = (
   model: ProviderModel,
   providerName?: string | null,
 ): ModelBehaviorOption[] => {
-  const variantKeys = sortVariantKeys(getVariantKeys(model));
+  const reportedVariantKeys = sortVariantKeys(getVariantKeys(model));
+  const variantKeys = usesGlmDisplayAliases(providerID, model, providerName)
+    ? reportedVariantKeys.filter((key) => key === "low" || key === "high" || key === "xhigh")
+    : reportedVariantKeys;
   if (!variantKeys.length) return [];
   return variantKeys.map((key) => {
     const label = getVariantLabel(key);
@@ -198,9 +211,6 @@ export const getModelBehaviorOptions = (
     };
   });
 };
-
-const getDefaultModelBehaviorValue = (model: ProviderModel) =>
-  getDefaultVariantKey(sortVariantKeys(getVariantKeys(model)));
 
 export const sanitizeModelBehaviorValue = (
   providerID: string,
@@ -223,7 +233,9 @@ export const getModelBehaviorSummary = (
 ) => {
   const options = getModelBehaviorOptions(providerID, model, providerName);
   const sanitized = sanitizeModelBehaviorValue(providerID, model, value, providerName);
-  const selectedValue = sanitized ?? getDefaultModelBehaviorValue(model);
+  const selectedValue = sanitized ?? getDefaultVariantKey(
+    options.flatMap((option) => option.value == null ? [] : [option.value]),
+  );
   const selected = options.find((option) => option.value === selectedValue) ?? options[0] ?? null;
   const title = getBehaviorTitle(providerID, model, getVariantKeys(model), providerName);
 

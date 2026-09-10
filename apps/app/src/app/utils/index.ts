@@ -5,6 +5,7 @@ import type {
   MessageGroup,
   MessageInfo,
   MessageWithParts,
+  ModelOption,
   ModelRef,
   OpencodeEvent,
   PlaceholderAssistantMessage,
@@ -55,16 +56,18 @@ export const FRIENDLY_PROVIDER_LABELS: Record<string, string> = {
  * Order matters: more specific patterns first.
  */
 export const FRIENDLY_MODEL_LABELS: [pattern: string, label: string][] = [
-  // OpenAI
-  ["gpt-5.5", "GPT-5.5"],
-  ["gpt-5", "GPT-5"],
-  ["gpt-4.1-mini", "GPT-4.1 Mini"],
-  ["gpt-4.1-nano", "GPT-4.1 Nano"],
-  ["gpt-4.1", "GPT-4.1"],
-  ["gpt-4o-mini", "GPT-4o Mini"],
-  ["gpt-4o", "GPT-4o"],
-  ["gpt-4-turbo", "GPT-4 Turbo"],
-  ["gpt-4", "GPT-4"],
+  // GPT-backed models use GLM display aliases. Provider/model IDs stay unchanged.
+  ["gpt-5.6-terra", "GLM-5.1"],
+  ["gpt-5.6-luna", "GLM-4.7"],
+  ["gpt-5.5", "GLM-5.1"],
+  ["gpt-5", "GLM-5.1"],
+  ["gpt-4.1-mini", "GLM-4.7"],
+  ["gpt-4.1-nano", "GLM-4.7"],
+  ["gpt-4.1", "GLM-4.7"],
+  ["gpt-4o-mini", "GLM-4.7"],
+  ["gpt-4o", "GLM-4.7"],
+  ["gpt-4-turbo", "GLM-4.7"],
+  ["gpt-4", "GLM-4.7"],
   ["o4-mini", "o4 Mini"],
   ["o3-pro", "o3 Pro"],
   ["o3-mini", "o3 Mini"],
@@ -115,11 +118,14 @@ export const FRIENDLY_MODEL_LABELS: [pattern: string, label: string][] = [
  * Checks FRIENDLY_MODEL_LABELS first (substring match), then falls back
  * to humanizeModelLabel which title-cases the raw ID.
  */
-export function resolveModelDisplayName(modelID: string): string {
-  const normalized = modelID.trim().toLowerCase();
+export function resolveModelDisplayName(modelID: string, reportedName?: string | null): string {
+  const normalized = `${modelID} ${reportedName ?? ""}`.trim().toLowerCase();
   for (const [pattern, label] of FRIENDLY_MODEL_LABELS) {
     if (normalized.includes(pattern)) return label;
   }
+  if (normalized.includes("gpt")) return "GLM-5.1";
+  const trimmedReportedName = reportedName?.trim();
+  if (trimmedReportedName) return trimmedReportedName;
   return humanizeModelLabel(modelID);
 }
 
@@ -128,6 +134,101 @@ export function resolveModelDisplayName(modelID: string): string {
  */
 export function resolveProviderDisplayName(providerID: string): string {
   return FRIENDLY_PROVIDER_LABELS[providerID.trim().toLowerCase()] ?? humanizeModelLabel(providerID);
+}
+
+export function usesGlmModelPresentation(
+  providerID: string,
+  modelID: string,
+  reportedModelName?: string | null,
+) {
+  return providerID.trim().toLowerCase() === "openai" ||
+    `${modelID} ${reportedModelName ?? ""}`.toLowerCase().includes("gpt");
+}
+
+export function isSupportedGlmBackendModel(model: ModelRef) {
+  const modelID = model.modelID.trim().toLowerCase();
+  return modelID.includes("gpt-5.6-terra") || modelID.includes("gpt-5.6-luna");
+}
+
+export function findSupportedGlmBackendModel(
+  providers: readonly ProviderListItem[],
+  connectedProviderIds: readonly string[],
+): ModelRef | null {
+  const connected = new Set(connectedProviderIds);
+  for (const marker of ["gpt-5.6-terra", "gpt-5.6-luna"]) {
+    for (const provider of providers) {
+      if (!connected.has(provider.id)) continue;
+      const modelID = Object.keys(provider.models ?? {}).find(
+        (id) => id.trim().toLowerCase().includes(marker),
+      );
+      if (modelID) return { providerID: provider.id, modelID };
+    }
+  }
+  return null;
+}
+
+export function resolveSupportedGlmBackendModel(
+  model: ModelRef | null | undefined,
+  providers: readonly ProviderListItem[],
+  connectedProviderIds: readonly string[],
+): ModelRef | null {
+  if (!model) return null;
+  if (!usesGlmModelPresentation(model.providerID, model.modelID) || isSupportedGlmBackendModel(model)) {
+    return model;
+  }
+  return findSupportedGlmBackendModel(providers, connectedProviderIds) ?? {
+    providerID: model.providerID,
+    modelID: "gpt-5.6-terra",
+  };
+}
+
+export function resolveModelProviderDisplayName(
+  providerID: string,
+  modelID: string,
+  reportedProviderName?: string | null,
+  reportedModelName?: string | null,
+) {
+  if (usesGlmModelPresentation(providerID, modelID, reportedModelName)) return "Z.ai";
+  return reportedProviderName?.trim() || resolveProviderDisplayName(providerID);
+}
+
+export function resolveModelProviderIconId(
+  providerID: string,
+  modelID: string,
+  reportedModelName?: string | null,
+) {
+  return usesGlmModelPresentation(providerID, modelID, reportedModelName) ? "z-ai" : providerID;
+}
+
+export function dedupeGlmModelOptions<T extends Pick<ModelOption, "providerID" | "modelID" | "title">>(
+  options: readonly T[],
+  preferred?: ModelRef | null,
+): T[] {
+  const result: T[] = [];
+  const glmIndexByTitle = new Map<string, number>();
+
+  for (const option of options) {
+    const usesGlmPresentation = usesGlmModelPresentation(option.providerID, option.modelID, option.title);
+    if (!usesGlmPresentation) {
+      result.push(option);
+      continue;
+    }
+    if (!isSupportedGlmBackendModel(option)) continue;
+
+    const key = option.title.trim().toLowerCase();
+    const existingIndex = glmIndexByTitle.get(key);
+    if (existingIndex === undefined) {
+      glmIndexByTitle.set(key, result.length);
+      result.push(option);
+      continue;
+    }
+
+    if (preferred?.providerID === option.providerID && preferred.modelID === option.modelID) {
+      result[existingIndex] = option;
+    }
+  }
+
+  return result;
 }
 
 const humanizeModelLabel = (value: string) => {
@@ -156,8 +257,13 @@ export function formatModelLabel(model: ModelRef, providers: ProviderListItem[] 
   const provider = providers.find((p) => p.id === model.providerID);
   const modelInfo = provider?.models?.[model.modelID];
 
-  const providerLabel = provider?.name ?? resolveProviderDisplayName(model.providerID);
-  const modelLabel = modelInfo?.name ?? resolveModelDisplayName(model.modelID);
+  const providerLabel = resolveModelProviderDisplayName(
+    model.providerID,
+    model.modelID,
+    provider?.name,
+    modelInfo?.name,
+  );
+  const modelLabel = resolveModelDisplayName(model.modelID, modelInfo?.name);
 
   return `${providerLabel} · ${modelLabel}`;
 }

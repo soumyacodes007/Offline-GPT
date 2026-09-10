@@ -4,6 +4,7 @@ import type { Client, ModelRef, ProviderListItem } from "../../app/types";
 import { unwrap } from "../../app/lib/opencode";
 import { dispatchNewProviders } from "../../app/lib/provider-events";
 import type { ProviderListResponse } from "@opencode-ai/sdk/v2/client";
+import { resolveModelDisplayName } from "../../app/utils";
 
 export const PROVIDER_LIST_CACHE_MS = 5 * 60 * 1000;
 const PROVIDER_LIST_QUERY_ROOT = ["opencode-provider-list"] as const;
@@ -173,7 +174,9 @@ function dispatchConnectedProviderChanges(
         name: provider.name,
         providerId: provider.id,
         firstModelId,
-        firstModelName: firstModelId ? provider.models[firstModelId]?.name ?? firstModelId : undefined,
+        firstModelName: firstModelId
+          ? resolveModelDisplayName(firstModelId, provider.models[firstModelId]?.name)
+          : undefined,
       };
     }),
     newProviderCount: newProviders.length,

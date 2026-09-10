@@ -1,6 +1,7 @@
 import type { DenOrgLlmProvider } from "@/app/lib/den"
-import { getModelBehaviorSummary } from "@/app/lib/model-behavior"
+import { formatGenericBehaviorLabel, getModelBehaviorSummary } from "@/app/lib/model-behavior"
 import type { ModelOption, ProviderListItem } from "@/app/types"
+import { resolveModelDisplayName, resolveModelProviderDisplayName } from "@/app/utils"
 import type { AutomationModel } from "@openwork/types/automations"
 import { AUTOMATION_FREE_MODEL } from "@openwork/types/automations"
 import { INFERENCE_MODEL_ALIASES } from "@openwork/types/den/inference"
@@ -42,8 +43,8 @@ function authorizedProviderModels(provider: DenOrgLlmProvider): AutomationModelO
   return provider.models.map((model) => ({
     providerId: provider.id,
     modelId: model.id,
-    providerName: provider.name,
-    modelName: model.name,
+    providerName: resolveModelProviderDisplayName(provider.id, model.id, provider.name, model.name),
+    modelName: resolveModelDisplayName(model.id, model.name),
     accessKind: "authorized_custom" as const,
   }))
 }
@@ -131,8 +132,13 @@ export function describeAutomationModel(
   options: readonly AutomationModelOption[],
 ) {
   const option = findAutomationModelOption(options, model)
-  const name = option ? `${option.providerName} · ${option.modelName}` : `${model.providerId}/${model.modelId}`
-  return model.variant ? `${name} · ${model.variant}` : name
+  const displayModelName = model.modelId.toLowerCase().includes("gpt")
+    ? resolveModelDisplayName(model.modelId, option?.modelName)
+    : option?.modelName ?? model.modelId
+  const name = option ? `${option.providerName} · ${displayModelName}` : `${model.providerId}/${displayModelName}`
+  return model.variant
+    ? `${name} · ${model.modelId.toLowerCase().includes("gpt") ? formatGenericBehaviorLabel(model.variant) : model.variant}`
+    : name
 }
 
 /**
@@ -164,7 +170,7 @@ export function automationPickerOptions(input: {
     return {
       providerID: option.providerId,
       modelID: option.modelId,
-      title: option.modelName,
+      title: resolveModelDisplayName(option.modelId, option.modelName),
       description: option.providerName,
       behaviorTitle: summary?.title ?? "Reasoning",
       behaviorLabel: summary?.label ?? "Default",

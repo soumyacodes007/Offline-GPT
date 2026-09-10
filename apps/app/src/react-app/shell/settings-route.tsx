@@ -141,19 +141,12 @@ import { useCheckDesktopRestriction, useDesktopConfig } from "@/react-app/domain
 import { useRestrictionNotice } from "@/react-app/domains/cloud/restriction-notice-provider";
 import { useCloudProviderAutoSync } from "@/react-app/domains/cloud/use-cloud-provider-auto-sync";
 import {
-  hasOpenWorkModelsAvailable,
-  hideOpenWorkModelsPromo,
-  useOpenWorkModelsPromoEligibility,
-  isOpenWorkModelsPromoHidden,
-  openWorkModelsPromoChangedEvent,
-  shouldShowOpenWorkModelsSyncing,
-} from "@/react-app/domains/cloud/openwork-models-promo";
-import {
   isDesktopRuntime,
   isElectronRuntime,
   isMacPlatform,
   normalizeDirectoryPath,
   resolveModelDisplayName,
+  resolveModelProviderDisplayName,
   resolveProviderDisplayName,
   safeStringify,
 } from "@/app/utils";
@@ -183,8 +176,7 @@ import { useReloadCoordinator } from "./reload-coordinator";
 import { CommandPalette, type PaletteItem } from "./command-palette";
 import { buildCommandPaletteSessions } from "./command-palette-sessions";
 import { useCommandPaletteShortcut } from "./use-shell-shortcuts";
-import { buildFeedbackUrl } from "@/app/lib/feedback";
-import { getDenInferenceUrl, type DenSettings } from "@/app/lib/den";
+import type { DenSettings } from "@/app/lib/den";
 import { readActiveWorkspaceId, writeActiveWorkspaceId } from "./session-memory";
 import { useUiStateStore } from "./ui-state-store";
 import {
@@ -932,60 +924,6 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
   useEffect(() => {
     void refreshConnectCapabilities({ force: true });
   }, [refreshConnectCapabilities]);
-
-  const hasOpenWorkCloudProvider = useMemo(
-    () =>
-      providerAuthSnapshot.cloudOrgProviders.some(isOpenWorkCloudProvider) ||
-      Object.values(providerAuthSnapshot.importedCloudProviders ?? {}).some(isOpenWorkCloudProvider),
-    [providerAuthSnapshot.cloudOrgProviders, providerAuthSnapshot.importedCloudProviders],
-  );
-  const [openWorkModelsPromoHidden, setOpenWorkModelsPromoHidden] = useState(isOpenWorkModelsPromoHidden);
-  const openWorkModelsPromoEligible = useOpenWorkModelsPromoEligibility();
-  // Entitled = Den/import says OpenWork Models is included. Available = local
-  // engine actually exposes selectable openwork models.
-  const openWorkModelsEntitled = cloudSession.isSignedIn && hasOpenWorkCloudProvider;
-  const openWorkModelsAvailable = hasOpenWorkModelsAvailable({
-    providerConnectedIds,
-    providers,
-  });
-  const showOpenWorkModelsSyncing = shouldShowOpenWorkModelsSyncing({
-    entitled: openWorkModelsEntitled,
-    available: openWorkModelsAvailable,
-    workspaceReady: Boolean(selectedWorkspaceId && activeClient),
-    reloadPending: providerAuthSnapshot.cloudProviderServerSync?.reloadPending === true,
-  });
-  const showOpenWorkModelsSubscribe =
-    openWorkModelsPromoEligible &&
-    !openWorkModelsEntitled &&
-    !openWorkModelsAvailable &&
-    !openWorkModelsPromoHidden;
-  const showOpenWorkModelsConnect =
-    openWorkModelsPromoEligible &&
-    !openWorkModelsEntitled &&
-    !openWorkModelsAvailable &&
-    openWorkModelsPromoHidden;
-
-  useEffect(() => {
-    const handlePromoChanged = () => setOpenWorkModelsPromoHidden(isOpenWorkModelsPromoHidden());
-    window.addEventListener(openWorkModelsPromoChangedEvent, handlePromoChanged);
-    return () => window.removeEventListener(openWorkModelsPromoChangedEvent, handlePromoChanged);
-  }, []);
-
-  const dismissOpenWorkModelsPromo = useCallback(() => {
-    hideOpenWorkModelsPromo();
-    setOpenWorkModelsPromoHidden(true);
-  }, []);
-
-  const subscribeToOpenWorkModels = useCallback(() => {
-    providerAuthStore.closeProviderAuthModal();
-    const accountPath = selectedWorkspaceId
-      ? workspaceSettingsRoute(selectedWorkspaceId, "cloud-account")
-      : "/settings/cloud-account";
-    navigate(accountPath);
-    window.setTimeout(() => {
-      platform.openLink(getDenInferenceUrl(cloudSession.baseUrl));
-    }, 0);
-  }, [cloudSession.baseUrl, navigate, platform, providerAuthStore, selectedWorkspaceId]);
 
   const handleOpenProviderAuth = useCallback(() => {
     if (providerAuthStore.isProviderAddRestricted()) {
@@ -1858,10 +1796,12 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     void connectionsStore.refreshMcpServers();
   }, [activeClient, connectionsStore, providerAuthStore, selectedWorkspace?.id]);
 
-  const selectedWorkspaceName = selectedWorkspace?.displayNameResolved ?? t("session.workspace_fallback");
+  const selectedWorkspaceName = selectedWorkspace
+    ? workspaceLabel(selectedWorkspace)
+    : t("session.workspace_fallback");
   const workspaceOptions = workspaces.map((workspace) => ({
     id: workspace.id,
-    name: workspace.displayNameResolved,
+    name: workspaceLabel(workspace),
     color: workspaceSwatchColor(workspace.id),
   }));
   const selectedWorkspaceColor = workspaceSwatchColor(selectedWorkspaceId);
@@ -1875,8 +1815,13 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     ? (() => {
         const provider = providers.find((item) => item.id === local.prefs.defaultModel?.providerID);
         const model = provider?.models?.[local.prefs.defaultModel.modelID];
-        const providerLabel = provider?.name ?? resolveProviderDisplayName(local.prefs.defaultModel.providerID);
-        const modelLabel = model?.name ?? resolveModelDisplayName(local.prefs.defaultModel.modelID);
+        const providerLabel = resolveModelProviderDisplayName(
+          local.prefs.defaultModel.providerID,
+          local.prefs.defaultModel.modelID,
+          provider?.name,
+          model?.name,
+        );
+        const modelLabel = resolveModelDisplayName(local.prefs.defaultModel.modelID, model?.name);
         return `${providerLabel} - ${modelLabel}`;
       })()
     : t("session.default_model");
@@ -1884,14 +1829,17 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     ? `${local.prefs.defaultModel.providerID}/${local.prefs.defaultModel.modelID}`
     : t("settings.default_label");
   const defaultModelVariantLabel = local.prefs.modelVariant ?? t("settings.default_label");
-  const providerStatusLabel = providerConnectedIds.length > 0 ? t("status.connected") : t("status.disconnected_label");
-  const providerStatusStyle = providerConnectedIds.length > 0
+  const visibleProviderConnectedIds = providerConnectedIds.filter(
+    (providerId) => providerId.trim().toLowerCase() !== "openwork",
+  );
+  const providerStatusLabel = visibleProviderConnectedIds.length > 0 ? t("status.connected") : t("status.disconnected_label");
+  const providerStatusStyle = visibleProviderConnectedIds.length > 0
     ? "bg-green-7/10 text-green-11 border-green-7/20"
     : "bg-gray-4/60 text-gray-11 border-gray-7/50";
-  const providerSummary = providerConnectedIds.length > 0
-    ? t("status.providers_connected", { count: providerConnectedIds.length })
+  const providerSummary = visibleProviderConnectedIds.length > 0
+    ? t("status.providers_connected", { count: visibleProviderConnectedIds.length })
     : t("settings.no_providers_connected");
-  const providerConnectedIdSet = new Set(providerConnectedIds);
+  const providerConnectedIdSet = new Set(visibleProviderConnectedIds);
   const disabledProviderIdSet = new Set(
     disabledProviders.map((id) => id.trim().toLowerCase()).filter(Boolean),
   );
@@ -2296,9 +2244,6 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
           <GeneralSettingsView
             onNavigateTab={(tab) => navigateSettingsPath(tab)}
             developerMode={developerMode}
-            onSendFeedback={() => platform.openLink(buildFeedbackUrl({ entrypoint: "settings" }))}
-            onJoinDiscord={() => platform.openLink("https://discord.gg/VEhNQXxYMB")}
-            onReportIssue={() => platform.openLink("https://github.com/different-ai/openwork/issues/new?template=bug.yml")}
           />
         );
       case "permissions":
@@ -2347,21 +2292,23 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
             canAddProviders={!providerAuthStore.isProviderAddRestricted()}
             organizationName={cloudSession.activeOrgName}
             cloudProviderIds={new Set([
-              ...Object.values(providerAuthSnapshot.importedCloudProviders ?? {}).map((p) => p.providerId),
-              ...(openWorkModelsEntitled || openWorkModelsAvailable ? ["openwork"] : []),
+              ...Object.values(providerAuthSnapshot.importedCloudProviders ?? {})
+                .filter((provider) => !isOpenWorkCloudProvider(provider))
+                .map((provider) => provider.providerId),
             ])}
-            showOpenWorkModelsSubscribe={showOpenWorkModelsSubscribe}
-            showOpenWorkModelsConnect={showOpenWorkModelsConnect}
-            showOpenWorkModelsSyncing={showOpenWorkModelsSyncing}
-            onSubscribeOpenWorkModels={subscribeToOpenWorkModels}
-            onDismissOpenWorkModels={dismissOpenWorkModelsPromo}
             cloudProvidersView={
               <CloudProvidersView
                 embedded
                 checkDesktopAppRestriction={checkDesktopRestriction}
-                cloudOrgProviders={providerAuthSnapshot.cloudOrgProviders}
+                cloudOrgProviders={providerAuthSnapshot.cloudOrgProviders.filter(
+                  (provider) => !isOpenWorkCloudProvider(provider),
+                )}
                 connectCloudProvider={providerAuthStore.connectCloudProvider}
-                importedCloudProviders={providerAuthSnapshot.importedCloudProviders}
+                importedCloudProviders={Object.fromEntries(
+                  Object.entries(providerAuthSnapshot.importedCloudProviders ?? {}).filter(
+                    ([, provider]) => !isOpenWorkCloudProvider(provider),
+                  ),
+                )}
                 importsUnavailable={
                   openworkServerSnapshot.openworkServerCapabilities?.config?.read === false ||
                   openworkServerSnapshot.openworkServerCapabilities?.config?.write === false
@@ -2739,15 +2686,17 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
         // not from `providers`.
         providers={providerAuthSnapshot.providerAuthProviders.filter(
           (provider) =>
+            provider.id.trim().toLowerCase() !== "openwork" &&
             !isDesktopProviderBlocked({
               providerId: provider.id,
               checkRestriction: checkDesktopRestriction,
             }),
         )}
-        connectedProviderIds={providerConnectedIds}
+        connectedProviderIds={visibleProviderConnectedIds}
         authMethods={Object.fromEntries(
           Object.entries(providerAuthSnapshot.providerAuthMethods).filter(
             ([providerId]) =>
+              providerId.trim().toLowerCase() !== "openwork" &&
               !isDesktopProviderBlocked({
                 providerId,
                 checkRestriction: checkDesktopRestriction,
@@ -2758,8 +2707,6 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
         onSubmitApiKey={providerAuthStore.submitProviderApiKey}
         onSubmitOAuth={providerAuthStore.completeProviderAuthOAuth}
         onRefreshProviders={providerAuthStore.refreshProviders}
-        showOpenWorkModelsSubscribe={showOpenWorkModelsSubscribe}
-        onSubscribeOpenWorkModels={subscribeToOpenWorkModels}
         onClose={() => providerAuthStore.closeProviderAuthModal()}
       />
       <RenameWorkspaceModal

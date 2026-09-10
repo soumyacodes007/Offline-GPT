@@ -1,8 +1,9 @@
 import type { LocalAvailableModel, LocalModelRef } from "@openwork/types/local-workflows";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { dedupeGlmModelOptions, resolveModelDisplayName, resolveModelProviderDisplayName } from "@/app/utils";
 
 export function modelLabel(model: LocalModelRef) {
-  return `${model.providerID} / ${model.modelID}`;
+  return `${model.providerID} / ${resolveModelDisplayName(model.modelID)}`;
 }
 
 export function ModelSelect(props: {
@@ -15,10 +16,17 @@ export function ModelSelect(props: {
   disabled?: boolean;
 }) {
   const key = (model: LocalModelRef) => `${model.providerID}/${model.modelID}`;
+  const visibleModels = dedupeGlmModelOptions(
+    props.models.map((model) => ({
+      ...model,
+      title: resolveModelDisplayName(model.modelID, model.name),
+    })),
+    props.value,
+  );
   const selectedKey = props.value ? key(props.value) : "";
-  const unavailable = props.value && !props.models.some((model) => key(model) === selectedKey);
-  const selectedModel = props.models.find((model) => key(model) === selectedKey);
-  const selectedLabel = selectedModel ? `${selectedModel.name} · ${selectedModel.providerName}` : props.value ? `${modelLabel(props.value)} (unavailable)` : props.emptyLabel;
+  const unavailable = props.value && !visibleModels.some((model) => key(model) === selectedKey);
+  const selectedModel = visibleModels.find((model) => key(model) === selectedKey);
+  const selectedLabel = selectedModel ? `${resolveModelDisplayName(selectedModel.modelID, selectedModel.name)} · ${resolveModelProviderDisplayName(selectedModel.providerID, selectedModel.modelID, selectedModel.providerName, selectedModel.name)}` : props.value ? `${modelLabel(props.value)} (unavailable)` : props.emptyLabel;
   return (
     <div className="grid min-w-0 gap-1.5 text-sm">
       <span className="font-medium">{props.label}</span>
@@ -27,7 +35,7 @@ export function ModelSelect(props: {
         disabled={props.disabled}
         onValueChange={(value) => {
           if (value === "") { props.onChange(null); return; }
-          const model = props.models.find((item) => key(item) === value);
+          const model = visibleModels.find((item) => key(item) === value);
           if (model) props.onChange({ providerID: model.providerID, modelID: model.modelID });
         }}
       >
@@ -37,7 +45,7 @@ export function ModelSelect(props: {
         <SelectContent align="start">
           <SelectItem value="" data-testid={`${props.testId}-option-auto`}>{props.emptyLabel}</SelectItem>
           {unavailable && props.value ? <SelectItem value={selectedKey} disabled>{modelLabel(props.value)} (unavailable)</SelectItem> : null}
-          {props.models.map((model) => <SelectItem key={key(model)} value={key(model)} data-testid={`${props.testId}-option-${key(model)}`}>{model.name} · {model.providerName}</SelectItem>)}
+          {visibleModels.map((model) => <SelectItem key={key(model)} value={key(model)} data-testid={`${props.testId}-option-${key(model)}`}>{model.title} · {resolveModelProviderDisplayName(model.providerID, model.modelID, model.providerName, model.name)}</SelectItem>)}
         </SelectContent>
       </Select>
     </div>

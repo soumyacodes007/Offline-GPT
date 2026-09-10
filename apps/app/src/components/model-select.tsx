@@ -19,10 +19,6 @@ import {
 import { useWorkspace } from "@/react-app/shell/workspace-provider";
 import { useCheckDesktopRestriction } from "@/react-app/domains/cloud/desktop-config-provider";
 import { useDenAuth } from "@/react-app/domains/cloud/den-auth-provider";
-import {
-  OPENWORK_MODELS_PROVIDER_ID,
-  OPENWORK_MODELS_PROVIDER_NAME,
-} from "@/react-app/domains/cloud/openwork-models-promo";
 import { getConnectedProviderItems, useProviderListQuery } from "@/react-app/infra/provider-list-query";
 import { filterEntitledModelOptions } from "@/react-app/domains/connections/provider-auth/provider-policy";
 import {
@@ -55,6 +51,7 @@ import {
   useModelCollectionsStore,
 } from "@/react-app/domains/session/models/model-collections-store";
 import { favoriteModelShortcutLabel } from "@/react-app/shell/favorite-model-shortcut";
+import { dedupeGlmModelOptions, resolveModelDisplayName, resolveModelProviderDisplayName } from "@/app/utils";
 
 function getProviderDisplayName(providerId: string) {
   return providerId
@@ -109,8 +106,8 @@ function useModelOptions(
           return {
             providerID: provider.id,
             modelID: id,
-            title: model.name,
-            description: provider.name,
+            title: resolveModelDisplayName(id, model.name),
+            description: resolveModelProviderDisplayName(provider.id, id, provider.name, model.name),
             behaviorTitle: summary.title,
             behaviorLabel: summary.label,
             behaviorDescription: summary.description,
@@ -212,9 +209,9 @@ interface ModelSelectProps {
   disabled?: boolean;
   /** When set, "All models" opens the full picker scoped to this session. */
   sessionId?: string;
-  /** Den/import includes OpenWork Models. Kept for callers; picker no longer upsells here. */
+  /** Managed-model entitlement state retained for callers. */
   openWorkModelsEntitled?: boolean;
-  /** The server is waiting to reload this workspace with OpenWork Models. */
+  /** The server is waiting to reload managed models for this workspace. */
   openWorkModelsSyncing?: boolean;
   /** Member-scoped models available before a workspace OpenCode client exists. */
   fallbackOptions?: readonly ModelOption[];
@@ -232,7 +229,6 @@ export function ModelSelect({
   onChange,
   disabled = false,
   sessionId,
-  openWorkModelsSyncing = false,
   fallbackOptions = [],
   behaviorValue = null,
   behaviorLabel,
@@ -249,11 +245,18 @@ export function ModelSelect({
   const recent = useModelCollectionsStore((state) => state.recent);
   const catalogOptions = useModelOptions(open, fallbackOptions, denAuth.isSignedIn);
   const modelOptions = React.useMemo(
-    () => overlaySelectedBehavior(catalogOptions, value, {
-      value: behaviorValue,
-      label: behaviorLabel,
-      options: behaviorOptions,
-    }),
+    () => dedupeGlmModelOptions(
+      overlaySelectedBehavior(
+        catalogOptions.filter((option) => option.providerID.trim().toLowerCase() !== "openwork"),
+        value,
+        {
+          value: behaviorValue,
+          label: behaviorLabel,
+          options: behaviorOptions,
+        },
+      ),
+      value,
+    ),
     [behaviorLabel, behaviorOptions, behaviorValue, catalogOptions, value],
   );
   const checkDesktopRestriction = useCheckDesktopRestriction();
@@ -523,7 +526,7 @@ export function ModelSelect({
                   className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
                   onClick={() => handleSelect(option)}
                 >
-                  <ProviderIcon providerId={option.providerID} providerName={option.description} className="size-3.5 opacity-70" size={14} />
+                  <ProviderIcon providerId={option.description === "Z.ai" ? "z-ai" : option.providerID} providerName={option.description} className="size-3.5 opacity-70" size={14} />
                   <span className="min-w-0 flex-1 truncate text-foreground">{option.title}</span>
                   {isSameModel(value, option) ? <Check className="size-3.5 shrink-0 text-muted-foreground" /> : null}
                 </button>
@@ -582,15 +585,6 @@ export function ModelSelect({
               <CommandHeader className="p-1.5 pb-1">
                 <CommandInput ref={searchInputRef} placeholder="Search models..." className="h-9 text-sm" />
               </CommandHeader>
-              {openWorkModelsSyncing ? (
-                <div className="mx-1 mb-1 flex items-center gap-2 rounded-md border border-amber-6/60 bg-amber-2/40 px-2 py-1.5">
-                  <ProviderIcon providerId={OPENWORK_MODELS_PROVIDER_ID} providerName={OPENWORK_MODELS_PROVIDER_NAME} className="size-3.5 shrink-0 text-amber-11" size={14} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-medium text-foreground">{OPENWORK_MODELS_PROVIDER_NAME}</span>
-                    <span className="block truncate text-[11px] text-muted-foreground">Included — pending workspace reload…</span>
-                  </span>
-                </div>
-              ) : null}
               <CommandPanel className="h-0 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
                 <CommandEmpty>No models found.</CommandEmpty>
                 <CommandList className="not-empty:scroll-py-1 not-empty:p-1">
@@ -610,7 +604,7 @@ export function ModelSelect({
                               onClick={() => handleSelect(option)}
                               data-checked={isSameModel(value, option)}
                             >
-                              <ProviderIcon providerId={option.providerID} providerName={option.description} className="size-3.5 opacity-70" size={14} />
+                              <ProviderIcon providerId={option.description === "Z.ai" ? "z-ai" : option.providerID} providerName={option.description} className="size-3.5 opacity-70" size={14} />
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-foreground">{option.title}</span>
                                 <span className="block truncate text-xs text-muted-foreground">{option.description ?? getProviderDisplayName(option.providerID)}</span>

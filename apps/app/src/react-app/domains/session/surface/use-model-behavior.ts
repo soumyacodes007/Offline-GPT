@@ -4,7 +4,7 @@
 // the model picker's lazy option loader until that moves into its own hook.
 import { useEffect, useMemo, useState } from "react";
 
-import { getModelBehaviorSummary } from "@/app/lib/model-behavior";
+import { formatGenericBehaviorLabel, getModelBehaviorSummary } from "@/app/lib/model-behavior";
 import type { ModelRef, ProviderListItem } from "@/app/types";
 import { t } from "@/i18n";
 
@@ -52,7 +52,9 @@ export function useModelBehavior(input: UseModelBehaviorInput) {
     const model = providerCatalog[defaultModel.providerID]?.[defaultModel.modelID];
     if (!model) {
       return {
-        modelVariantLabel: variant ?? t("settings.default_label"),
+        modelVariantLabel: defaultModel.modelID.toLowerCase().includes("gpt")
+          ? formatGenericBehaviorLabel(variant)
+          : variant ?? t("settings.default_label"),
         modelBehaviorOptions: emptyModelBehaviorOptions,
         modelVariantValue: variant,
       };

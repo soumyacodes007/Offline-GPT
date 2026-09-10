@@ -109,13 +109,14 @@ export function mapDesktopWorkspace(workspace: WorkspaceInfo): RouteWorkspace {
 }
 
 export function workspaceLabel(workspace: OpenworkWorkspaceInfo) {
-  return (
+  const label = (
     workspace.displayName?.trim() ||
     workspace.openworkWorkspaceName?.trim() ||
     workspace.name?.trim() ||
     workspace.path?.trim() ||
     t("session.workspace_fallback")
   );
+  return label === "OpenWork Chat" ? "OfflineGPT Chat" : label;
 }
 
 export function workspaceExportFilename(workspace: OpenworkWorkspaceInfo) {

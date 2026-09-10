@@ -21,6 +21,7 @@ import {
   openModelPickerEvent,
   pendingModelPickerProviderIdsKey,
 } from "@/react-app/shell/new-providers-listener";
+import { resolveModelDisplayName, resolveModelProviderDisplayName } from "@/app/utils";
 
 export type UseModelPickerInput = {
   client: Client | null;
@@ -136,8 +137,8 @@ export function useModelPicker(input: UseModelPickerInput) {
         next.push({
           providerID: provider.id,
           modelID: id,
-          title: model.name || id,
-          description: provider.name,
+          title: resolveModelDisplayName(id, model.name),
+          description: resolveModelProviderDisplayName(provider.id, id, provider.name, model.name),
           behaviorTitle: summary.title,
           behaviorLabel: summary.label,
           behaviorDescription: summary.description,

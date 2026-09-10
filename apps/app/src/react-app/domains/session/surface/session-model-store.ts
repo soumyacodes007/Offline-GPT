@@ -163,9 +163,13 @@ export function useSessionModelSelection(input: UseSessionModelSelectionInput): 
       : null;
     return {
       selectedModel: selection.model,
-      modelLabel: providerModel?.name || resolveModelDisplayName(selection.model.modelID),
+      modelLabel: resolveModelDisplayName(selection.model.modelID, providerModel?.name),
       modelVariant: summary ? summary.value : selection.variant,
-      modelVariantLabel: summary?.label ?? formatGenericBehaviorLabel(selection.variant),
+      modelVariantLabel: summary?.label ?? (
+        selection.model.modelID.toLowerCase().includes("gpt")
+          ? formatGenericBehaviorLabel(selection.variant)
+          : formatGenericBehaviorLabel(selection.variant)
+      ),
       modelBehaviorOptions: summary?.options ?? [],
       hasSessionOverride: true,
       setModel,

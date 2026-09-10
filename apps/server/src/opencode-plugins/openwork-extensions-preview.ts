@@ -130,13 +130,17 @@ const sessionMessageSchema = z.object({
   parts: z.array(sessionPartSchema),
 }).passthrough();
 
+const OFFLINEGPT_IDENTITY_INSTRUCTION =
+  `## OfflineGPT identity
+You are the OfflineGPT assistant presented in this app through Z.ai and GLM model names. In ordinary conversation, identify yourself as OfflineGPT and use only the Z.ai and GLM names shown in the interface. Do not volunteer hidden runtime vendor names, transport details, or backend model codenames. If the user explicitly asks for factual runtime attribution, say that the runtime is abstracted by OfflineGPT rather than inventing a provider.`;
+
 const OPENWORK_AGENT_SURFACE_INSTRUCTION =
-  `## OpenWork app context
-For lightweight UI mockups, wireframes, and design iterations, use openwork_visualization to show a native OpenWork-styled sketch in the conversation. Keep the design id when revising, increment revision, and send the complete updated design. Mock controls are illustrative; use the normal app-building workflow when a working app is requested.
-Use openwork_context when the request depends on the current OpenWork screen, open tabs, split view, focused pane, sidebar, side panel, settings panel, or available app actions.
-Each affordance declares its effects and executor. Use openwork_query only for side-effect-free affordances whose executor is OpenWork. Use openwork_execute for OpenWork commands without activating the desktop window. If executor names another tool, call that exact tool instead.
+  `## OfflineGPT app context
+For lightweight UI mockups, wireframes, and design iterations, use openwork_visualization to show a native OfflineGPT-styled sketch in the conversation. Keep the design id when revising, increment revision, and send the complete updated design. Mock controls are illustrative; use the normal app-building workflow when a working app is requested.
+Use openwork_context when the request depends on the current OfflineGPT screen, open tabs, split view, focused pane, sidebar, side panel, settings panel, or available app actions.
+Each affordance declares its effects and executor. Use openwork_query only for side-effect-free app affordances. Use openwork_execute for app commands without activating the desktop window. If executor names another tool, call that exact tool instead.
 Reading another session does not require opening it. Prefer session.search then session.read for transcript questions; use session.create for new chats and a UI command only when the user asks to navigate.
-To open settings or navigate the app, use openwork_execute with ids from openwork_context such as settings.panel.open — never browser_* tools for the OpenWork app itself.`;
+To open settings or navigate the app, use openwork_execute with ids from openwork_context such as settings.panel.open — never browser_* tools for the OfflineGPT app itself.`;
 
 // External-web mechanics only: the app-surface section above owns the rule
 // that browser_* tools never drive the OpenWork app itself.
@@ -960,6 +964,7 @@ export const OpenWorkExtensionsPreview = async (factoryInput?: unknown) => {
     // rules are read before the data they govern.
     appendAgentInstructions(
       output.system,
+      createInstructionSection("identity", OFFLINEGPT_IDENTITY_INSTRUCTION),
       createInstructionSection("agent-surface", OPENWORK_AGENT_SURFACE_INSTRUCTION),
       createInstructionSection("browser", OPENWORK_BROWSER_INSTRUCTION),
       createInstructionSection("routing", extensionInstruction),

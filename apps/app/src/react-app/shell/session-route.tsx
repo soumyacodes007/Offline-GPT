@@ -69,6 +69,7 @@ import {
   normalizeDirectoryPath,
   normalizeSessionStatus,
   resolveModelDisplayName,
+  resolveSupportedGlmBackendModel,
   safeStringify,
 } from "@/app/utils";
 import { t } from "@/i18n";
@@ -1351,7 +1352,12 @@ export function SessionRoute() {
         // Per-conversation model memory: a session that picked its own model
         // sends with it (and its variant) instead of the global default.
         const sessionModelSelection = getSessionModelSelection(targetSessionId);
-        const sendModel = sessionModelSelection?.model ?? local.prefs.defaultModel;
+        const configuredSendModel = sessionModelSelection?.model ?? local.prefs.defaultModel;
+        const sendModel = resolveSupportedGlmBackendModel(
+          configuredSendModel,
+          providers,
+          providerConnectedIds,
+        );
         const sendVariant = sessionModelSelection ? sessionModelSelection.variant : modelVariantValue;
         // Send-time validation targets the exact provider/model identity this
         // conversation displays and will submit — not the global default.
@@ -1706,7 +1712,12 @@ export function SessionRoute() {
           return { outcome: "cancelled", reason: "context_changed" };
         }
         const sessionModelSelection = getSessionModelSelection(targetSessionId);
-        const sendModel = sessionModelSelection?.model ?? local.prefs.defaultModel;
+        const configuredSendModel = sessionModelSelection?.model ?? local.prefs.defaultModel;
+        const sendModel = resolveSupportedGlmBackendModel(
+          configuredSendModel,
+          providers,
+          providerConnectedIds,
+        );
         const sendVariant = sessionModelSelection ? sessionModelSelection.variant : modelVariantValue;
         return submitWithCloudMcpReadiness({
           skipGate: true,
@@ -2368,7 +2379,7 @@ export function SessionRoute() {
     }
     useModelCollectionsStore.getState().recordRecent(next);
     local.setPrefs((previous) => ({ ...previous, defaultModel: next, modelVariant: variant }));
-    return providerModel?.name ?? next.modelID;
+    return resolveModelDisplayName(next.modelID, providerModel?.name);
   }, [local, modelVariantValue, providerCatalog, selectedSessionId]);
 
   const cycleFavoriteModelControlAction = useMemo<OpenworkControlAction>(() => ({

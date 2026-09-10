@@ -50,15 +50,12 @@ type ProviderOAuthSession = ProviderOAuthStartResult & {
 };
 
 const PROVIDER_LABELS: Record<string, string> = {
-  openwork: "OpenWork",
   opencode: "OpenCode Zen",
   openai: "OpenAI",
   anthropic: "Anthropic",
   google: "Google",
   openrouter: "OpenRouter",
 };
-
-const OPENWORK_MODELS_PROVIDER_ID = "openwork";
 
 export type ProviderAuthModalProps = {
   open: boolean;
@@ -78,8 +75,6 @@ export type ProviderAuthModalProps = {
     code?: string,
   ) => Promise<{ connected: boolean; pending?: boolean; message?: string }>;
   onRefreshProviders?: () => Promise<unknown>;
-  showOpenWorkModelsSubscribe?: boolean;
-  onSubscribeOpenWorkModels?: () => void | Promise<void>;
   onClose: () => void;
 };
 
@@ -88,7 +83,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   const isRemoteWorker = workerType === "remote";
 
   const [view, setView] = useState<
-    "list" | "method" | "api" | "oauth-code" | "oauth-auto" | "openwork-subscribe"
+    "list" | "method" | "api" | "oauth-code" | "oauth-auto"
   >("list");
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
@@ -174,9 +169,11 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
 
     const providersById = new Map(providers.map((provider) => [provider.id, provider]));
     const nextEntries = Object.keys(methods)
+      .filter((id) => id.trim().toLowerCase() !== "openwork")
       .flatMap((id) => {
         const provider = providersById.get(id);
         const entryMethods = (methods[id] ?? []).filter((method) => {
+          if (method.type === "cloud") return false;
           if (isAnthropicProvider(id, provider?.name) && isClaudeProMaxMethod(method)) {
             return false;
           }
@@ -196,22 +193,8 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       })
       .sort(compareProviders);
 
-    if (props.showOpenWorkModelsSubscribe) {
-      const connectedToOpenWork = connected.has(OPENWORK_MODELS_PROVIDER_ID);
-      return [
-        {
-          id: OPENWORK_MODELS_PROVIDER_ID,
-          name: "OpenWork",
-          methods: [{ type: "cloud", label: "Subscribe" }],
-          connected: connectedToOpenWork,
-          env: [],
-        },
-        ...nextEntries.filter((entry) => entry.id.trim().toLowerCase() !== OPENWORK_MODELS_PROVIDER_ID),
-      ];
-    }
-
     return nextEntries;
-  }, [isRemoteWorker, props.authMethods, props.connectedProviderIds, props.providers, props.showOpenWorkModelsSubscribe]);
+  }, [isRemoteWorker, props.authMethods, props.connectedProviderIds, props.providers]);
 
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedProviderId) ?? null,
@@ -524,11 +507,6 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       return;
     }
 
-    if (method.type === "cloud") {
-      setView("openwork-subscribe");
-      return;
-    }
-
     setView("api");
   };
 
@@ -536,11 +514,6 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     if (actionDisabled) return;
     setLocalError(null);
     setSelectedProviderId(entry.id);
-
-    if (props.showOpenWorkModelsSubscribe && entry.id.trim().toLowerCase() === OPENWORK_MODELS_PROVIDER_ID) {
-      setView("openwork-subscribe");
-      return;
-    }
 
     if (entry.methods.length === 1) {
       void handleMethodSelect(entry.methods[0]);
@@ -591,11 +564,6 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   };
 
   const handleBack = () => {
-    if (resolvedView === "openwork-subscribe") {
-      resetState();
-      return;
-    }
-
     if (resolvedView === "oauth-code" || resolvedView === "oauth-auto") {
       if ((selectedEntry?.methods.length ?? 0) > 1) {
         setView("method");
@@ -677,9 +645,6 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     }
     if (method.type === "oauth") {
       return "Continue in the browser and let OpenWork finish the connection automatically.";
-    }
-    if (method.type === "cloud") {
-      return "Subscribe to OpenWork Models.";
     }
     if (isOpencodeZenProvider(entry.id)) {
       return "Sign in to OpenCode Zen with an API key to unlock paid models alongside the free tier.";
@@ -906,27 +871,6 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                       ))}
                     </div>
                   ) : null}
-                </div>
-              ) : null}
-
-              {resolvedView === "openwork-subscribe" && selectedEntry ? (
-                <div className="rounded-xl border border-blue-6/50 bg-blue-2/25 shadow-sm p-5 space-y-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-12">OpenWork Models</div>
-                      <div className="text-xs text-gray-10 mt-1">
-                        Frontier intelligence, hand picked for your team&apos;s most ambitious work.
-                      </div>
-                    </div>
-                    <Button variant="ghost" onClick={handleBack} disabled={actionDisabled}>
-                      Back
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-end">
-                    <Button onClick={() => void props.onSubscribeOpenWorkModels?.()} disabled={actionDisabled}>
-                      Subscribe
-                    </Button>
-                  </div>
                 </div>
               ) : null}
 
