@@ -1,4 +1,4 @@
-import type { ExternalMcpOAuthCallbackMode } from "@openwork-ee/den-db/schema"
+import type { ExternalMcpOAuthCallbackMode } from "@offlinegpt-ee/den-db/schema"
 import { env } from "../env.js"
 
 export const HOSTED_MCP_CALLBACK_MIGRATION_CUTOFF = new Date("2026-08-24T00:01:00.000Z")
@@ -48,8 +48,8 @@ function usesHostedDirectApiMigration(): boolean {
   const api = new URL(env.apiPublicUrl)
   return web.protocol === "https:"
     && api.protocol === "https:"
-    && web.hostname === "app.openworklabs.com"
-    && (api.hostname === "api.app.openworklabs.com" || api.hostname === "api.openworklabs.com")
+    && web.hostname === "app.offlinegptlabs.com"
+    && (api.hostname === "api.app.offlinegptlabs.com" || api.hostname === "api.offlinegptlabs.com")
 }
 
 export function externalMcpHostedWebProxyCallbackUrl(input: {

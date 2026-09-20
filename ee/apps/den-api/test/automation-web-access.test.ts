@@ -1,8 +1,8 @@
 import { beforeAll, expect, test } from "bun:test"
-import { createAutomationSchema } from "@openwork/types/automations"
+import { createAutomationSchema } from "@offlinegpt/types/automations"
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DEN_DB_ENCRYPTION_KEY = process.env.DEN_DB_ENCRYPTION_KEY ?? "x".repeat(32)
   process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "y".repeat(32)
   process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://127.0.0.1:8790"
@@ -19,7 +19,7 @@ beforeAll(async () => {
 
 test("Cloud Automation creation fails before runtime or persistence without Web access", async () => {
   const service = new AutomationService({
-    getOpenWorkWebAccess: async () => ({ hasAccess: false }),
+    getOfflineGPTWebAccess: async () => ({ hasAccess: false }),
   })
   const definition = createAutomationSchema.parse({
     name: "Daily summary",
@@ -37,7 +37,7 @@ test("Cloud Automation creation fails before runtime or persistence without Web 
     ownerMemberId: "member_test",
     modelAttentionCapable: true,
   }, definition)).rejects.toMatchObject({
-    name: "OpenWorkWebAccessRequiredError",
-    code: "openwork_web_access_required",
+    name: "OfflineGPTWebAccessRequiredError",
+    code: "offlinegpt_web_access_required",
   })
 })

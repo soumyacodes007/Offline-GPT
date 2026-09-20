@@ -1,9 +1,9 @@
-import { addInitScript, browserScript } from "@openwork/cdp";
-import { localMysqlIsRunning, SkipError } from "@openwork/env";
-import type { Seed } from "@openwork/env";
-import { waitFor } from "@openwork/behaviors";
-import { navigate } from "@openwork/cdp";
-import { startMockIdpLab } from "@openwork/labs";
+import { addInitScript, browserScript } from "@offlinegpt/cdp";
+import { localMysqlIsRunning, SkipError } from "@offlinegpt/env";
+import type { Seed } from "@offlinegpt/env";
+import { waitFor } from "@offlinegpt/behaviors";
+import { navigate } from "@offlinegpt/cdp";
+import { startMockIdpLab } from "@offlinegpt/labs";
 
 function recordField(value: unknown, key: string): Record<string, unknown> | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
@@ -57,7 +57,7 @@ export async function ssoInvite(seed: Seed) {
       method: "POST",
       headers: {
         cookie: sessionCookie,
-        "x-openwork-org-id": organizationId,
+        "x-offlinegpt-org-id": organizationId,
       },
       body: JSON.stringify({
         issuer: registration.issuer,
@@ -77,7 +77,7 @@ export async function ssoInvite(seed: Seed) {
 
     const orgHeaders = {
       cookie: sessionCookie,
-      "x-openwork-org-id": organizationId,
+      "x-offlinegpt-org-id": organizationId,
     };
     const createdTest = await seed.api(den.admin, "/v1/sso/test", {
       method: "POST",

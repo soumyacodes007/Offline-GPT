@@ -15,7 +15,7 @@ import {
 import { compareCapabilityMatches, type CapabilityMatch } from "../src/mcp/search.js"
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DEN_DB_ENCRYPTION_KEY = process.env.DEN_DB_ENCRYPTION_KEY ?? "x".repeat(32)
   process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "y".repeat(32)
   process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://127.0.0.1:8790"
@@ -131,7 +131,7 @@ test("agent MCP server exposes steering instructions during initialize", async (
   expect(client.getInstructions()).toContain("cloudReadiness")
   expect(client.getInstructions()).toContain("Gmail read/search")
   expect(client.getInstructions()).toContain("Settings > Connect")
-  expect(client.getInstructions()).toContain("Never tell the user to reconnect OpenWork Cloud")
+  expect(client.getInstructions()).toContain("Never tell the user to reconnect OfflineGPT Cloud")
   expect(client.getInstructions()).toContain("connectionStatus.connectionName")
   expect(client.getInstructions()).toContain("schemaGuidance is advisory")
   expect(client.getInstructions()).toContain("always attempts the downstream provider call")
@@ -139,7 +139,7 @@ test("agent MCP server exposes steering instructions during initialize", async (
   expect(client.getInstructions()).toContain("never retry the same arguments unchanged")
   expect(client.getInstructions()).toContain("on the remote session")
   expect(client.getInstructions()).toContain("remote-session:create")
-  expect(client.getInstructions()).toContain("OpenWork Web instance")
+  expect(client.getInstructions()).toContain("OfflineGPT Web instance")
 
   await client.close()
   await server.close()
@@ -181,10 +181,10 @@ test("built-in cloud skills are searchable and executable as skill capabilities"
   expect(createSkill).toMatchObject({
     kind: "skill",
     name: "Create Skill",
-    provenance: "Built into OpenWork Cloud.",
+    provenance: "Built into OfflineGPT Cloud.",
   })
   expect(createSkill?.content).toContain("name: create-skill")
-  expect(createSkill?.content).toContain("openwork-cloud_create_skill")
+  expect(createSkill?.content).toContain("offlinegpt-cloud_create_skill")
   expect(createSkill?.content).toContain("Do not route this flow through `execute_capability` or `postPlugins`")
   expect(createSkill?.content).toContain("`duplicate_plugin`")
   expect(createSkill?.content).toContain("share-plugin")
@@ -297,11 +297,11 @@ test("capability search results include structured output alongside text compati
   expect(result.structuredContent).toEqual({ matches })
   expect(JSON.parse(result.content[0]?.text ?? "{}")).toEqual({ matches })
   const connectionStatus = {
-    version: 1, kind: "connection_action", source: "openwork-cloud",
+    version: 1, kind: "connection_action", source: "offlinegpt-cloud",
     layer: "mcp_connection", errorCode: "not_connected", authType: "oauth", credentialMode: "per_member",
     connectionId: "emc_notes", connectionName: "Notes", state: "needs_connection",
     actor: "member", message: "Connect your notes account.",
-    action: { type: "connect", label: "Connect Notes", surface: "openwork_your_connections", retry: "search_capabilities" },
+    action: { type: "connect", label: "Connect Notes", surface: "offlinegpt_your_connections", retry: "search_capabilities" },
   }
   const blocked = [{ ...matches[0], kind: "connection_status", connectionStatus }]
   const quiet = agentModule.capabilitySearchToolResult(blocked)
@@ -342,7 +342,7 @@ test("external capability failures preserve the slim agent-facing MCP error enve
     connectionStatus: {
       version: 1,
       kind: "connection_action",
-      source: "openwork-cloud",
+      source: "offlinegpt-cloud",
       layer: "mcp_connection",
       connectionId: "emc_test",
       connectionName: "Knowledge Hub",
@@ -355,7 +355,7 @@ test("external capability failures preserve the slim agent-facing MCP error enve
       action: {
         type: "reconnect",
         label: "Reconnect Knowledge Hub",
-        surface: "openwork_your_connections",
+        surface: "offlinegpt_your_connections",
         retry: "search_capabilities",
       },
     },
@@ -431,7 +431,7 @@ test("successful provider output preserves advisory schema guidance as additiona
     schemaGuidance: {
       advisory: true,
       providerCallAttempted: true,
-      message: "OpenWork forwarded the call to the provider. Use the provider result as the source of truth.",
+      message: "OfflineGPT forwarded the call to the provider. Use the provider result as the source of truth.",
       warnings: [{
         code: "arguments_schema_mismatch",
         message: "The arguments did not match the advertised schema.",

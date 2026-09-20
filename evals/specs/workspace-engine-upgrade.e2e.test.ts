@@ -1,6 +1,6 @@
 import { expect } from "vitest";
-import { go } from "@openwork/behaviors";
-import { observeTranscript, spec, type Probe, type User } from "@openwork/testkit";
+import { go } from "@offlinegpt/behaviors";
+import { observeTranscript, spec, type Probe, type User } from "@offlinegpt/testkit";
 import { workspaceEngineUpgrade } from "../worlds/chat.ts";
 
 // Fresh-engine chat journeys cannot witness ownership after an upgrade.

@@ -6,11 +6,11 @@ import {
   createCloudStartupFailure,
   publicCloudStartupFailure,
 } from "../src/workers/cloud-failure.js"
-import { OpenWorkWebAccessRequiredError } from "../src/openwork-web-access-error.js"
+import { OfflineGPTWebAccessRequiredError } from "../src/offlinegpt-web-access-error.js"
 
 describe("Cloud startup failure diagnostics", () => {
-  test("classifies a revoked OpenWork Web entitlement as its own failure code", () => {
-    expect(classifyCloudStartupFailure(new OpenWorkWebAccessRequiredError())).toBe("web_access_required")
+  test("classifies a revoked OfflineGPT Web entitlement as its own failure code", () => {
+    expect(classifyCloudStartupFailure(new OfflineGPTWebAccessRequiredError())).toBe("web_access_required")
     expect(cloudStartupFailureFromWorker({
       cloud_failure_code: "web_access_required",
       cloud_failure_stage: "provisioning",
@@ -24,12 +24,12 @@ describe("Cloud startup failure diagnostics", () => {
     expect(classifyCloudStartupFailure(new Error("429 Too Many Requests from provider"))).toBe("provider_rate_limited")
     expect(classifyCloudStartupFailure(new Error("Timed out waiting for Daytona worker health at https://secret.preview/health\nAuthorization: Bearer secret")))
       .toBe("runtime_health_timeout")
-    expect(classifyCloudStartupFailure(new Error("openwork session exited with 1\nstderr: token=secret")))
+    expect(classifyCloudStartupFailure(new Error("offlinegpt session exited with 1\nstderr: token=secret")))
       .toBe("runtime_start_failed")
 
     const failure = createCloudStartupFailure({
       stage: "recovery",
-      error: new Error("openwork session exited with 1\nstderr: token=secret"),
+      error: new Error("offlinegpt session exited with 1\nstderr: token=secret"),
       now: () => new Date("2026-08-28T12:00:00.000Z"),
     })
     const serialized = JSON.stringify(publicCloudStartupFailure(failure))

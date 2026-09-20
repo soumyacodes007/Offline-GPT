@@ -1,4 +1,4 @@
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { beforeAll, expect, test } from "bun:test"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
@@ -6,14 +6,14 @@ import type { WorkerRouteVariables } from "../src/routes/workers/shared.js"
 import type { CloudRuntimeStore } from "../src/workers/worker-access.js"
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DEN_DB_ENCRYPTION_KEY ??= "x".repeat(32)
   process.env.BETTER_AUTH_SECRET ??= "y".repeat(32)
   process.env.BETTER_AUTH_URL ??= "http://127.0.0.1:8790"
   process.env.CORS_ORIGINS ??= "http://127.0.0.1:8790"
   process.env.PROVISIONER_MODE = "daytona"
   process.env.DAYTONA_API_KEY = "daytona-test-key"
-  process.env.DAYTONA_SNAPSHOT = "openwork-0.18.8"
+  process.env.DAYTONA_SNAPSHOT = "offlinegpt-0.18.8"
 }
 
 type SharedModule = typeof import("../src/routes/workers/shared.js")
@@ -42,7 +42,7 @@ function worker() {
     description: null,
     destination: "cloud",
     status: "healthy",
-    image_version: "openwork-0.18.8",
+    image_version: "offlinegpt-0.18.8",
     workspace_path: null,
     sandbox_backend: "cloud-instance",
     last_heartbeat_at: null,
@@ -75,7 +75,7 @@ test("generic Daytona runtime routes refresh expiry and request only the fresh p
     worker: runtimeWorker,
     path: "/runtime/versions",
   }, {
-    getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+    getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
     resolveCloudAccess: (ownership) => access.resolveCloudRuntimeAccess(ownership, {
       loadWorker: async () => runtimeWorker,
       store: runtimeStore(),
@@ -143,7 +143,7 @@ test("cloud worker tokens expose expiring URLs only by explicit opt-in", async (
     { scope: "client" as const, token: "client-token" },
   ]
   const legacy = await shared.getWorkerTokensAndConnect(runtimeWorker, {
-    getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+    getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
     apiPublicUrl: "https://den.example.test/api/den",
     resolveCloudAccess,
     loadActiveTokens,
@@ -154,8 +154,8 @@ test("cloud worker tokens expose expiring URLs only by explicit opt-in", async (
     },
   })
   const resolved = await shared.getWorkerTokensAndConnect(runtimeWorker, {
-    getOpenWorkWebAccess: async () => ({ hasAccess: true }),
-    includeExpiringOpenworkUrl: true,
+    getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
+    includeExpiringOfflineGptUrl: true,
     apiPublicUrl: "https://den.example.test/api/den",
     loadActiveTokens,
     resolveCloudAccess: async () => ({
@@ -176,19 +176,19 @@ test("cloud worker tokens expose expiring URLs only by explicit opt-in", async (
   expect(legacy).toEqual({
     tokens: { owner: "host-token", host: "host-token", client: "client-token" },
     connect: {
-      openworkUrl: `https://den.example.test/api/den/v1/cloud/workers/${runtimeWorker.id}`,
+      offlinegptUrl: `https://den.example.test/api/den/v1/cloud/workers/${runtimeWorker.id}`,
       workspaceId: null,
     },
   })
   expect(resolved).toEqual({
     tokens: { owner: "host-token", host: "host-token", client: "client-token" },
     connect: {
-      openworkUrl: `https://den.example.test/api/den/v1/cloud/workers/${runtimeWorker.id}/w/created-workspace`,
+      offlinegptUrl: `https://den.example.test/api/den/v1/cloud/workers/${runtimeWorker.id}/w/created-workspace`,
       workspaceId: "created-workspace",
     },
     directPreview: {
       version: 1,
-      openworkUrl: "https://create-token.preview.example.test/w/created-workspace",
+      offlinegptUrl: "https://create-token.preview.example.test/w/created-workspace",
       workspaceId: "created-workspace",
       expiresAt: "2026-08-27T12:00:00.000Z",
     },
@@ -196,7 +196,7 @@ test("cloud worker tokens expose expiring URLs only by explicit opt-in", async (
   expect(requested).toEqual([
     "https://create-token.preview.example.test/workspaces",
   ])
-  expect("connect" in legacy ? legacy.connect?.openworkUrl : null).not.toContain("preview.example.test")
+  expect("connect" in legacy ? legacy.connect?.offlinegptUrl : null).not.toContain("preview.example.test")
   expect("directPreview" in legacy).toBe(false)
   expect(requested.join(" ")).not.toContain("workers.example.test")
 })
@@ -204,9 +204,9 @@ test("cloud worker tokens expose expiring URLs only by explicit opt-in", async (
 test("cloud worker tokens retain the stable route while provisioning", async () => {
   const runtimeWorker = { ...worker(), status: "provisioning" as const }
   const resolved = await shared.getWorkerTokensAndConnect(runtimeWorker, {
-    getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+    getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
     apiPublicUrl: "https://den.example.test/api/den",
-    includeExpiringOpenworkUrl: true,
+    includeExpiringOfflineGptUrl: true,
     loadActiveTokens: async () => [
       { scope: "host", token: "host-token" },
       { scope: "client", token: "client-token" },
@@ -217,7 +217,7 @@ test("cloud worker tokens retain the stable route while provisioning", async () 
   expect(resolved).toEqual({
     tokens: { owner: "host-token", host: "host-token", client: "client-token" },
     connect: {
-      openworkUrl: `https://den.example.test/api/den/v1/cloud/workers/${runtimeWorker.id}`,
+      offlinegptUrl: `https://den.example.test/api/den/v1/cloud/workers/${runtimeWorker.id}`,
       workspaceId: null,
     },
     directPreview: null,
@@ -237,11 +237,11 @@ function registerCompatibilityTestApp(input: {
   const organizationId = createDenTypeId("organization")
   let resolveIndex = 0
   compatibility.registerCloudWorkerCompatibilityRoutes(app, {
-    getOpenWorkWebAccess: async () => ({ hasAccess: input.hasWebAccess ?? true }),
+    getOfflineGPTWebAccess: async () => ({ hasAccess: input.hasWebAccess ?? true }),
     authenticate: async ({ request, workerId }) => {
       if (workerId !== input.workerId) return null
       const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? ""
-      const host = request.headers.get("x-openwork-host-token") ?? ""
+      const host = request.headers.get("x-offlinegpt-host-token") ?? ""
       if (host === "host-token" || bearer === "host-token") return { organizationId, scope: "host" }
       if (bearer === "client-token") return { organizationId, scope: "client" }
       return null
@@ -285,25 +285,25 @@ test("cloud worker OPTIONS bypasses global credentialed CORS for native origins"
     },
   })
 
-  for (const origin of ["null", "openwork://desktop"]) {
+  for (const origin of ["null", "offlinegpt://desktop"]) {
     const response = await app.request("https://den.example.test/v1/cloud/workers/worker_native/health", {
       method: "OPTIONS",
       headers: {
         Origin: origin,
         "Access-Control-Request-Method": "PATCH",
-        "Access-Control-Request-Headers": "content-type,x-openwork-host-token,x-opencode-directory",
+        "Access-Control-Request-Headers": "content-type,x-offlinegpt-host-token,x-opencode-directory",
       },
     })
     expect(response.status).toBe(204)
     expect(response.headers.get("access-control-allow-origin")).toBe(origin)
     expect(response.headers.get("access-control-allow-credentials")).toBeNull()
-    expect(response.headers.get("access-control-allow-headers")?.toLowerCase()).toContain("x-openwork-host-token")
+    expect(response.headers.get("access-control-allow-headers")?.toLowerCase()).toContain("x-offlinegpt-host-token")
     expect(response.headers.get("access-control-allow-methods")).toContain("PATCH")
   }
 
   const unrelated = await app.request("https://den.example.test/v1/other", {
     method: "OPTIONS",
-    headers: { Origin: "openwork://desktop", "Access-Control-Request-Method": "POST" },
+    headers: { Origin: "offlinegpt://desktop", "Access-Control-Request-Method": "POST" },
   })
   expect(unrelated.headers.get("access-control-allow-origin")).toBeNull()
 })
@@ -342,13 +342,13 @@ test("stable cloud worker route requires Web access before resolving or calling 
 
   const response = await app.request(
     `https://den.example.test/v1/cloud/workers/${workerId}/workspace/demo/sessions`,
-    { method: "POST", headers: { "X-OpenWork-Host-Token": "host-token" } },
+    { method: "POST", headers: { "X-OfflineGPT-Host-Token": "host-token" } },
   )
 
   expect(response.status).toBe(403)
   expect(await response.json()).toEqual({
-    error: "openwork_web_access_required",
-    message: "An active OpenWork Web subscription or complimentary access is required to use OpenWork Cloud.",
+    error: "offlinegpt_web_access_required",
+    message: "An active OfflineGPT Web subscription or complimentary access is required to use OfflineGPT Cloud.",
   })
   expect(resolutions).toBe(0)
   expect(requests).toHaveLength(0)
@@ -372,7 +372,7 @@ test("stable cloud worker route enforces worker token and method scope", async (
   )
   const hostWrite = await app.request(route, {
     method: "PUT",
-    headers: { "X-OpenWork-Host-Token": "host-token", "Content-Type": "application/json" },
+    headers: { "X-OfflineGPT-Host-Token": "host-token", "Content-Type": "application/json" },
     body: "{}",
   })
   const desktopHandoffWrite = await app.request(route, {
@@ -392,7 +392,7 @@ test("stable cloud worker route enforces worker token and method scope", async (
   expect(requests).toHaveLength(3)
   const handoffHeaders = new Headers(requests[2]?.init.headers)
   expect(handoffHeaders.get("authorization")).toBe("Bearer fresh-client-token")
-  expect(handoffHeaders.get("x-openwork-host-token")).toBe("fresh-host-token")
+  expect(handoffHeaders.get("x-offlinegpt-host-token")).toBe("fresh-host-token")
 })
 
 test("stable cloud worker route safely proxies bodies, headers, and streaming responses", async () => {
@@ -431,7 +431,7 @@ test("stable cloud worker route safely proxies bodies, headers, and streaming re
       "Content-Type": "application/json",
       Connection: "x-client-secret",
       "X-Client-Secret": "hidden",
-      "X-OpenWork-Host-Token": "host-token",
+      "X-OfflineGPT-Host-Token": "host-token",
     },
     body: JSON.stringify({ enabled: true }),
   })
@@ -446,7 +446,7 @@ test("stable cloud worker route safely proxies bodies, headers, and streaming re
   expect(await new Response(requests[0]?.init.body).text()).toBe(JSON.stringify({ enabled: true }))
   const writeHeaders = new Headers(requests[0]?.init.headers)
   expect(writeHeaders.get("authorization")).toBe("Bearer fresh-client-token")
-  expect(writeHeaders.get("x-openwork-host-token")).toBe("fresh-host-token")
+  expect(writeHeaders.get("x-offlinegpt-host-token")).toBe("fresh-host-token")
   expect(writeHeaders.get("x-client-secret")).toBeNull()
   expect(requests[0]?.init.redirect).toBe("error")
   expect(write.headers.get("content-encoding")).toBeNull()
@@ -461,7 +461,7 @@ test("stable cloud worker route safely proxies bodies, headers, and streaming re
   expect(await stream.text()).toBe("data: one\n\ndata: two\n\n")
   const streamHeaders = new Headers(requests[1]?.init.headers)
   expect(streamHeaders.get("authorization")).toBe("Bearer fresh-client-token")
-  expect(streamHeaders.get("x-openwork-host-token")).toBeNull()
+  expect(streamHeaders.get("x-offlinegpt-host-token")).toBeNull()
   expect(streamHeaders.get("last-event-id")).toBe("one")
 })
 
@@ -516,7 +516,7 @@ test("stable cloud worker route streams a multi-chunk large request without buff
   })
   const requestInit: RequestInit & { duplex: "half" } = {
     method: "POST",
-    headers: { "X-OpenWork-Host-Token": "host-token" },
+    headers: { "X-OfflineGPT-Host-Token": "host-token" },
     body,
     duplex: "half",
   }

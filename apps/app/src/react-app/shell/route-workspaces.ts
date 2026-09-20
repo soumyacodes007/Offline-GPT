@@ -8,7 +8,7 @@ import type { Session } from "@opencode-ai/sdk/v2/client";
 import { createClient, unwrap } from "@/app/lib/opencode";
 import { createClientV2, isOpencodeV2BaseUrl } from "@/app/lib/opencode-v2-adapter";
 import { deleteNativeSession } from "@/app/lib/opencode-session-native";
-import { OpenworkServerError, type OpenworkWorkspaceInfo } from "@/app/lib/openwork-server";
+import { OfflineGptServerError, type OfflineGptWorkspaceInfo } from "@/app/lib/offlinegpt-server";
 import type { ResolvedWorkspaceEndpoint } from "@/app/lib/workspace-endpoint";
 import type { WorkspaceInfo } from "@/app/lib/desktop-types";
 import type { WorkspaceSessionGroup } from "@/app/types";
@@ -19,7 +19,7 @@ import {
 } from "@/app/utils";
 import { t } from "@/i18n";
 
-export type RouteWorkspace = OpenworkWorkspaceInfo & {
+export type RouteWorkspace = OfflineGptWorkspaceInfo & {
   displayNameResolved: string;
 };
 
@@ -44,7 +44,7 @@ export type RouteSessionListTransport = (input: {
 
 const nativeRouteSessionList: RouteSessionListTransport = async ({ endpoint, limit }) => {
   const client = createClient(endpoint.opencodeBaseUrl, undefined, {
-    mode: "openwork",
+    mode: "offlinegpt",
     token: endpoint.token,
   });
   return client.session.list({ limit });
@@ -59,7 +59,7 @@ export const v2RouteSessionList: RouteSessionListTransport = async ({ endpoint, 
 async function routeSessionEndpoint(endpoint: ResolvedWorkspaceEndpoint): Promise<ResolvedWorkspaceEndpoint> {
   const status = await endpoint.client.getEngineV2PreviewStatus().catch((error: unknown) => {
     // Servers predating the preview endpoint still use v1.
-    if (error instanceof OpenworkServerError && error.status === 404) return null;
+    if (error instanceof OfflineGptServerError && error.status === 404) return null;
     throw error;
   });
   return status?.enabled && status.chatRouting
@@ -71,7 +71,7 @@ export async function createRouteSession(endpoint: ResolvedWorkspaceEndpoint, di
   const native = await routeSessionEndpoint(endpoint);
   const client = isOpencodeV2BaseUrl(native.opencodeBaseUrl)
     ? createClientV2(native.opencodeBaseUrl, directory, { token: native.token })
-    : createClient(native.opencodeBaseUrl, directory, { token: native.token, mode: "openwork" });
+    : createClient(native.opencodeBaseUrl, directory, { token: native.token, mode: "offlinegpt" });
   return unwrap(await client.session.create({ directory }));
 }
 
@@ -108,20 +108,20 @@ export function mapDesktopWorkspace(workspace: WorkspaceInfo): RouteWorkspace {
   };
 }
 
-export function workspaceLabel(workspace: OpenworkWorkspaceInfo) {
+export function workspaceLabel(workspace: OfflineGptWorkspaceInfo) {
   const label = (
     workspace.displayName?.trim() ||
-    workspace.openworkWorkspaceName?.trim() ||
+    workspace.offlinegptWorkspaceName?.trim() ||
     workspace.name?.trim() ||
     workspace.path?.trim() ||
     t("session.workspace_fallback")
   );
-  return label === "OpenWork Chat" ? "OfflineGPT Chat" : label;
+  return label === "OfflineGPT Chat" ? "OfflineGPT Chat" : label;
 }
 
-export function workspaceExportFilename(workspace: OpenworkWorkspaceInfo) {
+export function workspaceExportFilename(workspace: OfflineGptWorkspaceInfo) {
   const slug = workspaceLabel(workspace).replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
-  return `${slug || "workspace"}-openwork-export.json`;
+  return `${slug || "workspace"}-offlinegpt-export.json`;
 }
 
 export function downloadWorkspaceJson(filename: string, payload: unknown) {
@@ -268,7 +268,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isOpenworkWorkspaceArray(value: unknown): value is OpenworkWorkspaceInfo[] {
+function isOfflineGptWorkspaceArray(value: unknown): value is OfflineGptWorkspaceInfo[] {
   return Array.isArray(value);
 }
 
@@ -290,7 +290,7 @@ export function resolveRouteWorkspaceListState(input: {
   previousWorkspaces: RouteWorkspace[];
   orderIds: string[];
 }): RouteWorkspaceListState {
-  const serverItems = isRecord(input.list) && isOpenworkWorkspaceArray(input.list.items) ? input.list.items : null;
+  const serverItems = isRecord(input.list) && isOfflineGptWorkspaceArray(input.list.items) ? input.list.items : null;
   const workspaces = serverItems
     ? mergeRouteWorkspaces(serverItems, input.desktopWorkspaces)
     : input.previousWorkspaces.length > 0
@@ -353,7 +353,7 @@ export function describeWorkspaceCreateError(error: unknown) {
     lower.includes("os error 60") ||
     lower.includes("etimedout")
   ) {
-    return `${message}\n\nOpenWork could not read the workspace config before the filesystem timed out. This often happens when the folder is still syncing from iCloud Drive or another remote folder. Wait for the folder to finish downloading, move the workspace to a local folder, or try again.`;
+    return `${message}\n\nOfflineGPT could not read the workspace config before the filesystem timed out. This often happens when the folder is still syncing from iCloud Drive or another remote folder. Wait for the folder to finish downloading, move the workspace to a local folder, or try again.`;
   }
   return message;
 }
@@ -362,7 +362,7 @@ export function mergeRouteWorkspaces(
   serverWorkspaces: unknown,
   desktopWorkspaces: RouteWorkspace[],
 ): RouteWorkspace[] {
-  const serverWorkspaceList = isOpenworkWorkspaceArray(serverWorkspaces) ? serverWorkspaces : [];
+  const serverWorkspaceList = isOfflineGptWorkspaceArray(serverWorkspaces) ? serverWorkspaces : [];
   const desktopById = new Map(desktopWorkspaces.map((workspace) => [workspace.id, workspace]));
   const desktopByPath = new Map(
     desktopWorkspaces.flatMap((workspace) => {
@@ -372,7 +372,7 @@ export function mergeRouteWorkspaces(
   );
 
   // If a server workspace's id matches a desktop workspace marked as remote,
-  // skip the server's view entirely. The local OpenWork server may have stale
+  // skip the server's view entirely. The local OfflineGPT server may have stale
   // registrations from earlier (buggy) activate calls that show up here as
   // `workspaceType: "local"`, which would otherwise clobber the desktop's
   // remote routing fields and send workspace-scoped requests back to the

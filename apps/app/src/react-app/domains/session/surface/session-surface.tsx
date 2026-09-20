@@ -21,10 +21,10 @@ import { createDenClient, readDenSettings } from "@/app/lib/den";
 import { denSettingsChangedEvent } from "@/app/lib/den-session-events";
 import { useSessionDraftState } from "@/react-app/domains/session/sync/draft-store";
 import type {
-  OpenworkServerClient,
-  OpenworkSessionSnapshot,
-} from "@/app/lib/openwork-server";
-import { isLoopbackOpenworkServerUrl } from "@/app/lib/openwork-server";
+  OfflineGptServerClient,
+  OfflineGptSessionSnapshot,
+} from "@/app/lib/offlinegpt-server";
+import { isLoopbackOfflineGptServerUrl } from "@/app/lib/offlinegpt-server";
 import type {
   ComposerAttachment,
   ComposerDraft,
@@ -41,7 +41,7 @@ import {
   publishInspectorSlice,
   recordInspectorEvent,
 } from "@/app/lib/app-inspector";
-import { useControlAction, type OpenworkControlAction } from "@/react-app/shell/control/control-provider";
+import { useControlAction, type OfflineGptControlAction } from "@/react-app/shell/control/control-provider";
 import { isConnectDirectMcpServerName } from "@/react-app/domains/connections/cloud-mcp-user-state";
 import { attemptSilentMcpReauth } from "@/react-app/domains/connections/mcp-silent-reauth";
 import type {
@@ -69,7 +69,7 @@ import {
   subscribeQueuedDrain,
 } from "./queued-drain-machine";
 import { DevProfiler } from "@/react-app/shell/dev-profiler";
-import { PaperGrainGradient } from "@openwork/ui/react";
+import { PaperGrainGradient } from "@offlinegpt/ui/react";
 import { useShellConfig } from "@/react-app/shell/shell-config";
 import { useReactRenderWatchdog } from "@/react-app/shell/react-render-watchdog";
 import { SessionDebugPanel } from "./debug-panel";
@@ -162,21 +162,21 @@ import { buildConnectorToolIdentities } from "@/react-app/domains/connections/co
 
 const EMPTY_TRANSCRIPT: UIMessage[] = [];
 const IDLE_STATUS: SessionStatus = { type: "idle" };
-const DEFAULT_COMPOSER_CONTROL_TEXT = "Help me outline the next OpenWork task.";
+const DEFAULT_COMPOSER_CONTROL_TEXT = "Help me outline the next OfflineGPT task.";
 const SESSION_SURFACE_SELECTOR = "[data-session-surface-id]";
 
 function sanitizedInspectorDiagnosticText(value: string) {
   return value
     .replace(/https?:\/\/[^\s"'<>]+/gi, "[url]")
     .replace(/\b(Bearer|Basic)\s+[^\s"'<>]+/gi, "$1 [redacted]")
-    .replace(/\b(authorization|ownerToken|clientToken|openworkToken|accessToken|apiKey|token)\b\s*[=:]\s*[^\s,;]+/gi, "$1=[redacted]")
+    .replace(/\b(authorization|ownerToken|clientToken|offlinegptToken|accessToken|apiKey|token)\b\s*[=:]\s*[^\s,;]+/gi, "$1=[redacted]")
     .replace(/[\r\n\t]+/g, " ")
     .slice(0, 240);
 }
 
 const MARKDOWN_PRIMITIVE_EVAL_TEXT = `# Markdown proof heading
 
-This shared renderer keeps **bold proof text**, inline \`renderMarkdownHtml\`, and [OpenWork link](https://openworklabs.com) readable in one message.
+This shared renderer keeps **bold proof text**, inline \`renderMarkdownHtml\`, and [OfflineGPT link](https://offlinegptlabs.com) readable in one message.
 
 \`\`\`ts
 const pipeline = "shared markdown primitive";
@@ -314,7 +314,7 @@ function createChatTranscriptEvalMessages(sessionId: string) {
         },
         {
           type: "dynamic-tool",
-          toolName: "openwork-cloud_execute_capability",
+          toolName: "offlinegpt-cloud_execute_capability",
           toolCallId: "eval-transcript-capability",
           state: "output-available",
           input: { name: "getCapabilitiesGoogleWorkspaceCalendarEvents", body: {} },
@@ -341,7 +341,7 @@ function createChatTranscriptEvalMessages(sessionId: string) {
           toolName: "edit",
           toolCallId: "eval-transcript-edit-1",
           state: "output-available",
-          input: { filePath: "/tmp/openwork-eval/plan-tomorrow.md", oldString: "", newString: "" },
+          input: { filePath: "/tmp/offlinegpt-eval/plan-tomorrow.md", oldString: "", newString: "" },
           output: "",
         },
         {
@@ -349,7 +349,7 @@ function createChatTranscriptEvalMessages(sessionId: string) {
           toolName: "read",
           toolCallId: "eval-transcript-read-1",
           state: "output-available",
-          input: { filePath: "/tmp/openwork-eval/meeting-notes.md" },
+          input: { filePath: "/tmp/offlinegpt-eval/meeting-notes.md" },
           output: "",
         },
         {
@@ -362,7 +362,7 @@ function createChatTranscriptEvalMessages(sessionId: string) {
         },
         {
           type: "text",
-          text: "Your plan is drafted — details in [OpenWork](https://openworklabs.com). Search token: chat-transcript-proof.",
+          text: "Your plan is drafted — details in [OfflineGPT](https://offlinegptlabs.com). Search token: chat-transcript-proof.",
         },
       ],
       // `completed` makes the finished turn fold behind a real
@@ -388,7 +388,7 @@ function createConnectorToolCallEvalMessages(sessionId: string): UIMessage[] {
       role: "assistant",
       parts: [{
         type: "dynamic-tool",
-        toolName: "openwork-cloud_execute_capability",
+        toolName: "offlinegpt-cloud_execute_capability",
         toolCallId: "eval-connector-google-workspace",
         state: "output-available",
         input: { name: "getCapabilitiesGoogleWorkspaceCalendarEvents", body: {} },
@@ -424,7 +424,7 @@ function createSessionLifecycleEvalMessages(sessionId: string): UIMessage[] {
           toolName: "read",
           toolCallId: "eval-lifecycle-read",
           state: "input-streaming",
-          input: { filePath: "/tmp/openwork-eval/brief.md" },
+          input: { filePath: "/tmp/offlinegpt-eval/brief.md" },
         },
       ],
       metadata: { opencode: { created: now + 1 } },
@@ -496,7 +496,7 @@ function createSubagentActivityEvalMessages(sessionId: string, childSessionId?: 
             prompt: "Reproduce the Azure failure in isolation.",
             subagent_type: "executor-deep",
           },
-          ...(childSessionId ? { callProviderMetadata: { openwork: { childSessionId } } } : {}),
+          ...(childSessionId ? { callProviderMetadata: { offlinegpt: { childSessionId } } } : {}),
         },
       ],
       metadata: { opencode: { created: now + 1 } },
@@ -567,8 +567,8 @@ function createImageLightboxEvalMessages(sessionId: string): UIMessage[] {
 }
 
 export type SessionSurfaceProps = {
-  client: OpenworkServerClient;
-  environmentClient?: OpenworkServerClient | null;
+  client: OfflineGptServerClient;
+  environmentClient?: OfflineGptServerClient | null;
   workspaceId: string;
   workspaceRoot: string;
   sessionId: string;
@@ -576,7 +576,7 @@ export type SessionSurfaceProps = {
   isControlTarget: boolean;
   chatPane?: "primary" | "secondary";
   opencodeBaseUrl: string;
-  openworkToken: string;
+  offlinegptToken: string;
   developerMode: boolean;
   modelLabel: string;
   onModelClick: (sessionId?: string) => void;
@@ -594,10 +594,10 @@ export type SessionSurfaceProps = {
   selectedModel: ModelRef;
   /** providerID → modelID → provider model, for per-session variant options. */
   providerCatalog?: ProviderCatalog;
-  /** Den/import includes OpenWork Models for this org member (not just local sync). */
-  openWorkModelsEntitled?: boolean;
-  /** The server is waiting to reload this workspace with OpenWork Models. */
-  openWorkModelsSyncing?: boolean;
+  /** Den/import includes OfflineGPT Models for this org member (not just local sync). */
+  offlineGptModelsEntitled?: boolean;
+  /** The server is waiting to reload this workspace with OfflineGPT Models. */
+  offlineGptModelsSyncing?: boolean;
   onRefreshOrganizationModels?: () => void | Promise<void>;
   onModelPickerOpenChange: (open: boolean) => void;
   onModelChange: (model: ModelRef, variant?: string | null) => void;
@@ -644,7 +644,7 @@ export type SessionSurfaceProps = {
 };
 
 function messageToReadableText(message: UIMessage) {
-  const header = message.role === "user" ? "You" : message.role === "assistant" ? "OpenWork" : message.role;
+  const header = message.role === "user" ? "You" : message.role === "assistant" ? "OfflineGPT" : message.role;
   const body = message.parts
     .flatMap((part) => {
       if (part.type === "text") return [part.text];
@@ -700,7 +700,7 @@ function resolveFindOwnerSessionId() {
   return firstMountedSessionSurfaceId();
 }
 
-function statusLabel(snapshot: OpenworkSessionSnapshot | undefined, busy: boolean) {
+function statusLabel(snapshot: OfflineGptSessionSnapshot | undefined, busy: boolean) {
   if (busy) return "Running...";
   if (snapshot?.status.type === "busy") return "Running...";
   if (snapshot?.status.type === "retry") return `Retrying: ${snapshot.status.message}`;
@@ -977,7 +977,7 @@ function composerSessionHasContent(state: ComposerSessionState | undefined) {
   ));
 }
 
-function hiddenMessageCount(snapshot: OpenworkSessionSnapshot, revertMessageId: string): number {
+function hiddenMessageCount(snapshot: OfflineGptSessionSnapshot, revertMessageId: string): number {
   const index = snapshot.messages.findIndex((message) => message.info.id === revertMessageId);
   return index < 0 ? snapshot.messages.length : snapshot.messages.length - index;
 }
@@ -1065,7 +1065,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       workspaceId: props.workspaceId,
       workspaceRoot: props.workspaceRoot,
       opencodeBaseUrl: props.opencodeBaseUrl,
-      openworkToken: props.openworkToken,
+      offlinegptToken: props.offlinegptToken,
       client: props.client,
       agent: props.selectedAgent,
       variant: props.modelVariant,
@@ -1077,7 +1077,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     props.environmentRuntimeKey,
     props.modelVariant,
     props.opencodeBaseUrl,
-    props.openworkToken,
+    props.offlinegptToken,
     props.selectedAgent,
     props.selectedModel,
     props.sessionId,
@@ -1141,12 +1141,12 @@ export function SessionSurface(props: SessionSurfaceProps) {
   activeSessionOwnerRef.current = sessionOwner;
   const snapshotTargetRef = useRef<NativeSessionSnapshotTarget>({
     owner: sessionOwner,
-    endpoint: { opencodeBaseUrl: props.opencodeBaseUrl, token: props.openworkToken },
+    endpoint: { opencodeBaseUrl: props.opencodeBaseUrl, token: props.offlinegptToken },
     sessionId: props.sessionId,
   });
   snapshotTargetRef.current = {
     owner: sessionOwner,
-    endpoint: { opencodeBaseUrl: props.opencodeBaseUrl, token: props.openworkToken },
+    endpoint: { opencodeBaseUrl: props.opencodeBaseUrl, token: props.offlinegptToken },
     sessionId: props.sessionId,
   };
   const [ownedError, setOwnedError] = useState<{ owner: string; error: SessionError } | null>(null);
@@ -1163,7 +1163,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   // Terminal invariant: an accepted admission that reached idle with no
   // assistant result surfaces a bounded recovery card instead of plain idle.
   const [admissionOutcomeUnresolved, setAdmissionOutcomeUnresolved] = useState(false);
-  const [rendered, setRendered] = useState<{ sessionId: string; snapshot: OpenworkSessionSnapshot } | null>(null);
+  const [rendered, setRendered] = useState<{ sessionId: string; snapshot: OfflineGptSessionSnapshot } | null>(null);
   const [toolSkills, setToolSkills] = useState<SkillCard[]>([]);
   const [toolMcpServers, setToolMcpServers] = useState<McpServerEntry[]>([]);
   const [toolMcpStatus, setToolMcpStatus] = useState<string | null>(null);
@@ -1205,9 +1205,9 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const initializedAutoOpenSessionRef = useRef<string | null>(null);
   const opencodeClient = useMemo(
     () => isOpencodeV2BaseUrl(props.opencodeBaseUrl)
-      ? createClientV2(props.opencodeBaseUrl, props.workspaceRoot || undefined, { token: props.openworkToken })
-      : createClient(props.opencodeBaseUrl, props.workspaceRoot.trim() || undefined, { token: props.openworkToken, mode: "openwork" }),
-    [props.opencodeBaseUrl, props.openworkToken, props.workspaceRoot],
+      ? createClientV2(props.opencodeBaseUrl, props.workspaceRoot || undefined, { token: props.offlinegptToken })
+      : createClient(props.opencodeBaseUrl, props.workspaceRoot.trim() || undefined, { token: props.offlinegptToken, mode: "offlinegpt" }),
+    [props.opencodeBaseUrl, props.offlinegptToken, props.workspaceRoot],
   );
 
   const snapshotQueryKey = useMemo(
@@ -1223,8 +1223,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
     [props.workspaceId, props.sessionId],
   );
   const useDesktopLoopbackSnapshotRetry = isDesktopRuntime()
-    && isLoopbackOpenworkServerUrl(props.opencodeBaseUrl);
-  const snapshotQuery = useQuery<OpenworkSessionSnapshot>({
+    && isLoopbackOfflineGptServerUrl(props.opencodeBaseUrl);
+  const snapshotQuery = useQuery<OfflineGptSessionSnapshot>({
     queryKey: snapshotQueryKey,
     queryFn: async ({ signal }) => {
       if (evalSnapshotFailureRef.current) {
@@ -1238,7 +1238,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
           { limit: 140, signal },
         )
         : await opencodeSessionNative.composeNativeSessionSnapshot(
-          { opencodeBaseUrl: props.opencodeBaseUrl, token: props.openworkToken },
+          { opencodeBaseUrl: props.opencodeBaseUrl, token: props.offlinegptToken },
           props.sessionId,
           { limit: 140, signal },
         );
@@ -1339,7 +1339,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
         currentSnapshotId: currentSnapshot?.session.id ?? null,
         intendedSessionId: props.sessionId,
         opencodeBaseUrl: inspectorOpencodeBaseUrl,
-        tokenPresent: props.openworkToken.length > 0,
+        tokenPresent: props.offlinegptToken.length > 0,
       },
       error,
     }));
@@ -1352,7 +1352,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     pasteParts,
     currentSnapshot,
     inspectorOpencodeBaseUrl,
-    props.openworkToken,
+    props.offlinegptToken,
     props.sessionId,
     props.workspaceId,
     props.cloudMcpSubmissionState,
@@ -1487,7 +1487,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   useEffect(() => {
     renderedMessagesRef.current = renderedMessages;
   }, [renderedMessages]);
-  const seedMarkdownPrimitiveControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedMarkdownPrimitiveControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -1508,7 +1508,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     };
   }, [props.sessionId]);
   useControlAction(props.isControlTarget ? seedMarkdownPrimitiveControlAction : null);
-  const setMermaidEvalThemeControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const setMermaidEvalThemeControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -1526,7 +1526,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     };
   }, [props.sessionId]);
   useControlAction(props.isControlTarget ? setMermaidEvalThemeControlAction : null);
-  const seedMarkdownMathControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedMarkdownMathControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -1550,7 +1550,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     };
   }, [props.sessionId]);
   useControlAction(props.isControlTarget ? seedMarkdownMathControlAction : null);
-  const seedChatTranscriptControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedChatTranscriptControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -1567,7 +1567,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     };
   }, [props.sessionId]);
   useControlAction(props.isControlTarget ? seedChatTranscriptControlAction : null);
-  const seedConnectorToolCallControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedConnectorToolCallControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -1583,7 +1583,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     };
   }, [props.sessionId]);
   useControlAction(props.isControlTarget ? seedConnectorToolCallControlAction : null);
-  const seedSessionErrorControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedSessionErrorControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -1613,7 +1613,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     };
   }, [props.sessionId, setError]);
   useControlAction(props.isControlTarget ? seedSessionErrorControlAction : null);
-  const seedSessionLifecycleControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedSessionLifecycleControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -1655,7 +1655,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     };
   }, [props.sessionId, props.workspaceId]);
   useControlAction(props.isControlTarget ? seedSessionLifecycleControlAction : null);
-  const seedSubagentActivityControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedSubagentActivityControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -1685,7 +1685,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     };
   }, [props.sessionId, props.workspaceId]);
   useControlAction(props.isControlTarget ? seedSubagentActivityControlAction : null);
-  const seedChatLoadingControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedChatLoadingControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -1707,7 +1707,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     };
   }, [props.sessionId, props.workspaceId]);
   useControlAction(props.isControlTarget ? seedChatLoadingControlAction : null);
-  const seedImageLightboxControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedImageLightboxControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -1855,7 +1855,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     // A failed send stays visible for composer recovery; only snapshot failure invalidates the session transition.
     isError: snapshotQuery.isError,
   });
-  const failSessionSnapshotControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const failSessionSnapshotControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
 
     return {
@@ -2504,12 +2504,12 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }, [draft, props.sessionId, setComposerDraft]);
 
   const typeComposerText = useCallback(async (text: string, revertMessageId?: string | null) => {
-    window.dispatchEvent(new Event("openwork:focusPrompt"));
+    window.dispatchEvent(new Event("offlinegpt:focusPrompt"));
     replaceComposerDraft(props.sessionId, text, revertMessageId);
     await waitForControl(40);
   }, [props.sessionId, replaceComposerDraft]);
 
-  const composerSetTextControlAction = useMemo<OpenworkControlAction>(() => ({
+  const composerSetTextControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "composer.set_text",
     label: "Type into the composer",
     description: "Replace the current session draft and type the supplied text visibly.",
@@ -2529,7 +2529,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }), [attachments, buildDraft, props.onDraftChange, typeComposerText]);
   useControlAction(props.isControlTarget ? composerSetTextControlAction : null);
 
-  const composerSendControlAction = useMemo<OpenworkControlAction>(() => ({
+  const composerSendControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "composer.send",
     label: "Send the composer prompt",
     description: "Send the currently visible composer draft to the active session.",
@@ -2543,7 +2543,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }), [attachments.length, draft, handleSend, model.transitionState, queuedDrainState.phase.kind, sessionModelUnavailable]);
   useControlAction(props.isControlTarget ? composerSendControlAction : null);
 
-  const composerStopControlAction = useMemo<OpenworkControlAction>(() => ({
+  const composerStopControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "composer.stop",
     label: "Stop the current run",
     description: "Stop the current streaming session run.",
@@ -2603,7 +2603,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
         name: entry.name,
         config: entry.config as McpServerEntry["config"],
         source: entry.source,
-        origin: entry.name === "openwork-cloud" ? "openwork-connect" : "local",
+        origin: entry.name === "offlinegpt-cloud" ? "offlinegpt-connect" : "local",
       } satisfies McpServerEntry));
 
     void connectPromise.then((connect) => {
@@ -2773,10 +2773,10 @@ export function SessionSurface(props: SessionSurfaceProps) {
     const resetReconnectState = () => {
       useChatMcpReconnectStore.getState().reset();
       clearCloudInventoryCache();
-      setToolSkills((current) => current.filter((skill) => skill.origin !== "openwork-connect"));
-      setToolMcpServers((current) => current.filter((server) => server.origin !== "openwork-connect"));
+      setToolSkills((current) => current.filter((skill) => skill.origin !== "offlinegpt-connect"));
+      setToolMcpServers((current) => current.filter((server) => server.origin !== "offlinegpt-connect"));
       setToolMcpStatuses((current) => Object.fromEntries(
-        Object.entries(current).filter(([key]) => !key.startsWith("openwork-connect:")),
+        Object.entries(current).filter(([key]) => !key.startsWith("offlinegpt-connect:")),
       ));
     };
     const refreshImportedPlugins = () => {
@@ -2799,7 +2799,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     const organizationId = settings.activeOrgId?.trim() ?? "";
     if (!token || !organizationId) {
       props.onOpenConnect();
-      throw new Error("Sign in to OpenWork Cloud, then try reconnecting again.");
+      throw new Error("Sign in to OfflineGPT Cloud, then try reconnecting again.");
     }
 
     const scope: ChatMcpReconnectScope = {
@@ -2818,7 +2818,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     try {
       const denClient = createDenClient({ baseUrl: settings.baseUrl, token });
       const connections = await denClient.listMcpConnections(organizationId, "usable");
-      if (!isChatMcpReconnectScopeCurrent(scope, currentScope())) throw new Error("Your OpenWork account changed. Try connecting again.");
+      if (!isChatMcpReconnectScopeCurrent(scope, currentScope())) throw new Error("Your OfflineGPT account changed. Try connecting again.");
       const connection = connections.find((entry) => entry.id === action.connectionId);
       if (!connection || connection.authType !== "oauth" || connection.credentialMode !== "per_member") {
         throw new Error(`${action.connectionName} is no longer available as your reconnectable account.`);
@@ -2831,7 +2831,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       });
       onProgress({ phase: "opening" });
       const result = await denClient.startMcpConnectionConnect(organizationId, action.connectionId);
-      if (!isChatMcpReconnectScopeCurrent(scope, currentScope())) throw new Error("Your OpenWork account changed. Try connecting again.");
+      if (!isChatMcpReconnectScopeCurrent(scope, currentScope())) throw new Error("Your OfflineGPT account changed. Try connecting again.");
       if (result.status === "connected") {
         recordInspectorEvent("mcp.chat_reconnect.completed", {
           workspaceId: props.workspaceId,
@@ -2916,7 +2916,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       .finally(() => setRestoringRevertedMessages(false));
   }, [props.onRestoreRevertedSession, props.sessionId, restoringRevertedMessages]);
 
-  const sessionScrollTopControlAction = useMemo<OpenworkControlAction>(() => ({
+  const sessionScrollTopControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.scroll_top",
     label: "Go to the top of the session",
     description: "Scroll the visible session transcript to the first messages.",
@@ -2931,7 +2931,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }), []);
   useControlAction(props.isControlTarget ? sessionScrollTopControlAction : null);
 
-  const sessionScrollBottomControlAction = useMemo<OpenworkControlAction>(() => ({
+  const sessionScrollBottomControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.scroll_bottom",
     label: "Go to the bottom of the session",
     description: "Scroll the visible session transcript to the newest messages and composer area.",
@@ -2944,7 +2944,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }), [sessionScroll.jumpToLatest]);
   useControlAction(props.isControlTarget ? sessionScrollBottomControlAction : null);
 
-  const sessionLatestMessageControlAction = useMemo<OpenworkControlAction>(() => ({
+  const sessionLatestMessageControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.latest_message",
     label: "Read the latest session message",
     description: "Return the latest visible message in the current session transcript.",
@@ -2965,7 +2965,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }), [props.sessionId, renderedMessages]);
   useControlAction(props.isControlTarget ? sessionLatestMessageControlAction : null);
 
-  const sessionReadTranscriptControlAction = useMemo<OpenworkControlAction>(() => ({
+  const sessionReadTranscriptControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.read_transcript",
     label: "Read the current session transcript",
     description: "Return the last messages from the current session transcript as readable text, including the session ID, title, and message count.",
@@ -3240,8 +3240,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
         statusLabel={statusLabel(snapshot ?? undefined, chatStreaming)}
         modelPickerOpen={modelPickerOpen}
         selectedModel={sessionModel.selectedModel}
-        openWorkModelsEntitled={props.openWorkModelsEntitled}
-        openWorkModelsSyncing={props.openWorkModelsSyncing}
+        offlineGptModelsEntitled={props.offlineGptModelsEntitled}
+        offlineGptModelsSyncing={props.offlineGptModelsSyncing}
         onRefreshOrganizationModels={props.onRefreshOrganizationModels}
         onModelPickerOpenChange={handleModelPickerOpenChange}
         onModelChange={handleModelChange}

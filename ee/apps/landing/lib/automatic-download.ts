@@ -1,4 +1,4 @@
-import type { DetectedPlatform, DownloadCardInstallers } from "@openwork/ui/react";
+import type { DetectedPlatform, DownloadCardInstallers } from "@offlinegpt/ui/react";
 
 export function automaticDownloadHref(
   installers: DownloadCardInstallers,

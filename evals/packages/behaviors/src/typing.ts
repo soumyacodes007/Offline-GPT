@@ -1,5 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
-import type { Target } from "@openwork/cdp";
+import type { Target } from "@offlinegpt/cdp";
 
 export interface TypingProfile {
   focusMs: number;

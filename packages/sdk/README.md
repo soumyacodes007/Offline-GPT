@@ -1,17 +1,17 @@
-# OpenWork Den SDK
+# OfflineGPT Den SDK
 
-`@openwork/sdk` is a TypeScript client for the **Den cloud API**. It is a private
+`@offlinegpt/sdk` is a TypeScript client for the **Den cloud API**. It is a private
 workspace package for now; this change does not publish it to npm. It does not
-wrap the local OpenWork server or the OpenCode engine API.
+wrap the local OfflineGPT server or the OpenCode engine API.
 
 ```ts
-import { createDenClient } from "@openwork/sdk";
+import { createDenClient } from "@offlinegpt/sdk";
 
 const den = createDenClient({
   apiKey: process.env.DEN_API_KEY,
   orgId: process.env.DEN_ORG_ID,
-  // Defaults to https://api.openworklabs.com. Set this for a self-hosted Den.
-  baseUrl: "https://api.openworklabs.com",
+  // Defaults to https://api.offlinegptlabs.com. Set this for a self-hosted Den.
+  baseUrl: "https://api.offlinegptlabs.com",
 });
 
 const { data, error, response } = await den.getV1MeOrgs();
@@ -26,7 +26,7 @@ console.log(created.data.team.id);
 ```
 
 Use `token` for a user session (`Authorization: Bearer ...`), `apiKey` for an
-organization key (`x-api-key`), and `orgId` for `x-openwork-org-id`. Session-only
+organization key (`x-api-key`), and `orgId` for `x-offlinegpt-org-id`. Session-only
 operations still require a session. Configure either credential as appropriate
 for the operation. Each factory call owns an independent HTTP client.
 

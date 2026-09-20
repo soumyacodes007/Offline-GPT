@@ -1,10 +1,10 @@
-import { and, desc, eq, gte, inArray, sql } from "@openwork-ee/den-db/drizzle"
-import { ModelsAnalyticsEventTable as Event, ModelsAnalyticsSettingsTable as Settings } from "@openwork-ee/den-db/schema"
+import { and, desc, eq, gte, inArray, sql } from "@offlinegpt-ee/den-db/drizzle"
+import { ModelsAnalyticsEventTable as Event, ModelsAnalyticsSettingsTable as Settings } from "@offlinegpt-ee/den-db/schema"
 import {
   appendModelsAnalyticsEvents, readModelsAnalyticsSettings, modelsAnalyticsActivitySchema,
   modelsAnalyticsChoiceSchema, modelsAnalyticsQuerySchema, modelsAnalyticsRecordSchema,
   modelsAnalyticsSettingsSchema, modelsConsumptionSchema, modelsTaskBatchSchema,
-} from "@openwork-ee/telemetry"
+} from "@offlinegpt-ee/telemetry"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { db } from "../../db.js"
@@ -14,7 +14,7 @@ import { ensureOrganizationAdmin, orgAccessFailureStatus, type OrgRouteVariables
 
 export function registerModelsAnalyticsRoutes<T extends { Variables: OrgRouteVariables }>(app: Hono<T>) {
   app.get("/v1/inference/analytics/settings", describeRoute({
-    tags: ["Inference"], summary: "Read the OpenWork Models task analytics choice",
+    tags: ["Inference"], summary: "Read the OfflineGPT Models task analytics choice",
     responses: { 200: jsonResponse("Task analytics settings", modelsAnalyticsSettingsSchema) },
   }), orgMemberRoute(), async (c) => {
     const context = c.get("organizationContext")
@@ -22,7 +22,7 @@ export function registerModelsAnalyticsRoutes<T extends { Variables: OrgRouteVar
   })
 
   app.patch("/v1/inference/analytics/settings", describeRoute({
-    tags: ["Inference"], summary: "Choose whether to collect task analytics included with OpenWork Models",
+    tags: ["Inference"], summary: "Choose whether to collect task analytics included with OfflineGPT Models",
     responses: { 200: jsonResponse("Updated task analytics choice", modelsAnalyticsSettingsSchema) },
   }), orgRoleRoute(["admin"]), jsonValidator(modelsAnalyticsChoiceSchema), async (c) => {
     const permission = ensureOrganizationAdmin(c, "Only workspace admins can change task analytics.")
@@ -32,7 +32,7 @@ export function registerModelsAnalyticsRoutes<T extends { Variables: OrgRouteVar
     const choice = c.req.valid("json")
     const settings = await readModelsAnalyticsSettings(db, orgId)
     if (choice.enabled && (!settings.available || !settings.subscribed || !settings.modelsEnabled)) {
-      return c.json({ error: "models_analytics_unavailable", message: "Task analytics requires access to this feature and an active OpenWork Models subscription." }, 403)
+      return c.json({ error: "models_analytics_unavailable", message: "Task analytics requires access to this feature and an active OfflineGPT Models subscription." }, 403)
     }
     // Repeating the same choice must not move the collection cutoff forward.
     const consentedAt = choice.enabled && settings.enabled && settings.consentedAt ? new Date(settings.consentedAt) : new Date()
@@ -85,7 +85,7 @@ export function registerModelsAnalyticsRoutes<T extends { Variables: OrgRouteVar
   })
 
   app.get("/v1/inference/analytics/consumption", describeRoute({
-    tags: ["Inference"], summary: "Read provider-reported consumption for OpenWork Models",
+    tags: ["Inference"], summary: "Read provider-reported consumption for OfflineGPT Models",
     responses: { 200: jsonResponse("Model consumption", modelsConsumptionSchema) },
   }), orgRoleRoute(["admin"]), queryValidator(modelsAnalyticsQuerySchema), async (c) => {
     const orgId = c.get("organizationContext").organization.id

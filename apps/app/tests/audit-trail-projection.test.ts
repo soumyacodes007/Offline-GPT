@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import type { OpenworkSessionSnapshot } from "../src/app/lib/openwork-server";
+import type { OfflineGptSessionSnapshot } from "../src/app/lib/offlinegpt-server";
 
 import { normalizeWorkspaceAuditEntries } from "../src/react-app/domains/audit/normalize-workspace-audit";
 import { createAuditTrailExport, projectSessionAudit, serializeAuditTrailExport } from "../src/react-app/domains/audit/project-session-audit";
 import { redactAuditValue } from "../src/react-app/domains/audit/redact-audit-value";
 
 function snapshot(messages: unknown[], status: unknown = { type: "idle" }) {
-  return { session: { id: "ses_1" }, messages, todos: [], status } as unknown as OpenworkSessionSnapshot;
+  return { session: { id: "ses_1" }, messages, todos: [], status } as unknown as OfflineGptSessionSnapshot;
 }
 
 describe("audit trail projection", () => {

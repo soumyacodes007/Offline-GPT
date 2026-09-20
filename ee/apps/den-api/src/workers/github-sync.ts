@@ -1,11 +1,11 @@
-import { and, asc, desc, eq, inArray, isNull, lte, or } from "@openwork-ee/den-db/drizzle"
+import { and, asc, desc, eq, inArray, isNull, lte, or } from "@offlinegpt-ee/den-db/drizzle"
 import {
   ConnectorAccountTable,
   ConnectorInstanceTable,
   ConnectorSyncEventTable,
   ConnectorTargetTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { db } from "../db.js"
 import { env } from "../env.js"
 import { appLogger } from "../observability/logger.js"

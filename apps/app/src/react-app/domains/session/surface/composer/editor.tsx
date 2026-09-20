@@ -1227,7 +1227,7 @@ export const LexicalPromptEditor = forwardRef<LexicalPromptEditorHandle, EditorP
 
   const initialConfig = useMemo(
     () => ({
-      namespace: "openwork-react-session-composer",
+      namespace: "offlinegpt-react-session-composer",
       onError(error: Error) {
         throw error;
       },

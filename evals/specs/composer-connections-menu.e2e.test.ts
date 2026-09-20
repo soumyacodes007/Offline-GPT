@@ -1,6 +1,6 @@
-import { browserScript } from "@openwork/testkit";
+import { browserScript } from "@offlinegpt/testkit";
 import { expect } from "vitest";
-import { spec } from "@openwork/testkit";
+import { spec } from "@offlinegpt/testkit";
 import { connectionsMenu } from "../worlds/chat.ts";
 
 const test = spec.world(connectionsMenu);

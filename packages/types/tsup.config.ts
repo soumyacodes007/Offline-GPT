@@ -4,9 +4,9 @@ export default defineConfig({
   entry: {
     index: "src/index.ts",
     "agent-context-diagnostics": "src/agent-context-diagnostics.ts",
-    "openwork-affordance": "src/openwork-affordance.ts",
-    "openwork-context": "src/openwork-context.ts",
-    "openwork-provider": "src/openwork-provider.ts",
+    "offlinegpt-affordance": "src/offlinegpt-affordance.ts",
+    "offlinegpt-context": "src/offlinegpt-context.ts",
+    "offlinegpt-provider": "src/offlinegpt-provider.ts",
     "automations": "src/automations.ts",
     workflows: "src/workflows.ts",
     "local-workflows": "src/local-workflows.ts",

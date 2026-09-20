@@ -1,6 +1,6 @@
-import type { DenTypeId } from "@openwork-ee/utils/typeid"
-import { and, eq } from "@openwork-ee/den-db/drizzle"
-import { ConnectedAccountTable } from "@openwork-ee/den-db/schema"
+import type { DenTypeId } from "@offlinegpt-ee/utils/typeid"
+import { and, eq } from "@offlinegpt-ee/den-db/drizzle"
+import { ConnectedAccountTable } from "@offlinegpt-ee/den-db/schema"
 import { db } from "../db.js"
 import {
   clientSelectedFeatures,

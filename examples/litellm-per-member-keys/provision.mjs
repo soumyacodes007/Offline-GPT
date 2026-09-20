@@ -147,7 +147,7 @@ function denHeaders(input) {
   return {
     authorization: `Bearer ${input.denToken}`,
     "content-type": "application/json",
-    "x-openwork-org-id": input.orgId,
+    "x-offlinegpt-org-id": input.orgId,
   };
 }
 
@@ -427,7 +427,7 @@ export async function reconcileMemberKeys(input) {
   for (const entry of memberCredentials(listed)) {
     if (entry.state !== "missing" || typeof entry.orgMembershipId !== "string") continue;
     const orgMembershipId = entry.orgMembershipId;
-    const keyAlias = `openwork-${orgMembershipId}`;
+    const keyAlias = `offlinegpt-${orgMembershipId}`;
     const generated = await requestJson(
       `${liteLlmBaseUrl}/key/generate`,
       {
@@ -439,7 +439,7 @@ export async function reconcileMemberKeys(input) {
         body: JSON.stringify({
           models,
           key_alias: keyAlias,
-          metadata: { openwork_org_membership_id: orgMembershipId },
+          metadata: { offlinegpt_org_membership_id: orgMembershipId },
         }),
       },
       secrets,
@@ -520,10 +520,10 @@ function env(name) {
 /** @returns {ProvisionerConfig} */
 function configFromEnv() {
   return {
-    denApiUrl: env("OPENWORK_DEN_API_URL"),
-    denToken: env("OPENWORK_DEN_TOKEN"),
-    orgId: env("OPENWORK_ORG_ID"),
-    providerId: env("OPENWORK_LLM_PROVIDER_ID"),
+    denApiUrl: env("OFFLINEGPT_DEN_API_URL"),
+    denToken: env("OFFLINEGPT_DEN_TOKEN"),
+    orgId: env("OFFLINEGPT_ORG_ID"),
+    providerId: env("OFFLINEGPT_LLM_PROVIDER_ID"),
     liteLlmBaseUrl: env("LITELLM_BASE_URL"),
     liteLlmMasterKey: env("LITELLM_MASTER_KEY"),
     models: env("LITELLM_MODELS").split(",").map((model) => model.trim()).filter(Boolean),

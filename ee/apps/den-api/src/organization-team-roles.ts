@@ -1,5 +1,5 @@
-import { and, eq, isNotNull, isNull, or } from "@openwork-ee/den-db/drizzle"
-import { InvitationTable, MemberTable, OrganizationTable, ScimGroupMemberTable, ScimGroupTable, ScimProviderTable, TeamMemberTable, TeamTable } from "@openwork-ee/den-db/schema"
+import { and, eq, isNotNull, isNull, or } from "@offlinegpt-ee/den-db/drizzle"
+import { InvitationTable, MemberTable, OrganizationTable, ScimGroupMemberTable, ScimGroupTable, ScimProviderTable, TeamMemberTable, TeamTable } from "@offlinegpt-ee/den-db/schema"
 import { db } from "./db.js"
 import { organizationRoleValueSatisfies } from "./organization-role-hierarchy.js"
 

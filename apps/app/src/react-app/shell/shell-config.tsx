@@ -57,7 +57,7 @@ export const DEFAULT_SHELL_CONFIG: ShellConfig = {
 /*  Persistence                                                        */
 /* ------------------------------------------------------------------ */
 
-const STORAGE_KEY = "openwork.shell-config";
+const STORAGE_KEY = "offlinegpt.shell-config";
 
 function effectiveShellConfig(config: ShellConfig): ShellConfig {
   if (isDesktopRuntime() && readDesktopDistributionInfo().flavor === "public") {

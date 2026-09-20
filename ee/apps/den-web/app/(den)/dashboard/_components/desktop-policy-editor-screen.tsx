@@ -1,7 +1,7 @@
 "use client";
 
 import { ExecutionPolicyFields, validateExecutionPolicy } from "./execution-policy-fields";
-import { desktopExecutionPolicySchema, type DesktopExecutionPolicy } from "@openwork/types/den/desktop-policies";
+import { desktopExecutionPolicySchema, type DesktopExecutionPolicy } from "@offlinegpt/types/den/desktop-policies";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,7 @@ import {
   isRestrictedDesktopPolicyValue,
   type DesktopPolicyDocumentWrite,
   type DesktopPolicyValue,
-} from "@openwork/types/den/desktop-policies";
+} from "@offlinegpt/types/den/desktop-policies";
 import { DashboardPageTemplate } from "../../_components/ui/dashboard-page-template";
 import { DenButton } from "../../_components/ui/button";
 import { DenInput } from "../../_components/ui/input";
@@ -199,8 +199,8 @@ function getPromptDescriptionErrorId(index: number) {
 
 function getDisabledPromptCopy(isDefault: boolean) {
   return isDefault
-    ? "When organization prompts are off, OpenWork defaults are used."
-    : "When organization prompts are off, members inherit prompts from another matching policy or the default policy; if none apply, OpenWork defaults are used.";
+    ? "When organization prompts are off, OfflineGPT defaults are used."
+    : "When organization prompts are off, members inherit prompts from another matching policy or the default policy; if none apply, OfflineGPT defaults are used.";
 }
 
 function policyDocumentFromDraft(draft: PolicyDraft): DesktopPolicyDocumentWrite {

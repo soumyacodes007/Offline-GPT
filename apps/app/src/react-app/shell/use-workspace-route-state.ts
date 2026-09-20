@@ -19,13 +19,13 @@ import {
   workspaceBootstrap,
   workspaceSetRuntimeActive,
   workspaceSetSelected,
-  type OpenworkServerInfo,
+  type OfflineGptServerInfo,
   type WorkspaceList,
 } from "@/app/lib/desktop";
 import { createClient, unwrap } from "@/app/lib/opencode";
 import { createClientV2 } from "@/app/lib/opencode-v2-adapter";
 import { getNativeSession } from "@/app/lib/opencode-session-native";
-import { createOpenworkServerClient, OpenworkServerError, type OpenworkServerClient } from "@/app/lib/openwork-server";
+import { createOfflineGptServerClient, OfflineGptServerError, type OfflineGptServerClient } from "@/app/lib/offlinegpt-server";
 import { isDesktopRuntime } from "@/app/lib/runtime-env";
 import type { ResolvedWorkspaceEndpoint } from "@/app/lib/workspace-endpoint";
 import type { WorkspaceConnectionState } from "@/app/types";
@@ -44,10 +44,10 @@ import { useLocal } from "@/react-app/kernel/local-provider";
 import { useDenAuth } from "@/react-app/domains/cloud/den-auth-provider";
 import { useBootState } from "./boot-state";
 import {
-  ensureDesktopLocalOpenworkConnection,
+  ensureDesktopLocalOfflineGptConnection,
   shouldAttemptDesktopLocalReconnect,
-} from "./desktop-local-openwork";
-import { resolveOpenworkConnection } from "./openwork-connection";
+} from "./desktop-local-offlinegpt";
+import { resolveOfflineGptConnection } from "./offlinegpt-connection";
 import {
   commitRouteWorkspaceSelection,
   createRouteRefreshLifecycle,
@@ -89,10 +89,10 @@ import {
 export type UseWorkspaceRouteStateInput = {
   developerMode: boolean;
   workspaceRoute?: "session" | "automations" | "dashboard" | "apps";
-  /** Invoked when the openwork-server settings-changed event fires (the route bumps its settings version). */
+  /** Invoked when the offlinegpt-server settings-changed event fires (the route bumps its settings version). */
   onServerSettingsChanged: () => void;
-  /** Receives the local openwork-server host info discovered during refresh. */
-  onHostInfo: (info: OpenworkServerInfo | null) => void;
+  /** Receives the local offlinegpt-server host info discovered during refresh. */
+  onHostInfo: (info: OfflineGptServerInfo | null) => void;
 };
 
 type ModernRouteSessionResolution =
@@ -183,7 +183,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
     routeReady: bootRouteReady,
   } = useBootState();
   const [loading, setLoading] = useState(true);
-  const [client, setClient] = useState<OpenworkServerClient | null>(null);
+  const [client, setClient] = useState<OfflineGptServerClient | null>(null);
   const [baseUrl, setBaseUrl] = useState("");
   const [token, setToken] = useState("");
   const [engineV2ChatRouting, setEngineV2ChatRouting] = useState(false);
@@ -321,7 +321,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
       const backoffMs = (attempt: number) => Math.min(500 * Math.pow(2, attempt), 4_000);
 
       const fetchWithRetries = async (workspace: RouteWorkspace, attempt: number): Promise<void> => {
-        const isRemoteOpenworkWorkspace = workspace.workspaceType === "remote" && workspace.remoteType !== "opencode";
+        const isRemoteOfflineGptWorkspace = workspace.workspaceType === "remote" && workspace.remoteType !== "opencode";
         const endpoint = endpointForWorkspace(workspace);
         if (!endpoint) {
           if (workspace.workspaceType === "remote") {
@@ -341,7 +341,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
           }
           return;
         }
-        if (isRemoteOpenworkWorkspace) {
+        if (isRemoteOfflineGptWorkspace) {
           setWorkspaceConnectionOverrides((current) => ({
             ...current,
             [workspace.id]: {
@@ -357,7 +357,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
             ? await listRouteSessions(endpoint, v2RouteSessionList)
             : await listRouteSessions(endpoint);
           const workspaceRoot = normalizeDirectoryPath(workspace.path ?? "");
-          const items = workspaceRoot && !isRemoteOpenworkWorkspace
+          const items = workspaceRoot && !isRemoteOfflineGptWorkspace
             ? fetchedItems.filter((session) =>
                 normalizeDirectoryPath(session?.directory ?? "") === workspaceRoot,
               )
@@ -370,7 +370,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
           loadedWorkspaceIdsRef.current.add(workspace.id);
           setErrorsByWorkspaceId((current) => ({ ...current, [workspace.id]: null }));
           setWorkspaceConnectionOverrides((current) => {
-            if (isRemoteOpenworkWorkspace) {
+            if (isRemoteOfflineGptWorkspace) {
               return {
                 ...current,
                 [workspace.id]: {
@@ -504,8 +504,8 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
       if (!attempt.isCurrent()) return;
 
       const { normalizedBaseUrl, resolvedToken, resolvedHostToken, hostInfo } = await withRouteRefreshTimeout(
-        resolveOpenworkConnection(),
-        "OpenWork server connection",
+        resolveOfflineGptConnection(),
+        "OfflineGPT server connection",
       );
       if (!attempt.isCurrent()) return;
       if (!normalizedBaseUrl || !resolvedToken) {
@@ -563,13 +563,13 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
       // local workspaces => sidebar gets stuck in "loading" forever.
       updateLocalServer({ baseUrl: normalizedBaseUrl, token: resolvedToken });
 
-      const openworkClient = createOpenworkServerClient({
+      const offlinegptClient = createOfflineGptServerClient({
         baseUrl: normalizedBaseUrl,
         token: resolvedToken,
         hostToken: resolvedHostToken || undefined,
       });
       const workspaceListState = await refreshRouteWorkspaceListState({
-        load: () => withRouteRefreshTimeout(openworkClient.listWorkspaces(), "Workspace list"),
+        load: () => withRouteRefreshTimeout(offlinegptClient.listWorkspaces(), "Workspace list"),
         desktopWorkspaces,
         previousWorkspaces: workspacesRef.current,
         orderIds: workspaceOrderIdsRef.current,
@@ -628,7 +628,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
       updateLocalServer({ baseUrl: normalizedBaseUrl, token: resolvedToken });
 
       setConnectionPending(false);
-      setClient(openworkClient);
+      setClient(offlinegptClient);
       setBaseUrl(normalizedBaseUrl);
       setToken(resolvedToken);
       setWorkspaces(nextWorkspaces);
@@ -841,7 +841,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
       // so its stale resolution cannot overwrite the new connection state.
       void refreshRouteState({ supersede: true });
     };
-    window.addEventListener("openwork-server-settings-changed", handleSettingsChange);
+    window.addEventListener("offlinegpt-server-settings-changed", handleSettingsChange);
 
     // Also retry on visibility flip independently — even when nobody else
     // dispatches the settings event.
@@ -860,7 +860,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
         window.clearTimeout(startupRetryTimerRef.current);
         startupRetryTimerRef.current = null;
       }
-      window.removeEventListener("openwork-server-settings-changed", handleSettingsChange);
+      window.removeEventListener("offlinegpt-server-settings-changed", handleSettingsChange);
       if (typeof document !== "undefined") {
         document.removeEventListener("visibilitychange", handleVisibility);
       }
@@ -869,7 +869,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
 
   // Inspector wiring: publish the route's current state so an external
   // operator (or an AI driver using browser tools) can call
-  // `window.__openwork.snapshot()` or `window.__openwork.slice("route")` and
+  // `window.__offlinegpt.snapshot()` or `window.__offlinegpt.slice("route")` and
   // see workspaces / sessions / connection info without walking the DOM.
   useEffect(() => {
     const dispose = publishInspectorSlice("route", () => ({
@@ -990,7 +990,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
     if (!workspaceId || reconnectAttemptedWorkspaceIdRef.current === workspaceId) return;
     reconnectAttemptedWorkspaceIdRef.current = workspaceId;
 
-    void ensureDesktopLocalOpenworkConnection({
+    void ensureDesktopLocalOfflineGptConnection({
       route: "session",
       workspace: selectedWorkspace,
       allWorkspaces: workspaces,
@@ -1007,7 +1007,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
   const selectedWorkspaceRoot = selectedWorkspace?.path?.trim() || "";
   // Single source of truth for the selected workspace's server URL/token/id.
   // For remote workspaces this is the worker that owns the workspace; for
-  // local workspaces it's the user's local OpenWork server.
+  // local workspaces it's the user's local OfflineGPT server.
   const selectedWorkspaceEndpoint = useWorkspaceServerClient(selectedWorkspace, { baseUrl, token });
   const selectedWorkspaceServerToken = selectedWorkspaceEndpoint?.token ?? "";
   const defaultOpencodeBaseUrl = selectedWorkspaceEndpoint?.opencodeBaseUrl ?? "";
@@ -1019,11 +1019,11 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
       setEngineV2ChatRouting(false);
       return;
     }
-    const openworkClient = createOpenworkServerClient({ baseUrl: routingServerUrl, token: routingServerToken });
+    const offlinegptClient = createOfflineGptServerClient({ baseUrl: routingServerUrl, token: routingServerToken });
     let cancelled = false;
     const refresh = async () => {
       try {
-        const status = await openworkClient.getEngineV2PreviewStatus();
+        const status = await offlinegptClient.getEngineV2PreviewStatus();
         if (!cancelled) {
           setEngineV2ChatRouting(status.enabled && status.chatRouting);
           setEngineRoutingReady(true);
@@ -1031,19 +1031,19 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
       } catch (error) {
         if (cancelled) return;
         // Older servers do not expose the preview endpoint and use v1.
-        if (error instanceof OpenworkServerError && error.status === 404) setEngineRoutingReady(true);
+        if (error instanceof OfflineGptServerError && error.status === 404) setEngineRoutingReady(true);
         console.warn("[opencode-v2] failed to read chat routing status; retaining the current engine", error);
       }
     };
     setEngineV2ChatRouting(false);
     setEngineRoutingReady(false);
     void refresh();
-    window.addEventListener("openwork-server-settings-changed", refresh);
+    window.addEventListener("offlinegpt-server-settings-changed", refresh);
     const interval = window.setInterval(() => { void refresh(); }, 15_000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
-      window.removeEventListener("openwork-server-settings-changed", refresh);
+      window.removeEventListener("offlinegpt-server-settings-changed", refresh);
     };
   }, [routingServerUrl, routingServerToken]);
   useEffect(() => {
@@ -1194,7 +1194,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
             })
           : createClient(opencodeBaseUrl, selectedWorkspaceRoot || undefined, {
               token: selectedWorkspaceServerToken,
-              mode: "openwork",
+              mode: "offlinegpt",
             })
         : null,
     [engineRoutingReady, engineV2ChatRouting, opencodeBaseUrl, selectedWorkspaceError, selectedWorkspaceRoot, selectedWorkspaceServerToken],

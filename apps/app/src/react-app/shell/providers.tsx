@@ -3,8 +3,8 @@ import { useEffect, type ReactNode } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 
-import { isWebDeployment } from "@/app/lib/openwork-deployment";
-import { hydrateOpenworkServerSettingsFromEnv } from "@/app/lib/openwork-server";
+import { isWebDeployment } from "@/app/lib/offlinegpt-deployment";
+import { hydrateOfflineGptServerSettingsFromEnv } from "@/app/lib/offlinegpt-server";
 import { isDesktopRuntime } from "@/app/utils";
 import { ConnectLinkProvider } from "@/react-app/domains/cloud/connect-link-provider";
 import { DenAuthProvider } from "@/react-app/domains/cloud/den-auth-provider";
@@ -21,18 +21,18 @@ import { BootStateProvider } from "./boot-state";
 import { DesktopRuntimeBoot } from "./desktop-runtime-boot";
 import { useEnterpriseActivationRequired } from "@/react-app/domains/cloud/enterprise-activation-gate";
 import { startDebugLogger, stopDebugLogger } from "./debug-logger";
-import { resolveOpenworkConnection } from "./openwork-connection";
+import { resolveOfflineGptConnection } from "./offlinegpt-connection";
 import { ReloadCoordinatorProvider } from "./reload-coordinator";
 
 function resolveDefaultServerUrl(): string {
   if (isDesktopRuntime()) return "http://127.0.0.1:4096";
 
-  const openworkUrl =
-    typeof import.meta.env?.VITE_OPENWORK_URL === "string"
-      ? import.meta.env.VITE_OPENWORK_URL.trim()
+  const offlinegptUrl =
+    typeof import.meta.env?.VITE_OFFLINEGPT_URL === "string"
+      ? import.meta.env.VITE_OFFLINEGPT_URL.trim()
       : "";
-  if (openworkUrl) {
-    return `${openworkUrl.replace(/\/+$/, "")}/opencode`;
+  if (offlinegptUrl) {
+    return `${offlinegptUrl.replace(/\/+$/, "")}/opencode`;
   }
 
   if (isWebDeployment() && import.meta.env.PROD && typeof window !== "undefined") {
@@ -78,14 +78,14 @@ function EnterpriseAwareAppProviders({ children }: AppProvidersProps) {
 }
 
 export function AppProviders({ children }: AppProvidersProps) {
-  hydrateOpenworkServerSettingsFromEnv();
+  hydrateOfflineGptServerSettingsFromEnv();
 
   useEffect(() => {
-    // Start the dev observability forwarder. Reads the current openwork-server
+    // Start the dev observability forwarder. Reads the current offlinegpt-server
     // URL on every flush so reconnects after port changes still work. In prod
     // builds `startDebugLogger` is a no-op.
     startDebugLogger({
-      serverUrl: async () => (await resolveOpenworkConnection()).normalizedBaseUrl,
+      serverUrl: async () => (await resolveOfflineGptConnection()).normalizedBaseUrl,
     });
     return () => {
       stopDebugLogger();

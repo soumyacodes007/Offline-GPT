@@ -6,7 +6,7 @@ import type { HeadlessWebHandle } from "../packages/world/src/headless-web.ts";
 
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const CLOUD_MODEL_INFRA_WORKER_NAME = "cloud-model-infra-worker";
-const CLOUD_MODEL_INFRA_WORKER_WORKSPACE = "/tmp/openwork-cloud-model-infra-worker";
+const CLOUD_MODEL_INFRA_WORKER_WORKSPACE = "/tmp/offlinegpt-cloud-model-infra-worker";
 
 export interface CloudModelInfraWorkerOptions {
   name: string;
@@ -16,11 +16,11 @@ export interface CloudModelInfraWorkerOptions {
 
 /**
  * Worker runtime for the cloud model-infrastructure world: the same
- * source-first openwork-server plus managed OpenCode engine an OpenWork
+ * source-first offlinegpt-server plus managed OpenCode engine an OfflineGPT
  * Cloud worker runs, in an isolated workspace.
  *
  * `cloud-model-infra.ts` seeds a Den `worker` whose Daytona signed preview
- * points at this server's `openworkUrl`, so Den's readiness probe, provider
+ * points at this server's `offlinegptUrl`, so Den's readiness probe, provider
  * materialization, and remote-session capabilities exercise a real worker
  * runtime end to end without a Daytona sandbox.
  *
@@ -53,7 +53,7 @@ export async function main(): Promise<void> {
     name: CLOUD_MODEL_INFRA_WORKER_NAME,
     outputs: {
       webUrl: handle.manifest.webUrl,
-      openworkUrl: handle.manifest.openworkUrl,
+      offlinegptUrl: handle.manifest.offlinegptUrl,
       workspace: handle.manifest.workspace,
       runtimeManifest: handle.manifest.runtimeManifestPath,
     },

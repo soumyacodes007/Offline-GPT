@@ -1,6 +1,6 @@
-# Help Translate OpenWork
+# Help Translate OfflineGPT
 
-We are actively looking for contributors to translate OpenWork to your own native language.
+We are actively looking for contributors to translate OfflineGPT to your own native language.
 
 ## README translations
 

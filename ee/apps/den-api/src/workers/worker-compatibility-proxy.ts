@@ -1,11 +1,11 @@
-import { and, eq, inArray, isNull } from "@openwork-ee/den-db/drizzle"
-import { WorkerTable, WorkerTokenTable } from "@openwork-ee/den-db/schema"
+import { and, eq, inArray, isNull } from "@offlinegpt-ee/den-db/drizzle"
+import { WorkerTable, WorkerTokenTable } from "@offlinegpt-ee/den-db/schema"
 import { db } from "../db.js"
 import {
-  getOpenWorkWebRuntimeAccess,
-  openWorkWebAccessRequiredPayload,
-  type OpenWorkWebRuntimeAccessResolver,
-} from "../openwork-web-runtime-access.js"
+  getOfflineGPTWebRuntimeAccess,
+  offlineGptWebAccessRequiredPayload,
+  type OfflineGPTWebRuntimeAccessResolver,
+} from "../offlinegpt-web-runtime-access.js"
 import { resolveCloudRuntimeAccess } from "./worker-access.js"
 
 type WorkerId = typeof WorkerTable.$inferSelect.id
@@ -25,7 +25,7 @@ type ResolveCloudAccess = typeof resolveCloudRuntimeAccess
 
 export type CloudWorkerCompatibilityOptions = {
   authenticate?: AuthenticateWorkerRequest
-  getOpenWorkWebAccess?: OpenWorkWebRuntimeAccessResolver
+  getOfflineGPTWebAccess?: OfflineGPTWebRuntimeAccessResolver
   resolveCloudAccess?: ResolveCloudAccess
   fetchImpl?: typeof fetch
   maxActiveRequestsPerWorker?: number
@@ -57,7 +57,7 @@ const REQUEST_HEADERS_TO_STRIP = new Set([
   "x-forwarded-host",
   "x-forwarded-prefix",
   "x-forwarded-proto",
-  "x-openwork-host-token",
+  "x-offlinegpt-host-token",
   "x-real-ip",
 ])
 const RESPONSE_HEADERS_TO_STRIP = new Set([
@@ -85,7 +85,7 @@ function readBearerToken(request: Request) {
 function requestTokens(request: Request) {
   return Array.from(new Set([
     readBearerToken(request),
-    request.headers.get("x-openwork-host-token")?.trim() || null,
+    request.headers.get("x-offlinegpt-host-token")?.trim() || null,
   ].filter((value): value is string => Boolean(value))))
 }
 
@@ -136,7 +136,7 @@ function upstreamRequestHeaders(request: Request, authorization: WorkerAuthoriza
   })
   headers.set("Authorization", `Bearer ${access.clientToken}`)
   if (authorization.scope === "host") {
-    headers.set("X-OpenWork-Host-Token", access.hostToken)
+    headers.set("X-OfflineGPT-Host-Token", access.hostToken)
   }
   return headers
 }
@@ -169,8 +169,8 @@ function jsonError(
   })
 }
 
-function openWorkWebAccessRequiredResponse() {
-  return Response.json(openWorkWebAccessRequiredPayload(), {
+function offlineGptWebAccessRequiredResponse() {
+  return Response.json(offlineGptWebAccessRequiredPayload(), {
     status: 403,
     headers: {
       "Cache-Control": "no-store",
@@ -263,16 +263,16 @@ export async function proxyCloudWorkerCompatibilityRequest(input: {
   }
 
   // The stable /v1/cloud/workers/:id URL, token handling, and response shape are
-  // unchanged. Published desktops connect here only after OpenWorkWebAccessGate
+  // unchanged. Published desktops connect here only after OfflineGPTWebAccessGate
   // (v0.18.42+) granted Web access; the recheck terminates a worker token into a
   // live VM, so it enforces the same entitlement as provisioning and tokens.
   let webAccess
   try {
-    webAccess = await (options.getOpenWorkWebAccess ?? getOpenWorkWebRuntimeAccess)(authorization.organizationId)
+    webAccess = await (options.getOfflineGPTWebAccess ?? getOfflineGPTWebRuntimeAccess)(authorization.organizationId)
   } catch {
     return jsonError(503, "worker_runtime_unavailable")
   }
-  if (!webAccess.hasAccess) return openWorkWebAccessRequiredResponse()
+  if (!webAccess.hasAccess) return offlineGptWebAccessRequiredResponse()
 
   const maximum = Math.max(1, options.maxActiveRequestsPerWorker ?? DEFAULT_MAX_ACTIVE_REQUESTS_PER_WORKER)
   const release = acquireWorkerRequest(input.workerId, maximum)

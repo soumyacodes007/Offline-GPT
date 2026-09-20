@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { WorkflowGraph } from "@openwork/types/workflows";
+import type { WorkflowGraph } from "@offlinegpt/types/workflows";
 import {
   describeCondition,
   describeLoop,
@@ -23,7 +23,7 @@ describe("Workflow plain language", () => {
   test("names services and detects Google sub-services", () => {
     expect(serviceName("google_workspace")).toBe("Google Workspace");
     expect(serviceName("slack")).toBe("Slack");
-    expect(serviceName("den")).toBe("OpenWork");
+    expect(serviceName("den")).toBe("OfflineGPT");
     expect(serviceName("marketplace")).toBe("Marketplace");
     expect(serviceName("$codemode")).toBe("Search");
     expect(serviceName("custom_service")).toBe("Custom service");

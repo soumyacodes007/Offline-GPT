@@ -33,7 +33,7 @@ type PricingCard = {
   badge?: string;
 };
 
-const CLOUD_SIGNUP_URL = "https://app.openworklabs.com?mode=sign-up";
+const CLOUD_SIGNUP_URL = "https://app.offlinegptlabs.com?mode=sign-up";
 
 function PricingCardView({ card }: { card: PricingCard }) {
   return (
@@ -129,7 +129,7 @@ export function PricingGrid(props: PricingGridProps) {
       price: "$10",
       priceSub: "per seat / month",
       ctaLabel: "Start team plan",
-      href: "https://app.openworklabs.com/dashboard/billing",
+      href: "https://app.offlinegptlabs.com/dashboard/billing",
       external: true,
       badge: "Recommended",
       features: [
@@ -154,7 +154,7 @@ export function PricingGrid(props: PricingGridProps) {
         { text: "Usage and adoption analytics", icon: SlidersHorizontal },
         { text: "Desktop policies and version controls", icon: SlidersHorizontal },
         { text: "Internal white-labeling — your name, logo, and branding", icon: FileText },
-        { text: "OpenWork Web", icon: Code2 },
+        { text: "OfflineGPT Web", icon: Code2 },
         { text: "Spend observability", icon: FileText },
         { text: "Bring your own inference — self-hosted or private models", icon: Server },
         { text: "Standard SLA support included", icon: Plug },
@@ -182,19 +182,19 @@ export function PricingGrid(props: PricingGridProps) {
       </div>
 
       <p className="text-center text-[12px] font-medium text-gray-500">
-        Prices exclude taxes. Same pricing for OpenWork Cloud and self-hosted. No deployment fees.
+        Prices exclude taxes. Same pricing for OfflineGPT Cloud and self-hosted. No deployment fees.
       </p>
       <p className="text-center text-[12px] font-medium text-gray-500">
         Self-hosting the control plane is free for up to 5 users (excluding Enterprise Features such as
         SSO, analytics, desktop policies, and white-labeling), free for development and testing, and
         free to evaluate for 30 days at any size with all features — see the{" "}
         <a
-          href="https://github.com/different-ai/openwork/blob/dev/ee/LICENSE"
+          href="https://github.com/different-ai/offlinegpt/blob/dev/ee/LICENSE"
           rel="noreferrer"
           target="_blank"
           className="underline"
         >
-          OpenWork EE License
+          OfflineGPT EE License
         </a>{" "}
         and{" "}
         <a href="/terms/subscription" className="underline">

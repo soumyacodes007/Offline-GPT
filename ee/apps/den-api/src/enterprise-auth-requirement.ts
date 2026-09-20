@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "@openwork-ee/den-db/drizzle"
+import { and, eq, isNull } from "@offlinegpt-ee/den-db/drizzle"
 import {
   AuthAccountTable,
   AuthUserTable,
@@ -6,8 +6,8 @@ import {
   OrganizationTable,
   SsoConnectionTable,
   SsoProviderTable,
-} from "@openwork-ee/den-db/schema"
-import { normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { db } from "./db.js"
 
 type EnterpriseAuthRequirementRow = {

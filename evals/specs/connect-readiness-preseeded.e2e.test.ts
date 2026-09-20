@@ -1,7 +1,7 @@
-import { browserScript } from "@openwork/testkit";
+import { browserScript } from "@offlinegpt/testkit";
 import { expect } from "vitest";
-import { readAvailableModels, selectModel } from "@openwork/behaviors";
-import { observeTranscript, spec } from "@openwork/testkit";
+import { readAvailableModels, selectModel } from "@offlinegpt/behaviors";
+import { observeTranscript, spec } from "@offlinegpt/testkit";
 import {
   cloudHealthExpression,
   isRecord,
@@ -38,15 +38,15 @@ test("bundled engine connects to preseeded organization skills and connections",
     () => probe.eval(browserScript(cloudHealthExpression, [world.workspaceId])),
     {
       within: 180_000,
-      label: "openwork-cloud engine and agent-tool readiness",
+      label: "offlinegpt-cloud engine and agent-tool readiness",
       until: (value) => {
         if (!isRecord(value) || !isRecord(value.engine) || !isRecord(value.tools)) return false;
         return value.phase === "ready"
           && value.usable === true
           && value.engine.status === "connected"
           && Array.isArray(value.tools.present)
-          && value.tools.present.includes("openwork-cloud_search_capabilities")
-          && value.tools.present.includes("openwork-cloud_execute_capability")
+          && value.tools.present.includes("offlinegpt-cloud_search_capabilities")
+          && value.tools.present.includes("offlinegpt-cloud_execute_capability")
           && isRecord(value.tools.direct)
           && Array.isArray(value.tools.direct.present)
           && value.tools.direct.present.includes("search_capabilities")
@@ -60,8 +60,8 @@ test("bundled engine connects to preseeded organization skills and connections",
   expect(health.engine.status).not.toBe("failed");
   expect(health.engine.status).not.toBe("needs_client_registration");
   expect(health.tools.present).toEqual(expect.arrayContaining([
-    "openwork-cloud_search_capabilities",
-    "openwork-cloud_execute_capability",
+    "offlinegpt-cloud_search_capabilities",
+    "offlinegpt-cloud_execute_capability",
   ]));
 
   await step("the preseeded skill is discovered and executed", async () => {
@@ -109,7 +109,7 @@ test("bundled engine connects to preseeded organization skills and connections",
   expect(connectionStatus).toMatchObject({
     state: "needs_connection", actor: "member", credentialMode: "per_member",
     connectionId: world.connection.id, connectionName: world.connectionName,
-    action: { type: "connect", surface: "openwork_your_connections" },
+    action: { type: "connect", surface: "offlinegpt_your_connections" },
   });
   evidence.recordAssertionEvidence("An unconnected member-owned connection requires member sign-in",
     JSON.stringify(connectionStatus), true);

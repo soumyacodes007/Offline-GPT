@@ -3,8 +3,8 @@ import { access, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { test } from "@openwork/testkit";
-import { discoverWorlds, main } from "@openwork/world";
+import { test } from "@offlinegpt/testkit";
+import { discoverWorlds, main } from "@offlinegpt/world";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const WORLDS_DIRECTORY = join(REPO_ROOT, "worlds");
@@ -46,7 +46,7 @@ function ownedResources(): string[] {
 }
 
 test("world discovery, list, and help label scripts without importing them", async ({ evidence }) => {
-  const root = await mkdtemp(join(tmpdir(), "openwork-world-discovery-"));
+  const root = await mkdtemp(join(tmpdir(), "offlinegpt-world-discovery-"));
   try {
     const worldsDirectory = join(root, "worlds");
     const receiptsDirectory = join(root, "receipts");
@@ -58,8 +58,8 @@ test("world discovery, list, and help label scripts without importing them", asy
       name: "unguarded",
       path: join(worldsDirectory, "unguarded.ts"),
     }]);
-    const previousReceiptsDirectory = process.env.OPENWORK_WORLD_SNAPSHOT_DIR;
-    process.env.OPENWORK_WORLD_SNAPSHOT_DIR = receiptsDirectory;
+    const previousReceiptsDirectory = process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR;
+    process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR = receiptsDirectory;
     try {
       for (const command of [["list"], ["help"]]) {
         const lines: string[] = [];
@@ -72,8 +72,8 @@ test("world discovery, list, and help label scripts without importing them", asy
         assert.match(lines.join("\n"), /unguarded/);
       }
     } finally {
-      if (previousReceiptsDirectory === undefined) delete process.env.OPENWORK_WORLD_SNAPSHOT_DIR;
-      else process.env.OPENWORK_WORLD_SNAPSHOT_DIR = previousReceiptsDirectory;
+      if (previousReceiptsDirectory === undefined) delete process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR;
+      else process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR = previousReceiptsDirectory;
     }
     await assert.rejects(access(receiptsDirectory));
 
@@ -104,14 +104,14 @@ test("every root world is an import-safe executable script module", async ({ evi
     })),
   );
 
-  const root = await mkdtemp(join(tmpdir(), "openwork-world-imports-"));
-  const previousReceiptsDirectory = process.env.OPENWORK_WORLD_SNAPSHOT_DIR;
+  const root = await mkdtemp(join(tmpdir(), "offlinegpt-world-imports-"));
+  const previousReceiptsDirectory = process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR;
   const signalListeners = {
     sigint: process.listenerCount("SIGINT"),
     sigterm: process.listenerCount("SIGTERM"),
   };
   const resources = ownedResources();
-  process.env.OPENWORK_WORLD_SNAPSHOT_DIR = root;
+  process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR = root;
   try {
     for (const name of worldFileNames) {
       const load = worldImports[name];
@@ -130,8 +130,8 @@ test("every root world is an import-safe executable script module", async ({ evi
       true,
     );
   } finally {
-    if (previousReceiptsDirectory === undefined) delete process.env.OPENWORK_WORLD_SNAPSHOT_DIR;
-    else process.env.OPENWORK_WORLD_SNAPSHOT_DIR = previousReceiptsDirectory;
+    if (previousReceiptsDirectory === undefined) delete process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR;
+    else process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR = previousReceiptsDirectory;
     await rm(root, { recursive: true, force: true });
   }
 });
@@ -155,18 +155,18 @@ test("the retired definition, topology, adapter, and preset APIs are absent", as
   for (const path of deletedPaths) await assert.rejects(access(join(REPO_ROOT, path)));
 
   const [worldModule, envModule, testkitModule] = await Promise.all([
-    import("@openwork/world"),
+    import("@offlinegpt/world"),
     import("../packages/env/src/index.ts"),
-    import("@openwork/testkit"),
+    import("@offlinegpt/testkit"),
   ]);
   for (const name of ["createWorld" + "Definition", "defineHeadless" + "WebWorld", "createHeadless" + "WebAdapter"]) {
-    assert.equal(name in worldModule, false, `@openwork/world must not export ${name}`);
+    assert.equal(name in worldModule, false, `@offlinegpt/world must not export ${name}`);
   }
   for (const name of ["define" + "World", "createEval" + "WorldAdapter", "parseUntrusted" + "Snapshot", "resume" + "World"]) {
-    assert.equal(name in envModule, false, `@openwork/env must not export ${name}`);
+    assert.equal(name in envModule, false, `@offlinegpt/env must not export ${name}`);
   }
   for (const name of ["start" + "World", "define" + "World"]) {
-    assert.equal(name in testkitModule, false, `@openwork/testkit must not export ${name}`);
+    assert.equal(name in testkitModule, false, `@offlinegpt/testkit must not export ${name}`);
   }
 
   evidence.recordAssertionEvidence(

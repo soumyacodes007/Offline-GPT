@@ -93,7 +93,7 @@ export function clearGithubInstallationTokenCache() {
   githubInstallationTokenRequests.clear()
 }
 
-// Overridable so @openwork/testkit specs can point the connector at a mock GitHub witness.
+// Overridable so @offlinegpt/testkit specs can point the connector at a mock GitHub witness.
 function githubApiBase(): string {
   const override = process.env.GITHUB_CONNECTOR_API_BASE?.trim()
   return override ? override.replace(/\/+$/, "") : "https://api.github.com"
@@ -235,7 +235,7 @@ async function requestGithubJson<TResponse>(input: {
   const response = await fetchFn(`${githubApiBase()}${input.path}`, {
     headers: {
       Accept: "application/vnd.github+json",
-      "User-Agent": "openwork-den-api",
+      "User-Agent": "offlinegpt-den-api",
       "X-GitHub-Api-Version": GITHUB_API_VERSION,
       ...input.headers,
     },

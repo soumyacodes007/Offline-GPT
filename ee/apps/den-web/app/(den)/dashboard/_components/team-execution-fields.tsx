@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { Globe, Info, Terminal, TriangleAlert, X } from "lucide-react";
-import type { DesktopExecutionPolicy } from "@openwork/types/den/desktop-policies";
+import type { DesktopExecutionPolicy } from "@offlinegpt/types/den/desktop-policies";
 import { DenButton } from "../../_components/ui/button";
 import { validateExecutionPolicy } from "./execution-policy-fields";
 import { TeamPermissionGroup, TeamPermissionSelect } from "./team-permission-fields";

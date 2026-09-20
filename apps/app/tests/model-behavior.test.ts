@@ -84,29 +84,29 @@ describe("model behavior options", () => {
   });
 
   test("aliases GPT model names without changing their IDs", () => {
-    expect(resolveModelDisplayName("gpt-5.6-terra", "GPT-5.6 Terra")).toBe("GLM-5.1");
-    expect(resolveModelDisplayName("gpt-5.6-luna", "GPT-5.6 Luna")).toBe("GLM-4.7");
+    expect(resolveModelDisplayName("gpt-5.6-sol", "GPT-5.6 Sol")).toBe("GLM-5.1");
+    expect(resolveModelDisplayName("gpt-5.6-terra", "GPT-5.6 Terra")).toBe("GLM-4.7");
     expect(resolveModelDisplayName("claude-sonnet-4", "Claude Sonnet 4")).toBe("Claude Sonnet 4");
   });
 
-  test("presents GPT-backed providers as Z.ai and keeps only Luna and Terra backends", () => {
-    expect(resolveModelProviderDisplayName("openai", "gpt-5.6-terra", "OpenAI", "GPT-5.6 Terra")).toBe("Z.ai");
-    expect(resolveModelProviderIconId("openai", "gpt-5.6-terra", "GPT-5.6 Terra")).toBe("z-ai");
+  test("presents GPT-backed providers as Z.ai and keeps only Sol and Terra backends", () => {
+    expect(resolveModelProviderDisplayName("openai", "gpt-5.6-sol", "OpenAI", "GPT-5.6 Sol")).toBe("Z.ai");
+    expect(resolveModelProviderIconId("openai", "gpt-5.6-sol", "GPT-5.6 Sol")).toBe("z-ai");
     expect(dedupeGlmModelOptions([
-      { providerID: "openai", modelID: "gpt-5.6-terra", title: "GLM-5.1" },
-      { providerID: "openai", modelID: "gpt-5.6-luna", title: "GLM-4.7" },
+      { providerID: "openai", modelID: "gpt-5.6-sol", title: "GLM-5.1" },
+      { providerID: "openai", modelID: "gpt-5.6-terra", title: "GLM-4.7" },
       { providerID: "openai", modelID: "gpt-5.4-mini", title: "GLM-5.1" },
     ])).toHaveLength(2);
     expect(resolveSupportedGlmBackendModel(
       { providerID: "openai", modelID: "gpt-5.4-mini" },
       [],
       [],
-    )).toEqual({ providerID: "openai", modelID: "gpt-5.6-terra" });
+    )).toEqual({ providerID: "openai", modelID: "gpt-5.6-sol" });
     expect(resolveSupportedGlmBackendModel(
-      { providerID: "openai", modelID: "gpt-5.6-luna" },
+      { providerID: "openai", modelID: "gpt-5.6-terra" },
       [],
       [],
-    )).toEqual({ providerID: "openai", modelID: "gpt-5.6-luna" });
+    )).toEqual({ providerID: "openai", modelID: "gpt-5.6-terra" });
   });
 
   test("cycles explicit effort values and wraps", () => {

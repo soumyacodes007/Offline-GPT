@@ -1,19 +1,19 @@
-import type { DesktopCommandName, DesktopCommandArgs, DesktopCommandResult } from "@openwork/types/desktop-ipc";
-import type { OpenworkContextSnapshot } from "@openwork/types/openwork-context";
+import type { DesktopCommandName, DesktopCommandArgs, DesktopCommandResult } from "@offlinegpt/types/desktop-ipc";
+import type { OfflineGptContextSnapshot } from "@offlinegpt/types/offlinegpt-context";
 
 /** Test-facing browser protocols. State is installed by the corresponding world before use. */
 declare global {
   interface Window {
-    __openworkControl: {
+    __offlinegptControl: {
       listActions(): { id: string; disabled: boolean; args?: unknown; [key: string]: unknown }[];
       execute(action: string, args?: unknown): Promise<{ ok: boolean; error?: string; result?: unknown; value?: unknown }>;
-      context(): OpenworkContextSnapshot;
+      context(): OfflineGptContextSnapshot;
       snapshot(): { route: string; narration: string };
       setEnabled(enabled: boolean): void;
       command(request: { id: string; args?: unknown; [key: string]: unknown }): Promise<unknown>;
     };
     __reauthOriginalOpen?: typeof window.open;
-    __OPENWORK_ELECTRON__: {
+    __OFFLINEGPT_ELECTRON__: {
       shell: { relaunch(): Promise<void> };
       browserLogins: {
         testWitnessUrl(): Promise<string>;
@@ -35,7 +35,7 @@ declare global {
         setChannel(channel: "stable" | "alpha"): Promise<{ channel: "stable" | "alpha"; currentVersion: string }>;
       };
     };
-    __openwork: {
+    __offlinegpt: {
       slice(name: "composer"): {
         snapshotQuery: {
           status: "pending" | "error" | "success";
@@ -58,11 +58,11 @@ declare global {
         sessionsByWorkspaceId: Record<string, { id: string; title?: string }[]>;
       };
     };
-    __openworkRecoveryControl: { snapshot(): Promise<unknown>; select(id: string): Promise<unknown> };
-    __openworkApplyDesktopConfig(config: { allowAlphaUpdates?: boolean; brandAppName?: string; brandLogoUrl?: string }): void;
-    __openworkSetDesktopConfigRefreshResult(config: { allowAlphaUpdates?: boolean; brandAppName?: string; brandLogoUrl?: string }): void;
-    __openworkReadDesktopVersionMetadataEval(): { minAppVersion: string; latestAppVersion: string; publishedDesktopVersions: string[] };
-    __openworkUpdaterEvalBridge: {
+    __offlinegptRecoveryControl: { snapshot(): Promise<unknown>; select(id: string): Promise<unknown> };
+    __offlinegptApplyDesktopConfig(config: { allowAlphaUpdates?: boolean; brandAppName?: string; brandLogoUrl?: string }): void;
+    __offlinegptSetDesktopConfigRefreshResult(config: { allowAlphaUpdates?: boolean; brandAppName?: string; brandLogoUrl?: string }): void;
+    __offlinegptReadDesktopVersionMetadataEval(): { minAppVersion: string; latestAppVersion: string; publishedDesktopVersions: string[] };
+    __offlinegptUpdaterEvalBridge: {
       getChannel(): Promise<{ channel: string; currentVersion: string }>;
       setChannel(channel: "stable" | "alpha"): Promise<{ channel: string; currentVersion: string }>;
       check(channel?: "stable" | "alpha"): Promise<unknown>;
@@ -71,8 +71,8 @@ declare global {
       onDownloadProgress(callback?: (progress: unknown) => void): () => void;
     };
     __backgroundUpdateWitness: { checks: number; downloads: number; installs: number; offset: number; finishDownload: (() => void) | null; intervalCheck: (() => void) | null };
-    __openworkAlphaUpdateEligibilityEvalState: { checks: (string | undefined)[]; currentVersion: string; latestVersion: string };
-    __openworkUpdaterEvalState: { checks: (string | undefined)[]; setChannels: string[]; stableStarted: boolean; finishStable: (() => void) | null };
+    __offlinegptAlphaUpdateEligibilityEvalState: { checks: (string | undefined)[]; currentVersion: string; latestVersion: string };
+    __offlinegptUpdaterEvalState: { checks: (string | undefined)[]; setChannels: string[]; stableStarted: boolean; finishStable: (() => void) | null };
     __issue3980NotificationProbe: { observer: MutationObserver; state: { rawSeen: boolean } };
     __libraryStability: { requests: string[]; denEvents: number; samples: { buttons: number; contentVisible: boolean }[]; sampler?: number };
     __libraryLifecycleReads: number;

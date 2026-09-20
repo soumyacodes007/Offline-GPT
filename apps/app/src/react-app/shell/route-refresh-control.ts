@@ -250,7 +250,7 @@ export type RouteConnectionGapPlan = {
 };
 
 /**
- * Decide what a refresh does when it resolves no usable OpenWork server
+ * Decide what a refresh does when it resolves no usable OfflineGPT server
  * URL/token.
  *
  * On desktop the local server owns that URL and mints fresh tokens on every

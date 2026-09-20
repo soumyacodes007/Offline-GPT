@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect } from "vitest";
-import { liveOpenAiEnabled } from "@openwork/behaviors";
-import { observeTranscript, readTranscriptMessages, spec } from "@openwork/testkit";
+import { liveOpenAiEnabled } from "@offlinegpt/behaviors";
+import { observeTranscript, readTranscriptMessages, spec } from "@offlinegpt/testkit";
 import { skillLifecycle } from "../worlds/chat.ts";
 
 const test = spec.world(skillLifecycle, {
@@ -66,8 +66,8 @@ test("workspace skills change during an ongoing conversation", async ({ world, u
     expect((await agent.desktopApi(`${skillRoute}/${world.skillName}`, { method: "DELETE" })).status).toBe(200);
   };
 
-  await step("the conversation knows OpenWork and cannot invent a skill result", async () => {
-    expect(await ask(null)).toMatch(/OpenWork/i);
+  await step("the conversation knows OfflineGPT and cannot invent a skill result", async () => {
+    expect(await ask(null)).toMatch(/OfflineGPT/i);
   });
   await step("installing a matching skill makes its unseen instructions usable on the next turn", async () => {
     const code = randomUUID();

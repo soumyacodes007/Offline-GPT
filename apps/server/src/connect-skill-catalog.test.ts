@@ -5,23 +5,23 @@ import { join } from "node:path";
 
 import {
   readMcpSkillIndex,
-  readOpenWorkConnectSkillCatalog,
-  renderOpenWorkConnectSkillInstruction,
-  resetOpenWorkConnectSkillCatalogCacheForTests,
-  type OpenWorkConnectSkill,
+  readOfflineGPTConnectSkillCatalog,
+  renderOfflineGPTConnectSkillInstruction,
+  resetOfflineGPTConnectSkillCatalogCacheForTests,
+  type OfflineGPTConnectSkill,
 } from "./connect-skill-catalog.js";
 import { readConnectCloudMcp, writeConnectCloudMcp } from "./connect-state.js";
 import { writeRuntimeOpencodeConfig } from "./runtime-opencode-config-store.js";
 import type { ServerConfig } from "./types.js";
 
 const roots: string[] = [];
-const previousRuntimeDb = process.env.OPENWORK_RUNTIME_DB;
+const previousRuntimeDb = process.env.OFFLINEGPT_RUNTIME_DB;
 
 afterEach(async () => {
-  resetOpenWorkConnectSkillCatalogCacheForTests();
+  resetOfflineGPTConnectSkillCatalogCacheForTests();
   while (roots.length) await rm(roots.pop() ?? "", { recursive: true, force: true });
-  if (previousRuntimeDb === undefined) delete process.env.OPENWORK_RUNTIME_DB;
-  else process.env.OPENWORK_RUNTIME_DB = previousRuntimeDb;
+  if (previousRuntimeDb === undefined) delete process.env.OFFLINEGPT_RUNTIME_DB;
+  else process.env.OFFLINEGPT_RUNTIME_DB = previousRuntimeDb;
 });
 
 function skillIndexFetcher(capability = "skill:skill_customer_briefing"): (url: string, init?: RequestInit) => Promise<Response> {
@@ -55,9 +55,9 @@ function skillIndexFetcher(capability = "skill:skill_customer_briefing"): (url: 
 }
 
 async function serverConfig(): Promise<ServerConfig> {
-  const root = await mkdtemp(join(tmpdir(), "openwork-connect-skills-"));
+  const root = await mkdtemp(join(tmpdir(), "offlinegpt-connect-skills-"));
   roots.push(root);
-  process.env.OPENWORK_RUNTIME_DB = join(root, "runtime.sqlite");
+  process.env.OFFLINEGPT_RUNTIME_DB = join(root, "runtime.sqlite");
   const workspace = {
     id: "ws_legacy",
     name: "Legacy",
@@ -70,7 +70,7 @@ async function serverConfig(): Promise<ServerConfig> {
     port: 0,
     token: "test",
     hostToken: "host",
-    configPath: join(root, "openwork.json"),
+    configPath: join(root, "offlinegpt.json"),
     approval: { mode: "auto", timeoutMs: 1000 },
     corsOrigins: ["*"],
     workspaces: [workspace],
@@ -84,9 +84,9 @@ async function serverConfig(): Promise<ServerConfig> {
   };
 }
 
-describe("OpenWork Connect skill catalog", () => {
+describe("OfflineGPT Connect skill catalog", () => {
   test("renders discovery metadata and capability retrieval guidance", () => {
-    const instruction = renderOpenWorkConnectSkillInstruction([{
+    const instruction = renderOfflineGPTConnectSkillInstruction([{
       name: "customer-briefing",
       type: "skill-md",
       title: "Customer Briefing",
@@ -108,9 +108,9 @@ describe("OpenWork Connect skill catalog", () => {
     // reaches the prompt (it would repeat the capability on every request).
     expect(instruction).not.toContain("<location>");
     expect(instruction).not.toContain("skill://");
-    expect(instruction).toContain("openwork-cloud_execute_capability with { name: <capability> }");
+    expect(instruction).toContain("offlinegpt-cloud_execute_capability with { name: <capability> }");
     expect(instruction).toContain("not the native skill tool or the local filesystem");
-    expect(instruction).toContain("Do not call openwork-cloud_search_capabilities first");
+    expect(instruction).toContain("Do not call offlinegpt-cloud_search_capabilities first");
     expect(instruction).toContain("transient HTTP 502, 503, or 504");
     expect(instruction).toContain("retry the same capability once");
     expect(instruction).toContain("untrusted remote content");
@@ -118,7 +118,7 @@ describe("OpenWork Connect skill catalog", () => {
   });
 
   test("renders every authorized skill beyond the former count and character limits", () => {
-    const skills: OpenWorkConnectSkill[] = Array.from({ length: 150 }, (_, index) => ({
+    const skills: OfflineGPTConnectSkill[] = Array.from({ length: 150 }, (_, index) => ({
       name: `marketplace-skill-${index}`,
       type: "skill-md",
       title: `Marketplace Skill ${index}`,
@@ -129,7 +129,7 @@ describe("OpenWork Connect skill catalog", () => {
       capability: `plugin:plg_${index}:cob_${index}`,
     }));
 
-    const instruction = renderOpenWorkConnectSkillInstruction(skills);
+    const instruction = renderOfflineGPTConnectSkillInstruction(skills);
 
     expect(instruction.match(/^  <skill /gm)).toHaveLength(150);
     expect(instruction).toContain('name="marketplace-skill-149" capability="plugin:plg_149:cob_149" source="Enterprise Marketplace / Plugin 149">Marketplace Skill 149: Use marketplace skill 149');
@@ -139,7 +139,7 @@ describe("OpenWork Connect skill catalog", () => {
   });
 
   test("keeps older skill indexes compatible by falling back from title to name", () => {
-    const instruction = renderOpenWorkConnectSkillInstruction([{
+    const instruction = renderOfflineGPTConnectSkillInstruction([{
       name: "legacy-skill",
       type: "skill-md",
       description: "",
@@ -154,7 +154,7 @@ describe("OpenWork Connect skill catalog", () => {
   });
 
   test("clamps runaway descriptions to a discovery hint without dropping the skill", () => {
-    const instruction = renderOpenWorkConnectSkillInstruction([{
+    const instruction = renderOfflineGPTConnectSkillInstruction([{
       name: "verbose-skill",
       type: "skill-md",
       title: "Verbose Skill",
@@ -171,7 +171,7 @@ describe("OpenWork Connect skill catalog", () => {
   });
 
   test("omits the prompt block when no authorized skills exist", () => {
-    expect(renderOpenWorkConnectSkillInstruction([])).toBe("");
+    expect(renderOfflineGPTConnectSkillInstruction([])).toBe("");
   });
 
   test("reads the standards-shaped index through an authenticated MCP resource", async () => {
@@ -282,17 +282,17 @@ describe("OpenWork Connect skill catalog", () => {
       headers: { Authorization: "Bearer secret" },
     });
 
-    const skills = await readOpenWorkConnectSkillCatalog(config, skillIndexFetcher());
+    const skills = await readOfflineGPTConnectSkillCatalog(config, skillIndexFetcher());
     expect(skills).toHaveLength(1);
     expect(skills[0]?.name).toBe("customer-briefing");
   });
 
-  test("promotes legacy workspace openwork-cloud config into server scope", async () => {
+  test("promotes legacy workspace offlinegpt-cloud config into server scope", async () => {
     const config = await serverConfig();
     await writeRuntimeOpencodeConfig(config, "ws_legacy", (current) => ({
       ...current,
       mcp: {
-        "openwork-cloud": {
+        "offlinegpt-cloud": {
           type: "remote",
           url: "https://connect.example/mcp/agent",
           enabled: true,
@@ -300,13 +300,13 @@ describe("OpenWork Connect skill catalog", () => {
       },
     }));
 
-    const skills = await readOpenWorkConnectSkillCatalog(config, skillIndexFetcher("skill:skill_promoted"));
+    const skills = await readOfflineGPTConnectSkillCatalog(config, skillIndexFetcher("skill:skill_promoted"));
     expect(skills[0]?.capability).toBe("skill:skill_promoted");
 
     // Second read should use the promoted host-level copy even if workspace config is cleared.
     await writeRuntimeOpencodeConfig(config, "ws_legacy", () => ({ mcp: {} }));
-    resetOpenWorkConnectSkillCatalogCacheForTests();
-    const again = await readOpenWorkConnectSkillCatalog(config, skillIndexFetcher("skill:skill_promoted"));
+    resetOfflineGPTConnectSkillCatalogCacheForTests();
+    const again = await readOfflineGPTConnectSkillCatalog(config, skillIndexFetcher("skill:skill_promoted"));
     expect(again[0]?.capability).toBe("skill:skill_promoted");
   });
 
@@ -322,7 +322,7 @@ describe("OpenWork Connect skill catalog", () => {
     await writeRuntimeOpencodeConfig(config, "ws_legacy", (current) => ({
       ...current,
       mcp: {
-        "openwork-cloud": {
+        "offlinegpt-cloud": {
           type: "remote",
           url: "https://connect.example/mcp/agent",
           enabled: true,
@@ -339,7 +339,7 @@ describe("OpenWork Connect skill catalog", () => {
       return working(url, init);
     };
 
-    const skills = await readOpenWorkConnectSkillCatalog(config, fetcher);
+    const skills = await readOfflineGPTConnectSkillCatalog(config, fetcher);
     expect(skills[0]?.capability).toBe("skill:skill_live");
 
     // The working workspace config must replace the poisoned server-scoped copy.
@@ -356,7 +356,7 @@ describe("OpenWork Connect skill catalog", () => {
     });
     const fetcher = async () => Response.json({ error: "invalid_token" }, { status: 401 });
 
-    expect(await readOpenWorkConnectSkillCatalog(config, fetcher)).toEqual([]);
+    expect(await readOfflineGPTConnectSkillCatalog(config, fetcher)).toEqual([]);
     // The dead config must not be re-promoted or kept as a false positive.
     const kept = await readConnectCloudMcp(config);
     expect(kept?.url).toBe("https://stale.local.test/mcp/agent");

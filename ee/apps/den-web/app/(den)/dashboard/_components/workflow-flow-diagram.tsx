@@ -1,4 +1,4 @@
-import type { WorkflowGraph, WorkflowGraphNode } from "@openwork/types/workflows";
+import type { WorkflowGraph, WorkflowGraphNode } from "@offlinegpt/types/workflows";
 import { CornerDownLeft, GitBranch, Play, Repeat, Search, Wrench } from "lucide-react";
 import {
   describeCondition,

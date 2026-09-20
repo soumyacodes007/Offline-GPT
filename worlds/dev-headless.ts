@@ -19,7 +19,7 @@ function parseArgs(argv: readonly string[]): DevHeadlessOptions {
   if (unsupported) throw new Error(`Unsupported dev-headless flag: ${unsupported}`);
   return {
     replace: argv.includes("--replace")
-      || ["1", "true", "yes", "on"].includes((process.env.OPENWORK_DEV_HEADLESS_WEB_REPLACE ?? "").trim().toLowerCase()),
+      || ["1", "true", "yes", "on"].includes((process.env.OFFLINEGPT_DEV_HEADLESS_WEB_REPLACE ?? "").trim().toLowerCase()),
     keepTokens: argv.includes("--keep-tokens"),
     rotateTokens: argv.includes("--rotate-tokens"),
   };
@@ -28,7 +28,7 @@ function parseArgs(argv: readonly string[]): DevHeadlessOptions {
 function outputs(handle: HeadlessWebHandle): Record<string, string> {
   return {
     webUrl: handle.manifest.webUrl,
-    openworkUrl: handle.manifest.openworkUrl,
+    offlinegptUrl: handle.manifest.offlinegptUrl,
     workspace: handle.manifest.workspace,
     runtimeManifest: handle.manifest.runtimeManifestPath,
   };

@@ -37,7 +37,7 @@ afterEach(() => {
 describe("single-org public signup UI policy", () => {
   test("runtime config exposes private public-signup default for single-org deployments", async () => {
     delete process.env.DEN_API_BASE;
-    process.env.DEN_BASE_URL = "https://app.openworklabs.com";
+    process.env.DEN_BASE_URL = "https://app.offlinegptlabs.com";
     process.env.DEN_ORG_MODE = "single_org";
     delete process.env.DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP;
 
@@ -48,7 +48,7 @@ describe("single-org public signup UI policy", () => {
 
   test("runtime config parses Helm string public-signup values", async () => {
     delete process.env.DEN_API_BASE;
-    process.env.DEN_BASE_URL = "https://app.openworklabs.com";
+    process.env.DEN_BASE_URL = "https://app.offlinegptlabs.com";
     process.env.DEN_ORG_MODE = "single_org";
     process.env.DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP = "true";
 

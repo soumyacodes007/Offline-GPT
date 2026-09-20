@@ -34,20 +34,20 @@ describe("Den API build-time redirect rules", () => {
   });
 
   test("prefers an explicit DEN_API_BASE origin", () => {
-    const env = { DEN_API_BASE: "https://api.openworklabs.com/", DEN_BASE_URL: "https://app.openworklabs.com" };
+    const env = { DEN_API_BASE: "https://api.offlinegptlabs.com/", DEN_BASE_URL: "https://app.offlinegptlabs.com" };
 
-    expect(denApiRedirectOrigin(env)).toBe("https://api.openworklabs.com");
+    expect(denApiRedirectOrigin(env)).toBe("https://api.offlinegptlabs.com");
     expect(denApiRedirects(env)).toEqual([
       {
         source: "/api/den/:path*",
-        destination: "https://api.openworklabs.com/:path*",
+        destination: "https://api.offlinegptlabs.com/:path*",
         permanent: false,
       },
     ]);
   });
 
   test("derives the api-prefixed host from DEN_BASE_URL", () => {
-    expect(denApiRedirectOrigin({ DEN_BASE_URL: "https://app.openworklabs.com" })).toBe("https://api.app.openworklabs.com");
+    expect(denApiRedirectOrigin({ DEN_BASE_URL: "https://app.offlinegptlabs.com" })).toBe("https://api.app.offlinegptlabs.com");
     expect(denApiRedirectOrigin({ DEN_BASE_URL: "den.example.com" })).toBe("https://api.den.example.com");
     expect(denApiRedirectOrigin({ DEN_BASE_URL: "http://api.den.local:8790" })).toBe("http://api.den.local:8790");
   });
@@ -59,18 +59,18 @@ describe("Den API build-time redirect rules", () => {
   });
 
   test("ignores a DEN_API_BASE without a scheme, like the route handler", () => {
-    const env = { DEN_API_BASE: "api.openworklabs.com", DEN_BASE_URL: "https://app.openworklabs.com" };
+    const env = { DEN_API_BASE: "api.offlinegptlabs.com", DEN_BASE_URL: "https://app.offlinegptlabs.com" };
 
-    expect(denApiRedirectOrigin(env)).toBe("https://api.app.openworklabs.com");
+    expect(denApiRedirectOrigin(env)).toBe("https://api.app.offlinegptlabs.com");
   });
 
   test("matches the route handler's Location for every supported env shape", () => {
     const shapes: RedirectEnv[] = [
-      { DEN_API_BASE: "https://api.openworklabs.com", DEN_BASE_URL: "https://app.openworklabs.com" },
-      { DEN_BASE_URL: "https://app.openworklabs.com" },
+      { DEN_API_BASE: "https://api.offlinegptlabs.com", DEN_BASE_URL: "https://app.offlinegptlabs.com" },
+      { DEN_BASE_URL: "https://app.offlinegptlabs.com" },
       { DEN_BASE_URL: "http://localhost:3005", DEN_API_BASE: "http://127.0.0.1:8790" },
       { DEN_WEB_PUBLIC_ORIGIN: "https://den.example.org" },
-      { DEN_API_BASE: "not a url", DEN_BASE_URL: "https://app.openworklabs.com" },
+      { DEN_API_BASE: "not a url", DEN_BASE_URL: "https://app.offlinegptlabs.com" },
     ];
 
     for (const shape of shapes) {

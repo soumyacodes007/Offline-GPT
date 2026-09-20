@@ -1,9 +1,9 @@
-import { and, asc, eq, gt, lte, or, sql } from "@openwork-ee/den-db/drizzle"
+import { and, asc, eq, gt, lte, or, sql } from "@offlinegpt-ee/den-db/drizzle"
 import type { Hono } from "hono"
-import { InferenceKeyTable, InferenceOrgLimitPolicyTable, InferenceUsageLedgerBucketChargeTable, InferenceUsageLedgerEntryTable, InferenceOrgUsageBucketTable } from "@openwork-ee/den-db"
-import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
-import type { DenTypeId } from "@openwork-ee/utils/typeid"
-import { INFERENCE_USAGE_CONVERSION_FACTOR, INFERENCE_WINDOW_TYPES } from "@openwork/types/den/inference"
+import { InferenceKeyTable, InferenceOrgLimitPolicyTable, InferenceUsageLedgerBucketChargeTable, InferenceUsageLedgerEntryTable, InferenceOrgUsageBucketTable } from "@offlinegpt-ee/den-db"
+import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
+import type { DenTypeId } from "@offlinegpt-ee/utils/typeid"
+import { INFERENCE_USAGE_CONVERSION_FACTOR, INFERENCE_WINDOW_TYPES } from "@offlinegpt/types/den/inference"
 import * as Sentry from "@sentry/node"
 import { db } from "./db.js"
 import { env } from "./env.js"
@@ -33,7 +33,7 @@ export type OpenRouterUnknownModelUsageReport = {
   organizationId: string
   orgMembershipId: string
   inferenceKeyId: string
-  openworkRequestId: string
+  offlinegptRequestId: string
   externalEventId: string | null
   generationId: string | null
   usage: OpenRouterUsageMetadata
@@ -46,7 +46,7 @@ type OpenRouterUsageWebhookReporter = {
 type ParsedSpan = {
   orgMembershipId: string
   inferenceKeyId: string
-  openworkRequestId: string
+  offlinegptRequestId: string
   externalEventId: string | null
   generationId: string | null
   occurredAt: Date
@@ -183,21 +183,21 @@ function usageMetadataFromSpan(input: {
 function parseSpan(span: JsonRecord, attrs: JsonRecord): ParsedSpan | null {
   const orgMembershipId = stringAttr(attrs, ["trace.metadata.org_membership_id", "trace.org_membership_id", "metadata.org_membership_id", "org_membership_id"])
   const inferenceKeyId = stringAttr(attrs, ["trace.metadata.inference_key_id", "trace.inference_key_id", "metadata.inference_key_id", "inference_key_id"])
-  const openworkRequestId = stringAttr(attrs, ["trace.metadata.openwork_request_id", "trace.openwork_request_id", "metadata.openwork_request_id", "openwork_request_id", "trace_id"])
+  const offlinegptRequestId = stringAttr(attrs, ["trace.metadata.offlinegpt_request_id", "trace.offlinegpt_request_id", "metadata.offlinegpt_request_id", "offlinegpt_request_id", "trace_id"])
     ?? (typeof span.traceId === "string" ? span.traceId : null)
   const requestModel = stringAttr(attrs, ["gen_ai.request.model"])
   const responseModel = stringAttr(attrs, ["gen_ai.response.model"])
   const reportedModel = responseModel ?? requestModel
   const inputCost = numberAttr(attrs, ["gen_ai.usage.input_cost"])
   const outputCost = numberAttr(attrs, ["gen_ai.usage.output_cost"])
-  if (!orgMembershipId || !inferenceKeyId || !openworkRequestId || !reportedModel) {
+  if (!orgMembershipId || !inferenceKeyId || !offlinegptRequestId || !reportedModel) {
     return null
   }
   const generationId = stringAttr(attrs, ["gen_ai.response.id", "gen_ai.generation.id", "generation_id", "response_id"])
   const externalEventId = stringAttr(attrs, ["event_id", "id", "span_id"]) ?? generationId ?? spanString(span, "spanId")
   const occurredAt = timeFromSpan(span, attrs)
   const usageMetadata = usageMetadataFromSpan({ span, attrs, requestModel, responseModel, inputCost, outputCost, generationId })
-  if (!occurredAt || [openworkRequestId, reportedModel, externalEventId].some((value) => value !== null && value.length > 255)) return null
+  if (!occurredAt || [offlinegptRequestId, reportedModel, externalEventId].some((value) => value !== null && value.length > 255)) return null
   if (usageMetadata.currency !== null && usageMetadata.currency !== "USD") return null
   for (const name of ["gen_ai.usage.input_cost", "gen_ai.usage.output_cost"]) {
     const value = attrs[name]
@@ -217,7 +217,7 @@ function parseSpan(span: JsonRecord, attrs: JsonRecord): ParsedSpan | null {
   return {
     orgMembershipId,
     inferenceKeyId,
-    openworkRequestId,
+    offlinegptRequestId,
     externalEventId,
     generationId,
     occurredAt,
@@ -267,7 +267,7 @@ const sentryWebhookReporter: OpenRouterUsageWebhookReporter = {
       level: "fatal",
       tags: {
         organization_id: report.organizationId,
-        openwork_request_id: report.openworkRequestId,
+        offlinegpt_request_id: report.offlinegptRequestId,
         external_event_id: report.externalEventId ?? "none",
         reported_model: report.reportedModel,
       },
@@ -294,12 +294,12 @@ const defaultWebhookDependencies: WebhookDependencies = {
         .where(eq(InferenceOrgLimitPolicyTable.organization_id, inferenceKey.organization_id))
         .orderBy(asc(InferenceOrgLimitPolicyTable.window_type)).for("update")
       const identity = or(
-        and(eq(InferenceUsageLedgerEntryTable.external_job_id, span.openworkRequestId), eq(InferenceUsageLedgerEntryTable.event_type, "openrouter_usage")),
+        and(eq(InferenceUsageLedgerEntryTable.external_job_id, span.offlinegptRequestId), eq(InferenceUsageLedgerEntryTable.event_type, "openrouter_usage")),
         span.externalEventId ? eq(InferenceUsageLedgerEntryTable.external_event_id, span.externalEventId) : undefined,
       )
       const matchesIdentity = (entry: typeof InferenceUsageLedgerEntryTable.$inferSelect) =>
         entry.organization_id === inferenceKey.organization_id && entry.org_membership_id === inferenceKey.org_membership_id &&
-        entry.inference_key_id === inferenceKey.id && entry.external_job_id === span.openworkRequestId && entry.event_type === "openrouter_usage"
+        entry.inference_key_id === inferenceKey.id && entry.external_job_id === span.offlinegptRequestId && entry.event_type === "openrouter_usage"
       const existing = await tx.select().from(InferenceUsageLedgerEntryTable).where(identity).for("update")
       if (existing.some((entry) => !matchesIdentity(entry))) return "skipped"
       const occurredAt = existing[0]?.occurred_at ?? span.occurredAt
@@ -314,7 +314,7 @@ const defaultWebhookDependencies: WebhookDependencies = {
         await tx.insert(InferenceUsageLedgerEntryTable).values({
           id: createDenTypeId("inferenceUsageLedgerEntry"),
           organization_id: inferenceKey.organization_id, org_membership_id: inferenceKey.org_membership_id,
-          inference_key_id: inferenceKey.id, external_job_id: span.openworkRequestId, external_event_id: span.externalEventId,
+          inference_key_id: inferenceKey.id, external_job_id: span.offlinegptRequestId, external_event_id: span.externalEventId,
           cost_amount: costAmount ?? 0, model_id: span.reportedModel, provider_id: "openrouter",
           input_tokens: span.usageMetadata.inputTokens, output_tokens: span.usageMetadata.outputTokens, total_tokens: span.usageMetadata.totalTokens,
           event_type: "openrouter_usage", occurred_at: occurredAt, provider_usage: providerUsage,
@@ -371,7 +371,7 @@ function reportUnknownPricedModel(input: { span: ParsedSpan; inferenceKey: Webho
   logWebhookError("retained unpriced provider usage", {
     reportedModel: input.span.reportedModel,
     organizationId: input.inferenceKey.organization_id,
-    openworkRequestId: input.span.openworkRequestId,
+    offlinegptRequestId: input.span.offlinegptRequestId,
     externalEventId: input.span.externalEventId,
   })
   input.reporter.unknownModel({
@@ -379,7 +379,7 @@ function reportUnknownPricedModel(input: { span: ParsedSpan; inferenceKey: Webho
     organizationId: input.inferenceKey.organization_id,
     orgMembershipId: input.inferenceKey.org_membership_id,
     inferenceKeyId: input.inferenceKey.id,
-    openworkRequestId: input.span.openworkRequestId,
+    offlinegptRequestId: input.span.offlinegptRequestId,
     externalEventId: input.span.externalEventId,
     generationId: input.span.generationId,
     usage: input.span.usageMetadata,
@@ -447,7 +447,7 @@ export function registerWebhookRoutes(app: Hono, dependencies: WebhookDependenci
         }
       } catch {
         failed += 1
-        logWebhookError("Usage persistence failed; provider must retry", { requestId: span.openworkRequestId })
+        logWebhookError("Usage persistence failed; provider must retry", { requestId: span.offlinegptRequestId })
       }
     }
     return c.json({ ok: failed === 0 && invalid === 0, ingested, skipped, deferred, invalid, failed }, failed ? 503 : invalid ? 400 : 200)

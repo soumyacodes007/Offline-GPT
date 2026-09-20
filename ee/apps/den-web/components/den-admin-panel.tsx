@@ -134,7 +134,7 @@ type AdminOrganizationCapabilities = {
   mcpConnections: boolean;
 };
 
-type AdminOpenWorkWebAccess = {
+type AdminOfflineGPTWebAccess = {
   hasAccess: boolean;
   accessSource: "subscription" | "complimentary" | null;
   complimentaryAccess: boolean;
@@ -159,7 +159,7 @@ type AdminOrganization = {
   seatsFreeAdditional: number;
   billableSeatCount: number;
   capabilities: AdminOrganizationCapabilities;
-  openworkWebAccess: AdminOpenWorkWebAccess;
+  offlinegptWebAccess: AdminOfflineGPTWebAccess;
 };
 
 type AdminPageInfo = {
@@ -249,7 +249,7 @@ function parseBillingStatus(value: unknown): AdminBillingStatus | null {
   };
 }
 
-function parseAdminOpenWorkWebAccess(value: unknown): AdminOpenWorkWebAccess {
+function parseAdminOfflineGPTWebAccess(value: unknown): AdminOfflineGPTWebAccess {
   if (!isRecord(value)) {
     return {
       hasAccess: false,
@@ -455,7 +455,7 @@ function parseAdminPayload(payload: unknown): AdminPayload | null {
             installLinks: capabilities.installLinks === true,
             mcpConnections: capabilities.mcpConnections === true
           },
-          openworkWebAccess: parseAdminOpenWorkWebAccess(value.openworkWebAccess)
+          offlinegptWebAccess: parseAdminOfflineGPTWebAccess(value.offlinegptWebAccess)
         };
       })
       .filter((value): value is AdminOrganization => value !== null)
@@ -825,7 +825,7 @@ function buildFixtureOrganization(index: number): AdminOrganization {
     seatsFreeAdditional: target ? 20 : 0,
     billableSeatCount: target ? 103 : 0,
     capabilities: { installLinks: target, mcpConnections: target, modelsAnalytics: false },
-    openworkWebAccess: {
+    offlinegptWebAccess: {
       hasAccess: target,
       accessSource: target ? "complimentary" : null,
       complimentaryAccess: target,
@@ -995,7 +995,7 @@ function adminScaleFixturePayload(path: string): unknown | null {
   return null;
 }
 
-const AUTH_TOKEN_STORAGE_KEY = "openwork:web:auth-token";
+const AUTH_TOKEN_STORAGE_KEY = "offlinegpt:web:auth-token";
 
 // Browser calls go straight to the api.* origin. Attach the stored bearer token
 // like den-flow's requestJson does; den-api accepts either bearer or cookie
@@ -1403,7 +1403,7 @@ function PlanPill({ tier }: { tier: AdminOrganization["plan"]["tier"] }) {
   );
 }
 
-function OpenWorkWebAccessPill({ access }: { access: AdminOpenWorkWebAccess }) {
+function OfflineGPTWebAccessPill({ access }: { access: AdminOfflineGPTWebAccess }) {
   const label = access.hasOngoingSubscription
     ? "Paid subscription"
     : access.complimentaryAccess
@@ -1493,9 +1493,9 @@ export function DenAdminPanel() {
   const [savingFreeSeatsOrgId, setSavingFreeSeatsOrgId] = useState<string | null>(null);
   const [savingCapabilityOrgId, setSavingCapabilityOrgId] = useState<string | null>(null);
   const [capabilityError, setCapabilityError] = useState<{ orgId: string; message: string } | null>(null);
-  const [openworkWebAccessDialog, setOpenWorkWebAccessDialog] = useState<{ org: AdminOrganization; enabled: boolean; reason: string } | null>(null);
-  const [savingOpenWorkWebAccessOrgId, setSavingOpenWorkWebAccessOrgId] = useState<string | null>(null);
-  const [openworkWebAccessError, setOpenWorkWebAccessError] = useState<{ orgId: string; message: string } | null>(null);
+  const [offlinegptWebAccessDialog, setOfflineGPTWebAccessDialog] = useState<{ org: AdminOrganization; enabled: boolean; reason: string } | null>(null);
+  const [savingOfflineGPTWebAccessOrgId, setSavingOfflineGPTWebAccessOrgId] = useState<string | null>(null);
+  const [offlinegptWebAccessError, setOfflineGPTWebAccessError] = useState<{ orgId: string; message: string } | null>(null);
   const [deleteUserDialog, setDeleteUserDialog] = useState<AdminUser | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [adminEmail, setAdminEmail] = useState("");
@@ -2160,39 +2160,39 @@ export function DenAdminPanel() {
     }
   }, [setOrganizationCapabilityLocally]);
 
-  const saveOpenWorkWebAccess = useCallback(async () => {
-    if (!openworkWebAccessDialog) {
+  const saveOfflineGPTWebAccess = useCallback(async () => {
+    if (!offlinegptWebAccessDialog) {
       return;
     }
 
-    const reason = openworkWebAccessDialog.reason.trim();
+    const reason = offlinegptWebAccessDialog.reason.trim();
     if (reason.length < 3) {
-      setOpenWorkWebAccessError({ orgId: openworkWebAccessDialog.org.id, message: "Add a short reason for the audit log." });
+      setOfflineGPTWebAccessError({ orgId: offlinegptWebAccessDialog.org.id, message: "Add a short reason for the audit log." });
       return;
     }
 
-    const { org, enabled } = openworkWebAccessDialog;
-    setSavingOpenWorkWebAccessOrgId(org.id);
-    setOpenWorkWebAccessError(null);
+    const { org, enabled } = offlinegptWebAccessDialog;
+    setSavingOfflineGPTWebAccessOrgId(org.id);
+    setOfflineGPTWebAccessError(null);
     setError(null);
 
     try {
-      const { response, payload: nextPayload } = await putJson(`/v1/admin/organizations/${org.id}/openwork-web-access`, {
+      const { response, payload: nextPayload } = await putJson(`/v1/admin/organizations/${org.id}/offlinegpt-web-access`, {
         enabled,
         reason
       });
       if (!response.ok) {
-        const message = getErrorMessage(nextPayload, `Could not update OpenWork Web access for ${org.name}.`);
-        setOpenWorkWebAccessError({ orgId: org.id, message });
+        const message = getErrorMessage(nextPayload, `Could not update OfflineGPT Web access for ${org.name}.`);
+        setOfflineGPTWebAccessError({ orgId: org.id, message });
         setError(message);
         return;
       }
 
       const updatedOrganization = isRecord(nextPayload) && isRecord(nextPayload.organization) ? nextPayload.organization : null;
       if (!updatedOrganization) {
-        throw new Error("The OpenWork Web access response was incomplete.");
+        throw new Error("The OfflineGPT Web access response was incomplete.");
       }
-      const openworkWebAccess = parseAdminOpenWorkWebAccess(updatedOrganization.openworkWebAccess);
+      const offlinegptWebAccess = parseAdminOfflineGPTWebAccess(updatedOrganization.offlinegptWebAccess);
       setPayload((current) => {
         if (!current) {
           return current;
@@ -2200,19 +2200,19 @@ export function DenAdminPanel() {
         return {
           ...current,
           organizations: current.organizations.map((entry) => entry.id === org.id
-            ? { ...entry, openworkWebAccess }
+            ? { ...entry, offlinegptWebAccess }
             : entry)
         };
       });
-      setOpenWorkWebAccessDialog(null);
+      setOfflineGPTWebAccessDialog(null);
     } catch (nextError) {
       const message = nextError instanceof Error ? nextError.message : "Unknown network error";
-      setOpenWorkWebAccessError({ orgId: org.id, message });
+      setOfflineGPTWebAccessError({ orgId: org.id, message });
       setError(message);
     } finally {
-      setSavingOpenWorkWebAccessOrgId(null);
+      setSavingOfflineGPTWebAccessOrgId(null);
     }
-  }, [openworkWebAccessDialog]);
+  }, [offlinegptWebAccessDialog]);
 
   const deleteUser = useCallback(async () => {
     if (!deleteUserDialog) {
@@ -2741,13 +2741,13 @@ export function DenAdminPanel() {
                           }}
                           className="h-4 w-4 rounded-sm border-slate-300"
                         />
-                        OpenWork Connect (alpha)
+                        OfflineGPT Connect (alpha)
                       </label>
                     </div>
                     <label className="mt-3 inline-flex items-center gap-2 text-sm text-slate-700">
                       <input type="checkbox" checked={org.capabilities.modelsAnalytics} disabled={savingCapabilityOrgId === org.id}
                         onChange={(event) => void saveOrganizationCapability(org, "modelsAnalytics", event.target.checked)} />
-                      OpenWork Models task analytics (requires admin opt-in)
+                      OfflineGPT Models task analytics (requires admin opt-in)
                     </label>
                     {capabilityError?.orgId === org.id ? (
                       <p data-testid="admin-capability-error" className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-700">
@@ -2760,47 +2760,47 @@ export function DenAdminPanel() {
                     <p className="mt-1 text-xs text-slate-400">Off by default. Requires the deployment master switch and exposes native provider MCP Apps and imported Apps for this organization.</p>
                   </div>
 
-                  <div className="mt-4 border-t border-slate-200 pt-4" data-testid="admin-openwork-web-access">
+                  <div className="mt-4 border-t border-slate-200 pt-4" data-testid="admin-offlinegpt-web-access">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">OpenWork Web billing access</p>
-                          <OpenWorkWebAccessPill access={org.openworkWebAccess} />
+                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">OfflineGPT Web billing access</p>
+                          <OfflineGPTWebAccessPill access={org.offlinegptWebAccess} />
                         </div>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
-                          {org.openworkWebAccess.hasOngoingSubscription
-                            ? `A ${org.openworkWebAccess.subscriptionStatus ?? "current"} Stripe subscription controls access and billing.`
-                            : org.openworkWebAccess.complimentaryAccess
-                              ? "All joined members can use OpenWork Web without a Stripe subscription or per-member charge, even when deployment-wide availability is off."
-                              : "No complimentary grant or ongoing paid OpenWork Web subscription."}
+                          {org.offlinegptWebAccess.hasOngoingSubscription
+                            ? `A ${org.offlinegptWebAccess.subscriptionStatus ?? "current"} Stripe subscription controls access and billing.`
+                            : org.offlinegptWebAccess.complimentaryAccess
+                              ? "All joined members can use OfflineGPT Web without a Stripe subscription or per-member charge, even when deployment-wide availability is off."
+                              : "No complimentary grant or ongoing paid OfflineGPT Web subscription."}
                         </p>
                       </div>
                       <button
                         type="button"
-                        data-testid="admin-openwork-web-access-action"
-                        onClick={() => setOpenWorkWebAccessDialog({
+                        data-testid="admin-offlinegpt-web-access-action"
+                        onClick={() => setOfflineGPTWebAccessDialog({
                           org,
-                          enabled: !org.openworkWebAccess.complimentaryAccess,
+                          enabled: !org.offlinegptWebAccess.complimentaryAccess,
                           reason: ""
                         })}
-                        disabled={savingOpenWorkWebAccessOrgId === org.id || (!org.openworkWebAccess.complimentaryAccess && org.openworkWebAccess.hasOngoingSubscription)}
+                        disabled={savingOfflineGPTWebAccessOrgId === org.id || (!org.offlinegptWebAccess.complimentaryAccess && org.offlinegptWebAccess.hasOngoingSubscription)}
                         className="inline-flex shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {savingOpenWorkWebAccessOrgId === org.id
+                        {savingOfflineGPTWebAccessOrgId === org.id
                           ? "Saving..."
-                          : org.openworkWebAccess.complimentaryAccess
+                          : org.offlinegptWebAccess.complimentaryAccess
                             ? "Revoke complimentary access"
                             : "Grant complimentary access"}
                       </button>
                     </div>
-                    {!org.openworkWebAccess.complimentaryAccess && org.openworkWebAccess.hasOngoingSubscription ? (
+                    {!org.offlinegptWebAccess.complimentaryAccess && org.offlinegptWebAccess.hasOngoingSubscription ? (
                       <p className="mt-2 text-xs leading-5 text-amber-700">
                         Cancel or finish the paid subscription in Stripe before granting complimentary access.
                       </p>
                     ) : null}
-                    {openworkWebAccessError?.orgId === org.id ? (
-                      <p data-testid="admin-openwork-web-access-error" className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-700">
-                        {openworkWebAccessError.message}
+                    {offlinegptWebAccessError?.orgId === org.id ? (
+                      <p data-testid="admin-offlinegpt-web-access-error" className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-700">
+                        {offlinegptWebAccessError.message}
                       </p>
                     ) : null}
                   </div>
@@ -2945,7 +2945,7 @@ export function DenAdminPanel() {
                     <div data-testid="admin-usage-section" className="rounded-2xl border border-slate-200 bg-white px-4 py-4 lg:col-span-2">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">OpenWork model consumption</p>
+                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">OfflineGPT model consumption</p>
                           <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
                             Limits are shared by everyone in each organization. Reset only forgives this user&apos;s consumption in the current windows; it does not change shared limits or other members&apos; usage.
                           </p>
@@ -3101,65 +3101,65 @@ export function DenAdminPanel() {
         <p className="mt-6 text-xs leading-6 text-slate-500">Snapshot generated {formatDateTime(payload.generatedAt)}.</p>
       </div>
 
-      {openworkWebAccessDialog ? (
+      {offlinegptWebAccessDialog ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="openwork-web-access-dialog-title"
-          onClick={() => setOpenWorkWebAccessDialog(null)}
+          aria-labelledby="offlinegpt-web-access-dialog-title"
+          onClick={() => setOfflineGPTWebAccessDialog(null)}
         >
           <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">Organization billing access</p>
-            <h2 id="openwork-web-access-dialog-title" className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950">
-              {openworkWebAccessDialog.enabled ? "Grant" : "Revoke"} complimentary OpenWork Web?
+            <h2 id="offlinegpt-web-access-dialog-title" className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-slate-950">
+              {offlinegptWebAccessDialog.enabled ? "Grant" : "Revoke"} complimentary OfflineGPT Web?
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              {openworkWebAccessDialog.enabled
-                ? `${openworkWebAccessDialog.org.name} will receive OpenWork Web for every joined member without a Stripe subscription or per-member charge, even when deployment-wide availability is off.`
-                : `${openworkWebAccessDialog.org.name} will lose complimentary access immediately unless an independently eligible paid subscription exists.`}
+              {offlinegptWebAccessDialog.enabled
+                ? `${offlinegptWebAccessDialog.org.name} will receive OfflineGPT Web for every joined member without a Stripe subscription or per-member charge, even when deployment-wide availability is off.`
+                : `${offlinegptWebAccessDialog.org.name} will lose complimentary access immediately unless an independently eligible paid subscription exists.`}
             </p>
 
             <label className="mt-5 grid gap-2">
               <span className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Reason for audit log</span>
               <textarea
-                data-testid="admin-openwork-web-access-reason"
+                data-testid="admin-offlinegpt-web-access-reason"
                 rows={3}
                 maxLength={500}
-                value={openworkWebAccessDialog.reason}
-                onChange={(event) => setOpenWorkWebAccessDialog({ ...openworkWebAccessDialog, reason: event.target.value })}
-                placeholder="For example: Internal OpenWork administration organization"
+                value={offlinegptWebAccessDialog.reason}
+                onChange={(event) => setOfflineGPTWebAccessDialog({ ...offlinegptWebAccessDialog, reason: event.target.value })}
+                placeholder="For example: Internal OfflineGPT administration organization"
                 className="resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-hidden transition focus:border-slate-400"
               />
             </label>
 
-            {openworkWebAccessError?.orgId === openworkWebAccessDialog.org.id ? (
+            {offlinegptWebAccessError?.orgId === offlinegptWebAccessDialog.org.id ? (
               <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-5 text-red-700">
-                {openworkWebAccessError.message}
+                {offlinegptWebAccessError.message}
               </p>
             ) : null}
 
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setOpenWorkWebAccessDialog(null)}
-                disabled={savingOpenWorkWebAccessOrgId === openworkWebAccessDialog.org.id}
+                onClick={() => setOfflineGPTWebAccessDialog(null)}
+                disabled={savingOfflineGPTWebAccessOrgId === offlinegptWebAccessDialog.org.id}
                 className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                data-testid="admin-openwork-web-access-confirm"
+                data-testid="admin-offlinegpt-web-access-confirm"
                 onClick={() => {
-                  void saveOpenWorkWebAccess();
+                  void saveOfflineGPTWebAccess();
                 }}
-                disabled={savingOpenWorkWebAccessOrgId === openworkWebAccessDialog.org.id || openworkWebAccessDialog.reason.trim().length < 3}
+                disabled={savingOfflineGPTWebAccessOrgId === offlinegptWebAccessDialog.org.id || offlinegptWebAccessDialog.reason.trim().length < 3}
                 className="inline-flex items-center justify-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {savingOpenWorkWebAccessOrgId === openworkWebAccessDialog.org.id
+                {savingOfflineGPTWebAccessOrgId === offlinegptWebAccessDialog.org.id
                   ? "Saving..."
-                  : openworkWebAccessDialog.enabled
+                  : offlinegptWebAccessDialog.enabled
                     ? "Grant access"
                     : "Revoke access"}
               </button>
@@ -3182,7 +3182,7 @@ export function DenAdminPanel() {
               Edit free seats
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Set the total number of free seats for {freeSeatsDialog.org.name}. The default {DEFAULT_FREE_SEAT_COUNT} seats stay included; OpenWork saves only the additional seats in organization metadata.
+              Set the total number of free seats for {freeSeatsDialog.org.name}. The default {DEFAULT_FREE_SEAT_COUNT} seats stay included; OfflineGPT saves only the additional seats in organization metadata.
             </p>
 
             <label className="mt-5 grid gap-2">

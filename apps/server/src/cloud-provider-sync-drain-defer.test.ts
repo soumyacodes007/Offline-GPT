@@ -10,10 +10,10 @@ import { startServer } from "./server.js";
 import type { ServerConfig, WorkspaceInfo } from "./types.js";
 
 const ENV = {
-  OPENWORK_ENGINE_RELOAD_RETRY_MS: "50",
-  OPENWORK_ENGINE_DRAIN_TIMEOUT_MS: "5000",
-  OPENWORK_ENGINE_DRAIN_POLL_MS: "100",
-  OPENWORK_ENGINE_MIN_SPAWN_INTERVAL_MS: "0",
+  OFFLINEGPT_ENGINE_RELOAD_RETRY_MS: "50",
+  OFFLINEGPT_ENGINE_DRAIN_TIMEOUT_MS: "5000",
+  OFFLINEGPT_ENGINE_DRAIN_POLL_MS: "100",
+  OFFLINEGPT_ENGINE_MIN_SPAWN_INTERVAL_MS: "0",
 };
 
 type FakeEngine = {
@@ -141,7 +141,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function hostHeaders() {
-  return { "x-openwork-host-token": "host-token", "content-type": "application/json" };
+  return { "x-offlinegpt-host-token": "host-token", "content-type": "application/json" };
 }
 
 function clientHeaders() {
@@ -179,12 +179,12 @@ beforeEach(async () => {
     process.env[name] = value;
   }
 
-  const fixtureRoot = await mkdtemp(join(tmpdir(), "openwork-cloud-sync-drain-"));
+  const fixtureRoot = await mkdtemp(join(tmpdir(), "offlinegpt-cloud-sync-drain-"));
   root = fixtureRoot;
-  savedEnv.set("OPENWORK_RUNTIME_DB", process.env.OPENWORK_RUNTIME_DB);
-  savedEnv.set("OPENWORK_ENV_STORE", process.env.OPENWORK_ENV_STORE);
-  process.env.OPENWORK_RUNTIME_DB = join(fixtureRoot, "runtime.sqlite");
-  process.env.OPENWORK_ENV_STORE = join(fixtureRoot, "env.json");
+  savedEnv.set("OFFLINEGPT_RUNTIME_DB", process.env.OFFLINEGPT_RUNTIME_DB);
+  savedEnv.set("OFFLINEGPT_ENV_STORE", process.env.OFFLINEGPT_ENV_STORE);
+  process.env.OFFLINEGPT_RUNTIME_DB = join(fixtureRoot, "runtime.sqlite");
+  process.env.OFFLINEGPT_ENV_STORE = join(fixtureRoot, "env.json");
 
   const engineA = await startFakeEngine();
   engines.push(engineA);

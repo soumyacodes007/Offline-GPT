@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { deriveDimensionValue } from "@openwork-ee/telemetry"
+import { deriveDimensionValue } from "@offlinegpt-ee/telemetry"
 
 const VALUE_CONTRACT = /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$/
 

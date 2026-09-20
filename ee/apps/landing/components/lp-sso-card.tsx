@@ -3,7 +3,7 @@
 import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-const signInUrl = "app.openworklabs.com/sso/acme";
+const signInUrl = "app.offlinegptlabs.com/sso/acme";
 
 export function LpSsoCard() {
   const [copied, setCopied] = useState(false);

@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import { clearDenSession } from "../src/app/lib/den";
-import { createOpenworkServerClient } from "../src/app/lib/openwork-server";
+import { createOfflineGptServerClient } from "../src/app/lib/offlinegpt-server";
 import { createClient } from "../src/app/lib/opencode";
 import type { ResolvedWorkspaceEndpoint } from "../src/app/lib/workspace-endpoint";
 import type { ProviderListItem, WorkspaceDisplay } from "../src/app/types";
-import { createSessionOpenworkServer } from "../src/react-app/domains/connections/provider-auth/session-openwork-server";
+import { createSessionOfflineGptServer } from "../src/react-app/domains/connections/provider-auth/session-offlinegpt-server";
 import { createProviderAuthStore } from "../src/react-app/domains/connections/provider-auth/store";
 
 /**
  * Regression tests for #3671 (org-published LLM providers never reach
  * signed-in desktops): the session route — the app's default surface — used to
- * feed the provider-auth store a fabricated openwork-server snapshot without
+ * feed the provider-auth store a fabricated offlinegpt-server snapshot without
  * the `providerSync` capability or host-token auth, so
  * `serverHandlesProviderSync()` was permanently false there. After sign-in
  * the store therefore never PUT the Den session to the local server
@@ -19,7 +19,7 @@ import { createProviderAuthStore } from "../src/react-app/domains/connections/pr
  * import loop against Den.
  *
  * These tests drive the real store through the real session-route snapshot
- * builder (`createSessionOpenworkServer`) and assert the store takes the
+ * builder (`createSessionOfflineGptServer`) and assert the store takes the
  * server-side path for local endpoints: PUT /den-session with the host token,
  * POST /cloud-provider-sync/run, and zero renderer-side Den provider fetches.
  */
@@ -27,7 +27,7 @@ import { createProviderAuthStore } from "../src/react-app/domains/connections/pr
 const originalWindow = globalThis.window;
 const originalFetch = globalThis.fetch;
 const originalConsoleInfo = console.info;
-const originalDeployment = process.env.VITE_OPENWORK_DEPLOYMENT;
+const originalDeployment = process.env.VITE_OFFLINEGPT_DEPLOYMENT;
 
 const LOCAL_SERVER_ORIGIN = "http://127.0.0.1:7899";
 const REMOTE_SERVER_ORIGIN = "https://worker.example";
@@ -83,16 +83,16 @@ function installWindow(): Storage {
       },
       localStorage,
       location: { origin: "https://self-hosted.example" },
-      __OPENWORK_GATEWAY__: undefined,
+      __OFFLINEGPT_GATEWAY__: undefined,
     },
   });
   return localStorage;
 }
 
 function installCloudSession(storage: Storage) {
-  storage.setItem("openwork.den.baseUrl", "https://den.example");
-  storage.setItem("openwork.den.authToken", "den-token");
-  storage.setItem("openwork.den.activeOrgId", "org_test");
+  storage.setItem("offlinegpt.den.baseUrl", "https://den.example");
+  storage.setItem("offlinegpt.den.authToken", "den-token");
+  storage.setItem("offlinegpt.den.activeOrgId", "org_test");
 }
 
 function getRequestUrl(input: RequestInfo | URL): string {
@@ -184,7 +184,7 @@ function installFetchMock(
         return jsonResponse({ hasSession: true, lastRun: null, providers: [] });
       }
       if (url.pathname === "/workspace/ws_1/config" && method === "GET") {
-        return jsonResponse({ opencode: {}, openwork: {} });
+        return jsonResponse({ opencode: {}, offlinegpt: {} });
       }
       if (url.pathname === "/workspace/ws_1/config" && method === "PATCH") {
         return jsonResponse({ updatedAt: 1 });
@@ -213,7 +213,7 @@ function installFetchMock(
 }
 
 function makeEndpoint(options: { origin: string; isRemote: boolean }): ResolvedWorkspaceEndpoint {
-  const client = createOpenworkServerClient({ baseUrl: options.origin, token: "client-token" });
+  const client = createOfflineGptServerClient({ baseUrl: options.origin, token: "client-token" });
   const mountedBaseUrl = `${options.origin}/workspace/ws_1`;
   return {
     baseUrl: options.origin,
@@ -233,7 +233,7 @@ function createSessionRouteStore(options: {
 }) {
   const opencodeClient = createClient("https://engine.example", "/tmp/workspace_test", {
     token: "engine-token",
-    mode: "openwork",
+    mode: "offlinegpt",
   });
   const workspace = {
     id: "workspace_test",
@@ -259,7 +259,7 @@ function createSessionRouteStore(options: {
     selectedWorkspaceRoot: () => "/tmp/workspace_test",
     runtimeWorkspaceId: () => "ws_1",
     // The exact snapshot builder the session route mounts.
-    openworkServer: createSessionOpenworkServer({
+    offlinegptServer: createSessionOfflineGptServer({
       endpoint: () => options.endpoint,
       hostToken: () => options.hostToken,
     }),
@@ -281,7 +281,7 @@ function createSessionRouteStore(options: {
 
 describe("session-route cloud provider sync wiring", () => {
   beforeEach(() => {
-    process.env.VITE_OPENWORK_DEPLOYMENT = "web";
+    process.env.VITE_OFFLINEGPT_DEPLOYMENT = "web";
     console.info = () => undefined;
   });
 
@@ -289,8 +289,8 @@ describe("session-route cloud provider sync wiring", () => {
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
     Object.defineProperty(globalThis, "fetch", { configurable: true, value: originalFetch });
     console.info = originalConsoleInfo;
-    if (originalDeployment === undefined) delete process.env.VITE_OPENWORK_DEPLOYMENT;
-    else process.env.VITE_OPENWORK_DEPLOYMENT = originalDeployment;
+    if (originalDeployment === undefined) delete process.env.VITE_OFFLINEGPT_DEPLOYMENT;
+    else process.env.VITE_OFFLINEGPT_DEPLOYMENT = originalDeployment;
   });
 
   test("startup hydrates assigned organization models without a workspace endpoint", async () => {
@@ -359,7 +359,7 @@ describe("session-route cloud provider sync wiring", () => {
   test("logout removes connected provider credentials and resets their saved default", async () => {
     const storage = installWindow();
     installCloudSession(storage);
-    storage.setItem("openwork.defaultModel", "anthropic/claude-fable-5");
+    storage.setItem("offlinegpt.defaultModel", "anthropic/claude-fable-5");
     const requests: RecordedRequest[] = [];
     installFetchMock(requests);
     const store = createSessionRouteStore({
@@ -382,7 +382,7 @@ describe("session-route cloud provider sync wiring", () => {
         request.method === "DELETE" && new URL(request.url).pathname === "/auth/anthropic"
       ),
     ).toHaveLength(1);
-    expect(storage.getItem("openwork.defaultModel")).not.toBe("anthropic/claude-fable-5");
+    expect(storage.getItem("offlinegpt.defaultModel")).not.toBe("anthropic/claude-fable-5");
     store.dispose();
   });
 
@@ -435,7 +435,7 @@ describe("session-route cloud provider sync wiring", () => {
     );
     expect(sessionPuts).toHaveLength(1);
     expect(new URL(sessionPuts[0]?.url ?? "").origin).toBe(LOCAL_SERVER_ORIGIN);
-    expect(sessionPuts[0]?.headers["x-openwork-host-token"]).toBe("host-token-live");
+    expect(sessionPuts[0]?.headers["x-offlinegpt-host-token"]).toBe("host-token-live");
     expect(sessionPuts[0]?.body).toBe(JSON.stringify({
       baseUrl: "https://den.example/api/den",
       token: "den-token",
@@ -446,7 +446,7 @@ describe("session-route cloud provider sync wiring", () => {
       (request) => request.method === "POST" && new URL(request.url).pathname === "/cloud-provider-sync/run",
     );
     expect(runPosts).toHaveLength(2);
-    expect(runPosts.every((request) => request.headers["x-openwork-host-token"] === "host-token-live")).toBe(true);
+    expect(runPosts.every((request) => request.headers["x-offlinegpt-host-token"] === "host-token-live")).toBe(true);
 
     // Server-side sync means the renderer never fetches Den providers itself.
     expect(requests.filter((request) => request.url.includes("/v1/llm-providers"))).toHaveLength(0);
@@ -455,7 +455,7 @@ describe("session-route cloud provider sync wiring", () => {
   test("falls back to the persisted host token for loopback servers when live host info is absent", async () => {
     const storage = installWindow();
     installCloudSession(storage);
-    storage.setItem("openwork.server.hostToken", "host-token-stored");
+    storage.setItem("offlinegpt.server.hostToken", "host-token-stored");
     const requests: RecordedRequest[] = [];
     installFetchMock(requests, { runStatuses: [{ status: "no_session" }, { status: "noop" }] });
     const store = createSessionRouteStore({
@@ -469,14 +469,14 @@ describe("session-route cloud provider sync wiring", () => {
       (request) => request.method === "PUT" && new URL(request.url).pathname === "/den-session",
     );
     expect(sessionPuts).toHaveLength(1);
-    expect(sessionPuts[0]?.headers["x-openwork-host-token"]).toBe("host-token-stored");
+    expect(sessionPuts[0]?.headers["x-offlinegpt-host-token"]).toBe("host-token-stored");
   });
 
   test("remote workspaces never receive the desktop's Den session and keep the legacy client path", async () => {
     const storage = installWindow();
     installCloudSession(storage);
     // Even a (stale) persisted local host token must not leak to a remote worker.
-    storage.setItem("openwork.server.hostToken", "host-token-stored");
+    storage.setItem("offlinegpt.server.hostToken", "host-token-stored");
     const requests: RecordedRequest[] = [];
     installFetchMock(requests);
     const store = createSessionRouteStore({

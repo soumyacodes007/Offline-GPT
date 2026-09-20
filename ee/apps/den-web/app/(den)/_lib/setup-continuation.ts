@@ -1,5 +1,5 @@
 // Tab-scoped navigation intent, never a credential or a persisted membership flag.
-export const SETUP_CONTINUATION_KEY = "openwork.den.setup-continuation";
+export const SETUP_CONTINUATION_KEY = "offlinegpt.den.setup-continuation";
 export type SetupContinuation = {
   userId: string | null;
   desktopScheme: string | null;
@@ -13,7 +13,7 @@ export function parseSetupContinuation(raw: string | null): SetupContinuation | 
     const value: unknown = JSON.parse(raw);
     if (typeof value !== "object" || value === null
       || !("userId" in value) || !(value.userId === null || typeof value.userId === "string")
-      || !("desktopScheme" in value) || !(value.desktopScheme === null || value.desktopScheme === "openwork")
+      || !("desktopScheme" in value) || !(value.desktopScheme === null || value.desktopScheme === "offlinegpt")
       || !("at" in value) || typeof value.at !== "number" || !Number.isFinite(value.at)
       || value.at > Date.now() || Date.now() - value.at > 24 * 60 * 60 * 1000
       || !("setup" in value)) return null;

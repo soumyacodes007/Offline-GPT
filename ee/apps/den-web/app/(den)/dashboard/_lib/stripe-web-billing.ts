@@ -1,10 +1,10 @@
-export const OPENWORK_WEB_CHECKOUT_TYPE = "web";
-export const OPENWORK_WEB_QUANTITY_DEFINITION = "joined_non_removed_members";
-export const OPENWORK_WEB_UNIT_AMOUNT = 5000;
-export const OPENWORK_WEB_CURRENCY = "usd";
-export const OPENWORK_WEB_INTERVAL = "month";
+export const OFFLINEGPT_WEB_CHECKOUT_TYPE = "web";
+export const OFFLINEGPT_WEB_QUANTITY_DEFINITION = "joined_non_removed_members";
+export const OFFLINEGPT_WEB_UNIT_AMOUNT = 5000;
+export const OFFLINEGPT_WEB_CURRENCY = "usd";
+export const OFFLINEGPT_WEB_INTERVAL = "month";
 
-export type OpenWorkWebAccessSource = "subscription" | "complimentary" | null;
+export type OfflineGPTWebAccessSource = "subscription" | "complimentary" | null;
 
 export type StripeWebSubscription = {
   status: string;
@@ -18,15 +18,15 @@ export type StripeWebSubscription = {
 export type StripeWebBilling = {
   configured: boolean;
   priceId: string | null;
-  unitAmount: typeof OPENWORK_WEB_UNIT_AMOUNT;
-  currency: typeof OPENWORK_WEB_CURRENCY;
-  interval: typeof OPENWORK_WEB_INTERVAL;
-  quantityDefinition: typeof OPENWORK_WEB_QUANTITY_DEFINITION;
+  unitAmount: typeof OFFLINEGPT_WEB_UNIT_AMOUNT;
+  currency: typeof OFFLINEGPT_WEB_CURRENCY;
+  interval: typeof OFFLINEGPT_WEB_INTERVAL;
+  quantityDefinition: typeof OFFLINEGPT_WEB_QUANTITY_DEFINITION;
   quantity: number;
   expectedMonthlyTotal: number;
   hasEligibleSubscription: boolean;
   hasAccess: boolean;
-  accessSource: OpenWorkWebAccessSource;
+  accessSource: OfflineGPTWebAccessSource;
   complimentaryAccess: boolean;
   subscription: StripeWebSubscription | null;
 };
@@ -68,7 +68,7 @@ export function parseStripeWebBilling(payload: unknown): StripeWebBilling | null
 
   const value = payload.billing.stripe.web;
   const subscription = parseSubscription(value.subscription);
-  const accessSource: OpenWorkWebAccessSource | undefined = value.accessSource === "subscription" || value.accessSource === "complimentary"
+  const accessSource: OfflineGPTWebAccessSource | undefined = value.accessSource === "subscription" || value.accessSource === "complimentary"
     ? value.accessSource
     : value.accessSource === null
       ? null
@@ -76,15 +76,15 @@ export function parseStripeWebBilling(payload: unknown): StripeWebBilling | null
   if (
     typeof value.configured !== "boolean" ||
     (value.priceId !== undefined && value.priceId !== null && typeof value.priceId !== "string") ||
-    value.unitAmount !== OPENWORK_WEB_UNIT_AMOUNT ||
-    value.currency !== OPENWORK_WEB_CURRENCY ||
-    value.interval !== OPENWORK_WEB_INTERVAL ||
-    value.quantityDefinition !== OPENWORK_WEB_QUANTITY_DEFINITION ||
+    value.unitAmount !== OFFLINEGPT_WEB_UNIT_AMOUNT ||
+    value.currency !== OFFLINEGPT_WEB_CURRENCY ||
+    value.interval !== OFFLINEGPT_WEB_INTERVAL ||
+    value.quantityDefinition !== OFFLINEGPT_WEB_QUANTITY_DEFINITION ||
     typeof value.quantity !== "number" ||
     !Number.isInteger(value.quantity) ||
     value.quantity < 1 ||
     typeof value.expectedMonthlyTotal !== "number" ||
-    value.expectedMonthlyTotal !== value.quantity * OPENWORK_WEB_UNIT_AMOUNT ||
+    value.expectedMonthlyTotal !== value.quantity * OFFLINEGPT_WEB_UNIT_AMOUNT ||
     typeof value.hasEligibleSubscription !== "boolean" ||
     typeof value.hasAccess !== "boolean" ||
     accessSource === undefined ||
@@ -115,10 +115,10 @@ export function parseStripeWebBilling(payload: unknown): StripeWebBilling | null
   };
 }
 
-export function getOpenWorkWebQuantityDescription(quantity: number): string {
+export function getOfflineGPTWebQuantityDescription(quantity: number): string {
   const memberLabel = quantity === 1 ? "member" : "members";
   return `${quantity} ${memberLabel}`;
 }
 
-export const OPENWORK_WEB_QUANTITY_EXPLANATION =
+export const OFFLINEGPT_WEB_QUANTITY_EXPLANATION =
   "Billed for each joined member of your organization, including the owner. Pending invitations are not billed.";

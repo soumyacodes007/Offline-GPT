@@ -4,7 +4,7 @@ import {
   agentContextDiagnosticsReportSchema as sharedReportSchema,
   agentContextDiagnosticsRequestSchema as sharedRequestSchema,
   type AgentContextDiagnosticsRequest,
-} from "@openwork/types/agent-context-diagnostics";
+} from "@offlinegpt/types/agent-context-diagnostics";
 
 import {
   agentContextDiagnosticsReportSchema as localReportSchema,
@@ -38,14 +38,14 @@ const validRequest: AgentContextDiagnosticsRequest = {
 };
 
 const workspace: WorkspaceInfo = {
-  id: "remote_openwork_schema_parity",
-  name: "Remote OpenWork schema parity",
+  id: "remote_offlinegpt_schema_parity",
+  name: "Remote OfflineGPT schema parity",
   path: "",
   preset: "starter",
   workspaceType: "remote",
-  remoteType: "openwork",
-  baseUrl: "https://remote-openwork.invalid",
-  openworkHostUrl: "https://remote-openwork.invalid",
+  remoteType: "offlinegpt",
+  baseUrl: "https://remote-offlinegpt.invalid",
+  offlinegptHostUrl: "https://remote-offlinegpt.invalid",
 };
 
 const config: ServerConfig = {
@@ -91,7 +91,7 @@ describe("agent context diagnostics server-local schema parity", () => {
     const reportWithCanonicalMcp = {
       ...report,
       mcps: [{
-        name: "openwork-cloud",
+        name: "offlinegpt-cloud",
         source: "config.remote",
         type: "remote",
         enabled: true,
@@ -200,7 +200,7 @@ describe("agent context diagnostics server-local schema parity", () => {
       {
         ...report,
         mcps: [{
-          name: "openwork-cloud",
+          name: "offlinegpt-cloud",
           source: "config.remote",
           type: "remote",
           enabled: true,
@@ -216,7 +216,7 @@ describe("agent context diagnostics server-local schema parity", () => {
       {
         ...report,
         mcps: [{
-          name: "openwork-cloud",
+          name: "offlinegpt-cloud",
           source: "config.remote",
           type: "remote",
           enabled: true,

@@ -1,4 +1,4 @@
-import { browserScript } from "@openwork/cdp";
+import { browserScript } from "@offlinegpt/cdp";
 import type { Probe } from "./spec/types.ts";
 
 /** Observe rendered transcript text across frames, including gaps between eventual assertions. */

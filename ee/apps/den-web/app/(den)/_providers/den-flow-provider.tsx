@@ -25,8 +25,8 @@ import {
   type WorkerRuntimeSnapshot,
   type WorkerSummary,
   type WorkerStatusBucket,
-  buildOpenworkAppConnectUrl,
-  buildOpenworkDeepLink,
+  buildOfflineGptAppConnectUrl,
+  buildOfflineGptDeepLink,
   deriveOnboardingWorkerName,
   getAuthInfoForMode,
   getBillingSummary,
@@ -58,7 +58,7 @@ import {
   parseWorkspaceIdFromUrl,
   requestJson,
   resetPosthogUser,
-  resolveOpenworkWorkspaceUrl,
+  resolveOfflineGptWorkspaceUrl,
   withWorkerConnection,
   workerConnectionEquals,
   workerNeedsConnectionResolution,
@@ -67,7 +67,7 @@ import {
 import { EMPTY_RUNTIME_CONFIG, getRuntimeConfig, type DenWebRuntimeConfig } from "../_lib/runtime-config";
 import {
   getDesktopHandoffGrant,
-  getDesktopHandoffOpenworkUrl,
+  getDesktopHandoffOfflineGptUrl,
   rememberDesktopHandoffGrant,
 } from "../_lib/desktop-handoff";
 import {
@@ -187,8 +187,8 @@ type DenFlowContextValue = {
   events: LaunchEvent[];
   runtimeConfig: DenWebRuntimeConfig;
   runtimeConfigLoaded: boolean;
-  openworkDeepLink: string | null;
-  openworkAppConnectUrl: string | null;
+  offlinegptDeepLink: string | null;
+  offlinegptAppConnectUrl: string | null;
   hasWorkspaceScopedUrl: boolean;
   additionalWorkerNeedsPlan: boolean;
   selectedStatusMeta: { label: string; bucket: WorkerStatusBucket };
@@ -272,7 +272,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
   });
   const [hydratedSession, setHydratedSession] = useState<{ token: string | null } | null>(null);
   const sessionHydrated = hydratedSession !== null && hydratedSession.token === authToken;
-  const desktopAuthScheme = continuation?.desktopScheme ?? "openwork";
+  const desktopAuthScheme = continuation?.desktopScheme ?? "offlinegpt";
   const setupPending = Boolean(user && continuation?.userId === user.id && continuation.setup);
   const [webAuthRequested, setWebAuthRequested] = useState(false);
   const [webAuthReturnUrl, setWebAuthReturnUrl] = useState<string | null>(null);
@@ -327,19 +327,19 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       : selectedWorker
         ? listItemToWorker(selectedWorker, worker)
         : worker;
-  const { desktopUrl: openworkConnectUrl, webUrl: previewConnectUrl } = getWorkerConnectionTargets(activeWorker);
-  const { desktopToken: desktopOpenworkToken, webToken: webOpenworkToken } = getWorkerConnectionTokens(activeWorker);
-  const hasWorkspaceScopedUrl = Boolean(openworkConnectUrl && /\/w\/[^/?#]+/.test(openworkConnectUrl));
-  const openworkDeepLink = buildOpenworkDeepLink(
-    openworkConnectUrl,
-    desktopOpenworkToken,
+  const { desktopUrl: offlinegptConnectUrl, webUrl: previewConnectUrl } = getWorkerConnectionTargets(activeWorker);
+  const { desktopToken: desktopOfflineGptToken, webToken: webOfflineGptToken } = getWorkerConnectionTokens(activeWorker);
+  const hasWorkspaceScopedUrl = Boolean(offlinegptConnectUrl && /\/w\/[^/?#]+/.test(offlinegptConnectUrl));
+  const offlinegptDeepLink = buildOfflineGptDeepLink(
+    offlinegptConnectUrl,
+    desktopOfflineGptToken,
     activeWorker?.workerId ?? null,
     activeWorker?.workerName ?? null
   );
-  const openworkAppConnectUrl = buildOpenworkAppConnectUrl(
-    runtimeConfig.openworkAppConnectUrl,
+  const offlinegptAppConnectUrl = buildOfflineGptAppConnectUrl(
+    runtimeConfig.offlinegptAppConnectUrl,
     previewConnectUrl,
-    webOpenworkToken,
+    webOfflineGptToken,
     activeWorker?.workerId ?? null,
     activeWorker?.workerName ?? null,
     { autoConnect: true }
@@ -564,7 +564,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     }
 
     if (desktopAuthRequested || webAuthRequested) {
-      setAuthInfo("Signed in. Returning to OpenWork...");
+      setAuthInfo("Signed in. Returning to OfflineGPT...");
       return null;
     }
 
@@ -671,13 +671,13 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function withResolvedOpenworkCredentials(candidate: WorkerLaunch, options: { quiet?: boolean } = {}) {
-    const existingConnectUrl = candidate.openworkUrl?.trim() ?? "";
+  async function withResolvedOfflineGptCredentials(candidate: WorkerLaunch, options: { quiet?: boolean } = {}) {
+    const existingConnectUrl = candidate.offlinegptUrl?.trim() ?? "";
     const existingWorkspaceId = candidate.workspaceId?.trim() ?? "";
     if (existingConnectUrl && (existingWorkspaceId || existingConnectUrl.includes("/v1/cloud/workers/"))) {
       return {
         ...candidate,
-        openworkUrl: existingConnectUrl,
+        offlinegptUrl: existingConnectUrl,
         workspaceId: existingWorkspaceId
       };
     }
@@ -686,7 +686,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     if (!instanceUrl) {
       return {
         ...candidate,
-        openworkUrl: null,
+        offlinegptUrl: null,
         workspaceId: null
       };
     }
@@ -696,17 +696,17 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       const mountedWorkspaceId = parseWorkspaceIdFromUrl(instanceUrl);
       return {
         ...candidate,
-        openworkUrl: instanceUrl.trim().replace(/\/+$/, ""),
+        offlinegptUrl: instanceUrl.trim().replace(/\/+$/, ""),
         workspaceId: mountedWorkspaceId
       };
     }
 
     try {
-      const resolved = await resolveOpenworkWorkspaceUrl(instanceUrl, accessToken);
+      const resolved = await resolveOfflineGptWorkspaceUrl(instanceUrl, accessToken);
       if (resolved) {
         return {
           ...candidate,
-          openworkUrl: resolved.openworkUrl,
+          offlinegptUrl: resolved.offlinegptUrl,
           workspaceId: resolved.workspaceId
         };
       }
@@ -718,7 +718,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
     return {
       ...candidate,
-      openworkUrl: instanceUrl.trim().replace(/\/+$/, ""),
+      offlinegptUrl: instanceUrl.trim().replace(/\/+$/, ""),
       workspaceId: parseWorkspaceIdFromUrl(instanceUrl)
     };
   }
@@ -888,7 +888,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
         {
           method: "POST",
           headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-          body: JSON.stringify({ services: ["openwork-server", "opencode"] })
+          body: JSON.stringify({ services: ["offlinegpt-server", "opencode"] })
         },
         12000
       );
@@ -1089,20 +1089,20 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      const openworkUrl = getDesktopHandoffOpenworkUrl(payload) ?? "";
-      if (!openworkUrl) {
-        setAuthError("Desktop handoff succeeded, but no OpenWork redirect URL was returned.");
+      const offlinegptUrl = getDesktopHandoffOfflineGptUrl(payload) ?? "";
+      if (!offlinegptUrl) {
+        setAuthError("Desktop handoff succeeded, but no OfflineGPT redirect URL was returned.");
         return false;
       }
 
-      rememberDesktopHandoffGrant(getDesktopHandoffGrant(payload, openworkUrl));
-      setDesktopRedirectUrl(openworkUrl);
+      rememberDesktopHandoffGrant(getDesktopHandoffGrant(payload, offlinegptUrl));
+      setDesktopRedirectUrl(offlinegptUrl);
       persistContinuation(null);
       clearPendingAuthIntent();
-      window.location.assign(openworkUrl);
+      window.location.assign(offlinegptUrl);
       return true;
     } catch (error) {
-      if (continuationRef.current === current && epoch === sessionEpochRef.current) setAuthError(error instanceof Error ? error.message : "Failed to open OpenWork.");
+      if (continuationRef.current === current && epoch === sessionEpochRef.current) setAuthError(error instanceof Error ? error.message : "Failed to open OfflineGPT.");
       return false;
     } finally {
       handoffBusyRef.current = false;
@@ -1176,7 +1176,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       redirectUrl.searchParams.set("grant", grant);
       window.location.replace(redirectUrl.toString());
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Failed to return to OpenWork Cloud.");
+      setAuthError(error instanceof Error ? error.message : "Failed to return to OfflineGPT Cloud.");
     } finally {
       setWebRedirectBusy(false);
     }
@@ -1363,7 +1363,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       }
       const latestRuntimeConfig = await getRuntimeConfig();
       setRuntimeConfig(latestRuntimeConfig);
-      const callbackURL = getSocialCallbackUrl(latestRuntimeConfig.openworkAuthCallbackUrl);
+      const callbackURL = getSocialCallbackUrl(latestRuntimeConfig.offlinegptAuthCallbackUrl);
       const { response, payload } = await requestJson("/api/auth/sign-in/social", {
         method: "POST",
         body: JSON.stringify({
@@ -1573,7 +1573,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
         return "error" as const;
       }
 
-      const resolvedWorker = await withResolvedOpenworkCredentials(parsedWorker);
+      const resolvedWorker = await withResolvedOfflineGptCredentials(parsedWorker);
       setWorker(resolvedWorker);
       setWorkerLookupId(parsedWorker.workerId);
       setPendingRestoredWorkerId(null);
@@ -1679,8 +1679,8 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
               status: summary.status,
               provider: summary.provider,
               instanceUrl: summary.instanceUrl,
-              openworkUrl: summary.instanceUrl,
-              previewOpenworkUrl: null,
+              offlinegptUrl: summary.instanceUrl,
+              previewOfflineGptUrl: null,
               previewExpiresAt: null,
               workspaceId: null,
               clientToken: null,
@@ -1690,7 +1690,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
       const shouldUpdateActiveWorker = worker?.workerId === summary.workerId || (!background && workerLookupId === summary.workerId);
       if (shouldUpdateActiveWorker) {
-        const resolvedWorker = await withResolvedOpenworkCredentials(nextWorker, { quiet: true });
+        const resolvedWorker = await withResolvedOfflineGptCredentials(nextWorker, { quiet: true });
         setWorker(resolvedWorker);
         setPendingRestoredWorkerId(null);
         if (!background) {
@@ -1748,7 +1748,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       const { response, payload } = await requestJson(`/v1/workers/${encodeURIComponent(id)}/tokens`, {
         method: "POST",
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-        body: JSON.stringify({ includeExpiringOpenworkUrl: true })
+        body: JSON.stringify({ includeExpiringOfflineGptUrl: true })
       });
 
       if (!response.ok) {
@@ -1778,8 +1778,8 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
               status: "unknown",
               provider: null,
               instanceUrl: null,
-              openworkUrl: tokens.openworkUrl,
-              previewOpenworkUrl: tokens.previewOpenworkUrl,
+              offlinegptUrl: tokens.offlinegptUrl,
+              previewOfflineGptUrl: tokens.previewOfflineGptUrl,
               previewExpiresAt: tokens.previewExpiresAt,
               workspaceId: tokens.workspaceId,
               clientToken: tokens.clientToken,
@@ -1787,7 +1787,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
               hostToken: tokens.hostToken
             };
 
-      const resolvedWorker = await withResolvedOpenworkCredentials(nextWorker, { quiet: true });
+      const resolvedWorker = await withResolvedOfflineGptCredentials(nextWorker, { quiet: true });
       setWorker((current) => {
         if (!current || current.workerId !== resolvedWorker.workerId) return resolvedWorker;
         if (workerConnectionEquals(current, resolvedWorker)) return current;
@@ -1994,7 +1994,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     const stored = parseSetupContinuation(window.sessionStorage.getItem(SETUP_CONTINUATION_KEY));
     persistContinuation(params.get("desktopAuth") === "1"
       ? { userId: stored?.userId ?? null, setup: stored?.setup ?? null, at: Date.now(),
-          desktopScheme: "openwork" }
+          desktopScheme: "offlinegpt" }
       : stored);
     setWebAuthRequested(params.get("webAuth") === "1");
     const requestedWebReturnUrl = params.get("webAuthReturn")?.trim() ?? "";
@@ -2120,10 +2120,10 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
       const restored: WorkerLaunch = {
         ...parsed,
-        openworkUrl: parsed.provider === "daytona" && parsed.openworkUrl && !parsed.openworkUrl.includes("/v1/cloud/workers/")
+        offlinegptUrl: parsed.provider === "daytona" && parsed.offlinegptUrl && !parsed.offlinegptUrl.includes("/v1/cloud/workers/")
           ? null
-          : parsed.openworkUrl ?? parsed.instanceUrl,
-        previewOpenworkUrl: null,
+          : parsed.offlinegptUrl ?? parsed.instanceUrl,
+        previewOfflineGptUrl: null,
         previewExpiresAt: null,
         workspaceId: parsed.workspaceId ?? parseWorkspaceIdFromUrl(parsed.instanceUrl ?? ""),
         clientToken: null,
@@ -2148,7 +2148,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
     const serializable: WorkerLaunch = {
       ...worker,
-      previewOpenworkUrl: null,
+      previewOfflineGptUrl: null,
       previewExpiresAt: null,
       clientToken: null,
       ownerToken: null,
@@ -2182,7 +2182,7 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, [actionBusy, launchBusy, pendingRestoredWorkerId, user?.id, worker?.workerId, worker?.status, worker?.clientToken, worker?.hostToken, worker?.openworkUrl, worker?.previewOpenworkUrl, worker?.previewExpiresAt]);
+  }, [actionBusy, launchBusy, pendingRestoredWorkerId, user?.id, worker?.workerId, worker?.status, worker?.clientToken, worker?.hostToken, worker?.offlinegptUrl, worker?.previewOfflineGptUrl, worker?.previewExpiresAt]);
 
   const provisioningWorkerIds = workers
     .filter((item) => item.status === "provisioning")
@@ -2443,8 +2443,8 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     events,
     runtimeConfig,
     runtimeConfigLoaded,
-    openworkDeepLink,
-    openworkAppConnectUrl,
+    offlinegptDeepLink,
+    offlinegptAppConnectUrl,
     hasWorkspaceScopedUrl,
     additionalWorkerNeedsPlan,
     selectedStatusMeta,

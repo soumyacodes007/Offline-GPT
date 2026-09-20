@@ -1,4 +1,4 @@
-import { WorkerTable } from "@openwork-ee/den-db/schema"
+import { WorkerTable } from "@offlinegpt-ee/den-db/schema"
 import { env } from "../env.js"
 import { appLogger } from "../observability/logger.js"
 import {
@@ -255,29 +255,29 @@ async function provisionWorkerOnRender(
   const serviceName = slug(
     `${env.render.workerNamePrefix}-${input.name}-${input.workerId.slice(0, 8)}`,
   ).slice(0, 62)
-  const openworkServerPackage = env.render.workerOpenworkVersion?.trim()
-    ? `openwork-server@${env.render.workerOpenworkVersion.trim()}`
-    : "openwork-server"
+  const offlinegptServerPackage = env.render.workerOfflineGptVersion?.trim()
+    ? `offlinegpt-server@${env.render.workerOfflineGptVersion.trim()}`
+    : "offlinegpt-server"
   const buildCommand = [
-    `npm install -g ${shellQuote(openworkServerPackage)}`,
+    `npm install -g ${shellQuote(offlinegptServerPackage)}`,
     "node ./scripts/install-opencode.mjs",
   ].join(" && ")
   const startScript = `
 set -u
 mkdir -p /tmp/workspace
-plugin_dir="$(npm root -g)/openwork-server/dist/opencode-plugins"
+plugin_dir="$(npm root -g)/offlinegpt-server/dist/opencode-plugins"
 if [ ! -d "$plugin_dir" ]; then
-  echo "openwork-server extension plugins missing at $plugin_dir" >&2
+  echo "offlinegpt-server extension plugins missing at $plugin_dir" >&2
   exit 1
 fi
 attempt=0
 while [ "$attempt" -lt 3 ]; do
   attempt=$((attempt + 1))
-  if OPENWORK_MANAGE_OPENCODE=1 OPENWORK_OPENCODE_BIN=./bin/opencode OPENWORK_EXTENSIONS_PLUGIN_DIR="$plugin_dir" openwork-server --workspace /tmp/workspace --host 0.0.0.0 --port "\${PORT:-10000}" --cors '*' --approval manual --verbose; then
+  if OFFLINEGPT_MANAGE_OPENCODE=1 OFFLINEGPT_OPENCODE_BIN=./bin/opencode OFFLINEGPT_EXTENSIONS_PLUGIN_DIR="$plugin_dir" offlinegpt-server --workspace /tmp/workspace --host 0.0.0.0 --port "\${PORT:-10000}" --cors '*' --approval manual --verbose; then
     exit 0
   fi
   status=$?
-  echo "openwork-server failed (attempt $attempt, exit $status); retrying in 3s"
+  echo "offlinegpt-server failed (attempt $attempt, exit $status); retrying in 3s"
   sleep 3
 done
 exit 1
@@ -293,8 +293,8 @@ exit 1
     autoDeploy: "no",
     rootDir: env.render.workerRootDir,
     envVars: [
-      { key: "OPENWORK_TOKEN", value: input.clientToken },
-      { key: "OPENWORK_HOST_TOKEN", value: input.hostToken },
+      { key: "OFFLINEGPT_TOKEN", value: input.clientToken },
+      { key: "OFFLINEGPT_HOST_TOKEN", value: input.hostToken },
       { key: "DEN_WORKER_ID", value: input.workerId },
     ],
     serviceDetails: {

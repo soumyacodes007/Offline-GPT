@@ -1,11 +1,11 @@
 import { expect } from "vitest";
-import { denFetch, signIn } from "@openwork/behaviors";
-import { eventually, inviteMember, needs, server, test, unmetNeeds } from "@openwork/testkit";
-import type { TestNeeds } from "@openwork/testkit";
+import { denFetch, signIn } from "@offlinegpt/behaviors";
+import { eventually, inviteMember, needs, server, test, unmetNeeds } from "@offlinegpt/testkit";
+import type { TestNeeds } from "@offlinegpt/testkit";
 import { enableScimFixtureSso } from "./helpers/scim-fixture.ts";
 
 const requirements: TestNeeds = {
-  optIn: ["OPENWORK_EVAL_E2E_TESTS"],
+  optIn: ["OFFLINEGPT_EVAL_E2E_TESTS"],
 };
 const missingRequirements = unmetNeeds(requirements, process.env);
 const title = missingRequirements.length > 0
@@ -80,7 +80,7 @@ test(title, { timeout: 1_800_000 }, async ({ evidence, place }) => {
   const orgName = `Okta SCIM Lifecycle ${runId}`;
   const managedDomain = "okta-scim.test";
   const managedEmail = `avery.${runId}@${managedDomain}`;
-  const controlPassword = "OpenWorkEval123!";
+  const controlPassword = "OfflineGPTEval123!";
 
   await using den = await server({
     place,
@@ -90,7 +90,7 @@ test(title, { timeout: 1_800_000 }, async ({ evidence, place }) => {
     },
   });
   const control = await inviteMember(den, "control", {
-    email: `control.${runId}@openwork.test`,
+    email: `control.${runId}@offlinegpt.test`,
     name: "Control Member",
     password: controlPassword,
   });
@@ -120,7 +120,7 @@ test(title, { timeout: 1_800_000 }, async ({ evidence, place }) => {
   const adminHeaders = {
     authorization: `Bearer ${den.admin.token}`,
     cookie: sessionCookie,
-    "x-openwork-org-id": organizationId,
+    "x-offlinegpt-org-id": organizationId,
   };
   const sso = await denFetch(den.ref, "/v1/sso/saml", {
     method: "POST",
@@ -128,7 +128,7 @@ test(title, { timeout: 1_800_000 }, async ({ evidence, place }) => {
     body: JSON.stringify({
       issuer: `http://127.0.0.1/okta/exk-${runId}`,
       domain: managedDomain,
-      entryPoint: `https://okta.example.test/app/openwork/exk-${runId}/sso/saml`,
+      entryPoint: `https://okta.example.test/app/offlinegpt/exk-${runId}/sso/saml`,
       cert: "okta-test-signing-certificate",
       audience: den.ref.apiUrl,
     }),

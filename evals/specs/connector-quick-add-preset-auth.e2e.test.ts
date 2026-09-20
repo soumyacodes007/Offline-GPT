@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { spec } from "@openwork/testkit";
+import { spec } from "@offlinegpt/testkit";
 import { API_KEY_PRESET_ID, connectorQuickAddPresetAuth } from "../worlds/connector-quick-add.ts";
 
 // An admin who picks an API-key quick add must be asked for that key even when

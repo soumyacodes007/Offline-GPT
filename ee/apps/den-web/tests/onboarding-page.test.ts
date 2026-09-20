@@ -13,7 +13,7 @@ const page = read("dashboard", "(admin)", "onboarding", "page.tsx");
 
 describe("Marketplace onboarding page", () => {
   test("finishes setup without downloads or an installation checklist", () => {
-    expect(screen).not.toContain("DownloadOpenWorkCard");
+    expect(screen).not.toContain("DownloadOfflineGPTCard");
     expect(screen).not.toContain("send-download-link");
     expect(screen).not.toContain("app-installed");
     expect(screen).toContain("DenBadge");
@@ -22,17 +22,17 @@ describe("Marketplace onboarding page", () => {
     expect(screen).toContain("completeSetup(orgId)");
   });
 
-  test("offers OpenWork Models and Bring your Own Keys as the model path", () => {
-    expect(screen).toContain("onboarding-choice-openwork-models");
+  test("offers OfflineGPT Models and Bring your Own Keys as the model path", () => {
+    expect(screen).toContain("onboarding-choice-offlinegpt-models");
     expect(screen).toContain("onboarding-choice-byok");
     expect(screen).toContain("Explore models");
     expect(screen).toContain("Bring your Own Keys");
-    expect(screen).toContain("/openwork-mark.svg");
+    expect(screen).toContain("/offlinegpt-mark.svg");
   });
 
   test("checks model status without enabling models", () => {
     expect(screen).toContain("/v1/inference");
-    expect(screen).toContain('headers: { "x-openwork-org-id": orgId }');
+    expect(screen).toContain('headers: { "x-offlinegpt-org-id": orgId }');
     expect(screen).not.toContain('method: "POST"');
     expect(screen).toContain("Signing in does not enable models.");
     expect(screen).toContain("No model selection is required");

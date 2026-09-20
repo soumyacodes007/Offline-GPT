@@ -6,7 +6,7 @@ import {
   EnterpriseMcpLifecycleDeadlineError,
   EnterpriseMcpOAuthContractError,
   EnterpriseMcpToolInputError,
-} from "@openwork/enterprise-mcp-client"
+} from "@offlinegpt/enterprise-mcp-client"
 import {
   ExternalMcpDiagnosticTracker,
   catalogDiagnosticError,
@@ -18,7 +18,7 @@ import {
 import { PrivateUrlError } from "../src/capability-sources/url-guard.js"
 import { connectCallbackPage } from "../src/capability-sources/oauth-callback-page.js"
 
-process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/openwork_test"
+process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
 process.env.DEN_DB_ENCRYPTION_KEY ??= "local-dev-db-encryption-key-please-change-1234567890"
 process.env.BETTER_AUTH_SECRET ??= "local-dev-secret-not-for-production-use!!"
 process.env.BETTER_AUTH_URL ??= "http://127.0.0.1:8790"
@@ -119,7 +119,7 @@ class RecordingOAuthProvider implements OAuthClientProvider {
   get clientMetadata() {
     return {
       redirect_uris: [this.redirectUrl],
-      client_name: "OpenWork deadline test",
+      client_name: "OfflineGPT deadline test",
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       token_endpoint_auth_method: "none",
@@ -497,7 +497,7 @@ describe("external MCP diagnostics", () => {
       phase: "MCP_TOOL_EXECUTION",
       category: "mcp_tool_input_invalid",
       code: "MCP_INVALID_PARAMS",
-      actionOwner: "openwork",
+      actionOwner: "offlinegpt",
       retryable: false,
       jsonRpcCode: -32602,
       providerErrorMessage: "Provider rejected private argument detail",
@@ -670,7 +670,7 @@ describe("external MCP diagnostics", () => {
     })
   })
 
-  test("attributes our own lifecycle deadline to OpenWork rather than the provider", () => {
+  test("attributes our own lifecycle deadline to OfflineGPT rather than the provider", () => {
     const tracker = new ExternalMcpDiagnosticTracker("req_own_deadline")
     tracker.begin("MCP_TOOL_EXECUTION")
     const error = tracker.error(new EnterpriseMcpLifecycleDeadlineError("tool-execution"))
@@ -682,12 +682,12 @@ describe("external MCP diagnostics", () => {
       retryable: true,
     })
     expect(error.diagnostic.message).toBe(
-      "The capability did not finish within the time OpenWork allows a single tool call.",
+      "The capability did not finish within the time OfflineGPT allows a single tool call.",
     )
     expect(error.diagnostic.operatorAction).not.toContain("JSON-RPC error code")
   })
 
-  test("attributes a wrapped lifecycle deadline to OpenWork through its cause chain", () => {
+  test("attributes a wrapped lifecycle deadline to OfflineGPT through its cause chain", () => {
     const tracker = new ExternalMcpDiagnosticTracker("req_wrapped_deadline")
     tracker.begin("MCP_TOOL_EXECUTION")
     const error = tracker.error(
@@ -893,7 +893,7 @@ describe("external MCP diagnostics", () => {
       retryable: false,
       actionOwner: "provider_admin",
     })
-    expect(diagnostic.message).toBe("The MCP server answered, but OpenWork could not interpret its response for the current request.")
+    expect(diagnostic.message).toBe("The MCP server answered, but OfflineGPT could not interpret its response for the current request.")
   })
 
   test("classifies unknown correlated JSON-RPC errors as provider-declared while preserving the code", () => {
@@ -926,7 +926,7 @@ describe("external MCP diagnostics", () => {
       phase: "MCP_TOOL_EXECUTION",
       category: "mcp_tool_input_invalid",
       code: "MCP_PROVIDER_INVALID_PARAMS",
-      actionOwner: "openwork",
+      actionOwner: "offlinegpt",
       retryable: false,
       providerErrorMessage: "private provider validation detail",
     })
@@ -949,7 +949,7 @@ describe("external MCP diagnostics", () => {
       phase: "MCP_TOOL_EXECUTION",
       category: "mcp_tool_input_invalid",
       code: "MCP_PROVIDER_INVALID_PARAMS",
-      actionOwner: "openwork",
+      actionOwner: "offlinegpt",
       retryable: false,
       providerErrorMessage: "Input validation error: Invalid arguments for tool lookup_incident: private provider detail",
     })
@@ -1199,7 +1199,7 @@ describe("external MCP diagnostics", () => {
       category: "oauth_configuration_changed",
       code: "MCP_OAUTH_CONFIGURATION_CHANGED",
       retryable: true,
-      actionOwner: "openwork",
+      actionOwner: "offlinegpt",
     })
   })
 
@@ -1256,15 +1256,15 @@ describe("external MCP diagnostics", () => {
     const html = connectCallbackPage({ ok: true, name: "Enterprise MCP <test>" })
 
     expect(html).toContain("You're connected")
-    expect(html).toContain("Enterprise MCP &lt;test&gt; is connected to OpenWork.")
+    expect(html).toContain("Enterprise MCP &lt;test&gt; is connected to OfflineGPT.")
     expect(html).not.toContain("window.close")
     expect(html).not.toContain("<button")
-    expect(html).toContain("You can close this window and return to OpenWork.")
+    expect(html).toContain("You can close this window and return to OfflineGPT.")
     expect(html).toContain('<div class="brand">')
-    expect(html).toContain("OpenWork</span>")
+    expect(html).toContain("OfflineGPT</span>")
     expect(html).not.toContain("@keyframes")
-    expect(html).not.toContain("openwork://")
-    expect(html).not.toContain("Open OpenWork")
+    expect(html).not.toContain("offlinegpt://")
+    expect(html).not.toContain("Open OfflineGPT")
   })
 
   test("exhausts paginated tool catalogs exactly once", async () => {

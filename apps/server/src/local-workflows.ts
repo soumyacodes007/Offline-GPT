@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { openworkServerDataDir } from "@openwork/paths";
-import type { LocalAvailableModel, LocalModelRef, LocalRouteCategory, LocalRouteDecision, LocalRoutingSettings, LocalWorkflow, LocalWorkflowInput, LocalWorkflowRun, LocalWorkflowRunStep, LocalWorkflowState, LocalWorkflowsSnapshot } from "@openwork/types/local-workflows";
-import { localWorkflowInputSchema, localWorkflowStateSchema } from "@openwork/types/local-workflows";
+import { offlinegptServerDataDir } from "@offlinegpt/paths";
+import type { LocalAvailableModel, LocalModelRef, LocalRouteCategory, LocalRouteDecision, LocalRoutingSettings, LocalWorkflow, LocalWorkflowInput, LocalWorkflowRun, LocalWorkflowRunStep, LocalWorkflowState, LocalWorkflowsSnapshot } from "@offlinegpt/types/local-workflows";
+import { localWorkflowInputSchema, localWorkflowStateSchema } from "@offlinegpt/types/local-workflows";
 import { ApiError } from "./errors.js";
 import { recordAudit } from "./audit.js";
 import type { Actor, ServerConfig, WorkspaceInfo } from "./types.js";
@@ -66,7 +66,7 @@ export class LocalWorkflowService {
   }
   private path(workspace: WorkspaceInfo): string {
     const key = createHash("sha256").update(`${this.config.configPath ?? "local"}\0${workspace.id}\0${workspace.path}`).digest("hex");
-    return join(openworkServerDataDir(), "local-workflows", `${key}.json`);
+    return join(offlinegptServerDataDir(), "local-workflows", `${key}.json`);
   }
   private load(workspace: WorkspaceInfo): Promise<LocalWorkflowState> {
     const cached = this.cache.get(workspace.id); if (cached) return Promise.resolve(cached);
@@ -126,7 +126,7 @@ export class LocalWorkflowService {
     return {
       routing: structuredClone(state.routing), workflows: structuredClone(state.workflows), runs: structuredClone(state.runs),
       models: catalog.models, modelsError: catalog.error,
-      scheduler: { active: Boolean(this.scheduler), description: this.config.readOnly ? "Schedules are disabled on this read-only server." : "Schedules run while the local OpenWork server is running (minimum interval: 1 minute). Runs stop after 10 minutes." },
+      scheduler: { active: Boolean(this.scheduler), description: this.config.readOnly ? "Schedules are disabled on this read-only server." : "Schedules run while the local OfflineGPT server is running (minimum interval: 1 minute). Runs stop after 10 minutes." },
     };
   }
   async route(workspace: WorkspaceInfo, prompt: string, category?: LocalRouteCategory | "auto", explicit?: LocalModelRef | null): Promise<LocalRouteDecision> {

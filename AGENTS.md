@@ -1,6 +1,6 @@
 # AGENTS.md
 
-OpenWork is a free, open-source desktop app (macOS, Windows, Linux) for doing
+OfflineGPT is a free, open-source desktop app (macOS, Windows, Linux) for doing
 work with AI agents on your own files — an open-source alternative to Claude
 Cowork and Codex, built on OpenCode, running any model from 50+ providers.
 Desktop mode keeps files local; cloud is optional. Three surfaces live in this
@@ -9,17 +9,17 @@ repo:
 - **Desktop app** (`apps/`, `packages/`) — local-first agent workspace: chat on
   files, skills, browser automation, scheduled automations, Anthropic-compatible
   plugins.
-- **OpenWork MCP gateway** (`ee/apps/den-api`) — one URL
-  (`api.openworklabs.com/mcp/agent`) that brings org-assigned skills, plugins,
+- **OfflineGPT MCP gateway** (`ee/apps/den-api`) — one URL
+  (`api.offlinegptlabs.com/mcp/agent`) that brings org-assigned skills, plugins,
   and connections (Google Workspace, Microsoft 365, MCPs) into Codex, Claude
   Code, Cursor, or any MCP client via `search_capabilities` /
   `execute_capability`.
-- **OpenWork Den** (`ee/apps/den-*`) — the org control plane: provision
+- **OfflineGPT Den** (`ee/apps/den-*`) — the org control plane: provision
   inference, manage teams and access, set desktop policies, publish skills and
   plugins through marketplaces.
 
-The app consumes OpenWork server surfaces (self-hosted or hosted) rather than
-inventing parallel behavior. Anything OpenCode can do is available in OpenWork,
+The app consumes OfflineGPT server surfaces (self-hosted or hosted) rather than
+inventing parallel behavior. Anything OpenCode can do is available in OfflineGPT,
 even before a dedicated UI exists.
 
 ## Confidentiality (hard rule — this repo is public)
@@ -49,17 +49,17 @@ escalate any leak instead of rewriting history.
 ## Local headless web (agents)
 
 - `pnpm world up dev-headless --detach` launches an isolated browser UI +
- local `openwork-server` without Electron as a detached script world.
+ local `offlinegpt-server` without Electron as a detached script world.
  `pnpm dev:headless-web` remains a compatibility alias with its prior foreground
  default (`--detach` still works). Read
  `tmp/dev-headless-web.json` for the owner-only runtime manifest.
- It does not use `~/.config/openwork/server.json`, and its engine keeps its own
+ It does not use `~/.config/offlinegpt/server.json`, and its engine keeps its own
  sessions database at `tmp/dev-headless-opencode.db` instead of the desktop
  app's `~/.local/share/opencode/opencode.db`. Stop a running script with
  `pnpm world down dev-headless`; pass script options after `--`, for example
  `pnpm world up dev-headless --detach -- --replace --keep-tokens`. Cloud sign-in
  is copy/paste handoff (Den cannot redirect grants to localhost): Account → Sign
- in → copy OpenWork link on Den → Paste sign-in code in Settings.
+ in → copy OfflineGPT link on Den → Paste sign-in code in Settings.
 
 ## Coding
 

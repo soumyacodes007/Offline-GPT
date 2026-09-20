@@ -11,10 +11,10 @@ import { pathToFileURL } from "node:url";
 import {
   desktopBootstrapPath,
   normalizeWorkspaceRootPath,
-  openworkEnvStorePath,
-  openworkServerConfigPath,
+  offlinegptEnvStorePath,
+  offlinegptServerConfigPath,
   resolveWorkspaceOpencodeConfigPath,
-} from "@openwork/paths";
+} from "@offlinegpt/paths";
 import {
   dedupeCertificates,
   resolveSystemCaBundle,
@@ -25,8 +25,8 @@ import {
 const __runtimeDir = path.dirname(fileURLToPath(import.meta.url));
 
 const DIRECT_RUNTIME = "direct";
-const OPENWORK_SERVER_PORT_RANGE_START = 48_000;
-const OPENWORK_SERVER_PORT_RANGE_END = 51_000;
+const OFFLINEGPT_SERVER_PORT_RANGE_START = 48_000;
+const OFFLINEGPT_SERVER_PORT_RANGE_END = 51_000;
 const MAX_BOOTSTRAP_BYTES = 256 * 1024;
 const MAX_CHAIN_REPAIR_BODY_BYTES = 64 * 1024;
 const MAX_CHAIN_REPAIR_ORIGINS = 3;
@@ -182,7 +182,7 @@ function normalizeServerCredentials(value) {
   };
 }
 
-export function migrateOpenworkServerTokenStore(value) {
+export function migrateOfflineGptServerTokenStore(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const sourceWorkspaces = source.workspaces && typeof source.workspaces === "object" && !Array.isArray(source.workspaces)
     ? source.workspaces
@@ -255,15 +255,15 @@ export async function prepareRuntimeWorkspaceRoot(projectDir, options = {}) {
   }
 }
 
-export function resolveOpenworkServerConfigPath(env = process.env) {
-  return openworkServerConfigPath({ env });
+export function resolveOfflineGptServerConfigPath(env = process.env) {
+  return offlinegptServerConfigPath({ env });
 }
 
 export function seedWorkspacePathsForEmbeddedServer(workspacePaths, serverConfigExists) {
   return serverConfigExists ? [] : workspacePaths;
 }
 
-export function selectStickyOpenworkPortWorkspace(requestedWorkspacePaths = [], serverWorkspacePaths = []) {
+export function selectStickyOfflineGptPortWorkspace(requestedWorkspacePaths = [], serverWorkspacePaths = []) {
   for (const value of [...requestedWorkspacePaths, ...serverWorkspacePaths]) {
     const workspacePath = String(value ?? "").trim();
     if (workspacePath) return workspacePath;
@@ -272,7 +272,7 @@ export function selectStickyOpenworkPortWorkspace(requestedWorkspacePaths = [], 
 }
 
 export function resolveEvalLocalServerDelayMs(env = process.env) {
-  const delayMs = Number(env.OPENWORK_EVAL_LOCAL_SERVER_DELAY_MS);
+  const delayMs = Number(env.OFFLINEGPT_EVAL_LOCAL_SERVER_DELAY_MS);
   return Number.isFinite(delayMs) && delayMs > 0 ? delayMs : 0;
 }
 
@@ -380,23 +380,23 @@ export function snapshotEngineState(state) {
 }
 
 /**
- * Where the in-process openwork-server persists its structured log. Packaged
+ * Where the in-process offlinegpt-server persists its structured log. Packaged
  * apps have no visible stdout, so without this file every engine rollover
- * reason and reload trigger is lost. An explicit OPENWORK_SERVER_LOG_FILE wins.
+ * reason and reload trigger is lost. An explicit OFFLINEGPT_SERVER_LOG_FILE wins.
  */
-export function resolveOpenworkServerLogFile(userDataDir, env = process.env) {
-  const explicit = String(env.OPENWORK_SERVER_LOG_FILE ?? "").trim();
+export function resolveOfflineGptServerLogFile(userDataDir, env = process.env) {
+  const explicit = String(env.OFFLINEGPT_SERVER_LOG_FILE ?? "").trim();
   if (explicit) return explicit;
-  return path.join(userDataDir, "logs", "openwork-server.log");
+  return path.join(userDataDir, "logs", "offlinegpt-server.log");
 }
 
-function createOpenworkServerState() {
+function createOfflineGptServerState() {
   return {
     child: null,
     childExited: true,
     inProcess: false,
     logFilePath: null,
-    // Monotonic per-start identity assigned by startOpenworkServerInner.
+    // Monotonic per-start identity assigned by startOfflineGptServerInner.
     // Sticky ports and persisted tokens make the connection details identical
     // across restarts, so clients need this to observe a new server lifetime.
     generation: null,
@@ -418,7 +418,7 @@ function createOpenworkServerState() {
   };
 }
 
-export function snapshotOpenworkServerState(state) {
+export function snapshotOfflineGptServerState(state) {
   const child = state.childExited ? null : state.child;
   const running = state.inProcess || Boolean(child && child.exitCode === null && !child.killed);
   return {
@@ -454,7 +454,7 @@ export function snapshotOpenworkServerState(state) {
  * explicit forceRestart or a host rebind (remote access change) gives up the
  * running server.
  */
-export function resolveOpenworkServerReuse({
+export function resolveOfflineGptServerReuse({
   forceRestart,
   inProcess,
   lifecycleState,
@@ -474,19 +474,19 @@ export function resolveOpenworkServerReuse({
 
 /**
  * A failed server start must not leave the state objects describing the
- * runtime it already stopped: snapshotOpenworkServerState would report
- * running:true with a dead baseUrl and assertOpenworkServerReady would pass
+ * runtime it already stopped: snapshotOfflineGptServerState would report
+ * running:true with a dead baseUrl and assertOfflineGptServerReady would pass
  * against it. Keeps accumulated output for diagnostics and the project dir so
  * a retry via engineRestart still knows its workspace. The engine state only
  * resets when this start owned the engine (manageOpencode) — an external
  * engine keeps running regardless of the server's fate.
  */
-export function resetRuntimeStatesAfterFailedServerStart(openworkServerStateRef, engineStateRef, options = {}) {
-  const serverStdout = openworkServerStateRef.lastStdout;
-  const serverStderr = openworkServerStateRef.lastStderr;
-  Object.assign(openworkServerStateRef, createOpenworkServerState());
-  openworkServerStateRef.lastStdout = serverStdout;
-  openworkServerStateRef.lastStderr = serverStderr;
+export function resetRuntimeStatesAfterFailedServerStart(offlinegptServerStateRef, engineStateRef, options = {}) {
+  const serverStdout = offlinegptServerStateRef.lastStdout;
+  const serverStderr = offlinegptServerStateRef.lastStderr;
+  Object.assign(offlinegptServerStateRef, createOfflineGptServerState());
+  offlinegptServerStateRef.lastStdout = serverStdout;
+  offlinegptServerStateRef.lastStderr = serverStderr;
   if (options.manageOpencode === true) {
     const engineStdout = engineStateRef.lastStdout;
     const engineStderr = engineStateRef.lastStderr;
@@ -498,15 +498,15 @@ export function resetRuntimeStatesAfterFailedServerStart(openworkServerStateRef,
   }
 }
 
-function assertOpenworkServerReady(snapshot) {
+function assertOfflineGptServerReady(snapshot) {
   if (!snapshot?.running) {
-    throw new Error("OpenWork server did not stay running after startup.");
+    throw new Error("OfflineGPT server did not stay running after startup.");
   }
   if (!snapshot.baseUrl) {
-    throw new Error("OpenWork server did not report a base URL after startup.");
+    throw new Error("OfflineGPT server did not report a base URL after startup.");
   }
   if (!snapshot.ownerToken && !snapshot.clientToken) {
-    throw new Error("OpenWork server did not report an access token after startup.");
+    throw new Error("OfflineGPT server did not report an access token after startup.");
   }
   return snapshot;
 }
@@ -722,14 +722,14 @@ async function fetchJson(url, options = {}, timeoutMs = 3000) {
 }
 
 export function resolveUserEnvFilePath(env = process.env) {
-  return openworkEnvStorePath({ env });
+  return offlinegptEnvStorePath({ env });
 }
 
 const USER_ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const USER_ENV_RESERVED_PREFIXES = ["OPENWORK_", "OPENCODE_"];
+const USER_ENV_RESERVED_PREFIXES = ["OFFLINEGPT_", "OPENCODE_"];
 
 // Synchronous, best-effort; absent or malformed returns {}. Reserved prefixes
-// are stripped so a tampered file can never shadow OPENWORK_* / OPENCODE_*.
+// are stripped so a tampered file can never shadow OFFLINEGPT_* / OPENCODE_*.
 function loadUserEnvFile(env = process.env) {
   try {
     const raw = readFileSync(resolveUserEnvFilePath(env), "utf8");
@@ -1149,7 +1149,7 @@ async function resolveChainRepairOrigins(options) {
   const env = options.parentEnv ?? {};
   const chainRepair = options.chainRepair ?? {};
   if (chainRepair.origins) return normalizeRepairOrigins(chainRepair.origins);
-  const envOrigins = typeof env.OPENWORK_CHAIN_REPAIR_ORIGINS === "string" ? env.OPENWORK_CHAIN_REPAIR_ORIGINS : "";
+  const envOrigins = typeof env.OFFLINEGPT_CHAIN_REPAIR_ORIGINS === "string" ? env.OFFLINEGPT_CHAIN_REPAIR_ORIGINS : "";
   if (envOrigins.trim()) return normalizeRepairOrigins(envOrigins.split(","));
   const bootstrapPath = chainRepair.bootstrapPath ?? desktopBootstrapPath({ env });
   const origin = await readActivatedEnterpriseOrigin(bootstrapPath);
@@ -1164,15 +1164,15 @@ async function repairIncompleteChains(options) {
   const env = options.parentEnv ?? {};
   const chainRepair = options.chainRepair ?? {};
   const logInfo = options.logInfo;
-  if (chainRepair.disabled === true || String(env.OPENWORK_DISABLE_CHAIN_REPAIR ?? "").trim() === "1") {
-    if (typeof logInfo === "function") logInfo("OpenWork runtime: chain repair disabled by OPENWORK_DISABLE_CHAIN_REPAIR.");
+  if (chainRepair.disabled === true || String(env.OFFLINEGPT_DISABLE_CHAIN_REPAIR ?? "").trim() === "1") {
+    if (typeof logInfo === "function") logInfo("OfflineGPT runtime: chain repair disabled by OFFLINEGPT_DISABLE_CHAIN_REPAIR.");
     return { pems: [], timedOut: false };
   }
 
   const origins = await resolveChainRepairOrigins(options);
   if (origins.length === 0) {
-    if (!chainRepair.origins && !String(env.OPENWORK_CHAIN_REPAIR_ORIGINS ?? "").trim() && typeof logInfo === "function") {
-      logInfo("OpenWork runtime: chain repair skipped: no activation record.");
+    if (!chainRepair.origins && !String(env.OFFLINEGPT_CHAIN_REPAIR_ORIGINS ?? "").trim() && typeof logInfo === "function") {
+      logInfo("OfflineGPT runtime: chain repair skipped: no activation record.");
     }
     return { pems: [], timedOut: false };
   }
@@ -1180,7 +1180,7 @@ async function repairIncompleteChains(options) {
   const fetchImpl = chainRepair.fetchImpl ?? globalThis.fetch;
   const tlsModule = options.tlsModule ?? tls;
   const tlsConnectImpl = chainRepair.tlsConnectImpl ?? tls.connect;
-  const totalTimeoutValue = Number(env.OPENWORK_CHAIN_REPAIR_TIMEOUT_MS);
+  const totalTimeoutValue = Number(env.OFFLINEGPT_CHAIN_REPAIR_TIMEOUT_MS);
   const totalTimeoutMs =
     Number.isFinite(totalTimeoutValue) && totalTimeoutValue >= 1000 && totalTimeoutValue <= 120000
       ? totalTimeoutValue
@@ -1193,7 +1193,7 @@ async function repairIncompleteChains(options) {
 
   if (typeof fetchImpl !== "function") {
     if (typeof logInfo === "function") {
-      for (const origin of origins) logInfo(`OpenWork runtime: chain repair skipped for ${origin}: fetch unavailable`);
+      for (const origin of origins) logInfo(`OfflineGPT runtime: chain repair skipped for ${origin}: fetch unavailable`);
     }
     return { pems: [], timedOut: false };
   }
@@ -1203,27 +1203,27 @@ async function repairIncompleteChains(options) {
     for (const origin of origins) {
       const strictError = await strictProbeChainRepair(origin, tlsConnectImpl);
       if (strictError === null) {
-        if (typeof logInfo === "function") logInfo(`OpenWork runtime: chain ok for ${origin}`);
+        if (typeof logInfo === "function") logInfo(`OfflineGPT runtime: chain ok for ${origin}`);
         continue;
       }
       if (strictError !== "UNABLE_TO_VERIFY_LEAF_SIGNATURE") {
-        if (typeof logInfo === "function") logInfo(`OpenWork runtime: chain repair skipped for ${origin}: ${strictError}`);
+        if (typeof logInfo === "function") logInfo(`OfflineGPT runtime: chain repair skipped for ${origin}: ${strictError}`);
         continue;
       }
 
       const leafState = await introspectLeafCertificate(origin, tlsConnectImpl);
       if (!leafState) {
-        if (typeof logInfo === "function") logInfo(`OpenWork runtime: chain repair skipped for ${origin}: certificate introspection failed`);
+        if (typeof logInfo === "function") logInfo(`OfflineGPT runtime: chain repair skipped for ${origin}: certificate introspection failed`);
         continue;
       }
       if (!leafState.leafOnly) {
-        if (typeof logInfo === "function") logInfo(`OpenWork runtime: chain repair skipped for ${origin}: served chain includes an intermediate`);
+        if (typeof logInfo === "function") logInfo(`OfflineGPT runtime: chain repair skipped for ${origin}: served chain includes an intermediate`);
         continue;
       }
 
       const issuerUrls = caIssuerUrls(leafState.leaf);
       if (issuerUrls.length === 0) {
-        if (typeof logInfo === "function") logInfo(`OpenWork runtime: chain repair skipped for ${origin}: no CA Issuers AIA URL`);
+        if (typeof logInfo === "function") logInfo(`OfflineGPT runtime: chain repair skipped for ${origin}: no CA Issuers AIA URL`);
         continue;
       }
 
@@ -1238,18 +1238,18 @@ async function repairIncompleteChains(options) {
         if (!intermediate) continue;
         const reason = refusalReason(leafState.leaf, intermediate, rootsProvider);
         if (reason) {
-          if (typeof logInfo === "function") logInfo(`OpenWork runtime: chain repair refused for ${origin}: ${reason}`);
+          if (typeof logInfo === "function") logInfo(`OfflineGPT runtime: chain repair refused for ${origin}: ${reason}`);
           continue;
         }
         pems.push(intermediate.toString());
         repaired = true;
         if (typeof logInfo === "function") {
-          logInfo(`OpenWork runtime: chain repaired for ${origin}: added "${certificateCommonName(intermediate)}"`);
+          logInfo(`OfflineGPT runtime: chain repaired for ${origin}: added "${certificateCommonName(intermediate)}"`);
         }
         break;
       }
       if (!repaired && typeof logInfo === "function") {
-        logInfo(`OpenWork runtime: chain repair skipped for ${origin}: no usable AIA issuer certificate`);
+        logInfo(`OfflineGPT runtime: chain repair skipped for ${origin}: no usable AIA issuer certificate`);
       }
     }
     return { pems, timedOut: false };
@@ -1284,7 +1284,7 @@ async function resolveSystemCa({
   const env = parentEnv ?? {};
   if (Object.prototype.hasOwnProperty.call(env, "NODE_EXTRA_CA_CERTS")) {
     if (typeof logInfo === "function") {
-      logInfo("OpenWork runtime: NODE_EXTRA_CA_CERTS is already set; skipping system CA bundle export.");
+      logInfo("OfflineGPT runtime: NODE_EXTRA_CA_CERTS is already set; skipping system CA bundle export.");
     }
     try {
       const configuredPem = await readFile(String(env.NODE_EXTRA_CA_CERTS), "utf8");
@@ -1307,7 +1307,7 @@ async function resolveSystemCa({
       platform: platformLoader,
     });
     if (typeof logInfo === "function") {
-      logInfo(`OpenWork runtime: system CA bundle sources ${summarizeSystemCaSources(bundle.sources)}`);
+      logInfo(`OfflineGPT runtime: system CA bundle sources ${summarizeSystemCaSources(bundle.sources)}`);
     }
     let repairedPems = [];
     try {
@@ -1323,7 +1323,7 @@ async function resolveSystemCa({
       });
       repairedPems = repaired.pems;
       if (repaired.timedOut && typeof logInfo === "function") {
-        logInfo("OpenWork runtime: chain repair skipped: timed out");
+        logInfo("OfflineGPT runtime: chain repair skipped: timed out");
       }
     } catch {
       repairedPems = [];
@@ -1381,11 +1381,11 @@ export function createRuntimeManager({
   const inheritedProcessEnv = { ...process.env };
   let injectedUserEnvKeys = new Set();
   const engineState = createEngineState();
-  const openworkServerState = createOpenworkServerState();
+  const offlinegptServerState = createOfflineGptServerState();
   // Monotonic across this Electron process. Never reset with the server
   // state: each successful server start must be observable as a new
   // generation even when ports and tokens are reused.
-  let openworkServerGenerationCounter = 0;
+  let offlinegptServerGenerationCounter = 0;
 
   // Serialize engine lifecycle operations. Without this, concurrent renderer
   // invocations of engineStart/engineStop/engineRestart race: each call's
@@ -1425,16 +1425,16 @@ export function createRuntimeManager({
     return systemCaPromise;
   }
 
-  function openworkServerTokenStorePath() {
-    const override = process.env.OPENWORK_SERVER_TOKEN_STORE_PATH?.trim();
+  function offlinegptServerTokenStorePath() {
+    const override = process.env.OFFLINEGPT_SERVER_TOKEN_STORE_PATH?.trim();
     if (override) return path.resolve(override);
-    return path.join(userDataDir, "openwork-server-tokens.json");
+    return path.join(userDataDir, "offlinegpt-server-tokens.json");
   }
 
-  function openworkServerStatePath() {
-    const override = process.env.OPENWORK_SERVER_STATE_PATH?.trim();
+  function offlinegptServerStatePath() {
+    const override = process.env.OFFLINEGPT_SERVER_STATE_PATH?.trim();
     if (override) return path.resolve(override);
-    return path.join(userDataDir, "openwork-server-state.json");
+    return path.join(userDataDir, "offlinegpt-server-state.json");
   }
 
   function managedOpencodeWorkdir() {
@@ -1442,8 +1442,8 @@ export function createRuntimeManager({
   }
 
   async function loadTokenStore() {
-    const stored = await readJsonFile(openworkServerTokenStorePath(), { version: 1, workspaces: {} });
-    const migrated = migrateOpenworkServerTokenStore(stored);
+    const stored = await readJsonFile(offlinegptServerTokenStorePath(), { version: 1, workspaces: {} });
+    const migrated = migrateOfflineGptServerTokenStore(stored);
     if (JSON.stringify(stored) !== JSON.stringify(migrated)) {
       await saveTokenStore(migrated);
     }
@@ -1451,13 +1451,13 @@ export function createRuntimeManager({
   }
 
   async function saveTokenStore(store) {
-    const filePath = openworkServerTokenStorePath();
+    const filePath = offlinegptServerTokenStorePath();
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
   }
 
   async function loadPortState() {
-    return readJsonFile(openworkServerStatePath(), {
+    return readJsonFile(offlinegptServerStatePath(), {
       version: 4,
       workspacePorts: {},
       preferredPort: null,
@@ -1465,7 +1465,7 @@ export function createRuntimeManager({
   }
 
   async function savePortState(state) {
-    const filePath = openworkServerStatePath();
+    const filePath = offlinegptServerStatePath();
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
   }
@@ -1482,7 +1482,7 @@ export function createRuntimeManager({
     await saveTokenStore(store);
   }
 
-  async function readPreferredOpenworkPort(workspaceKey) {
+  async function readPreferredOfflineGptPort(workspaceKey) {
     const state = await loadPortState();
     const normalized = normalizeWorkspaceKey(workspaceKey, workspacePlatform);
     if (normalized && state.workspacePorts?.[normalized]) {
@@ -1491,7 +1491,7 @@ export function createRuntimeManager({
     return state.preferredPort ?? null;
   }
 
-  async function persistPreferredOpenworkPort(workspaceKey, port) {
+  async function persistPreferredOfflineGptPort(workspaceKey, port) {
     const state = await loadPortState();
     const normalized = normalizeWorkspaceKey(workspaceKey, workspacePlatform);
     state.version = 4;
@@ -1514,8 +1514,8 @@ export function createRuntimeManager({
     return portAvailable(host, port);
   }
 
-  async function resolveOpenworkPort(host, workspaceKey, currentPort = null) {
-    const preferredPort = await readPreferredOpenworkPort(workspaceKey);
+  async function resolveOfflineGptPort(host, workspaceKey, currentPort = null) {
+    const preferredPort = await readPreferredOfflineGptPort(workspaceKey);
     if (currentPort && (await waitForPortAvailable(host, currentPort))) {
       return { port: currentPort, preferredPort };
     }
@@ -1526,7 +1526,7 @@ export function createRuntimeManager({
   }
 
   async function ensureDevModePaths() {
-    const root = path.join(userDataDir, "openwork-dev-data");
+    const root = path.join(userDataDir, "offlinegpt-dev-data");
     const paths = {
       homeDir: path.join(root, "home"),
       xdgConfigHome: path.join(root, "xdg", "config"),
@@ -1548,7 +1548,7 @@ export function createRuntimeManager({
     // User env is layered first so process.env + any caller overrides always
     // win. See apps/server/src/env-file.ts — all loaders must agree on path +
     // reserved-keys policy.
-    const devPaths = process.env.OPENWORK_DEV_MODE === "1" && process.env.OPENWORK_DEV_SHARED_STATE !== "1"
+    const devPaths = process.env.OFFLINEGPT_DEV_MODE === "1" && process.env.OFFLINEGPT_DEV_SHARED_STATE !== "1"
       ? await ensureDevModePaths()
       : null;
     const userEnvPathEnv = devPaths
@@ -1585,7 +1585,7 @@ export function createRuntimeManager({
       env[pathKey] = pathEnv;
     }
     if (devPaths) {
-      env.OPENWORK_DEV_MODE = "1";
+      env.OFFLINEGPT_DEV_MODE = "1";
       env.HOME = devPaths.homeDir;
       env.USERPROFILE = devPaths.homeDir;
       env.XDG_CONFIG_HOME = devPaths.xdgConfigHome;
@@ -1649,7 +1649,7 @@ export function createRuntimeManager({
     const candidates = [];
     const seen = new Set();
 
-    for (const key of ["OPENWORK_DOCKER_BIN", "OPENWRK_DOCKER_BIN", "DOCKER_BIN"]) {
+    for (const key of ["OFFLINEGPT_DOCKER_BIN", "OPENWRK_DOCKER_BIN", "DOCKER_BIN"]) {
       const value = process.env[key]?.trim();
       if (value && !seen.has(value)) {
         seen.add(value);
@@ -1702,13 +1702,13 @@ export function createRuntimeManager({
     }
 
     throw new Error(
-      `Failed to run docker: ${errors.join("; ")} (Set OPENWORK_DOCKER_BIN to your docker binary if needed)`,
+      `Failed to run docker: ${errors.join("; ")} (Set OFFLINEGPT_DOCKER_BIN to your docker binary if needed)`,
     );
   }
 
-  const legacyOpenworkContainerPrefix = `${["openwork", "orchestrator"].join("-")}-`;
+  const legacyOfflineGptContainerPrefix = `${["offlinegpt", "orchestrator"].join("-")}-`;
 
-  async function listOpenworkManagedContainers() {
+  async function listOfflineGptManagedContainers() {
     const result = runDockerCommandDetailed(["ps", "-a", "--format", "{{.Names}}"], 8000);
     if (result.status !== 0) {
       const combined = `${result.stdout.trim()}\n${result.stderr.trim()}`.trim();
@@ -1717,7 +1717,7 @@ export function createRuntimeManager({
     return result.stdout
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter((name) => name && (name.startsWith(legacyOpenworkContainerPrefix) || name.startsWith("openwork-dev-") || name.startsWith("openwrk-")))
+      .filter((name) => name && (name.startsWith(legacyOfflineGptContainerPrefix) || name.startsWith("offlinegpt-dev-") || name.startsWith("openwrk-")))
       .sort();
   }
 
@@ -1868,9 +1868,9 @@ export function createRuntimeManager({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-OpenWork-Host-Token": hostToken,
+          "X-OfflineGPT-Host-Token": hostToken,
         },
-        body: JSON.stringify({ scope: "owner", label: "OpenWork desktop owner token" }),
+        body: JSON.stringify({ scope: "owner", label: "OfflineGPT desktop owner token" }),
       },
       5000,
     );
@@ -1881,35 +1881,35 @@ export function createRuntimeManager({
   // In-process server handle. Kept alive across restarts so we can stop it.
   let inProcessServer = null;
 
-  async function startOpenworkServer(options) {
+  async function startOfflineGptServer(options) {
     // The inner start stops any previous runtime before mutating state, so a
     // throw below always happens with nothing left running.
     try {
-      return await startOpenworkServerInner(options);
+      return await startOfflineGptServerInner(options);
     } catch (error) {
-      resetRuntimeStatesAfterFailedServerStart(openworkServerState, engineState, options);
+      resetRuntimeStatesAfterFailedServerStart(offlinegptServerState, engineState, options);
       throw error;
     }
   }
 
-  async function startOpenworkServerInner(options) {
+  async function startOfflineGptServerInner(options) {
     const evalDelayMs = resolveEvalLocalServerDelayMs();
     if (evalDelayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, evalDelayMs));
     }
-    const currentPort = openworkServerState.port;
+    const currentPort = offlinegptServerState.port;
     // Stop any previously running in-process server
     if (inProcessServer) {
       try { await inProcessServer.stop(); } catch { /* ignore */ }
       inProcessServer = null;
     }
-    await stopChild(openworkServerState);
+    await stopChild(offlinegptServerState);
 
     const host = options.remoteAccessEnabled ? "0.0.0.0" : "127.0.0.1";
 
     const managedOpencode = options.manageOpencode ? resolveOpencodeBinary(options.opencodeBinPath) : null;
-    openworkServerState.managedOpencodeBinPath = managedOpencode?.path ?? null;
-    openworkServerState.managedOpencodeBinSource = managedOpencode?.source ?? null;
+    offlinegptServerState.managedOpencodeBinPath = managedOpencode?.path ?? null;
+    offlinegptServerState.managedOpencodeBinSource = managedOpencode?.source ?? null;
     if (options.manageOpencode) {
       engineState.opencodeBinPath = managedOpencode?.path ?? null;
       engineState.opencodeBinSource = managedOpencode?.source ?? null;
@@ -1923,7 +1923,7 @@ export function createRuntimeManager({
     // truth. Do not pass Electron's legacy workspace list as CLI workspaces or
     // the server config loader will ignore server.json and lose server-created
     // workspaces after restart.
-    const serverConfigPath = resolveOpenworkServerConfigPath(process.env);
+    const serverConfigPath = resolveOfflineGptServerConfigPath(process.env);
     const requestedWorkspacePaths = prioritizeWorkspacePaths("", options.workspacePaths, {
       platform: workspacePlatform,
     });
@@ -1931,8 +1931,8 @@ export function createRuntimeManager({
       requestedWorkspacePaths,
       existsSync(serverConfigPath),
     );
-    const activeWorkspace = selectStickyOpenworkPortWorkspace(requestedWorkspacePaths, workspacePaths);
-    const portSelection = await resolveOpenworkPort(host, activeWorkspace, currentPort);
+    const activeWorkspace = selectStickyOfflineGptPortWorkspace(requestedWorkspacePaths, workspacePaths);
+    const portSelection = await resolveOfflineGptPort(host, activeWorkspace, currentPort);
     const tokens = await loadServerCredentials();
 
     // One call: resolve config, spawn managed OpenCode, start HTTP server.
@@ -1943,18 +1943,18 @@ export function createRuntimeManager({
       path.resolve(__runtimeDir, "..", "server", "dist", "embedded.js"),
       ...(process.resourcesPath ? [path.resolve(process.resourcesPath, "server", "dist", "embedded.js")] : []),
     ];
-    const candidates = process.env.OPENWORK_DEV_MODE === "1"
+    const candidates = process.env.OFFLINEGPT_DEV_MODE === "1"
       ? [devPath, ...packagedPaths]
       : [...packagedPaths, devPath];
     const embeddedPath = candidates.find((candidate) => existsSync(candidate));
     if (!embeddedPath) {
-      throw new Error(`Cannot find OpenWork embedded server bundle. Checked: ${candidates.join(", ")}`);
+      throw new Error(`Cannot find OfflineGPT embedded server bundle. Checked: ${candidates.join(", ")}`);
     }
     // Must be set before the bundle loads: the server memoizes its file sink
     // from process.env the first time it creates a logger.
-    const logFilePath = resolveOpenworkServerLogFile(userDataDir);
-    process.env.OPENWORK_SERVER_LOG_FILE = logFilePath;
-    openworkServerState.logFilePath = logFilePath;
+    const logFilePath = resolveOfflineGptServerLogFile(userDataDir);
+    process.env.OFFLINEGPT_SERVER_LOG_FILE = logFilePath;
+    offlinegptServerState.logFilePath = logFilePath;
     const { startEmbeddedServer } = await import(embeddedServerImportUrl(embeddedPath));
     // startEmbeddedServer falls back to an OS-assigned port if `port` races
     // into EADDRINUSE (see apps/server/src/serve-node.ts), so the bound port
@@ -1977,7 +1977,7 @@ export function createRuntimeManager({
       localManagedMcpVaultKey,
     });
     inProcessServer = handle;
-    openworkServerState.managedOpencodeExecution = handle.managedOpencodeExecution ?? null;
+    offlinegptServerState.managedOpencodeExecution = handle.managedOpencodeExecution ?? null;
     engineState.managedByServer = Boolean(handle.managedOpencode);
     engineState.managedPid = handle.managedOpencode?.pid ?? null;
     engineState.managedIsAlive = handle.managedOpencode?.isAlive ?? null;
@@ -1985,20 +1985,20 @@ export function createRuntimeManager({
     const boundPort = handle.port;
     const baseUrl = handle.url;
 
-    openworkServerState.inProcess = true;
-    openworkServerGenerationCounter += 1;
-    openworkServerState.generation = openworkServerGenerationCounter;
-    openworkServerState.remoteAccessEnabled = options.remoteAccessEnabled;
-    openworkServerState.host = host;
-    openworkServerState.port = boundPort;
-    openworkServerState.baseUrl = baseUrl;
-    openworkServerState.clientToken = tokens.clientToken;
-    openworkServerState.hostToken = tokens.hostToken;
+    offlinegptServerState.inProcess = true;
+    offlinegptServerGenerationCounter += 1;
+    offlinegptServerState.generation = offlinegptServerGenerationCounter;
+    offlinegptServerState.remoteAccessEnabled = options.remoteAccessEnabled;
+    offlinegptServerState.host = host;
+    offlinegptServerState.port = boundPort;
+    offlinegptServerState.baseUrl = baseUrl;
+    offlinegptServerState.clientToken = tokens.clientToken;
+    offlinegptServerState.hostToken = tokens.hostToken;
 
     const connectUrls = options.remoteAccessEnabled ? buildConnectUrls(boundPort) : { connectUrl: null, mdnsUrl: null, lanUrl: null };
-    openworkServerState.connectUrl = connectUrls.connectUrl;
-    openworkServerState.mdnsUrl = connectUrls.mdnsUrl;
-    openworkServerState.lanUrl = connectUrls.lanUrl;
+    offlinegptServerState.connectUrl = connectUrls.connectUrl;
+    offlinegptServerState.mdnsUrl = connectUrls.mdnsUrl;
+    offlinegptServerState.lanUrl = connectUrls.lanUrl;
 
     // No health check needed -- startServer() resolves only after the listener is bound.
     let workspaceList = null;
@@ -2013,7 +2013,7 @@ export function createRuntimeManager({
       }
     }
     ownerToken ||= await issueOwnerToken(baseUrl, tokens.hostToken);
-    openworkServerState.ownerToken = ownerToken;
+    offlinegptServerState.ownerToken = ownerToken;
     if (ownerToken) {
       await persistServerOwnerToken(ownerToken);
     }
@@ -2037,13 +2037,13 @@ export function createRuntimeManager({
           engineState.childExited = false;
         }
       } catch (error) {
-        appendOutput(openworkServerState, "lastStderr", `OpenWork server workspace probe: ${error instanceof Error ? error.message : String(error)}\n`);
+        appendOutput(offlinegptServerState, "lastStderr", `OfflineGPT server workspace probe: ${error instanceof Error ? error.message : String(error)}\n`);
       }
     }
     if (!portSelection.preferredPort || boundPort === portSelection.preferredPort) {
-      await persistPreferredOpenworkPort(activeWorkspace, boundPort);
+      await persistPreferredOfflineGptPort(activeWorkspace, boundPort);
     }
-    return snapshotOpenworkServerState(openworkServerState);
+    return snapshotOfflineGptServerState(offlinegptServerState);
   }
 
   async function stopAllRuntimeChildren() {
@@ -2052,11 +2052,11 @@ export function createRuntimeManager({
       try { await inProcessServer.stop(); } catch { /* ignore */ }
       inProcessServer = null;
     }
-    await stopChild(openworkServerState);
+    await stopChild(offlinegptServerState);
     await stopChild(engineState);
 
     Object.assign(engineState, createEngineState());
-    Object.assign(openworkServerState, createOpenworkServerState());
+    Object.assign(offlinegptServerState, createOfflineGptServerState());
   }
 
   async function prepareFreshRuntime() {
@@ -2067,19 +2067,19 @@ export function createRuntimeManager({
   }
 
   function settleAfterWorkspacePreparationFailure() {
-    if (snapshotOpenworkServerState(openworkServerState).running) {
+    if (snapshotOfflineGptServerState(offlinegptServerState).running) {
       lifecycleState = "healthy";
       return;
     }
     Object.assign(engineState, createEngineState());
-    Object.assign(openworkServerState, createOpenworkServerState());
+    Object.assign(offlinegptServerState, createOfflineGptServerState());
     lifecycleState = "idle";
   }
 
-  async function ensureOpenwork(options) {
-    let openworkServer;
+  async function ensureOfflineGpt(options) {
+    let offlinegptServer;
     try {
-      openworkServer = await startOpenworkServer({
+      offlinegptServer = await startOfflineGptServer({
         workspacePaths: options.workspacePaths,
         opencodeBaseUrl: engineState.baseUrl,
         opencodeUsername: engineState.opencodeUsername,
@@ -2089,11 +2089,11 @@ export function createRuntimeManager({
         opencodeBinPath: options.opencodeBinPath,
       });
     } catch (error) {
-      appendOutput(engineState, "lastStderr", `OpenWork server: ${error instanceof Error ? error.message : String(error)}\n`);
+      appendOutput(engineState, "lastStderr", `OfflineGPT server: ${error instanceof Error ? error.message : String(error)}\n`);
       throw error;
     }
 
-    assertOpenworkServerReady(openworkServer);
+    assertOfflineGptServerReady(offlinegptServer);
   }
 
   async function engineStart(projectDir, options = {}) {
@@ -2111,26 +2111,26 @@ export function createRuntimeManager({
 
     // Reuse a healthy server instead of tearing it down. During boot the
     // main process kicks off bootRuntimeForSelectedWorkspace while renderer
-    // routes independently call ensureDesktopLocalOpenworkConnection. Both go
+    // routes independently call ensureDesktopLocalOfflineGptConnection. Both go
     // through this serialized path; without this guard the second call runs
     // prepareFreshRuntime (killing the freshly bound server) and then rebinds
     // the sticky preferred port, racing the not-yet-released socket into
     // EADDRINUSE and leaving the runtime in error -> boot screen.
-    // resolveOpenworkServerReuse also spans workspace switches: requesting a
+    // resolveOfflineGptServerReuse also spans workspace switches: requesting a
     // different projectDir retargets the running runtime instead of killing
     // the process and every in-flight run with it.
-    const reuseDecision = resolveOpenworkServerReuse({
+    const reuseDecision = resolveOfflineGptServerReuse({
       forceRestart: options.forceRestart,
-      inProcess: openworkServerState.inProcess,
+      inProcess: offlinegptServerState.inProcess,
       lifecycleState,
-      remoteAccessEnabled: openworkServerState.remoteAccessEnabled,
-      requestedRemoteAccess: options.openworkRemoteAccess,
+      remoteAccessEnabled: offlinegptServerState.remoteAccessEnabled,
+      requestedRemoteAccess: options.offlinegptRemoteAccess,
       currentProjectDir: engineState.projectDir,
       requestedProjectDir: safeProjectDir,
       platform: workspacePlatform,
     });
     if (reuseDecision.reuse) {
-      const existing = snapshotOpenworkServerState(openworkServerState);
+      const existing = snapshotOfflineGptServerState(offlinegptServerState);
       if (existing.running && existing.baseUrl && (existing.ownerToken || existing.clientToken)) {
         if (reuseDecision.retarget) {
           try {
@@ -2144,7 +2144,7 @@ export function createRuntimeManager({
             throw error;
           }
           engineState.projectDir = safeProjectDir;
-          await persistPreferredOpenworkPort(safeProjectDir, openworkServerState.port);
+          await persistPreferredOfflineGptPort(safeProjectDir, offlinegptServerState.port);
         }
         return snapshotEngineState(engineState);
       }
@@ -2175,10 +2175,10 @@ export function createRuntimeManager({
       engineState.child = null;
       engineState.childExited = true;
 
-      await ensureOpenwork({
+      await ensureOfflineGpt({
         projectDir: safeProjectDir,
         workspacePaths,
-        remoteAccessEnabled: options.openworkRemoteAccess === true,
+        remoteAccessEnabled: options.offlinegptRemoteAccess === true,
         manageOpencode: true,
         opencodeBinPath: options.opencodeBinPath,
       });
@@ -2203,14 +2203,14 @@ export function createRuntimeManager({
     if (!projectDir) {
       throw new Error("OpenCode is not configured for a local workspace");
     }
-    const openworkRemoteAccess = typeof options.openworkRemoteAccess === "boolean"
-      ? options.openworkRemoteAccess
-      : openworkServerState.remoteAccessEnabled;
+    const offlinegptRemoteAccess = typeof options.offlinegptRemoteAccess === "boolean"
+      ? options.offlinegptRemoteAccess
+      : offlinegptServerState.remoteAccessEnabled;
     return engineStart(projectDir, {
       runtime: engineState.runtime,
       workspacePaths: [projectDir],
       opencodeEnableExa: options.opencodeEnableExa,
-      openworkRemoteAccess,
+      offlinegptRemoteAccess,
       forceRestart: true,
     });
   }
@@ -2227,29 +2227,29 @@ export function createRuntimeManager({
       lifecycleState,
       engine: await engineInfo(),
       enginePool: inProcessServer?.managedOpencodePool?.() ?? null,
-      openworkServer: snapshotOpenworkServerState(openworkServerState),
+      offlinegptServer: snapshotOfflineGptServerState(offlinegptServerState),
     };
   }
 
-  async function openworkServerInfo() {
-    return snapshotOpenworkServerState(openworkServerState);
+  async function offlinegptServerInfo() {
+    return snapshotOfflineGptServerState(offlinegptServerState);
   }
 
-  async function openworkServerRestart(options = {}) {
+  async function offlinegptServerRestart(options = {}) {
     const workspacePaths = prioritizeWorkspacePaths(engineState.projectDir, await listLocalWorkspacePaths(), {
       platform: workspacePlatform,
     });
     const shouldManageOpencode = Boolean(
-      openworkServerState.managedOpencodeBinPath || engineState.opencodeBinPath || !engineState.baseUrl,
+      offlinegptServerState.managedOpencodeBinPath || engineState.opencodeBinPath || !engineState.baseUrl,
     );
-    return startOpenworkServer({
+    return startOfflineGptServer({
       workspacePaths,
       opencodeBaseUrl: shouldManageOpencode ? null : engineState.baseUrl,
       opencodeUsername: shouldManageOpencode ? null : engineState.opencodeUsername,
       opencodePassword: shouldManageOpencode ? null : engineState.opencodePassword,
       remoteAccessEnabled: options.remoteAccessEnabled === true,
       manageOpencode: shouldManageOpencode,
-      opencodeBinPath: engineState.opencodeBinPath ?? openworkServerState.managedOpencodeBinPath,
+      opencodeBinPath: engineState.opencodeBinPath ?? offlinegptServerState.managedOpencodeBinPath,
     });
   }
 
@@ -2260,7 +2260,7 @@ export function createRuntimeManager({
         status: -1,
         stdout: "",
         stderr:
-          "Guided install is not supported on Windows yet. Install the OpenWork-pinned OpenCode version manually, then restart OpenWork.",
+          "Guided install is not supported on Windows yet. Install the OfflineGPT-pinned OpenCode version manually, then restart OfflineGPT.",
       };
     }
 
@@ -2306,8 +2306,8 @@ export function createRuntimeManager({
     };
   }
 
-  async function sandboxCleanupOpenworkContainers() {
-    const candidates = await listOpenworkManagedContainers().catch((error) => {
+  async function sandboxCleanupOfflineGptContainers() {
+    const candidates = await listOfflineGptManagedContainers().catch((error) => {
       throw error;
     });
     const removed = [];
@@ -2340,9 +2340,9 @@ export function createRuntimeManager({
     engineInfo,
     engineDoctor,
     engineInstall,
-    openworkServerInfo,
-    openworkServerRestart: (options) => withRuntimeLifecycle(() => openworkServerRestart(options)),
+    offlinegptServerInfo,
+    offlinegptServerRestart: (options) => withRuntimeLifecycle(() => offlinegptServerRestart(options)),
     opencodeMcpAuth,
-    sandboxCleanupOpenworkContainers,
+    sandboxCleanupOfflineGptContainers,
   };
 }

@@ -11,7 +11,7 @@ import type { ExternalConnectionStatus } from "../src/mcp/external-capabilities.
 const needsSignInStatus: ExternalConnectionStatus = {
   version: 1,
   kind: "connection_action",
-  source: "openwork-cloud",
+  source: "offlinegpt-cloud",
   layer: "downstream_provider",
   connectionId: "emc_gmail",
   connectionName: "Gmail",
@@ -24,9 +24,9 @@ const needsSignInStatus: ExternalConnectionStatus = {
   action: {
     type: "connect",
     label: "Connect Gmail",
-    surface: "openwork_your_connections",
+    surface: "offlinegpt_your_connections",
     retry: "search_capabilities",
-    url: "https://app.openworklabs.com/dashboard/connections/emc_gmail",
+    url: "https://app.offlinegptlabs.com/dashboard/connections/emc_gmail",
   },
 }
 
@@ -42,8 +42,8 @@ test("connection status payloads carry the exact human action for native renderi
     action: {
       type: "connect",
       label: "Connect Gmail",
-      surface: "openwork_your_connections",
-      url: "https://app.openworklabs.com/dashboard/connections/emc_gmail",
+      surface: "offlinegpt_your_connections",
+      url: "https://app.offlinegptlabs.com/dashboard/connections/emc_gmail",
     },
   })
   const match = { kind: "connection_status", connectionStatus: needsSignInStatus }
@@ -58,7 +58,7 @@ test("connection status payloads carry the exact human action for native renderi
   const fallback = connectionActionTextFallback(payload)
   expect(fallback).toContain("# Connection needs attention: Gmail")
   expect(fallback).toContain("Action: Connect Gmail")
-  expect(fallback).toContain("Open: https://app.openworklabs.com/dashboard/connections/emc_gmail")
+  expect(fallback).toContain("Open: https://app.offlinegptlabs.com/dashboard/connections/emc_gmail")
 
   const connected = connectedConnectionActionPayload({ connectionId: "emc_gmail", connectionName: "Gmail" })
   expect(connected.state).toBe("connected")

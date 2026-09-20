@@ -36,7 +36,7 @@ import { LazyMotion, Reorder, domMax, m, useDragControls } from "motion/react";
 
 import { getDisplaySessionTitle } from "../../../../app/lib/session-title";
 import type { WorkspaceInfo } from "../../../../app/lib/desktop";
-import { OpenWorkDenHelpLink } from "../../workspace/openwork-den-help-link";
+import { OfflineGPTDenHelpLink } from "../../workspace/offlinegpt-den-help-link";
 import { NotificationBell } from "../../../shell/notification-center";
 import { useUiStateStore } from "../../../shell/ui-state-store";
 import type {
@@ -161,7 +161,7 @@ import { SidebarDestination } from "./sidebar-destination";
 import { SessionTitle } from "./session-title";
 import { AuditTrailMiniPanel } from "../../audit/audit-trail-mini-panel";
 import { useAuditTrailController } from "../../audit/use-audit-trail-controller";
-import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
+import type { OfflineGptServerClient } from "../../../../app/lib/offlinegpt-server";
 import { LocalWorkflowsPanel } from "../../local-workflows/local-workflows-panel";
 
 /** Paper Desktop: unread #2FBE54, needs-action #E8933A (14px artboard → ~8px app). */
@@ -802,7 +802,7 @@ function RemoteConnectionIssueCard(props: {
             >
               {props.message}
             </div>
-            <OpenWorkDenHelpLink />
+            <OfflineGPTDenHelpLink />
             <div className="mt-2 flex flex-wrap gap-1.5">
               {props.canRecover ? (
                 <Button
@@ -939,7 +939,7 @@ export type AppSidebarProps = {
   onOpenDashboard?: () => void;
   /** Opens the cross-session message search dialog (Cmd/Ctrl+Shift+F). */
   onOpenSessionSearch?: () => void;
-  auditClient?: OpenworkServerClient | null;
+  auditClient?: OfflineGptServerClient | null;
   /** Back/forward across recently viewed conversations, rendered at the top of the sidebar. */
   conversationHistory?: {
     canGoBack: boolean;
@@ -1831,9 +1831,9 @@ function WorkspaceSidebarGroup({
   );
 }
 
-const SESSION_DRAG_TYPE = "application/x-openwork-session-id";
+const SESSION_DRAG_TYPE = "application/x-offlinegpt-session-id";
 const EMPTY_PINNED_IDS = new Set<string>();
-const UNGROUPED_GROUP_ID = "__openwork_ungrouped";
+const UNGROUPED_GROUP_ID = "__offlinegpt_ungrouped";
 
 function SessionGroupActions({ group, groups, workspaceId, count }: {
   group: SessionGroupDefinition;

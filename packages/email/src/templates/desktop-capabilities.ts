@@ -1,4 +1,4 @@
-export const DEFAULT_OPENWORK_DOWNLOAD_URL = "https://openworklabs.com/download"
+export const DEFAULT_OFFLINEGPT_DOWNLOAD_URL = "https://offlinegptlabs.com/download"
 
 export type DesktopCapability = {
   title: string

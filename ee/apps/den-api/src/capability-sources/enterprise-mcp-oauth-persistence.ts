@@ -8,17 +8,17 @@ import {
   type EnterpriseMcpPersistenceContext,
   type StoredOAuthClientInformation,
   type StoredOAuthTokens,
-} from "@openwork/enterprise-mcp-client"
+} from "@offlinegpt/enterprise-mcp-client"
 import type { OAuthDiscoveryState } from "@modelcontextprotocol/sdk/client/auth.js"
-import { and, eq } from "@openwork-ee/den-db/drizzle"
+import { and, eq } from "@offlinegpt-ee/den-db/drizzle"
 import {
   ConnectedAccountTable,
   ExternalMcpConnectionTable,
   OrgOAuthClientTable,
   type ExternalMcpCredentialHealth,
   type ExternalMcpOAuthConfiguration,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import {
   OAuthClientInformationFullSchema,
   OAuthClientInformationSchema,
@@ -85,7 +85,7 @@ const oauthDiscoveryStateSchema = z.object({
   authorizationServerMetadata: OAuthMetadataSchema.or(OpenIdProviderMetadataSchema).optional(),
   resourceMetadata: OAuthProtectedResourceMetadataSchema.optional(),
   resourceMetadataUrl: z.string().url().optional(),
-  openworkMetadataVerification: z.object({
+  offlinegptMetadataVerification: z.object({
     version: z.literal(1),
     issuer: z.string().url(),
   }).optional(),

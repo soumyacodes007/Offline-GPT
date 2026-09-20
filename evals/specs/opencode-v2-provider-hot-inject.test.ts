@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { createServer, type IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { eventually, test } from "@openwork/testkit";
+import { eventually, test } from "@offlinegpt/testkit";
 import { expect } from "vitest";
 
 import {
@@ -26,14 +26,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 
 async function resolveOpencodeV2Bin(): Promise<string> {
-  const override = process.env.OPENWORK_EVAL_OPENCODE2_BIN;
+  const override = process.env.OFFLINEGPT_EVAL_OPENCODE2_BIN;
   if (typeof override === "string" && override.trim() !== "") return override;
 
   const constants: unknown = JSON.parse(await readFile(join(import.meta.dirname, "../../constants.json"), "utf8"));
   if (!isRecord(constants) || typeof constants.opencodeV2Version !== "string") {
     throw new Error("constants.json must define a string opencodeV2Version");
   }
-  return installOpencodeV2Binary(join(tmpdir(), "openwork-opencode-v2-verified"), constants.opencodeV2Version);
+  return installOpencodeV2Binary(join(tmpdir(), "offlinegpt-opencode-v2-verified"), constants.opencodeV2Version);
 }
 
 async function readRequestBody(request: IncomingMessage): Promise<unknown> {
@@ -100,7 +100,7 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
   const directory = join(rootDir, "workspace");
   await mkdir(directory);
   const baseConfig = join(rootDir, "opencode.json");
-  await writeFile(baseConfig, `${JSON.stringify({ agent: { openwork: { mode: "primary" } }, default_agent: "openwork" })}\n`);
+  await writeFile(baseConfig, `${JSON.stringify({ agent: { offlinegpt: { mode: "primary" } }, default_agent: "offlinegpt" })}\n`);
   let server: ManagedOpencodeV2Server | undefined;
 
   try {
@@ -129,8 +129,8 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
       rootDir,
       env: {
         OPENCODE_CONFIG: baseConfig, OPENCODE_MODELS_URL: opencodeModelsUrl,
-        OPENWORK_ENCRYPTION_KEY: "fixture-server-only", OPENWORK_TOKEN: "fixture-server-only",
-        OPENWORK_HOST_TOKEN: "fixture-server-only", OPENWORK_SERVER_TOKEN: "fixture-server-only",
+        OFFLINEGPT_ENCRYPTION_KEY: "fixture-server-only", OFFLINEGPT_TOKEN: "fixture-server-only",
+        OFFLINEGPT_HOST_TOKEN: "fixture-server-only", OFFLINEGPT_SERVER_TOKEN: "fixture-server-only",
         OPENAI_API_KEY: "fixture-server-only", ANTHROPIC_API_KEY: "fixture-server-only",
         AWS_SECRET_ACCESS_KEY: "fixture-server-only", GITHUB_TOKEN: "fixture-server-only",
         DATABASE_URL: "fixture-server-only", CUSTOM_SERVICE_SECRET: "fixture-server-only",
@@ -144,7 +144,7 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
     if (process.platform === "linux") {
       const environment = await readFile(`/proc/${pid0}/environ`, "utf8");
       const names = environment.split("\0").map((entry) => entry.split("=")[0]);
-      expect(names.filter((name) => name?.startsWith("OPENWORK_"))).toEqual([]);
+      expect(names.filter((name) => name?.startsWith("OFFLINEGPT_"))).toEqual([]);
       for (const name of ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "AWS_SECRET_ACCESS_KEY", "GITHUB_TOKEN", "DATABASE_URL", "CUSTOM_SERVICE_SECRET"]) {
         expect(names).not.toContain(name);
       }
@@ -168,8 +168,8 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
     const catalogReadinessMs = Date.now() - catalogStartedAt;
     const baselineText = JSON.stringify(baseline.json);
     expect(baseline.status).toBe(200);
-    expect(baselineText).not.toContain("openwork-witness-a");
-    expect(baselineText).not.toContain("openwork-witness-b");
+    expect(baselineText).not.toContain("offlinegpt-witness-a");
+    expect(baselineText).not.toContain("offlinegpt-witness-b");
     console.info(`[opencode-v2-spec] cold catalog readiness: ${catalogReadinessMs}ms`);
     evidence.recordAssertionEvidence(
       "C1 positive baseline and negative provider absence",
@@ -179,7 +179,7 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
 
     const injectionStartedAt = Date.now();
     await server.injectProvider({
-      id: "openwork-witness-a",
+      id: "offlinegpt-witness-a",
       name: "Witness A",
       baseUrl: `${witnessUrl}/v1`,
       apiKey: "witness-key-a",
@@ -191,7 +191,7 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
         within: 15_000,
         intervalMs: 250,
         label: "provider A to appear in the model list",
-        until: (result) => result !== undefined && JSON.stringify(result.json).includes("openwork-witness-a"),
+        until: (result) => result !== undefined && JSON.stringify(result.json).includes("offlinegpt-witness-a"),
       },
     );
     if (process.platform !== "win32") {
@@ -205,7 +205,7 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
       );
     }
     const injectionLatencyMs = Date.now() - injectionStartedAt;
-    expect(JSON.stringify(modelsAfterA?.json)).toContain("openwork-witness-a");
+    expect(JSON.stringify(modelsAfterA?.json)).toContain("offlinegpt-witness-a");
     console.info(`[opencode-v2-spec] provider A injection latency: ${injectionLatencyMs}ms`);
     evidence.recordAssertionEvidence(
       "C2 positive hot injection and negative bounded-wait failure",
@@ -216,7 +216,7 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
     const sessionA = await server.fetchJson("/api/session", {
       method: "POST",
       directory,
-      body: { model: { providerID: "openwork-witness-a", id: "witness-model-a" } },
+      body: { model: { providerID: "offlinegpt-witness-a", id: "witness-model-a" } },
     });
     expect(sessionA.status).toBe(200);
     const idA = sessionId(sessionA.json);
@@ -240,7 +240,7 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
       true,
     );
     await server.injectProvider({
-      id: "openwork-witness-b",
+      id: "offlinegpt-witness-b",
       name: "Witness B",
       baseUrl: `${witnessUrl}/v1`,
       apiKey: "witness-key-b",
@@ -254,7 +254,7 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
         intervalMs: 250,
         label: "provider B to appear in the model list",
         until: (result) => {
-          if (result === undefined || !JSON.stringify(result.json).includes("openwork-witness-b")) {
+          if (result === undefined || !JSON.stringify(result.json).includes("offlinegpt-witness-b")) {
             providerBFirstSeenAt = undefined;
             return false;
           }
@@ -264,13 +264,13 @@ test("opencode v2 injects providers at runtime without an engine reload", { time
       },
     );
     const modelsAfterBText = JSON.stringify(modelsAfterB?.json);
-    expect(modelsAfterBText).toContain("openwork-witness-a");
-    expect(modelsAfterBText).toContain("openwork-witness-b");
+    expect(modelsAfterBText).toContain("offlinegpt-witness-a");
+    expect(modelsAfterBText).toContain("offlinegpt-witness-b");
 
     const sessionB = await server.fetchJson("/api/session", {
       method: "POST",
       directory,
-      body: { model: { providerID: "openwork-witness-b", id: "witness-model-b" } },
+      body: { model: { providerID: "offlinegpt-witness-b", id: "witness-model-b" } },
     });
     expect(sessionB.status).toBe(200);
     const idB = sessionId(sessionB.json);

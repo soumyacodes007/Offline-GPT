@@ -3,15 +3,15 @@ import { Daytona, DaytonaConflictError, DaytonaNotFoundError, type CreateSandbox
 import {
   renderCheckpointExistsCommand,
   renderCheckpointFlushCommand,
-  renderOpenWorkBootstrapCommand,
+  renderOfflineGPTBootstrapCommand,
   renderRestoreMarkerExistsCommand,
   shellQuote,
-  type OpenWorkBootstrapConfig,
-  type OpenWorkCheckpointConfig,
-} from "@openwork-ee/cloud-runtime/bootstrap"
-import { eq } from "@openwork-ee/den-db/drizzle"
-import { DaytonaSandboxTable, WorkerTable } from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+  type OfflineGPTBootstrapConfig,
+  type OfflineGPTCheckpointConfig,
+} from "@offlinegpt-ee/cloud-runtime/bootstrap"
+import { eq } from "@offlinegpt-ee/den-db/drizzle"
+import { DaytonaSandboxTable, WorkerTable } from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { db } from "../db.js"
 import { env } from "../env.js"
 import { appLogger } from "../observability/logger.js"
@@ -187,8 +187,8 @@ function workerHint(workerId: WorkerId) {
 
 function sandboxLabels(workerId: WorkerId) {
   return {
-    "openwork.den.provider": "daytona",
-    "openwork.den.worker-id": workerId,
+    "offlinegpt.den.provider": "daytona",
+    "offlinegpt.den.worker-id": workerId,
   }
 }
 
@@ -328,7 +328,7 @@ function sharedVolumeMounts(workerId: WorkerId, volumeId: string) {
   ]
 }
 
-function checkpointConfig(): OpenWorkCheckpointConfig {
+function checkpointConfig(): OfflineGPTCheckpointConfig {
   return {
     dataMountPath: env.daytona.dataMountPath,
     runtimeDataPath: env.daytona.runtimeDataPath,
@@ -339,11 +339,11 @@ function checkpointConfig(): OpenWorkCheckpointConfig {
   }
 }
 
-function bootstrapConfig(input: ProvisionInput): OpenWorkBootstrapConfig {
+function bootstrapConfig(input: ProvisionInput): OfflineGPTBootstrapConfig {
   return {
     ...checkpointConfig(),
     workspaceMountPath: env.daytona.workspaceMountPath,
-    port: env.daytona.openworkPort,
+    port: env.daytona.offlinegptPort,
     workerId: input.workerId,
     clientToken: input.clientToken,
     hostToken: input.hostToken,
@@ -361,8 +361,8 @@ export function checkpointFlushCommand() {
   return renderCheckpointFlushCommand(checkpointConfig())
 }
 
-export function buildOpenWorkStartCommand(input: ProvisionInput) {
-  return renderOpenWorkBootstrapCommand(bootstrapConfig(input))
+export function buildOfflineGPTStartCommand(input: ProvisionInput) {
+  return renderOfflineGPTBootstrapCommand(bootstrapConfig(input))
 }
 
 async function waitForVolumeReady(getVolume: DaytonaProvisioningRuntime["getVolume"], name: string, timeoutMs: number) {
@@ -483,7 +483,7 @@ export async function waitForHealth(url: string, timeoutMs: number, sandbox: Day
         const logs = await sandbox.process.getSessionCommandLogs(sessionId, commandId)
         throw new Error(
           [
-            `openwork session exited with ${command.exitCode}`,
+            `offlinegpt session exited with ${command.exitCode}`,
             logs.stdout?.trim() ? `stdout:\n${logs.stdout.trim().slice(-4000)}` : "",
             logs.stderr?.trim() ? `stderr:\n${logs.stderr.trim().slice(-4000)}` : "",
           ]
@@ -492,7 +492,7 @@ export async function waitForHealth(url: string, timeoutMs: number, sandbox: Day
         )
       }
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith("openwork session exited")) {
+      if (error instanceof Error && error.message.startsWith("offlinegpt session exited")) {
         throw error
       }
     }
@@ -553,7 +553,7 @@ function restoreMarkerExistsCommand() {
 async function verifyRestoreMarker(sandbox: DaytonaSandboxRuntime) {
   const exitCode = await runSandboxShellCommand(
     sandbox,
-    `openwork-restore-verify-${Date.now()}`,
+    `offlinegpt-restore-verify-${Date.now()}`,
     restoreMarkerExistsCommand(),
     env.daytona.createTimeoutSeconds,
   )
@@ -640,7 +640,7 @@ export async function refreshDaytonaSignedPreview(workerId: WorkerId) {
 
   const expiresInSeconds = normalizedSignedPreviewExpirySeconds()
   const issuedAtMs = Date.now()
-  const preview = await sandbox.getSignedPreviewUrl(env.daytona.openworkPort, expiresInSeconds)
+  const preview = await sandbox.getSignedPreviewUrl(env.daytona.offlinegptPort, expiresInSeconds)
   const expiresAt = signedPreviewRefreshAt(expiresInSeconds, issuedAtMs)
 
   await db
@@ -701,7 +701,7 @@ async function checkpointExistsOnDaytonaVolume(daytona: Daytona, workerId: Worke
 
     const exitCode = await runSandboxShellCommand(
       probeSandbox,
-      `openwork-ckpt-probe-${workerHint(workerId)}-${Date.now()}`,
+      `offlinegpt-ckpt-probe-${workerHint(workerId)}-${Date.now()}`,
       checkpointExistsCommand(),
       env.daytona.createTimeoutSeconds,
     )
@@ -846,7 +846,7 @@ async function getSandboxAfterCreateConflict(
   return null
 }
 
-type StartedOpenWorkProcess = {
+type StartedOfflineGPTProcess = {
   signedPreviewUrl: string
   signedPreviewUrlExpiresAt: Date
 }
@@ -861,17 +861,17 @@ function provisionedInstance(url: string, region: string | null, imageVersion: s
   }
 }
 
-async function startOpenWorkProcessOnDaytonaSandbox(input: {
+async function startOfflineGPTProcessOnDaytonaSandbox(input: {
   provisionInput: ProvisionInput
   runtime: DaytonaProvisioningRuntime
   sandbox: DaytonaSandboxRuntime
   sessionId: string
-}): Promise<StartedOpenWorkProcess> {
+}): Promise<StartedOfflineGPTProcess> {
   await input.sandbox.process.createSession(input.sessionId)
   const command = await input.sandbox.process.executeSessionCommand(
     input.sessionId,
     {
-      command: buildOpenWorkStartCommand(input.provisionInput),
+      command: buildOfflineGPTStartCommand(input.provisionInput),
       runAsync: true,
     },
     0,
@@ -879,7 +879,7 @@ async function startOpenWorkProcessOnDaytonaSandbox(input: {
 
   const expiresInSeconds = normalizedSignedPreviewExpirySeconds()
   const issuedAtMs = input.runtime.now ? input.runtime.now() : Date.now()
-  const preview = await input.sandbox.getSignedPreviewUrl(env.daytona.openworkPort, expiresInSeconds)
+  const preview = await input.sandbox.getSignedPreviewUrl(env.daytona.offlinegptPort, expiresInSeconds)
   await input.runtime.waitForHealth(preview.url, env.daytona.healthcheckTimeoutMs, input.sandbox, input.sessionId, command.cmdId)
   return {
     signedPreviewUrl: preview.url,
@@ -891,7 +891,7 @@ async function persistDaytonaSandbox(input: {
   provisionInput: ProvisionInput
   runtime: DaytonaProvisioningRuntime
   sandbox: DaytonaSandboxRuntime
-  started: StartedOpenWorkProcess
+  started: StartedOfflineGPTProcess
   workspaceVolumeId: string
   dataVolumeId: string
 }) {
@@ -906,7 +906,7 @@ async function persistDaytonaSandbox(input: {
   })
 }
 
-async function startOpenWorkOnDaytonaSandbox(input: {
+async function startOfflineGPTOnDaytonaSandbox(input: {
   provisionInput: ProvisionInput
   runtime: DaytonaProvisioningRuntime
   sandbox: DaytonaSandboxRuntime
@@ -915,7 +915,7 @@ async function startOpenWorkOnDaytonaSandbox(input: {
   dataVolumeId: string
   imageVersion?: string | null
 }): Promise<ProvisionedInstance> {
-  const started = await startOpenWorkProcessOnDaytonaSandbox(input)
+  const started = await startOfflineGPTProcessOnDaytonaSandbox(input)
   await persistDaytonaSandbox({
     provisionInput: input.provisionInput,
     runtime: input.runtime,
@@ -977,7 +977,7 @@ async function wakeExistingDaytonaSandbox(input: {
   imageVersion?: string | null
 }) {
   if (isStartedSandboxState(input.sandbox.state)) {
-    // A failed health probe means an already-running OpenWork process cannot be
+    // A failed health probe means an already-running OfflineGPT process cannot be
     // trusted. Restart the sandbox before launching a new process so recovery
     // cannot leave two servers competing for the same port and state files.
     await input.sandbox.stop(env.daytona.stopTimeoutSeconds ?? env.daytona.deleteTimeoutSeconds)
@@ -985,11 +985,11 @@ async function wakeExistingDaytonaSandbox(input: {
   }
   await startDaytonaSandboxForWake({ workerId: input.provisionInput.workerId, sandbox: input.sandbox })
 
-  return startOpenWorkOnDaytonaSandbox({
+  return startOfflineGPTOnDaytonaSandbox({
     provisionInput: input.provisionInput,
     runtime: input.runtime,
     sandbox: input.sandbox,
-    sessionId: `openwork-wake-${workerHint(input.provisionInput.workerId)}-${Date.now()}`,
+    sessionId: `offlinegpt-wake-${workerHint(input.provisionInput.workerId)}-${Date.now()}`,
     workspaceVolumeId: input.workspaceVolumeId,
     dataVolumeId: input.dataVolumeId,
     imageVersion: input.imageVersion,
@@ -1017,17 +1017,17 @@ async function recycleDaytonaSandbox(input: {
         input.sharedVolume,
       ),
     )
-    const started = await startOpenWorkProcessOnDaytonaSandbox({
+    const started = await startOfflineGPTProcessOnDaytonaSandbox({
       provisionInput: input.provisionInput,
       runtime: input.runtime,
       sandbox: replacementSandbox,
-      sessionId: `openwork-recycle-${workerHint(input.provisionInput.workerId)}-${Date.now()}`,
+      sessionId: `offlinegpt-recycle-${workerHint(input.provisionInput.workerId)}-${Date.now()}`,
     })
     const restored = input.requireRestoreMarker === false
       ? true
       : await input.runtime.verifyRestoreMarker(replacementSandbox)
     if (!restored) {
-      throw new Error("Daytona replacement did not restore an OpenWork checkpoint")
+      throw new Error("Daytona replacement did not restore an OfflineGPT checkpoint")
     }
 
     await persistDaytonaSandbox({
@@ -1092,11 +1092,11 @@ export async function provisionWorkerOnDaytonaWithRuntime(
   let createdSandbox: DaytonaSandboxRuntime | null = null
   try {
     createdSandbox = await runtime.createSandbox(buildDaytonaCreateParams(input, name, sharedVolume))
-    return startOpenWorkOnDaytonaSandbox({
+    return startOfflineGPTOnDaytonaSandbox({
       provisionInput: input,
       runtime,
       sandbox: createdSandbox,
-      sessionId: `openwork-${workerHint(input.workerId)}`,
+      sessionId: `offlinegpt-${workerHint(input.workerId)}`,
       workspaceVolumeId: sharedVolume.id,
       dataVolumeId: sharedVolume.id,
     })
@@ -1159,7 +1159,7 @@ export async function flushWorkerCheckpointOnDaytona(workerId: WorkerId) {
   await sandbox.refreshData()
   const exitCode = await runSandboxShellCommand(
     toDaytonaSandboxRuntime(sandbox),
-    `openwork-update-flush-${workerHint(workerId)}-${Date.now()}`,
+    `offlinegpt-update-flush-${workerHint(workerId)}-${Date.now()}`,
     checkpointFlushCommand(),
     env.daytona.createTimeoutSeconds,
   )

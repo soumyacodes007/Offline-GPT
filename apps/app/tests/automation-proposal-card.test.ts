@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseAutomationProposal } from "../src/components/tools/openwork-automation-proposal";
+import { parseAutomationProposal } from "../src/components/tools/offlinegpt-automation-proposal";
 
 const dailyProposal = {
   ok: true,
@@ -18,7 +18,7 @@ const dailyProposal = {
 };
 
 describe("Automation proposal card", () => {
-  test("reads a proposal out of an openwork_execute result, string or object", () => {
+  test("reads a proposal out of an offlinegpt_execute result, string or object", () => {
     const fromObject = parseAutomationProposal(dailyProposal);
     const fromString = parseAutomationProposal(JSON.stringify(dailyProposal));
 

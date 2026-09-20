@@ -28,7 +28,7 @@ import type { ServerConfig } from "./types.js";
 
 const OPENCODE_V2_VERSION = constants.opencodeV2Version;
 const PREVIEW_STATE_FILE = "engine-v2-preview.json";
-const UNSET_API_KEY = "openwork-engine-v2-preview-unset";
+const UNSET_API_KEY = "offlinegpt-engine-v2-preview-unset";
 // A cold sidecar can return HTTP 503 while its model catalog initializes for 17–20 seconds.
 const CATALOG_MIRROR_TIMEOUT_MS = 60_000;
 
@@ -76,7 +76,7 @@ export function resolveInitialEngineV2PreviewState(
   env: NodeJS.ProcessEnv,
   persisted: EngineV2PreviewState,
 ): EngineV2PreviewState {
-  const override = env.OPENWORK_ENGINE_V2_PREVIEW;
+  const override = env.OFFLINEGPT_ENGINE_V2_PREVIEW;
   if (override === "1" || override === "chat") return { enabled: true, chatRouting: true };
   if (override === "sidecar") return { enabled: true, chatRouting: false };
   return persisted;
@@ -133,7 +133,7 @@ function exec(file: string, args: string[], options: { cwd?: string; timeout?: n
 }
 
 async function resolveBinary(config: ServerConfig): Promise<ResolvedBinary> {
-  const override = process.env.OPENWORK_OPENCODE2_BIN?.trim();
+  const override = process.env.OFFLINEGPT_OPENCODE2_BIN?.trim();
   if (override) return { bin: override, source: "env" };
 
   let pathError = "not found";
@@ -149,7 +149,7 @@ async function resolveBinary(config: ServerConfig): Promise<ResolvedBinary> {
     return { bin: binary, source: "cache" };
   } catch (error) {
     throw new Error(
-      `Unable to resolve OpenCode v2 (${pathError}; verified download: ${errorMessage(error)}). Set OPENWORK_OPENCODE2_BIN to a working opencode2 binary.`,
+      `Unable to resolve OpenCode v2 (${pathError}; verified download: ${errorMessage(error)}). Set OFFLINEGPT_OPENCODE2_BIN to a working opencode2 binary.`,
     );
   }
 }
@@ -493,7 +493,7 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
     const managed = await createManagedOpencodeV2Server({
       bin: resolved.bin,
       rootDir,
-      env: { OPENCODE_MODELS_URL: opencodeModelsUrl, OPENWORK_SERVER_URL: `http://127.0.0.1:${config.port}`, OPENWORK_POLICY_TOKEN: managedDesktopPolicy(config).evaluationToken },
+      env: { OPENCODE_MODELS_URL: opencodeModelsUrl, OFFLINEGPT_SERVER_URL: `http://127.0.0.1:${config.port}`, OFFLINEGPT_POLICY_TOKEN: managedDesktopPolicy(config).evaluationToken },
       permissions: async () => executionRules((await readGlobalRuntimeOpencodeConfig(config)).managedPolicy?.execution),
     });
     sidecar = managed;
@@ -509,7 +509,7 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
       const unsubscribeConfig = onRuntimeOpencodeConfigWrite((_writeConfig, workspaceId) => {
         const global = isEngineGlobalRuntimeConfigId(workspaceId);
         if (global) scheduleMirror();
-        // Connections installed through OpenWork also update already-open
+        // Connections installed through OfflineGPT also update already-open
         // locations while a conversation is active. Request admission joins
         // the same serialized reconciliation rather than racing it.
         for (const [directory, id] of mcpWorkspaces) {
@@ -549,7 +549,7 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
 
   function recordStartError(error: unknown): void {
     running = false;
-    lastError = `${errorMessage(error)} Set OPENWORK_OPENCODE2_BIN to a working opencode2 binary to override resolution.`;
+    lastError = `${errorMessage(error)} Set OFFLINEGPT_OPENCODE2_BIN to a working opencode2 binary to override resolution.`;
   }
 
   async function stopRuntime(): Promise<void> {

@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { validateSamlResponsePolicy } from "../src/sso-saml-response-policy.js"
 
-const expectedAudience = "https://openwork.example.com/saml/metadata"
-const expectedAcsUrl = "https://openwork.example.com/api/auth/sso/saml2/sp/acs/openwork-sso-org_123"
+const expectedAudience = "https://offlinegpt.example.com/saml/metadata"
+const expectedAcsUrl = "https://offlinegpt.example.com/api/auth/sso/saml2/sp/acs/offlinegpt-sso-org_123"
 
 describe("SAML response policy", () => {
   test("accepts matching audience, destination, recipient, and assertion ID", () => {
@@ -44,8 +44,8 @@ describe("SAML response policy", () => {
   })
 
   test("accepts delivery to the advertised web-origin ACS when the stored callback is on the API origin", () => {
-    const webOriginAcsUrl = "https://app.openwork.example.com/api/auth/sso/saml2/sp/acs/openwork-sso-org_123"
-    const apiOriginAcsUrl = "https://api.openwork.example.com/api/auth/sso/saml2/sp/acs/openwork-sso-org_123"
+    const webOriginAcsUrl = "https://app.offlinegpt.example.com/api/auth/sso/saml2/sp/acs/offlinegpt-sso-org_123"
+    const apiOriginAcsUrl = "https://api.offlinegpt.example.com/api/auth/sso/saml2/sp/acs/offlinegpt-sso-org_123"
 
     expect(validateSamlResponsePolicy({
       samlResponse: samlResponse({ destination: webOriginAcsUrl, recipient: webOriginAcsUrl }),
@@ -58,7 +58,7 @@ describe("SAML response policy", () => {
     const result = validateSamlResponsePolicy({
       samlResponse: samlResponse({ destination: "https://evil.example.com/acs" }),
       expectedAudience,
-      expectedAcsUrls: [expectedAcsUrl, "https://api.openwork.example.com/api/auth/sso/saml2/sp/acs/openwork-sso-org_123"],
+      expectedAcsUrls: [expectedAcsUrl, "https://api.offlinegpt.example.com/api/auth/sso/saml2/sp/acs/offlinegpt-sso-org_123"],
     })
 
     expect(result).toMatchObject({ ok: false, code: "invalid_destination" })

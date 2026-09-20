@@ -1,5 +1,5 @@
-import { and, eq, isNull, sql } from "@openwork-ee/den-db/drizzle"
-import { MemberTable, OrganizationTable } from "@openwork-ee/den-db/schema"
+import { and, eq, isNull, sql } from "@offlinegpt-ee/den-db/drizzle"
+import { MemberTable, OrganizationTable } from "@offlinegpt-ee/den-db/schema"
 import { cache } from "./cache.js"
 import { db } from "./db.js"
 import { syncInferenceAfterMemberChange } from "./inference.js"

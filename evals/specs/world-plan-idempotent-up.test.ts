@@ -4,13 +4,13 @@ import { access, appendFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { eventually, test } from "@openwork/testkit";
+import { eventually, test } from "@offlinegpt/testkit";
 import {
   isProcessAlive,
   main,
   readScriptWorldSnapshot,
   type WorldCliOptions,
-} from "@openwork/world";
+} from "@offlinegpt/world";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -44,7 +44,7 @@ async function exitedNodePid(): Promise<number> {
 }
 
 test("plan classifies and up adopts without duplicating worlds", async ({ evidence }) => {
-  const root = await mkdtemp(join(tmpdir(), "openwork-world-plan-idempotent-"));
+  const root = await mkdtemp(join(tmpdir(), "offlinegpt-world-plan-idempotent-"));
   const worldsDirectory = join(root, "worlds");
   const scriptsDirectory = join(root, ".worlds", "scripts");
   const fixtureName = "idempotent-world";
@@ -52,8 +52,8 @@ test("plan classifies and up adopts without duplicating worlds", async ({ eviden
   const snapshotPath = join(scriptsDirectory, `${fixtureName}.json`);
   const logPath = join(scriptsDirectory, `${fixtureName}.log`);
   const holdUrl = pathToFileURL(join(REPO_ROOT, "packages", "world", "src", "hold.ts")).href;
-  const previousSnapshotDirectory = process.env.OPENWORK_WORLD_SNAPSHOT_DIR;
-  const previousStage = process.env.OPENWORK_WORLD_STAGE;
+  const previousSnapshotDirectory = process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR;
+  const previousStage = process.env.OFFLINEGPT_WORLD_STAGE;
   const launchedPids = new Set<number>();
   let printedLines: string[] = [];
 
@@ -71,8 +71,8 @@ test("plan classifies and up adopts without duplicating worlds", async ({ eviden
   };
 
   try {
-    process.env.OPENWORK_WORLD_SNAPSHOT_DIR = scriptsDirectory;
-    delete process.env.OPENWORK_WORLD_STAGE;
+    process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR = scriptsDirectory;
+    delete process.env.OFFLINEGPT_WORLD_STAGE;
     await mkdir(worldsDirectory);
     await mkdir(scriptsDirectory, { recursive: true });
     const fixtureSource = `
@@ -242,7 +242,7 @@ if (import.meta.main) await main();
       true,
     );
   } finally {
-    delete process.env.OPENWORK_WORLD_STAGE;
+    delete process.env.OFFLINEGPT_WORLD_STAGE;
     try {
       const snapshot = await readScriptWorldSnapshot(snapshotPath);
       if (snapshot && isProcessAlive(snapshot.pid)) {
@@ -260,10 +260,10 @@ if (import.meta.main) await main();
         });
       } catch {}
     }
-    if (previousSnapshotDirectory === undefined) delete process.env.OPENWORK_WORLD_SNAPSHOT_DIR;
-    else process.env.OPENWORK_WORLD_SNAPSHOT_DIR = previousSnapshotDirectory;
-    if (previousStage === undefined) delete process.env.OPENWORK_WORLD_STAGE;
-    else process.env.OPENWORK_WORLD_STAGE = previousStage;
+    if (previousSnapshotDirectory === undefined) delete process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR;
+    else process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR = previousSnapshotDirectory;
+    if (previousStage === undefined) delete process.env.OFFLINEGPT_WORLD_STAGE;
+    else process.env.OFFLINEGPT_WORLD_STAGE = previousStage;
     await rm(root, { recursive: true, force: true });
   }
 }, 60_000);

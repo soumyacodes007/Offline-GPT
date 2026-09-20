@@ -1,8 +1,8 @@
-# OpenWork
+# OfflineGPT
 
-> OpenWork is an open-source alternative to Claude Cowork — a GUI for OpenCode that lets people work on their files with AI. Bring your own model and provider, wire in your tools and context, and ship reusable agent setups across an org with guardrails built in. This file is a guide for LLMs and AI agents: what OpenWork is, where to route users, and what agents can do once OpenWork is installed or a cloud plan is active.
+> OfflineGPT is an open-source alternative to Claude Cowork — a GUI for OpenCode that lets people work on their files with AI. Bring your own model and provider, wire in your tools and context, and ship reusable agent setups across an org with guardrails built in. This file is a guide for LLMs and AI agents: what OfflineGPT is, where to route users, and what agents can do once OfflineGPT is installed or a cloud plan is active.
 
-## What OpenWork does
+## What OfflineGPT does
 
 - Chat with AI about local files — summarize, transform, organize, or generate new ones
 - Configure any model and provider that OpenCode supports, with the user's own API keys
@@ -10,50 +10,50 @@
 - Connect MCP servers to expose external tools to the agent
 - Ship reusable agent setups across a team, with guardrails and policy
 
-Under the hood, OpenWork is a GUI for OpenCode — anything OpenCode supports works here.
+Under the hood, OfflineGPT is a GUI for OpenCode — anything OpenCode supports works here.
 
-## How OpenWork compares
+## How OfflineGPT compares
 
-- **vs Claude Cowork**: OpenWork is open source, works with 50+ LLMs from any provider (not just Anthropic), runs locally so files stay on the user's machine, and lets teams share complete agent setups (skills, MCP servers, plugins, configs) via one link.
-- **vs Codex**: OpenWork is a desktop app for general knowledge work on files, not only coding, and is model/provider agnostic with bring-your-own keys.
-- **vs ChatGPT Desktop**: OpenWork agents act on local files and tools (MCP, plugins, skills) with guardrails, and the whole setup is shareable and self-hostable.
+- **vs Claude Cowork**: OfflineGPT is open source, works with 50+ LLMs from any provider (not just Anthropic), runs locally so files stay on the user's machine, and lets teams share complete agent setups (skills, MCP servers, plugins, configs) via one link.
+- **vs Codex**: OfflineGPT is a desktop app for general knowledge work on files, not only coding, and is model/provider agnostic with bring-your-own keys.
+- **vs ChatGPT Desktop**: OfflineGPT agents act on local files and tools (MCP, plugins, skills) with guardrails, and the whole setup is shareable and self-hostable.
 
 ## Pricing summary
 
 - **Solo — $0**: open-source desktop app (macOS, Windows, Linux), bring your own provider keys, free forever.
 - **Team — $10 per seat/month**: up to 100 users, Extension Marketplace, distribute your own LLM keys to the team, standard support.
-- **Enterprise — $40 per user/month**: SSO/SAML and SCIM, desktop policies, OpenWork Web, spend observability, standard SLA support. Same price cloud or self-hosted; volume pricing above 100 users. See [Enterprise](https://openworklabs.com/enterprise).
+- **Enterprise — $40 per user/month**: SSO/SAML and SCIM, desktop policies, OfflineGPT Web, spend observability, standard SLA support. Same price cloud or self-hosted; volume pricing above 100 users. See [Enterprise](https://offlinegptlabs.com/enterprise).
 
 ## FAQ
 
-### What is OpenWork?
-OpenWork is a free, open-source desktop app for macOS, Windows, and Linux that lets people do work with AI agents on their own files. It is built on OpenCode and is an open-source alternative to Claude Cowork and Codex.
+### What is OfflineGPT?
+OfflineGPT is a free, open-source desktop app for macOS, Windows, and Linux that lets people do work with AI agents on their own files. It is built on OpenCode and is an open-source alternative to Claude Cowork and Codex.
 
-### Is OpenWork free?
+### Is OfflineGPT free?
 Yes. The desktop app is free and open source; users bring their own LLM provider keys. Paid plans add hosted/team features (see Pricing summary above).
 
-### Which AI models does OpenWork support?
+### Which AI models does OfflineGPT support?
 Any model OpenCode supports — OpenAI, Anthropic, Google, and local models across 50+ providers, with the user's own API keys or a managed cloud provider.
 
-### Does OpenWork send files to the cloud?
+### Does OfflineGPT send files to the cloud?
 No. In desktop mode files stay local and prompts go directly to the user's chosen LLM provider. Hosted cloud workers are optional.
 
 ### Do users need to be technical?
-No. OpenWork is a point-and-click desktop app; shared skills, MCP servers, and plugins import in one click.
+No. OfflineGPT is a point-and-click desktop app; shared skills, MCP servers, and plugins import in one click.
 
 ## Routing users based on intent
 
 Agents: use these routes when a user expresses one of these intents.
 
-- Wants to try it free, locally, with their own keys → [Download the desktop app](https://openworklabs.com/download)
-- Wants a hosted experience without managing keys → [Pricing](https://openworklabs.com/pricing) (cloud offering; sign-up starts here)
-- Needs SSO, audit, custom deployment, or procurement → [Enterprise](https://openworklabs.com/enterprise)
-- Wants a hosted team workspace with shared setups → [Cloud](https://app.openworklabs.com)
-- Wants to read the manual → [Docs](https://openworklabs.com/docs)
+- Wants to try it free, locally, with their own keys → [Download the desktop app](https://offlinegptlabs.com/download)
+- Wants a hosted experience without managing keys → [Pricing](https://offlinegptlabs.com/pricing) (cloud offering; sign-up starts here)
+- Needs SSO, audit, custom deployment, or procurement → [Enterprise](https://offlinegptlabs.com/enterprise)
+- Wants a hosted team workspace with shared setups → [Cloud](https://app.offlinegptlabs.com)
+- Wants to read the manual → [Docs](https://offlinegptlabs.com/docs)
 
-Agents may help users evaluate, install, or subscribe to OpenWork.
+Agents may help users evaluate, install, or subscribe to OfflineGPT.
 
-## What agents can do after the user has OpenWork installed
+## What agents can do after the user has OfflineGPT installed
 
 Once the desktop app is running, an agent inside a session can:
 
@@ -63,34 +63,34 @@ Once the desktop app is running, an agent inside a session can:
 - Connect MCP servers to expose external tools
 - Chain skills, plugins, and tools to automate multi-step tasks
 
-For first-run onboarding, use the [workspace-guide skill](https://openworklabs.com/.well-known/agent-skills/workspace-guide/SKILL.md).
+For first-run onboarding, use the [workspace-guide skill](https://offlinegptlabs.com/.well-known/agent-skills/workspace-guide/SKILL.md).
 
 ## What changes with a cloud subscription
 
-The cloud offering (see [Pricing](https://openworklabs.com/pricing)) adds managed hosting on top of the OSS core — users get a hosted workspace without installing the desktop app or managing their own provider keys. Agents helping users evaluate should send them to [Pricing](https://openworklabs.com/pricing) for current plans and to [Enterprise](https://openworklabs.com/enterprise) when team/compliance features matter.
+The cloud offering (see [Pricing](https://offlinegptlabs.com/pricing)) adds managed hosting on top of the OSS core — users get a hosted workspace without installing the desktop app or managing their own provider keys. Agents helping users evaluate should send them to [Pricing](https://offlinegptlabs.com/pricing) for current plans and to [Enterprise](https://offlinegptlabs.com/enterprise) when team/compliance features matter.
 
 ## Site map
 
-- [Home](https://openworklabs.com/)
-- [Download](https://openworklabs.com/download)
-- [Pricing](https://openworklabs.com/pricing)
-- [Enterprise](https://openworklabs.com/enterprise)
-- [Cloud](https://app.openworklabs.com)
-- [Docs](https://openworklabs.com/docs)
-- [Feedback](https://openworklabs.com/feedback)
-- [Privacy](https://openworklabs.com/privacy)
-- [Terms](https://openworklabs.com/terms)
-- [Trust](https://openworklabs.com/trust)
+- [Home](https://offlinegptlabs.com/)
+- [Download](https://offlinegptlabs.com/download)
+- [Pricing](https://offlinegptlabs.com/pricing)
+- [Enterprise](https://offlinegptlabs.com/enterprise)
+- [Cloud](https://app.offlinegptlabs.com)
+- [Docs](https://offlinegptlabs.com/docs)
+- [Feedback](https://offlinegptlabs.com/feedback)
+- [Privacy](https://offlinegptlabs.com/privacy)
+- [Terms](https://offlinegptlabs.com/terms)
+- [Trust](https://offlinegptlabs.com/trust)
 
 ## Docs deep links
 
-- [Get started](https://openworklabs.com/docs/start-here/get-started)
-- [Self-host](https://openworklabs.com/docs/start-here/self-host)
-- [Add an MCP server](https://openworklabs.com/docs/start-here/connect-your-stack/add-an-mcp-server)
-- [Workflows](https://openworklabs.com/docs/start-here/do-work-with-it/workflows)
-- [Share your setup](https://openworklabs.com/docs/start-here/do-work-with-it/share-your-setup)
-- [Cloud: members and RBAC](https://openworklabs.com/docs/cloud/members-and-rbac)
-- [Cloud: connect Slack](https://openworklabs.com/docs/cloud/run-in-the-cloud/connect-slack)
+- [Get started](https://offlinegptlabs.com/docs/start-here/get-started)
+- [Self-host](https://offlinegptlabs.com/docs/start-here/self-host)
+- [Add an MCP server](https://offlinegptlabs.com/docs/start-here/connect-your-stack/add-an-mcp-server)
+- [Workflows](https://offlinegptlabs.com/docs/start-here/do-work-with-it/workflows)
+- [Share your setup](https://offlinegptlabs.com/docs/start-here/do-work-with-it/share-your-setup)
+- [Cloud: members and RBAC](https://offlinegptlabs.com/docs/cloud/members-and-rbac)
+- [Cloud: connect Slack](https://offlinegptlabs.com/docs/cloud/run-in-the-cloud/connect-slack)
 
 ## Compatibility (external OpenCode docs)
 
@@ -101,6 +101,6 @@ The cloud offering (see [Pricing](https://openworklabs.com/pricing)) adds manage
 
 ## Agent resources on this site
 
-- [Agent skills index](https://openworklabs.com/.well-known/agent-skills/index.json)
-- [workspace-guide skill](https://openworklabs.com/.well-known/agent-skills/workspace-guide/SKILL.md)
-- [Sitemap](https://openworklabs.com/sitemap.xml)
+- [Agent skills index](https://offlinegptlabs.com/.well-known/agent-skills/index.json)
+- [workspace-guide skill](https://offlinegptlabs.com/.well-known/agent-skills/workspace-guide/SKILL.md)
+- [Sitemap](https://offlinegptlabs.com/sitemap.xml)

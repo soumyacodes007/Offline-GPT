@@ -28,10 +28,10 @@ function useUpdatePreference(key: string) {
 function useUpdater() {
   const local = useLocal();
   const desktopConfig = useDesktopConfig();
-  const [updateAutoCheck, setUpdateAutoCheck] = useUpdatePreference("openwork.react.settings.update-auto-check");
+  const [updateAutoCheck, setUpdateAutoCheck] = useUpdatePreference("offlinegpt.react.settings.update-auto-check");
   // Older Settings wrote "0" even when the user never touched the old opt-in.
   // Start the automatic-download default once, then retain future opt-outs.
-  const [updateAutoDownload, setUpdateAutoDownload] = useUpdatePreference("openwork.react.settings.update-auto-download.v2");
+  const [updateAutoDownload, setUpdateAutoDownload] = useUpdatePreference("offlinegpt.react.settings.update-auto-download.v2");
   const onReleaseChannelChange = useCallback((next: "stable" | "alpha") => {
     local.setPrefs((previous) => ({ ...previous, releaseChannel: next }));
   }, [local.setPrefs]);

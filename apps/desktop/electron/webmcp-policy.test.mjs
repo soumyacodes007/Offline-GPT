@@ -45,7 +45,7 @@ function fakeFrame(origin, parent = null) {
       assert.fail("Policy must never execute in the page's main world.");
     },
     send(channel, replyChannel, childIndex) {
-      assert.equal(channel, "openwork:webmcp:read-policy");
+      assert.equal(channel, "offlinegpt:webmcp:read-policy");
       this.ipc.emit(replyChannel, { senderFrame: this }, {
         ...this.runtimePolicy,
         embedding: childIndex === null ? null : this.embedding,

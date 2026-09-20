@@ -11,7 +11,7 @@ export function WorkspaceIntentChoices({ intent, onChange, disabled }: {
   disabled: boolean;
 }) {
   return <fieldset disabled={disabled} className="grid gap-2.5">
-    <legend className="mb-3 text-xs font-medium text-gray-500">How will you use OpenWork?</legend>
+    <legend className="mb-3 text-xs font-medium text-gray-500">How will you use OfflineGPT?</legend>
     {([
       { id: "personal", icon: Laptop, title: "On my own", copy: "Your own tools and projects. Room to grow later." },
       { id: "team", icon: Users, title: "Create a team", copy: "Shared tools and a place to work together." },

@@ -1,6 +1,6 @@
-import { AuditEventTable } from "@openwork-ee/den-db/schema"
-import type { DenTypeId } from "@openwork-ee/utils/typeid"
-import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+import { AuditEventTable } from "@offlinegpt-ee/den-db/schema"
+import type { DenTypeId } from "@offlinegpt-ee/utils/typeid"
+import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { appLogger } from "./observability/logger.js"
 import { AUDIT_ALERT_OPERATIONAL_MARKER } from "./operational-log-markers.js"
 
@@ -24,8 +24,8 @@ export const ORGANIZATION_AUDIT_ACTIONS = {
   ssoConnectionEnabled: "organization.sso.connection_enabled",
   ssoConnectionDisabled: "organization.sso.connection_disabled",
   ssoConnectionDeleted: "organization.sso.connection_deleted",
-  openWorkWebComplimentaryAccessGranted: "organization.openwork_web.complimentary_access_granted",
-  openWorkWebComplimentaryAccessRevoked: "organization.openwork_web.complimentary_access_revoked",
+  offlineGptWebComplimentaryAccessGranted: "organization.offlinegpt_web.complimentary_access_granted",
+  offlineGptWebComplimentaryAccessRevoked: "organization.offlinegpt_web.complimentary_access_revoked",
   dpaSignedUpdated: "organization.dpa_signed.updated",
 }
 
@@ -70,8 +70,8 @@ export function isOrganizationAuditAlertAction(action: OrganizationAuditAction) 
     case ORGANIZATION_AUDIT_ACTIONS.ssoConnectionEnabled:
     case ORGANIZATION_AUDIT_ACTIONS.ssoConnectionDisabled:
     case ORGANIZATION_AUDIT_ACTIONS.ssoConnectionDeleted:
-    case ORGANIZATION_AUDIT_ACTIONS.openWorkWebComplimentaryAccessGranted:
-    case ORGANIZATION_AUDIT_ACTIONS.openWorkWebComplimentaryAccessRevoked:
+    case ORGANIZATION_AUDIT_ACTIONS.offlineGptWebComplimentaryAccessGranted:
+    case ORGANIZATION_AUDIT_ACTIONS.offlineGptWebComplimentaryAccessRevoked:
     case ORGANIZATION_AUDIT_ACTIONS.dpaSignedUpdated:
       return true
     case ORGANIZATION_AUDIT_ACTIONS.scimReconciliationRun:

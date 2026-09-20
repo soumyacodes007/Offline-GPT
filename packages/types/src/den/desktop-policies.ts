@@ -38,7 +38,7 @@ export const desktopPolicyDefinitions = [
     group: "ai",
     name: "Custom providers",
     description:
-      "Allow users to add and use models that are not deployed through OpenWork Cloud.",
+      "Allow users to add and use models that are not deployed through OfflineGPT Cloud.",
     userNotice:
       "Your organization administrator has disabled adding custom providers.",
     defaultValue: true,
@@ -94,9 +94,9 @@ export const desktopPolicyDefinitions = [
     group: "tools",
     name: "Built-in Extensions",
     description:
-      "Allow users to see and use OpenWork's built-in extensions, including browser, image, and local-provider extensions.",
+      "Allow users to see and use OfflineGPT's built-in extensions, including browser, image, and local-provider extensions.",
     userNotice:
-      "Your organization administrator has disabled built-in OpenWork extensions.",
+      "Your organization administrator has disabled built-in OfflineGPT extensions.",
     defaultValue: true,
     restrictedValue: false,
   },

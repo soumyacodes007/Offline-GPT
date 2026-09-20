@@ -10,19 +10,19 @@ import {
   resolveDenBaseUrls,
 } from "../src/app/lib/den";
 import {
-  hydrateOpenworkServerSettingsFromEnv,
-  readOpenworkServerSettings,
-} from "../src/app/lib/openwork-server";
-import { createOpenworkServerStore } from "../src/react-app/domains/connections/openwork-server-store";
-import { buildOpenworkHealthHeaders } from "../src/react-app/kernel/server-provider";
+  hydrateOfflineGptServerSettingsFromEnv,
+  readOfflineGptServerSettings,
+} from "../src/app/lib/offlinegpt-server";
+import { createOfflineGptServerStore } from "../src/react-app/domains/connections/offlinegpt-server-store";
+import { buildOfflineGptHealthHeaders } from "../src/react-app/kernel/server-provider";
 import {
   isStaleStoredDesktopConnection,
-  resolveOpenworkConnection,
-} from "../src/react-app/shell/openwork-connection";
+  resolveOfflineGptConnection,
+} from "../src/react-app/shell/offlinegpt-connection";
 
 const originalWindow = globalThis.window;
 const originalFetch = globalThis.fetch;
-const originalDeployment = process.env.VITE_OPENWORK_DEPLOYMENT;
+const originalDeployment = process.env.VITE_OFFLINEGPT_DEPLOYMENT;
 
 function restoreEnv(key: string, value: string | undefined) {
   if (value === undefined) delete process.env[key];
@@ -59,8 +59,8 @@ function getRequestUrl(input: RequestInfo | URL): string {
   return input.url;
 }
 
-function createTestOpenworkServerStore(startupPreference: "local" | "server" = "server") {
-  return createOpenworkServerStore({
+function createTestOfflineGptServerStore(startupPreference: "local" | "server" = "server") {
+  return createOfflineGptServerStore({
     startupPreference: () => startupPreference,
     documentVisible: () => true,
     developerMode: () => false,
@@ -88,9 +88,9 @@ function installWindow(options: {
     clientToken?: string;
     hostToken?: string;
   };
-  /** Raw openworkServerInfo response for non-ready/restarting server states. */
+  /** Raw offlinegptServerInfo response for non-ready/restarting server states. */
   electronServerInfoRaw?: Record<string, unknown>;
-  /** Simulate a desktop bridge whose openworkServerInfo call fails outright. */
+  /** Simulate a desktop bridge whose offlinegptServerInfo call fails outright. */
   electronServerInfoError?: boolean;
 }) {
   const localStorage = memoryStorage();
@@ -104,12 +104,12 @@ function installWindow(options: {
       setTimeout: () => 1,
       clearTimeout: () => undefined,
       location: { origin: options.origin },
-      __OPENWORK_GATEWAY__: options.gateway ? { version: 1 } : undefined,
-      __OPENWORK_BOOTSTRAP__: options.bootstrapToken ? { token: options.bootstrapToken } : undefined,
-      __OPENWORK_ELECTRON__: electronBridgeInstalled
+      __OFFLINEGPT_GATEWAY__: options.gateway ? { version: 1 } : undefined,
+      __OFFLINEGPT_BOOTSTRAP__: options.bootstrapToken ? { token: options.bootstrapToken } : undefined,
+      __OFFLINEGPT_ELECTRON__: electronBridgeInstalled
         ? {
             invokeDesktop: async (command: string) => {
-              if (command !== "openworkServerInfo") {
+              if (command !== "offlinegptServerInfo") {
                 throw new Error(`Unexpected desktop command: ${command}`);
               }
               if (options.electronServerInfoError) {
@@ -135,7 +135,7 @@ function installWindow(options: {
 
 describe("gateway runtime mode", () => {
   beforeEach(() => {
-    process.env.VITE_OPENWORK_DEPLOYMENT = "web";
+    process.env.VITE_OFFLINEGPT_DEPLOYMENT = "web";
   });
 
   afterEach(() => {
@@ -148,22 +148,22 @@ describe("gateway runtime mode", () => {
       value: originalFetch,
     });
     if (originalDeployment === undefined) {
-      delete process.env.VITE_OPENWORK_DEPLOYMENT;
+      delete process.env.VITE_OFFLINEGPT_DEPLOYMENT;
     } else {
-      process.env.VITE_OPENWORK_DEPLOYMENT = originalDeployment;
+      process.env.VITE_OFFLINEGPT_DEPLOYMENT = originalDeployment;
     }
   });
 
-  test("resolves OpenWork server traffic through the gateway origin with the Den session token", async () => {
-    const storage = installWindow({ origin: "https://web.openworklabs.com", gateway: true });
-    storage.setItem("openwork.den.authToken", "den-session-token");
-    storage.setItem("openwork.server.urlOverride", "https://direct-instance.example.com");
-    storage.setItem("openwork.server.token", "stale-instance-token");
+  test("resolves OfflineGPT server traffic through the gateway origin with the Den session token", async () => {
+    const storage = installWindow({ origin: "https://web.offlinegptlabs.com", gateway: true });
+    storage.setItem("offlinegpt.den.authToken", "den-session-token");
+    storage.setItem("offlinegpt.server.urlOverride", "https://direct-instance.example.com");
+    storage.setItem("offlinegpt.server.token", "stale-instance-token");
 
-    const connection = await resolveOpenworkConnection();
+    const connection = await resolveOfflineGptConnection();
 
     expect(connection).toEqual({
-      normalizedBaseUrl: "https://web.openworklabs.com",
+      normalizedBaseUrl: "https://web.offlinegptlabs.com",
       resolvedToken: "den-session-token",
       resolvedHostToken: "",
       hostInfo: null,
@@ -171,9 +171,9 @@ describe("gateway runtime mode", () => {
     });
   });
 
-  test("keeps the OpenWork server snapshot stable when options have not changed", () => {
-    installWindow({ origin: "https://web.openworklabs.com", gateway: true });
-    const store = createTestOpenworkServerStore();
+  test("keeps the OfflineGPT server snapshot stable when options have not changed", () => {
+    installWindow({ origin: "https://web.offlinegptlabs.com", gateway: true });
+    const store = createTestOfflineGptServerStore();
     const initialSnapshot = store.getSnapshot();
     let notifications = 0;
     const unsubscribe = store.subscribe(() => {
@@ -185,7 +185,7 @@ describe("gateway runtime mode", () => {
     expect(store.getSnapshot()).toBe(initialSnapshot);
     expect(notifications).toBe(0);
 
-    store.updateOpenworkServerSettings({
+    store.updateOfflineGptServerSettings({
       urlOverride: "https://instance.example.com",
       token: "instance-token",
     });
@@ -197,14 +197,14 @@ describe("gateway runtime mode", () => {
 
   test("keeps Den web on the configured origin and Den API calls on the gateway origin", () => {
     const storage = installWindow({ origin: "https://gw.example", gateway: true });
-    storage.setItem("openwork.den.baseUrl", "https://app.openworklabs.com");
-    storage.setItem("openwork.den.authToken", "den-session-token");
+    storage.setItem("offlinegpt.den.baseUrl", "https://app.offlinegptlabs.com");
+    storage.setItem("offlinegpt.den.authToken", "den-session-token");
 
     expect(resolveDenBaseUrls("https://gw.example")).toEqual({
-      baseUrl: "https://app.openworklabs.com",
+      baseUrl: "https://app.offlinegptlabs.com",
       apiBaseUrl: "https://gw.example/api/den",
     });
-    expect(readDenSettings().baseUrl).toBe("https://app.openworklabs.com");
+    expect(readDenSettings().baseUrl).toBe("https://app.offlinegptlabs.com");
     expect(readDenSettings().apiBaseUrl).toBe("https://gw.example/api/den");
     expect(readDenSettings().authToken).toBe("den-session-token");
   });
@@ -214,7 +214,7 @@ describe("gateway runtime mode", () => {
 
     const authUrl = new URL(buildDenAuthUrl(readDenSettings().baseUrl, "sign-up"));
 
-    expect(authUrl.origin).toBe("https://app.openworklabs.com");
+    expect(authUrl.origin).toBe("https://app.offlinegptlabs.com");
     expect(authUrl.searchParams.get("mode")).toBe("sign-up");
     expect(authUrl.searchParams.get("webAuth")).toBe("1");
     expect(authUrl.searchParams.get("webAuthReturn")).toBe("https://gw.example");
@@ -242,7 +242,7 @@ describe("gateway runtime mode", () => {
     await client.getSession();
 
     expect(requestedUrls).toEqual([
-      "https://app.openworklabs.com/api/auth/sign-in/email",
+      "https://app.offlinegptlabs.com/api/auth/sign-in/email",
       "https://gw.example/api/den/v1/me",
     ]);
   });
@@ -262,10 +262,10 @@ describe("gateway runtime mode", () => {
         requests.push({
           url,
           authorization: headers.get("authorization"),
-          organizationId: headers.get("x-openwork-org-id"),
+          organizationId: headers.get("x-offlinegpt-org-id"),
         });
         if (new URL(url).pathname === "/api/den/v1/org") {
-          return Response.json({ capabilities: { openworkWeb: true } });
+          return Response.json({ capabilities: { offlinegptWeb: true } });
         }
         return Response.json({
           billing: {
@@ -285,7 +285,7 @@ describe("gateway runtime mode", () => {
     const access = await createDenClient({
       baseUrl: readDenSettings().baseUrl,
       token: "tok_test",
-    }).getOpenWorkWebAccess("org_test");
+    }).getOfflineGPTWebAccess("org_test");
 
     expect(access).toEqual({ hasAccess: true, accessSource: "complimentary" });
     expect(requests).toEqual([
@@ -316,7 +316,7 @@ describe("gateway runtime mode", () => {
     const access = await createDenClient({
       baseUrl: readDenSettings().baseUrl,
       token: "tok_test",
-    }).getOpenWorkWebAccess("org_test");
+    }).getOfflineGPTWebAccess("org_test");
 
     expect(access).toEqual({ hasAccess: false, accessSource: null });
     expect(requestedUrls).toEqual(["https://gw.example/api/den/v1/org"]);
@@ -329,35 +329,35 @@ describe("gateway runtime mode", () => {
   });
 
   test("returns a stable gateway bootstrap snapshot for React external stores", () => {
-    installWindow({ origin: "https://web.openworklabs.com", gateway: true });
+    installWindow({ origin: "https://web.offlinegptlabs.com", gateway: true });
 
     const first = readDenBootstrapConfig();
     const second = readDenBootstrapConfig();
 
     expect(second).toBe(first);
-    expect(first.baseUrl).toBe("https://app.openworklabs.com");
-    expect(first.apiBaseUrl).toBe("https://web.openworklabs.com/api/den");
+    expect(first.baseUrl).toBe("https://app.offlinegptlabs.com");
+    expect(first.apiBaseUrl).toBe("https://web.offlinegptlabs.com/api/den");
   });
 
   test("does not hydrate an instance bootstrap token into server storage behind the gateway", () => {
     const storage = installWindow({
-      origin: "https://web.openworklabs.com",
+      origin: "https://web.offlinegptlabs.com",
       gateway: true,
       bootstrapToken: "instance-token-must-not-store",
     });
 
-    hydrateOpenworkServerSettingsFromEnv();
+    hydrateOfflineGptServerSettingsFromEnv();
 
-    expect(storage.getItem("openwork.server.token")).toBeNull();
-    expect(readOpenworkServerSettings().token).toBeUndefined();
+    expect(storage.getItem("offlinegpt.server.token")).toBeNull();
+    expect(readOfflineGptServerSettings().token).toBeUndefined();
   });
 
-  test("uses same-origin and the Den bearer for OpenWork server store env calls behind the gateway", async () => {
+  test("uses same-origin and the Den bearer for OfflineGPT server store env calls behind the gateway", async () => {
     const storage = installWindow({ origin: "https://gw.example", gateway: true });
-    storage.setItem("openwork.den.authToken", "den-session-token");
-    storage.setItem("openwork.server.urlOverride", "https://direct-instance.example.com");
-    storage.setItem("openwork.server.token", "stale-instance-token");
-    storage.setItem("openwork.server.hostToken", "stale-host-token");
+    storage.setItem("offlinegpt.den.authToken", "den-session-token");
+    storage.setItem("offlinegpt.server.urlOverride", "https://direct-instance.example.com");
+    storage.setItem("offlinegpt.server.token", "stale-instance-token");
+    storage.setItem("offlinegpt.server.hostToken", "stale-host-token");
     const requests: Array<{ url: string; authorization: string | null; hostToken: string | null }> = [];
     Object.defineProperty(globalThis, "fetch", {
       configurable: true,
@@ -366,7 +366,7 @@ describe("gateway runtime mode", () => {
         requests.push({
           url: getRequestUrl(input),
           authorization: headers.get("authorization"),
-          hostToken: headers.get("x-openwork-host-token"),
+          hostToken: headers.get("x-offlinegpt-host-token"),
         });
         return new Response(JSON.stringify({ runtimeKey: "runtime-a", pendingChanges: false, ok: true, count: 1 }), {
           status: 200,
@@ -375,14 +375,14 @@ describe("gateway runtime mode", () => {
       },
     });
 
-    const store = createTestOpenworkServerStore();
+    const store = createTestOfflineGptServerStore();
     const snapshot = store.getSnapshot();
-    const client = snapshot.openworkServerClient;
-    if (!client) throw new Error("Expected a gateway OpenWork server client");
+    const client = snapshot.offlinegptServerClient;
+    if (!client) throw new Error("Expected a gateway OfflineGPT server client");
 
-    expect(snapshot.openworkServerBaseUrl).toBe("https://gw.example");
-    expect(snapshot.openworkServerAuth.token).toBe("den-session-token");
-    expect(snapshot.openworkServerAuth.hostToken).toBeUndefined();
+    expect(snapshot.offlinegptServerBaseUrl).toBe("https://gw.example");
+    expect(snapshot.offlinegptServerAuth.token).toBe("den-session-token");
+    expect(snapshot.offlinegptServerAuth.hostToken).toBeUndefined();
     expect(client.baseUrl).toBe("https://gw.example");
     expect(client.token).toBe("den-session-token");
 
@@ -405,10 +405,10 @@ describe("gateway runtime mode", () => {
 
   test("uses the Den bearer for same-origin OpenCode health polling behind the gateway", () => {
     const storage = installWindow({ origin: "https://gw.example", gateway: true });
-    storage.setItem("openwork.den.authToken", "den-session-token");
-    storage.setItem("openwork.server.token", "stale-instance-token");
+    storage.setItem("offlinegpt.den.authToken", "den-session-token");
+    storage.setItem("offlinegpt.server.token", "stale-instance-token");
 
-    expect(buildOpenworkHealthHeaders("https://gw.example/opencode")).toEqual({
+    expect(buildOfflineGptHealthHeaders("https://gw.example/opencode")).toEqual({
       Authorization: "Bearer den-session-token",
     });
   });
@@ -416,7 +416,7 @@ describe("gateway runtime mode", () => {
 
 describe("non-gateway connection modes", () => {
   beforeEach(() => {
-    process.env.VITE_OPENWORK_DEPLOYMENT = "web";
+    process.env.VITE_OFFLINEGPT_DEPLOYMENT = "web";
   });
 
   afterEach(() => {
@@ -429,46 +429,46 @@ describe("non-gateway connection modes", () => {
       value: originalFetch,
     });
     if (originalDeployment === undefined) {
-      delete process.env.VITE_OPENWORK_DEPLOYMENT;
+      delete process.env.VITE_OFFLINEGPT_DEPLOYMENT;
     } else {
-      process.env.VITE_OPENWORK_DEPLOYMENT = originalDeployment;
+      process.env.VITE_OFFLINEGPT_DEPLOYMENT = originalDeployment;
     }
   });
 
   test("direct instance bootstrap hydration and same-origin resolution are unchanged without the marker", async () => {
     installWindow({ origin: "https://instance.example.com", bootstrapToken: "instance-token" });
 
-    hydrateOpenworkServerSettingsFromEnv();
-    const connection = await resolveOpenworkConnection();
+    hydrateOfflineGptServerSettingsFromEnv();
+    const connection = await resolveOfflineGptConnection();
 
-    expect(readOpenworkServerSettings().token).toBe("instance-token");
+    expect(readOfflineGptServerSettings().token).toBe("instance-token");
     expect(connection.normalizedBaseUrl).toBe("https://instance.example.com");
     expect(connection.resolvedToken).toBe("instance-token");
     expect(connection.source).toBe("same-origin");
   });
 
-  test("force-env settings overwrite stale localStorage openwork-server credentials", () => {
+  test("force-env settings overwrite stale localStorage offlinegpt-server credentials", () => {
     const previous = {
-      url: process.env.VITE_OPENWORK_URL,
-      port: process.env.VITE_OPENWORK_PORT,
-      token: process.env.VITE_OPENWORK_TOKEN,
-      hostToken: process.env.VITE_OPENWORK_HOST_TOKEN,
-      force: process.env.VITE_OPENWORK_FORCE_ENV_SETTINGS,
+      url: process.env.VITE_OFFLINEGPT_URL,
+      port: process.env.VITE_OFFLINEGPT_PORT,
+      token: process.env.VITE_OFFLINEGPT_TOKEN,
+      hostToken: process.env.VITE_OFFLINEGPT_HOST_TOKEN,
+      force: process.env.VITE_OFFLINEGPT_FORCE_ENV_SETTINGS,
     };
-    process.env.VITE_OPENWORK_URL = "http://127.0.0.1:8787";
-    process.env.VITE_OPENWORK_PORT = "8787";
-    process.env.VITE_OPENWORK_TOKEN = "fresh-token";
-    process.env.VITE_OPENWORK_HOST_TOKEN = "fresh-host-token";
-    process.env.VITE_OPENWORK_FORCE_ENV_SETTINGS = "1";
+    process.env.VITE_OFFLINEGPT_URL = "http://127.0.0.1:8787";
+    process.env.VITE_OFFLINEGPT_PORT = "8787";
+    process.env.VITE_OFFLINEGPT_TOKEN = "fresh-token";
+    process.env.VITE_OFFLINEGPT_HOST_TOKEN = "fresh-host-token";
+    process.env.VITE_OFFLINEGPT_FORCE_ENV_SETTINGS = "1";
 
     const storage = installWindow({ origin: "http://127.0.0.1:5173" });
-    storage.setItem("openwork.server.urlOverride", "http://127.0.0.1:9999");
-    storage.setItem("openwork.server.token", "stale-token");
-    storage.setItem("openwork.server.hostToken", "stale-host-token");
+    storage.setItem("offlinegpt.server.urlOverride", "http://127.0.0.1:9999");
+    storage.setItem("offlinegpt.server.token", "stale-token");
+    storage.setItem("offlinegpt.server.hostToken", "stale-host-token");
 
     try {
-      hydrateOpenworkServerSettingsFromEnv();
-      expect(readOpenworkServerSettings()).toEqual({
+      hydrateOfflineGptServerSettingsFromEnv();
+      expect(readOfflineGptServerSettings()).toEqual({
         urlOverride: "http://127.0.0.1:8787",
         portOverride: 8787,
         token: "fresh-token",
@@ -476,79 +476,79 @@ describe("non-gateway connection modes", () => {
         remoteAccessEnabled: false,
       });
     } finally {
-      restoreEnv("VITE_OPENWORK_URL", previous.url);
-      restoreEnv("VITE_OPENWORK_PORT", previous.port);
-      restoreEnv("VITE_OPENWORK_TOKEN", previous.token);
-      restoreEnv("VITE_OPENWORK_HOST_TOKEN", previous.hostToken);
-      restoreEnv("VITE_OPENWORK_FORCE_ENV_SETTINGS", previous.force);
+      restoreEnv("VITE_OFFLINEGPT_URL", previous.url);
+      restoreEnv("VITE_OFFLINEGPT_PORT", previous.port);
+      restoreEnv("VITE_OFFLINEGPT_TOKEN", previous.token);
+      restoreEnv("VITE_OFFLINEGPT_HOST_TOKEN", previous.hostToken);
+      restoreEnv("VITE_OFFLINEGPT_FORCE_ENV_SETTINGS", previous.force);
     }
   });
 
   test("force-env without a VITE host token clears a leftover browser host token", () => {
     const previous = {
-      url: process.env.VITE_OPENWORK_URL,
-      port: process.env.VITE_OPENWORK_PORT,
-      token: process.env.VITE_OPENWORK_TOKEN,
-      hostToken: process.env.VITE_OPENWORK_HOST_TOKEN,
-      force: process.env.VITE_OPENWORK_FORCE_ENV_SETTINGS,
+      url: process.env.VITE_OFFLINEGPT_URL,
+      port: process.env.VITE_OFFLINEGPT_PORT,
+      token: process.env.VITE_OFFLINEGPT_TOKEN,
+      hostToken: process.env.VITE_OFFLINEGPT_HOST_TOKEN,
+      force: process.env.VITE_OFFLINEGPT_FORCE_ENV_SETTINGS,
     };
-    process.env.VITE_OPENWORK_URL = "http://127.0.0.1:8787";
-    process.env.VITE_OPENWORK_PORT = "8787";
-    process.env.VITE_OPENWORK_TOKEN = "fresh-token";
-    delete process.env.VITE_OPENWORK_HOST_TOKEN;
-    process.env.VITE_OPENWORK_FORCE_ENV_SETTINGS = "1";
+    process.env.VITE_OFFLINEGPT_URL = "http://127.0.0.1:8787";
+    process.env.VITE_OFFLINEGPT_PORT = "8787";
+    process.env.VITE_OFFLINEGPT_TOKEN = "fresh-token";
+    delete process.env.VITE_OFFLINEGPT_HOST_TOKEN;
+    process.env.VITE_OFFLINEGPT_FORCE_ENV_SETTINGS = "1";
 
     const storage = installWindow({ origin: "http://127.0.0.1:5178" });
-    storage.setItem("openwork.server.hostToken", "leaked-host-token");
+    storage.setItem("offlinegpt.server.hostToken", "leaked-host-token");
 
     try {
-      hydrateOpenworkServerSettingsFromEnv();
-      expect(readOpenworkServerSettings().hostToken).toBeUndefined();
-      expect(storage.getItem("openwork.server.hostToken")).toBeNull();
+      hydrateOfflineGptServerSettingsFromEnv();
+      expect(readOfflineGptServerSettings().hostToken).toBeUndefined();
+      expect(storage.getItem("offlinegpt.server.hostToken")).toBeNull();
     } finally {
-      restoreEnv("VITE_OPENWORK_URL", previous.url);
-      restoreEnv("VITE_OPENWORK_PORT", previous.port);
-      restoreEnv("VITE_OPENWORK_TOKEN", previous.token);
-      restoreEnv("VITE_OPENWORK_HOST_TOKEN", previous.hostToken);
-      restoreEnv("VITE_OPENWORK_FORCE_ENV_SETTINGS", previous.force);
+      restoreEnv("VITE_OFFLINEGPT_URL", previous.url);
+      restoreEnv("VITE_OFFLINEGPT_PORT", previous.port);
+      restoreEnv("VITE_OFFLINEGPT_TOKEN", previous.token);
+      restoreEnv("VITE_OFFLINEGPT_HOST_TOKEN", previous.hostToken);
+      restoreEnv("VITE_OFFLINEGPT_FORCE_ENV_SETTINGS", previous.force);
     }
   });
 
   test("stored server settings still win without the marker", async () => {
     const storage = installWindow({ origin: "https://instance.example.com" });
-    storage.setItem("openwork.server.urlOverride", "https://manual.example.com");
-    storage.setItem("openwork.server.token", "manual-token");
-    storage.setItem("openwork.server.hostToken", "host-token");
+    storage.setItem("offlinegpt.server.urlOverride", "https://manual.example.com");
+    storage.setItem("offlinegpt.server.token", "manual-token");
+    storage.setItem("offlinegpt.server.hostToken", "host-token");
 
-    const connection = await resolveOpenworkConnection();
+    const connection = await resolveOfflineGptConnection();
 
     expect(connection.normalizedBaseUrl).toBe("https://manual.example.com");
     expect(connection.resolvedToken).toBe("manual-token");
     expect(connection.resolvedHostToken).toBe("");
     expect(connection.source).toBe("stored-settings");
 
-    const store = createTestOpenworkServerStore();
+    const store = createTestOfflineGptServerStore();
     const snapshot = store.getSnapshot();
 
-    expect(snapshot.openworkServerBaseUrl).toBe("https://manual.example.com");
-    expect(snapshot.openworkServerAuth.token).toBe("manual-token");
-    expect(snapshot.openworkServerAuth.hostToken).toBeUndefined();
-    expect(snapshot.openworkServerClient?.baseUrl).toBe("https://manual.example.com");
-    expect(snapshot.openworkServerClient?.token).toBe("manual-token");
+    expect(snapshot.offlinegptServerBaseUrl).toBe("https://manual.example.com");
+    expect(snapshot.offlinegptServerAuth.token).toBe("manual-token");
+    expect(snapshot.offlinegptServerAuth.hostToken).toBeUndefined();
+    expect(snapshot.offlinegptServerClient?.baseUrl).toBe("https://manual.example.com");
+    expect(snapshot.offlinegptServerClient?.token).toBe("manual-token");
   });
 
   test("OpenCode health polling still uses the stored instance token without the gateway marker", () => {
     const storage = installWindow({ origin: "https://instance.example.com" });
-    storage.setItem("openwork.server.token", "instance-token");
+    storage.setItem("offlinegpt.server.token", "instance-token");
 
-    expect(buildOpenworkHealthHeaders("https://instance.example.com/opencode")).toEqual({
+    expect(buildOfflineGptHealthHeaders("https://instance.example.com/opencode")).toEqual({
       Authorization: "Bearer instance-token",
     });
   });
 
   test("plain web Den settings still use a stored custom base URL without the marker", () => {
     const storage = installWindow({ origin: "https://instance.example.com" });
-    storage.setItem("openwork.den.baseUrl", "https://den.self-hosted.example.com");
+    storage.setItem("offlinegpt.den.baseUrl", "https://den.self-hosted.example.com");
 
     expect(readDenSettings().baseUrl).toBe("https://den.self-hosted.example.com");
     expect(readDenSettings().apiBaseUrl).toBe("https://den.self-hosted.example.com/api/den");
@@ -561,20 +561,20 @@ describe("non-gateway connection modes", () => {
 
     try {
       const settings = readDenSettings();
-      expect(settings.baseUrl).toBe("https://app.openworklabs.com");
+      expect(settings.baseUrl).toBe("https://app.offlinegptlabs.com");
       expect(settings.apiBaseUrl).toBe("http://127.0.0.1:5178/api/den");
 
       // Every Den client derives its API base the same way, so requests go
       // through the same-origin proxy even when created from the web base.
       const client = createDenClient({ baseUrl: settings.baseUrl, token: "den-token" });
       expect(client.baseUrls.apiBaseUrl).toBe("http://127.0.0.1:5178/api/den");
-      expect(client.baseUrls.baseUrl).toBe("https://app.openworklabs.com");
+      expect(client.baseUrls.baseUrl).toBe("https://app.offlinegptlabs.com");
 
       // Sign-in still opens the real Den web app, not the proxy origin.
       // Loopback cannot use webAuth return URLs against hosted Den, so the
       // URL uses desktopAuth (copy link / paste grant) instead.
       const authUrl = new URL(buildDenAuthUrl(settings.baseUrl, "sign-in"));
-      expect(authUrl.origin).toBe("https://app.openworklabs.com");
+      expect(authUrl.origin).toBe("https://app.offlinegptlabs.com");
       expect(authUrl.searchParams.get("desktopAuth")).toBe("1");
       expect(authUrl.searchParams.get("webAuth")).toBeNull();
     } finally {
@@ -587,25 +587,25 @@ describe("non-gateway connection modes", () => {
 
     const authUrl = new URL(buildDenAuthUrl(readDenSettings().baseUrl, "sign-in"));
 
-    expect(authUrl.origin).toBe("https://app.openworklabs.com");
+    expect(authUrl.origin).toBe("https://app.offlinegptlabs.com");
     expect(authUrl.searchParams.get("desktopAuth")).toBe("1");
-    expect(authUrl.searchParams.get("desktopScheme")).toBe("openwork");
+    expect(authUrl.searchParams.get("desktopScheme")).toBe("offlinegpt");
     expect(authUrl.searchParams.get("webAuth")).toBeNull();
     expect(authUrl.searchParams.get("webAuthReturn")).toBeNull();
   });
 
   test("force-env clears a stale stored Den base URL on web bootstrap init", async () => {
-    const previous = process.env.VITE_OPENWORK_FORCE_ENV_SETTINGS;
-    process.env.VITE_OPENWORK_FORCE_ENV_SETTINGS = "1";
+    const previous = process.env.VITE_OFFLINEGPT_FORCE_ENV_SETTINGS;
+    process.env.VITE_OFFLINEGPT_FORCE_ENV_SETTINGS = "1";
     const storage = installWindow({ origin: "http://127.0.0.1:5178" });
-    storage.setItem("openwork.den.baseUrl", "http://127.0.0.1:8779");
+    storage.setItem("offlinegpt.den.baseUrl", "http://127.0.0.1:8779");
 
     try {
       await initializeDenBootstrapConfig();
-      expect(storage.getItem("openwork.den.baseUrl")).toBeNull();
-      expect(readDenSettings().baseUrl).toBe("https://app.openworklabs.com");
+      expect(storage.getItem("offlinegpt.den.baseUrl")).toBeNull();
+      expect(readDenSettings().baseUrl).toBe("https://app.offlinegptlabs.com");
     } finally {
-      restoreEnv("VITE_OPENWORK_FORCE_ENV_SETTINGS", previous);
+      restoreEnv("VITE_OFFLINEGPT_FORCE_ENV_SETTINGS", previous);
     }
   });
 
@@ -619,7 +619,7 @@ describe("non-gateway connection modes", () => {
       },
     });
 
-    const connection = await resolveOpenworkConnection();
+    const connection = await resolveOfflineGptConnection();
 
     expect(connection.normalizedBaseUrl).toBe("http://127.0.0.1:8787");
     expect(connection.resolvedToken).toBe("owner-token");
@@ -637,8 +637,8 @@ describe("non-gateway connection modes", () => {
         hostToken: "live-host-token",
       },
     });
-    storage.setItem("openwork.server.token", "stale-client-token");
-    storage.setItem("openwork.server.hostToken", "stale-host-token");
+    storage.setItem("offlinegpt.server.token", "stale-client-token");
+    storage.setItem("offlinegpt.server.hostToken", "stale-host-token");
     Object.defineProperty(globalThis, "fetch", {
       configurable: true,
       value: async () => new Response(JSON.stringify({ ok: true }), {
@@ -647,12 +647,12 @@ describe("non-gateway connection modes", () => {
       }),
     });
 
-    const store = createTestOpenworkServerStore("local");
+    const store = createTestOfflineGptServerStore("local");
 
-    expect(await store.reconnectOpenworkServer()).toBe(true);
-    expect(readOpenworkServerSettings().token).toBe("live-client-token");
-    expect(readOpenworkServerSettings().hostToken).toBe("live-host-token");
-    expect(store.getSnapshot().openworkServerAuth).toEqual({
+    expect(await store.reconnectOfflineGptServer()).toBe(true);
+    expect(readOfflineGptServerSettings().token).toBe("live-client-token");
+    expect(readOfflineGptServerSettings().hostToken).toBe("live-host-token");
+    expect(store.getSnapshot().offlinegptServerAuth).toEqual({
       token: "live-client-token",
       hostToken: "live-host-token",
     });
@@ -666,10 +666,10 @@ describe("non-gateway connection modes", () => {
       origin: "https://instance.example.com",
       electronServerInfoRaw: { running: false, baseUrl: null, ownerToken: null, clientToken: null },
     });
-    storage.setItem("openwork.server.urlOverride", "http://127.0.0.1:4100");
-    storage.setItem("openwork.server.token", "tok_previous_lifetime");
+    storage.setItem("offlinegpt.server.urlOverride", "http://127.0.0.1:4100");
+    storage.setItem("offlinegpt.server.token", "tok_previous_lifetime");
 
-    const connection = await resolveOpenworkConnection();
+    const connection = await resolveOfflineGptConnection();
 
     expect(connection.source).toBe("empty");
     expect(connection.normalizedBaseUrl).toBe("");
@@ -681,10 +681,10 @@ describe("non-gateway connection modes", () => {
       origin: "https://instance.example.com",
       electronServerInfoRaw: { running: false, baseUrl: null, ownerToken: null, clientToken: null },
     });
-    storage.setItem("openwork.server.urlOverride", "https://manual.example.com");
-    storage.setItem("openwork.server.token", "manual-token");
+    storage.setItem("offlinegpt.server.urlOverride", "https://manual.example.com");
+    storage.setItem("offlinegpt.server.token", "manual-token");
 
-    const connection = await resolveOpenworkConnection();
+    const connection = await resolveOfflineGptConnection();
 
     expect(connection.source).toBe("stored-settings");
     expect(connection.normalizedBaseUrl).toBe("https://manual.example.com");
@@ -698,10 +698,10 @@ describe("non-gateway connection modes", () => {
       origin: "https://instance.example.com",
       electronServerInfoError: true,
     });
-    storage.setItem("openwork.server.urlOverride", "http://127.0.0.1:4100");
-    storage.setItem("openwork.server.token", "tok_stored");
+    storage.setItem("offlinegpt.server.urlOverride", "http://127.0.0.1:4100");
+    storage.setItem("offlinegpt.server.token", "tok_stored");
 
-    const connection = await resolveOpenworkConnection();
+    const connection = await resolveOfflineGptConnection();
 
     expect(connection.source).toBe("stored-settings");
     expect(connection.normalizedBaseUrl).toBe("http://127.0.0.1:4100");

@@ -4,12 +4,12 @@ import { MonitorSmartphone } from "lucide-react";
 import { surfaceCardClass } from "../workspace/modal-styles";
 import { registerExtensionConfig } from "./extension-registry";
 
-const openWorkBrowserConfigFactory = () => <OpenWorkBrowserConfig />;
+const offlineGptBrowserConfigFactory = () => <OfflineGPTBrowserConfig />;
 
-registerExtensionConfig("openwork.browser.settings", openWorkBrowserConfigFactory);
-registerExtensionConfig("openwork-browser", openWorkBrowserConfigFactory);
+registerExtensionConfig("offlinegpt.browser.settings", offlineGptBrowserConfigFactory);
+registerExtensionConfig("offlinegpt-browser", offlineGptBrowserConfigFactory);
 
-function OpenWorkBrowserConfig() {
+function OfflineGPTBrowserConfig() {
   return (
     <div className={`${surfaceCardClass} space-y-3 p-4`}>
       <div className="flex items-start gap-3">

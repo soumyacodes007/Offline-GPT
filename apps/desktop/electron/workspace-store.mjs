@@ -1,5 +1,5 @@
 // Desktop workspace persistence and bootstrap configuration. This module owns
-// on-disk workspace state, per-workspace openwork.json files, remote workspace
+// on-disk workspace state, per-workspace offlinegpt.json files, remote workspace
 // normalization/discovery, and the workspace-facing command operations.
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
@@ -10,10 +10,10 @@ import {
   desktopBootstrapPath as resolveDesktopBootstrapPath,
   legacyDesktopBootstrapPath as resolveLegacyDesktopBootstrapPath,
   normalizeWorkspaceRootPath,
-  openworkServerConfigPath as resolveOpenworkServerConfigPath,
-} from "@openwork/paths";
+  offlinegptServerConfigPath as resolveOfflineGptServerConfigPath,
+} from "@offlinegpt/paths";
 
-import { openworkWorkspaceDisplayName, selectOpenworkWorkspaceForConnection } from "./remote-workspace.mjs";
+import { offlinegptWorkspaceDisplayName, selectOfflineGptWorkspaceForConnection } from "./remote-workspace.mjs";
 import { exportWorkspaceConfig, importWorkspaceConfig } from "./workspace-archive.mjs";
 
 const EMPTY_WORKSPACE_LIST = Object.freeze({
@@ -116,8 +116,8 @@ const DEFAULT_DESKTOP_BOOTSTRAP_PATH = resolveDesktopBootstrapPath({ homeDir: os
 // LOCALAPPDATA and XDG_CONFIG_HOME. Keep reading that file when the canonical one
 // is missing so existing installs keep their deployment config.
 const LEGACY_DESKTOP_BOOTSTRAP_PATH = resolveLegacyDesktopBootstrapPath({ homeDir: os.homedir() });
-const HOSTED_DESKTOP_WEB_URL = "https://app.openworklabs.com";
-const HOSTED_DESKTOP_API_URL = "https://api.openworklabs.com";
+const HOSTED_DESKTOP_WEB_URL = "https://app.offlinegptlabs.com";
+const HOSTED_DESKTOP_API_URL = "https://api.offlinegptlabs.com";
 
 function bootstrapUrlOrigin(value) {
   if (typeof value !== "string" || !value.trim()) return "";
@@ -140,14 +140,14 @@ export function createWorkspaceStore({
   forceRequireSignin,
 }) {
   function desktopBootstrapPath() {
-    if (process.env.OPENWORK_DESKTOP_BOOTSTRAP_PATH?.trim()) {
+    if (process.env.OFFLINEGPT_DESKTOP_BOOTSTRAP_PATH?.trim()) {
       return resolveDesktopBootstrapPath({ env: process.env, homeDir: os.homedir(), userDataDir: app.getPath("userData") });
     }
     // Dev mode swaps process.env.HOME to the sandboxed dev-data home midway
     // through startup (runtime.mjs buildChildEnv -> Object.assign(process.env)),
     // which changes what os.homedir() returns. Resolve the dev-data home
     // deterministically so early and late IPC reads target the same file.
-    if (process.env.OPENWORK_DEV_MODE === "1") {
+    if (process.env.OFFLINEGPT_DEV_MODE === "1") {
       return resolveDesktopBootstrapPath({ env: process.env, homeDir: os.homedir(), userDataDir: app.getPath("userData") });
     }
     return DEFAULT_DESKTOP_BOOTSTRAP_PATH;
@@ -157,7 +157,7 @@ export function createWorkspaceStore({
     // An explicit bootstrap path defines an isolated installation boundary.
     // Never let a legacy global config cross that boundary: it may contain a
     // completed activation from another distribution or deployment.
-    if (process.env.OPENWORK_DESKTOP_BOOTSTRAP_PATH?.trim()) return null;
+    if (process.env.OFFLINEGPT_DESKTOP_BOOTSTRAP_PATH?.trim()) return null;
     const primary = desktopBootstrapPath();
     if (primary === DEFAULT_DESKTOP_BOOTSTRAP_PATH && LEGACY_DESKTOP_BOOTSTRAP_PATH !== primary) {
       return LEGACY_DESKTOP_BOOTSTRAP_PATH;
@@ -166,24 +166,24 @@ export function createWorkspaceStore({
   }
 
   function workspaceStatePath() {
-    const override = process.env.OPENWORK_DESKTOP_WORKSPACE_STATE_PATH?.trim();
+    const override = process.env.OFFLINEGPT_DESKTOP_WORKSPACE_STATE_PATH?.trim();
     if (override) return path.resolve(override);
-    return path.join(app.getPath("userData"), "openwork-workspaces.json");
+    return path.join(app.getPath("userData"), "offlinegpt-workspaces.json");
   }
 
-  function openworkServerTokenStorePath() {
-    const override = process.env.OPENWORK_SERVER_TOKEN_STORE_PATH?.trim();
+  function offlinegptServerTokenStorePath() {
+    const override = process.env.OFFLINEGPT_SERVER_TOKEN_STORE_PATH?.trim();
     if (override) return path.resolve(override);
-    return path.join(app.getPath("userData"), "openwork-server-tokens.json");
+    return path.join(app.getPath("userData"), "offlinegpt-server-tokens.json");
   }
 
-  function openworkServerConfigPath() {
-    return resolveOpenworkServerConfigPath({ env: process.env, homeDir: os.homedir() });
+  function offlinegptServerConfigPath() {
+    return resolveOfflineGptServerConfigPath({ env: process.env, homeDir: os.homedir() });
   }
 
-  // Earlier Electron alpha builds copied Tauri's openwork-workspaces.json into
+  // Earlier Electron alpha builds copied Tauri's offlinegpt-workspaces.json into
   // an Electron-only workspace-state.json. Keep importing that file when the
-  // shared canonical file is missing, but write openwork-workspaces.json going
+  // shared canonical file is missing, but write offlinegpt-workspaces.json going
   // forward so Tauri rollback and Electron both read the same desktop state.
   function legacyElectronWorkspaceStatePath() {
     return path.join(app.getPath("userData"), "workspace-state.json");
@@ -198,7 +198,7 @@ export function createWorkspaceStore({
       await mkdir(path.dirname(current), { recursive: true });
       const raw = await readFile(legacy, "utf8");
       await writeFile(current, raw, "utf8");
-      console.info("[migration] copied workspace-state.json to openwork-workspaces.json");
+      console.info("[migration] copied workspace-state.json to offlinegpt-workspaces.json");
       return true;
     } catch (error) {
       console.warn("[migration] legacy Electron workspace-state copy failed", error);
@@ -467,7 +467,7 @@ export function createWorkspaceStore({
       legacyExists: legacyPath ? existsSync(legacyPath) : false,
       home: os.homedir(),
       envHome: process.env.HOME ?? null,
-      envOverride: process.env.OPENWORK_DESKTOP_BOOTSTRAP_PATH ?? null,
+      envOverride: process.env.OFFLINEGPT_DESKTOP_BOOTSTRAP_PATH ?? null,
       exists: existsSync(configPath),
       raw: null,
       parsed: null,
@@ -507,7 +507,7 @@ export function createWorkspaceStore({
     return undefined;
   }
 
-  function defaultWorkspaceOpenworkConfig(workspacePath, preset = null) {
+  function defaultWorkspaceOfflineGptConfig(workspacePath, preset = null) {
     return {
       version: 1,
       workspace: workspacePath
@@ -557,7 +557,7 @@ export function createWorkspaceStore({
   }
 
   async function recoverWorkspacesFromTokenStore() {
-    const store = await readJsonFile(openworkServerTokenStorePath(), null);
+    const store = await readJsonFile(offlinegptServerTokenStorePath(), null);
     if (!isRecord(store) || !isRecord(store.workspaces)) return [];
 
     const candidates = [];
@@ -593,7 +593,7 @@ export function createWorkspaceStore({
     const workspaceKey = normalizeWorkspacePathKey(workspacePath);
     if (!workspaceKey) return;
 
-    const store = await readJsonFile(openworkServerTokenStorePath(), null);
+    const store = await readJsonFile(offlinegptServerTokenStorePath(), null);
     if (!isRecord(store) || !isRecord(store.workspaces)) return;
 
     const workspaces = { ...store.workspaces };
@@ -604,12 +604,12 @@ export function createWorkspaceStore({
       changed = true;
     }
     if (changed) {
-      await writeJsonFileAtomic(openworkServerTokenStorePath(), { ...store, workspaces });
+      await writeJsonFileAtomic(offlinegptServerTokenStorePath(), { ...store, workspaces });
     }
   }
 
   async function recoverWorkspacesFromServerConfig() {
-    const config = await readJsonFile(openworkServerConfigPath(), null);
+    const config = await readJsonFile(offlinegptServerConfigPath(), null);
     if (!isRecord(config) || !Array.isArray(config.workspaces)) return [];
 
     const seen = new Set();
@@ -625,13 +625,13 @@ export function createWorkspaceStore({
 
       const baseUrl = typeof entry.baseUrl === "string" ? entry.baseUrl.trim() : "";
       const directory = typeof entry.directory === "string" && entry.directory.trim() ? entry.directory.trim() : null;
-      const remoteType = entry.remoteType === "opencode" ? "opencode" : "openwork";
-      const openworkWorkspaceId = typeof entry.openworkWorkspaceId === "string" ? entry.openworkWorkspaceId.trim() : "";
+      const remoteType = entry.remoteType === "opencode" ? "opencode" : "offlinegpt";
+      const offlinegptWorkspaceId = typeof entry.offlinegptWorkspaceId === "string" ? entry.offlinegptWorkspaceId.trim() : "";
       const id = typeof entry.id === "string" && entry.id.trim()
         ? entry.id.trim()
         : workspaceType === "remote"
-          ? remoteType === "openwork"
-            ? openworkRemoteWorkspaceId(baseUrl, openworkWorkspaceId)
+          ? remoteType === "offlinegpt"
+            ? offlinegptRemoteWorkspaceId(baseUrl, offlinegptWorkspaceId)
             : remoteWorkspaceId(baseUrl, directory)
           : localWorkspaceId(normalizedPath);
       const key = workspaceType === "remote" ? id : normalizeWorkspacePathKey(normalizedPath);
@@ -674,7 +674,7 @@ export function createWorkspaceStore({
     return stableWorkspaceId(key);
   }
 
-  function parseOpenworkWorkspaceIdFromUrl(input) {
+  function parseOfflineGptWorkspaceIdFromUrl(input) {
     const raw = String(input ?? "").trim();
     if (!raw) return null;
     try {
@@ -697,7 +697,7 @@ export function createWorkspaceStore({
     }
   }
 
-  function stripOpenworkWorkspaceMount(input) {
+  function stripOfflineGptWorkspaceMount(input) {
     const raw = String(input ?? "").trim();
     if (!raw) return null;
     try {
@@ -716,13 +716,13 @@ export function createWorkspaceStore({
     }
   }
 
-  function openworkRemoteWorkspaceId(hostUrl, workspaceId) {
-    const remoteWorkspaceId = String(workspaceId ?? "").trim() || parseOpenworkWorkspaceIdFromUrl(hostUrl);
+  function offlinegptRemoteWorkspaceId(hostUrl, workspaceId) {
+    const remoteWorkspaceId = String(workspaceId ?? "").trim() || parseOfflineGptWorkspaceIdFromUrl(hostUrl);
     if (remoteWorkspaceId) return `rem_${remoteWorkspaceId}`;
-    return `rem_${createHash("sha256").update(`openwork::${hostUrl}`).digest("hex").slice(0, 12)}`;
+    return `rem_${createHash("sha256").update(`offlinegpt::${hostUrl}`).digest("hex").slice(0, 12)}`;
   }
 
-  async function fetchOpenworkWorkspaceList(hostUrl, token, hostToken) {
+  async function fetchOfflineGptWorkspaceList(hostUrl, token, hostToken) {
     const url = `${String(hostUrl ?? "").replace(/\/+$/, "")}/workspaces`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8_000);
@@ -730,7 +730,7 @@ export function createWorkspaceStore({
     const bearerToken = String(token ?? "").trim();
     const hostAuthToken = String(hostToken ?? "").trim();
     if (bearerToken) headers.set("Authorization", `Bearer ${bearerToken}`);
-    if (hostAuthToken) headers.set("X-OpenWork-Host-Token", hostAuthToken);
+    if (hostAuthToken) headers.set("X-OfflineGPT-Host-Token", hostAuthToken);
 
     try {
       const electron = await import("electron").catch(() => null);
@@ -742,7 +742,7 @@ export function createWorkspaceStore({
         cache: "no-store",
       });
       if (!response.ok) {
-        throw new Error(`OpenWork workspace discovery failed (${response.status} ${response.statusText || "HTTP error"})`);
+        throw new Error(`OfflineGPT workspace discovery failed (${response.status} ${response.statusText || "HTTP error"})`);
       }
       return await response.json();
     } finally {
@@ -750,9 +750,9 @@ export function createWorkspaceStore({
     }
   }
 
-  async function discoverOpenworkWorkspace({ hostUrl, token, hostToken, directory }) {
-    const list = await fetchOpenworkWorkspaceList(hostUrl, token, hostToken);
-    return selectOpenworkWorkspaceForConnection(list, directory);
+  async function discoverOfflineGptWorkspace({ hostUrl, token, hostToken, directory }) {
+    const list = await fetchOfflineGptWorkspaceList(hostUrl, token, hostToken);
+    return selectOfflineGptWorkspaceForConnection(list, directory);
   }
 
   function normalizeWorkspaceEntry(input) {
@@ -766,32 +766,32 @@ export function createWorkspaceStore({
       baseUrl: input.baseUrl ?? null,
       directory: input.directory ?? null,
       displayName: input.displayName ?? null,
-      openworkHostUrl: input.openworkHostUrl ?? null,
-      openworkToken: input.openworkToken ?? null,
-      openworkClientToken: input.openworkClientToken ?? null,
-      openworkHostToken: input.openworkHostToken ?? null,
-      openworkWorkspaceId: input.openworkWorkspaceId ?? null,
-      openworkWorkspaceName: input.openworkWorkspaceName ?? null,
+      offlinegptHostUrl: input.offlinegptHostUrl ?? null,
+      offlinegptToken: input.offlinegptToken ?? null,
+      offlinegptClientToken: input.offlinegptClientToken ?? null,
+      offlinegptHostToken: input.offlinegptHostToken ?? null,
+      offlinegptWorkspaceId: input.offlinegptWorkspaceId ?? null,
+      offlinegptWorkspaceName: input.offlinegptWorkspaceName ?? null,
       sandboxBackend: input.sandboxBackend ?? null,
       sandboxRunId: input.sandboxRunId ?? null,
       sandboxContainerName: input.sandboxContainerName ?? null,
     };
   }
 
-  async function readWorkspaceOpenworkConfig(workspacePath) {
-    const openworkPath = path.join(workspacePath, ".opencode", "openwork.json");
-    if (!(await pathExists(openworkPath))) {
-      return defaultWorkspaceOpenworkConfig(workspacePath);
+  async function readWorkspaceOfflineGptConfig(workspacePath) {
+    const offlinegptPath = path.join(workspacePath, ".opencode", "offlinegpt.json");
+    if (!(await pathExists(offlinegptPath))) {
+      return defaultWorkspaceOfflineGptConfig(workspacePath);
     }
-    const raw = await readFile(openworkPath, "utf8");
+    const raw = await readFile(offlinegptPath, "utf8");
     return JSON.parse(raw);
   }
 
-  async function writeWorkspaceOpenworkConfig(workspacePath, config) {
-    const openworkPath = path.join(workspacePath, ".opencode", "openwork.json");
-    await mkdir(path.dirname(openworkPath), { recursive: true });
-    await writeFile(openworkPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-    return execResult(true, `Wrote ${openworkPath}`);
+  async function writeWorkspaceOfflineGptConfig(workspacePath, config) {
+    const offlinegptPath = path.join(workspacePath, ".opencode", "offlinegpt.json");
+    await mkdir(path.dirname(offlinegptPath), { recursive: true });
+    await writeFile(offlinegptPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+    return execResult(true, `Wrote ${offlinegptPath}`);
   }
 
   async function writeWorkspaceState(nextState) {
@@ -833,11 +833,11 @@ export function createWorkspaceStore({
     let activeId = typeof state?.activeId === "string" ? state.activeId : null;
     let workspaces = Array.isArray(state?.workspaces) ? state.workspaces : [];
     let changed = false;
-    if (!workspaceStateExists && process.env.OPENWORK_DESKTOP_DISABLE_WORKSPACE_RECOVERY !== "1") {
+    if (!workspaceStateExists && process.env.OFFLINEGPT_DESKTOP_DISABLE_WORKSPACE_RECOVERY !== "1") {
       const recoveredWorkspaces = await recoverWorkspacesFromKnownState();
       if (recoveredWorkspaces.length > 0) {
         const selectedWorkspace = recoveredWorkspaces[0];
-        console.info("[migration] recovered desktop workspaces from persisted OpenWork state", {
+        console.info("[migration] recovered desktop workspaces from persisted OfflineGPT state", {
           count: recoveredWorkspaces.length,
           selectedWorkspaceId: selectedWorkspace.id,
         });
@@ -851,29 +851,29 @@ export function createWorkspaceStore({
     const idMap = new Map();
     const migratedWorkspaces = workspaces.map((entry) => {
       const workspace = entry && typeof entry === "object" ? entry : normalizeWorkspaceEntry(entry ?? {});
-      if (workspace.workspaceType !== "remote" || workspace.remoteType !== "openwork") return workspace;
+      if (workspace.workspaceType !== "remote" || workspace.remoteType !== "offlinegpt") return workspace;
 
-      const remoteWorkspaceId = String(workspace.openworkWorkspaceId ?? "").trim()
-        || parseOpenworkWorkspaceIdFromUrl(workspace.openworkHostUrl)
-        || parseOpenworkWorkspaceIdFromUrl(workspace.baseUrl);
+      const remoteWorkspaceId = String(workspace.offlinegptWorkspaceId ?? "").trim()
+        || parseOfflineGptWorkspaceIdFromUrl(workspace.offlinegptHostUrl)
+        || parseOfflineGptWorkspaceIdFromUrl(workspace.baseUrl);
       if (!remoteWorkspaceId) return workspace;
 
-      const hostUrl = stripOpenworkWorkspaceMount(workspace.openworkHostUrl) || stripOpenworkWorkspaceMount(workspace.baseUrl);
-      const nextId = openworkRemoteWorkspaceId(hostUrl ?? workspace.baseUrl, remoteWorkspaceId);
+      const hostUrl = stripOfflineGptWorkspaceMount(workspace.offlinegptHostUrl) || stripOfflineGptWorkspaceMount(workspace.baseUrl);
+      const nextId = offlinegptRemoteWorkspaceId(hostUrl ?? workspace.baseUrl, remoteWorkspaceId);
       idMap.set(workspace.id, nextId);
       const nextWorkspace = {
         ...workspace,
         id: nextId,
         baseUrl: hostUrl,
-        openworkWorkspaceId: remoteWorkspaceId,
-        openworkHostUrl: hostUrl,
+        offlinegptWorkspaceId: remoteWorkspaceId,
+        offlinegptHostUrl: hostUrl,
       };
-      if (workspace.id !== nextWorkspace.id || workspace.baseUrl !== nextWorkspace.baseUrl || workspace.openworkWorkspaceId !== nextWorkspace.openworkWorkspaceId || workspace.openworkHostUrl !== nextWorkspace.openworkHostUrl) {
+      if (workspace.id !== nextWorkspace.id || workspace.baseUrl !== nextWorkspace.baseUrl || workspace.offlinegptWorkspaceId !== nextWorkspace.offlinegptWorkspaceId || workspace.offlinegptHostUrl !== nextWorkspace.offlinegptHostUrl) {
         changed = true;
       }
       return nextWorkspace;
     });
-    // Older desktop state can contain multiple OpenWork remote entries that
+    // Older desktop state can contain multiple OfflineGPT remote entries that
     // normalize to the same rem_<workspaceId> after stripping worker mounts.
     // Collapse them here so React never receives duplicate workspace keys.
     const workspaceIndexById = new Map();
@@ -924,10 +924,10 @@ export function createWorkspaceStore({
     const state = await readWorkspaceState();
     // Recovery and an explicitly saved empty list both take precedence.
     if (state.workspaces.length > 0 || existsSync(workspaceStatePath())) return null;
-    const home = process.env.OPENWORK_DEV_MODE === "1" && process.env.OPENWORK_DEV_SHARED_STATE !== "1"
-      ? path.join(app.getPath("userData"), "openwork-dev-data", "home")
+    const home = process.env.OFFLINEGPT_DEV_MODE === "1" && process.env.OFFLINEGPT_DEV_SHARED_STATE !== "1"
+      ? path.join(app.getPath("userData"), "offlinegpt-dev-data", "home")
       : os.homedir();
-    const folderPath = await normalizeLocalWorkspacePath(path.join(home, "OpenWork Chat"));
+    const folderPath = await normalizeLocalWorkspacePath(path.join(home, "OfflineGPT Chat"));
     try {
       await createWorkspace({ folderPath });
       return null;
@@ -958,7 +958,7 @@ export function createWorkspaceStore({
     const prefixes = new Set();
     for (const workspace of (await readWorkspaceState()).workspaces) {
       if (workspace?.workspaceType !== "remote") continue;
-      for (const value of [workspace.baseUrl, workspace.openworkHostUrl]) {
+      for (const value of [workspace.baseUrl, workspace.offlinegptHostUrl]) {
         const raw = typeof value === "string" ? value.trim() : "";
         if (raw) prefixes.add(raw);
       }
@@ -1000,8 +1000,8 @@ export function createWorkspaceStore({
       workspaceType: "local",
     });
     await mkdir(path.join(folderPath, ".opencode"), { recursive: true });
-    if (!(await pathExists(path.join(folderPath, ".opencode", "openwork.json")))) {
-      await writeWorkspaceOpenworkConfig(folderPath, defaultWorkspaceOpenworkConfig(folderPath, preset));
+    if (!(await pathExists(path.join(folderPath, ".opencode", "offlinegpt.json")))) {
+      await writeWorkspaceOfflineGptConfig(folderPath, defaultWorkspaceOfflineGptConfig(folderPath, preset));
     }
 
     return mutateWorkspaceState((state) => {
@@ -1023,57 +1023,57 @@ export function createWorkspaceStore({
     if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
       throw new Error("baseUrl must start with http:// or https://");
     }
-    const remoteType = input.remoteType === "opencode" ? "opencode" : "openwork";
+    const remoteType = input.remoteType === "opencode" ? "opencode" : "offlinegpt";
     const directory = typeof input.directory === "string" && input.directory.trim() ? input.directory.trim() : null;
-    const rawOpenworkHostUrl = typeof input.openworkHostUrl === "string" && input.openworkHostUrl.trim()
-      ? input.openworkHostUrl.trim()
+    const rawOfflineGptHostUrl = typeof input.offlinegptHostUrl === "string" && input.offlinegptHostUrl.trim()
+      ? input.offlinegptHostUrl.trim()
       : null;
-    const openworkHostUrl = remoteType === "openwork"
-      ? stripOpenworkWorkspaceMount(rawOpenworkHostUrl ?? baseUrl)
-      : rawOpenworkHostUrl;
-    const openworkWorkspaceId = typeof input.openworkWorkspaceId === "string" && input.openworkWorkspaceId.trim()
-      ? input.openworkWorkspaceId.trim()
-      : remoteType === "openwork"
-        ? parseOpenworkWorkspaceIdFromUrl(rawOpenworkHostUrl) || parseOpenworkWorkspaceIdFromUrl(baseUrl)
+    const offlinegptHostUrl = remoteType === "offlinegpt"
+      ? stripOfflineGptWorkspaceMount(rawOfflineGptHostUrl ?? baseUrl)
+      : rawOfflineGptHostUrl;
+    const offlinegptWorkspaceId = typeof input.offlinegptWorkspaceId === "string" && input.offlinegptWorkspaceId.trim()
+      ? input.offlinegptWorkspaceId.trim()
+      : remoteType === "offlinegpt"
+        ? parseOfflineGptWorkspaceIdFromUrl(rawOfflineGptHostUrl) || parseOfflineGptWorkspaceIdFromUrl(baseUrl)
         : null;
-    let resolvedOpenworkWorkspaceId = openworkWorkspaceId;
-    let resolvedOpenworkWorkspaceName = input.openworkWorkspaceName ?? null;
-    if (remoteType === "openwork" && !resolvedOpenworkWorkspaceId) {
-      const discovered = await discoverOpenworkWorkspace({
-        hostUrl: openworkHostUrl ?? baseUrl,
-        token: input.openworkToken,
-        hostToken: input.openworkHostToken,
+    let resolvedOfflineGptWorkspaceId = offlinegptWorkspaceId;
+    let resolvedOfflineGptWorkspaceName = input.offlinegptWorkspaceName ?? null;
+    if (remoteType === "offlinegpt" && !resolvedOfflineGptWorkspaceId) {
+      const discovered = await discoverOfflineGptWorkspace({
+        hostUrl: offlinegptHostUrl ?? baseUrl,
+        token: input.offlinegptToken,
+        hostToken: input.offlinegptHostToken,
         directory,
       });
       if (!discovered?.id) {
         throw new Error(
           directory
-            ? `OpenWork server has no workspace matching ${directory}.`
-            : "OpenWork server returned no workspaces.",
+            ? `OfflineGPT server has no workspace matching ${directory}.`
+            : "OfflineGPT server returned no workspaces.",
         );
       }
-      resolvedOpenworkWorkspaceId = String(discovered.id).trim();
-      resolvedOpenworkWorkspaceName = openworkWorkspaceDisplayName(discovered);
+      resolvedOfflineGptWorkspaceId = String(discovered.id).trim();
+      resolvedOfflineGptWorkspaceName = offlinegptWorkspaceDisplayName(discovered);
     }
-    const id = remoteType === "openwork"
-      ? openworkRemoteWorkspaceId(openworkHostUrl ?? baseUrl, resolvedOpenworkWorkspaceId)
+    const id = remoteType === "offlinegpt"
+      ? offlinegptRemoteWorkspaceId(offlinegptHostUrl ?? baseUrl, resolvedOfflineGptWorkspaceId)
       : remoteWorkspaceId(baseUrl, directory);
     const workspace = normalizeWorkspaceEntry({
       id,
-      name: String(input.displayName ?? resolvedOpenworkWorkspaceName ?? "Remote workspace"),
+      name: String(input.displayName ?? resolvedOfflineGptWorkspaceName ?? "Remote workspace"),
       displayName: input.displayName ?? null,
       path: directory ?? "",
       preset: "remote",
       workspaceType: "remote",
       remoteType,
-      baseUrl: remoteType === "openwork" ? (openworkHostUrl ?? baseUrl) : baseUrl,
+      baseUrl: remoteType === "offlinegpt" ? (offlinegptHostUrl ?? baseUrl) : baseUrl,
       directory,
-      openworkHostUrl,
-      openworkToken: input.openworkToken ?? null,
-      openworkClientToken: input.openworkClientToken ?? null,
-      openworkHostToken: input.openworkHostToken ?? null,
-      openworkWorkspaceId: resolvedOpenworkWorkspaceId,
-      openworkWorkspaceName: resolvedOpenworkWorkspaceName,
+      offlinegptHostUrl,
+      offlinegptToken: input.offlinegptToken ?? null,
+      offlinegptClientToken: input.offlinegptClientToken ?? null,
+      offlinegptHostToken: input.offlinegptHostToken ?? null,
+      offlinegptWorkspaceId: resolvedOfflineGptWorkspaceId,
+      offlinegptWorkspaceName: resolvedOfflineGptWorkspaceName,
       sandboxBackend: input.sandboxBackend ?? null,
       sandboxRunId: input.sandboxRunId ?? null,
       sandboxContainerName: input.sandboxContainerName ?? null,
@@ -1096,50 +1096,50 @@ export function createWorkspaceStore({
       if (!existing) return state;
 
       let nextWorkspace = { ...existing, ...patch };
-      const nextRemoteType = nextWorkspace.remoteType === "opencode" ? "opencode" : "openwork";
-      if (nextRemoteType === "openwork") {
-        const rawHostUrl = typeof nextWorkspace.openworkHostUrl === "string" && nextWorkspace.openworkHostUrl.trim()
-          ? nextWorkspace.openworkHostUrl.trim()
+      const nextRemoteType = nextWorkspace.remoteType === "opencode" ? "opencode" : "offlinegpt";
+      if (nextRemoteType === "offlinegpt") {
+        const rawHostUrl = typeof nextWorkspace.offlinegptHostUrl === "string" && nextWorkspace.offlinegptHostUrl.trim()
+          ? nextWorkspace.offlinegptHostUrl.trim()
           : null;
         const nextBaseUrl = String(nextWorkspace.baseUrl ?? "").trim();
-        const hostUrl = stripOpenworkWorkspaceMount(rawHostUrl ?? nextBaseUrl);
+        const hostUrl = stripOfflineGptWorkspaceMount(rawHostUrl ?? nextBaseUrl);
         const directory = typeof nextWorkspace.directory === "string" && nextWorkspace.directory.trim()
           ? nextWorkspace.directory.trim()
           : null;
-        const parsedWorkspaceId = parseOpenworkWorkspaceIdFromUrl(rawHostUrl) || parseOpenworkWorkspaceIdFromUrl(nextBaseUrl);
+        const parsedWorkspaceId = parseOfflineGptWorkspaceIdFromUrl(rawHostUrl) || parseOfflineGptWorkspaceIdFromUrl(nextBaseUrl);
         let remoteWorkspaceId = parsedWorkspaceId || (
-          typeof nextWorkspace.openworkWorkspaceId === "string" && nextWorkspace.openworkWorkspaceId.trim()
-            ? nextWorkspace.openworkWorkspaceId.trim()
+          typeof nextWorkspace.offlinegptWorkspaceId === "string" && nextWorkspace.offlinegptWorkspaceId.trim()
+            ? nextWorkspace.offlinegptWorkspaceId.trim()
             : null
         );
-        let remoteWorkspaceName = nextWorkspace.openworkWorkspaceName ?? null;
+        let remoteWorkspaceName = nextWorkspace.offlinegptWorkspaceName ?? null;
         if (!remoteWorkspaceId) {
-          const discovered = await discoverOpenworkWorkspace({
+          const discovered = await discoverOfflineGptWorkspace({
             hostUrl: hostUrl ?? nextBaseUrl,
-            token: nextWorkspace.openworkToken,
-            hostToken: nextWorkspace.openworkHostToken,
+            token: nextWorkspace.offlinegptToken,
+            hostToken: nextWorkspace.offlinegptHostToken,
             directory,
           });
           if (!discovered?.id) {
             throw new Error(
               directory
-                ? `OpenWork server has no workspace matching ${directory}.`
-                : "OpenWork server returned no workspaces.",
+                ? `OfflineGPT server has no workspace matching ${directory}.`
+                : "OfflineGPT server returned no workspaces.",
             );
           }
           remoteWorkspaceId = String(discovered.id).trim();
-          remoteWorkspaceName = openworkWorkspaceDisplayName(discovered);
+          remoteWorkspaceName = offlinegptWorkspaceDisplayName(discovered);
         }
-        const nextId = openworkRemoteWorkspaceId(hostUrl ?? nextBaseUrl, remoteWorkspaceId);
+        const nextId = offlinegptRemoteWorkspaceId(hostUrl ?? nextBaseUrl, remoteWorkspaceId);
         nextWorkspace = normalizeWorkspaceEntry({
           ...nextWorkspace,
           id: nextId,
           baseUrl: hostUrl ?? nextBaseUrl,
-          openworkHostUrl: hostUrl,
+          offlinegptHostUrl: hostUrl,
           directory,
-          remoteType: "openwork",
-          openworkWorkspaceId: remoteWorkspaceId,
-          openworkWorkspaceName: remoteWorkspaceName,
+          remoteType: "offlinegpt",
+          offlinegptWorkspaceId: remoteWorkspaceId,
+          offlinegptWorkspaceName: remoteWorkspaceName,
         });
         if (nextId !== workspaceId) {
           if (state.selectedId === workspaceId) state.selectedId = nextId;
@@ -1188,14 +1188,14 @@ export function createWorkspaceStore({
     if (!workspacePath || !authorizedRoot) {
       throw new Error("workspacePath and folderPath are required");
     }
-    const config = await readWorkspaceOpenworkConfig(workspacePath);
+    const config = await readWorkspaceOfflineGptConfig(workspacePath);
     if (!Array.isArray(config.authorizedRoots)) {
       config.authorizedRoots = [];
     }
     if (!config.authorizedRoots.includes(authorizedRoot)) {
       config.authorizedRoots.push(authorizedRoot);
     }
-    return writeWorkspaceOpenworkConfig(workspacePath, config);
+    return writeWorkspaceOfflineGptConfig(workspacePath, config);
   }
 
   async function exportConfig(input = {}) {
@@ -1241,7 +1241,7 @@ export function createWorkspaceStore({
     });
   }
 
-  async function resetOpenworkState() {
+  async function resetOfflineGptState() {
     await rm(workspaceStatePath(), { force: true });
     await clearDesktopBootstrapFiles();
     return undefined;
@@ -1254,7 +1254,7 @@ export function createWorkspaceStore({
     createWorkspace,
     clearDesktopBootstrapConfig,
     debugDesktopBootstrapConfig,
-    defaultWorkspaceOpenworkConfig,
+    defaultWorkspaceOfflineGptConfig,
     exportConfig,
     forgetWorkspace,
     getDesktopBootstrapConfig,
@@ -1263,15 +1263,15 @@ export function createWorkspaceStore({
     listRemoteWorkspaceUrlPrefixes,
     migrateLegacyElectronWorkspaceStateIfNeeded,
     readDesktopBootstrapConfigSync,
-    readWorkspaceOpenworkConfig,
+    readWorkspaceOfflineGptConfig,
     readWorkspaceState,
-    resetOpenworkState,
+    resetOfflineGptState,
     setDesktopBootstrapConfig,
     setRuntimeActiveWorkspace,
     setSelectedWorkspace,
     updateRemoteWorkspace,
     updateWorkspaceDisplayName,
-    writeWorkspaceOpenworkConfig,
+    writeWorkspaceOfflineGptConfig,
     writeWorkspaceState,
   };
 }

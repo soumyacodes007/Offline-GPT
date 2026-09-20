@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import type { DynamicToolUIPart } from "ai"
-import type { ConnectionActionPayload } from "@openwork/types/connection-action-app"
+import type { ConnectionActionPayload } from "@offlinegpt/types/connection-action-app"
 import { ArrowUpRight, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -15,7 +15,7 @@ const ACTION_OWNER = {
   organization_admin: "Your organization admin",
   provider_admin: "The provider admin",
   network_admin: "Your network admin",
-  openwork: "OpenWork support",
+  offlinegpt: "OfflineGPT support",
 }
 
 /** Uses the desktop's signed-in account; credentials never enter an MCP App. */

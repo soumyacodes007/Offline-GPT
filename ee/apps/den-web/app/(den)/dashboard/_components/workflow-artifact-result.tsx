@@ -1,6 +1,6 @@
 "use client";
 
-import type { ArtifactFreshness, WorkflowArtifactSnapshot } from "@openwork/types/workflows";
+import type { ArtifactFreshness, WorkflowArtifactSnapshot } from "@offlinegpt/types/workflows";
 import { DenChip } from "../../_components/ui/chip";
 import { DenNotice } from "../../_components/ui/notice";
 import { WorkflowFriendlyValue } from "./workflow-friendly-value";
@@ -80,7 +80,7 @@ export function WorkflowArtifactResult(props: {
           <div className="mt-3 space-y-4">
             <div className="flex flex-wrap gap-2">
               <DenChip tone="neutral" mono>Workflow version {snapshot.configObjectVersionId.slice(0, 8)}</DenChip>
-              <DenChip tone="neutral">{snapshot.source === "scheduled" ? "Scheduled · OpenWork Cloud" : "Manual"}</DenChip>
+              <DenChip tone="neutral">{snapshot.source === "scheduled" ? "Scheduled · OfflineGPT Cloud" : "Manual"}</DenChip>
             </div>
             {snapshot.markdown ? <WorkflowMarkdownPreview markdown={snapshot.markdown} /> : <p className="text-[13px] text-gray-400">No rendered preview is retained.</p>}
             <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-xl bg-gray-950 p-4 font-mono text-[12px] text-gray-100">{JSON.stringify(snapshot.value, null, 2)}</pre>

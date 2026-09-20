@@ -3,7 +3,7 @@ import type {
   ExternalMcpAuthType,
   ExternalMcpConnectionKind,
   ExternalMcpCredentialMode,
-} from "@openwork-ee/den-db/schema"
+} from "@offlinegpt-ee/den-db/schema"
 
 export type ExternalMcpOAuthStateIdentitySource = {
   id: string
@@ -52,7 +52,7 @@ export function createExternalMcpIdentityBinding(
   secret: string,
 ): string {
   return createHmac("sha256", secret)
-    .update("openwork:external-mcp-identity:v2\0")
+    .update("offlinegpt:external-mcp-identity:v2\0")
     .update(JSON.stringify(connectionIdentityFields(source)))
     .digest("base64url")
 }

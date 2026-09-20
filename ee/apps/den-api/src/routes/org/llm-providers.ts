@@ -1,6 +1,6 @@
 import { declarativeDeleteSchema, declarativeResponses, externalKeyParamsSchema, isDuplicateEntry, type ResourceActionContext, type ResourceOrganizationContext } from "./declarative.js"
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from "@openwork-ee/den-db/drizzle"
-import { ManagedModelsPolicyError } from "@openwork/types/den/managed-models-policy"
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "@offlinegpt-ee/den-db/drizzle"
+import { ManagedModelsPolicyError } from "@offlinegpt/types/den/managed-models-policy"
 import {
   AuthUserTable,
   InvitationTable,
@@ -10,8 +10,8 @@ import {
   LlmProviderTable,
   MemberTable,
   TeamTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { Hono } from "hono"
 import { describeRoute, type DescribeRouteOptions } from "hono-openapi"
 import { z } from "zod"
@@ -612,7 +612,7 @@ async function loadLlmProviders(input: {
   const providers = await db
     .select()
     .from(LlmProviderTable)
-    .where(and(providerWhere, managedModelsAllowed ? undefined : sql`${LlmProviderTable.source} <> 'openwork'`))
+    .where(and(providerWhere, managedModelsAllowed ? undefined : sql`${LlmProviderTable.source} <> 'offlinegpt'`))
     .orderBy(desc(LlmProviderTable.updatedAt))
 
   if (providers.length === 0) {
@@ -1313,7 +1313,7 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
       const memberTeams = c.get("memberTeams") ?? []
 
       // Desktop entitlement is based on this list. If org inference is enabled
-      // but this member's OpenWork provider/key was deleted, re-provision before
+      // but this member's OfflineGPT provider/key was deleted, re-provision before
       // listing so Subscribe CTAs don't lie about an already-enabled org.
       if (query.scope === "usable") {
         try {
@@ -1322,7 +1322,7 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
             memberId: payload.currentMember.id,
           })
         } catch {
-          // Keep listing other providers even if OpenWork re-provision fails.
+          // Keep listing other providers even if OfflineGPT re-provision fails.
         }
       }
 
@@ -1399,7 +1399,7 @@ export function registerOrgLlmProviderRoutes<T extends { Variables: OrgRouteVari
         }, 403)
       }
 
-      if (provider.source === "openwork") {
+      if (provider.source === "offlinegpt") {
         try {
           await assertOrganizationManagedModelsAllowed(payload.organization.id)
         } catch (error) {

@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Eye, Layers, Puzzle, Settings, ShieldCheck, Sparkles, Users, X } from "lucide-react";
-import type { DesktopPolicyKey } from "@openwork/types/den/desktop-policies";
+import type { DesktopPolicyKey } from "@offlinegpt/types/den/desktop-policies";
 import { DenButton } from "../../_components/ui/button";
 import { DenNotice } from "../../_components/ui/notice";
 import { getMembersRoute, getOrgAccessFlags } from "../../_lib/den-org";
@@ -123,7 +123,7 @@ function TeamPermissionsEditor({ teamId, teamName, policy, canManage, onSaved }:
   </section>;
 
   return <section aria-label="Team permissions" className="mb-8 space-y-5">
-    <div><div className="flex items-center gap-2"><ShieldCheck aria-hidden="true" className="h-5 w-5 text-gray-500" /><h2 ref={editorHeading} tabIndex={-1} className="text-lg font-semibold tracking-tight text-gray-950">What this team can do</h2></div><p className="mt-1 text-sm text-gray-500">Choose what members of {teamName} can do in OpenWork.</p></div>
+    <div><div className="flex items-center gap-2"><ShieldCheck aria-hidden="true" className="h-5 w-5 text-gray-500" /><h2 ref={editorHeading} tabIndex={-1} className="text-lg font-semibold tracking-tight text-gray-950">What this team can do</h2></div><p className="mt-1 text-sm text-gray-500">Choose what members of {teamName} can do in OfflineGPT.</p></div>
     {enabling ? <DenNotice tone="warning" message="These permissions are currently disabled. Review and save to enable them for this team." /> : null}
     {!canManage ? <DenNotice tone="info" message="Only an organization owner or super-admin can change these permissions." /> : null}
     <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-medium text-gray-900">Work permissions</h3><DenButton variant="ghost" size="sm" icon={Eye} aria-expanded={preview} aria-controls={previewId} onClick={() => setPreview(!preview)}>Preview member experience</DenButton></div>

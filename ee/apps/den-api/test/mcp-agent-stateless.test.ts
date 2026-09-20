@@ -32,7 +32,7 @@ test("serves the 2026 stateless wire with fresh per-request servers", async () =
   const exchanges: ObservedExchange[] = []
   const handler = createAgentMcpHttpHandler(() => {
     const instance = ++serverInstances
-    const server = new McpServer({ name: "openwork-agent-stateless-test", version: "1.0.0" })
+    const server = new McpServer({ name: "offlinegpt-agent-stateless-test", version: "1.0.0" })
     server.registerTool("stateless_instance", {
       description: "Return the per-request server instance ordinal.",
       inputSchema: z.object({}),
@@ -41,7 +41,7 @@ test("serves the 2026 stateless wire with fresh per-request servers", async () =
     }))
     return server
   })
-  const transport = new StreamableHTTPClientTransport(new URL("https://openwork.example.test/mcp/agent"), {
+  const transport = new StreamableHTTPClientTransport(new URL("https://offlinegpt.example.test/mcp/agent"), {
     fetch: async (url, init) => {
       const request = new Request(url, init)
       const body = await request.clone().json() as Record<string, unknown>
@@ -95,11 +95,11 @@ test("serves the 2026 stateless wire with fresh per-request servers", async () =
 
 test("rejects a modern protocol header/body mismatch instead of normalizing it", async () => {
   const handler = createAgentMcpHttpHandler(() => new McpServer({
-    name: "openwork-agent-stateless-test",
+    name: "offlinegpt-agent-stateless-test",
     version: "1.0.0",
   }))
   try {
-    const response = await handler.fetch(new Request("https://openwork.example.test/mcp/agent", {
+    const response = await handler.fetch(new Request("https://offlinegpt.example.test/mcp/agent", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -132,13 +132,13 @@ test("rejects a modern protocol header/body mismatch instead of normalizing it",
 test("keeps the 2025 stateless fallback for existing clients", async () => {
   const methods: string[] = []
   const handler = createAgentMcpHttpHandler(() => {
-    const server = new McpServer({ name: "openwork-agent-legacy-test", version: "1.0.0" })
+    const server = new McpServer({ name: "offlinegpt-agent-legacy-test", version: "1.0.0" })
     server.registerTool("legacy_compatible", { inputSchema: z.object({}) }, async () => ({
       content: [{ type: "text", text: "compatible" }],
     }))
     return server
   })
-  const transport = new LegacyStreamableHTTPClientTransport(new URL("https://openwork.example.test/mcp/agent"), {
+  const transport = new LegacyStreamableHTTPClientTransport(new URL("https://offlinegpt.example.test/mcp/agent"), {
     fetch: async (url, init) => {
       const request = new Request(url, init)
       const body = await request.clone().json() as { method?: string }
@@ -166,10 +166,10 @@ test("keeps the 2025 stateless fallback for existing clients", async () => {
 test("keeps a prepared request-local server bound through legacy request cloning", async () => {
   const handlers = createScopedAgentMcpHttpHandlers()
   let serverInstances = 0
-  const transport = new LegacyStreamableHTTPClientTransport(new URL("https://openwork.example.test/mcp/agent"), {
+  const transport = new LegacyStreamableHTTPClientTransport(new URL("https://offlinegpt.example.test/mcp/agent"), {
     fetch: async (url, init) => {
       const instance = ++serverInstances
-      const server = new McpServer({ name: "openwork-agent-legacy-binding-test", version: "1.0.0" })
+      const server = new McpServer({ name: "offlinegpt-agent-legacy-binding-test", version: "1.0.0" })
       server.registerTool("legacy_request_instance", { inputSchema: z.object({}) }, async () => ({
         content: [{ type: "text", text: String(instance) }],
       }))
@@ -191,10 +191,10 @@ test("keeps a prepared request-local server bound through legacy request cloning
 
 test("delivers modern list changes through subscriptions/listen", async () => {
   const handler = createAgentMcpHttpHandler(() => new McpServer(
-    { name: "openwork-agent-subscription-test", version: "1.0.0" },
+    { name: "offlinegpt-agent-subscription-test", version: "1.0.0" },
     { capabilities: { tools: { listChanged: true } } },
   ))
-  const transport = new StreamableHTTPClientTransport(new URL("https://openwork.example.test/mcp/agent"), {
+  const transport = new StreamableHTTPClientTransport(new URL("https://offlinegpt.example.test/mcp/agent"), {
     fetch: async (url, init) => handler.fetch(new Request(url, init)),
   })
   const client = new Client(
@@ -224,7 +224,7 @@ test("isolates list-change subscriptions by authenticated catalog audience", asy
   const handlers = createScopedAgentMcpHttpHandlers()
   const requestServer = (toolName: string) => {
     const server = new McpServer(
-      { name: "openwork-agent-scoped-subscription-test", version: "1.0.0" },
+      { name: "offlinegpt-agent-scoped-subscription-test", version: "1.0.0" },
       { capabilities: { tools: { listChanged: true }, resources: { listChanged: true } } },
     )
     server.registerTool(toolName, { inputSchema: z.object({}) }, async () => ({
@@ -233,7 +233,7 @@ test("isolates list-change subscriptions by authenticated catalog audience", asy
     return server
   }
   const clientFor = (scopeKey: string, toolName: string) => {
-    const transport = new StreamableHTTPClientTransport(new URL("https://openwork.example.test/mcp/agent"), {
+    const transport = new StreamableHTTPClientTransport(new URL("https://offlinegpt.example.test/mcp/agent"), {
       fetch: async (url, init) => handlers.fetch(scopeKey, new Request(url, init), requestServer(toolName)),
     })
     const client = new Client(

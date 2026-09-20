@@ -42,7 +42,7 @@ function setEnv(name: string, value: string): void {
 }
 
 async function createWorkspaceRoot(label: string) {
-  const root = await mkdtemp(join(tmpdir(), `openwork-instance-eviction-${label}-`));
+  const root = await mkdtemp(join(tmpdir(), `offlinegpt-instance-eviction-${label}-`));
   await mkdir(join(root, ".opencode"), { recursive: true });
   roots.push(root);
   return root;
@@ -107,7 +107,7 @@ function syntheticManagedHandle(url: string): ManagedOpencodeServer {
   };
 }
 
-async function startPooledOpenworkServer(input: { activeRoot: string; idleRoot: string; engineUrl: string }) {
+async function startPooledOfflineGptServer(input: { activeRoot: string; idleRoot: string; engineUrl: string }) {
   const config: ServerConfig = {
     host: "127.0.0.1",
     port: 0,
@@ -197,22 +197,22 @@ const disposesFor = (requests: EngineRequest[], root: string) =>
 
 describe("engine instance eviction", () => {
   test("an idle background instance is evicted after the TTL and re-attached on return; active and busy instances stay", async () => {
-    setEnv("OPENWORK_ENGINE_INSTANCE_IDLE_TTL_MS", "250");
-    setEnv("OPENWORK_MCP_SYNC_RETRY_DELAY_MS", "10");
+    setEnv("OFFLINEGPT_ENGINE_INSTANCE_IDLE_TTL_MS", "250");
+    setEnv("OFFLINEGPT_MCP_SYNC_RETRY_DELAY_MS", "10");
     const activeRoot = await createWorkspaceRoot("active");
     const idleRoot = await createWorkspaceRoot("idle");
-    setEnv("OPENWORK_RUNTIME_DB", join(activeRoot, "runtime.sqlite"));
+    setEnv("OFFLINEGPT_RUNTIME_DB", join(activeRoot, "runtime.sqlite"));
     const engine = startMockEngine();
-    const openwork = await startPooledOpenworkServer({ activeRoot, idleRoot, engineUrl: engine.url });
-    const reaper = engineInstanceReaperForConfig(openwork.config);
+    const offlinegpt = await startPooledOfflineGptServer({ activeRoot, idleRoot, engineUrl: engine.url });
+    const reaper = engineInstanceReaperForConfig(offlinegpt.config);
     expect(reaper).not.toBeNull();
     if (!reaper) throw new Error("engine instance reaper was not registered");
 
     // A runtime-DB MCP on the background workspace: the dynamic push is the
     // state a fresh instance cannot recover from disk.
-    const added = await fetch(`${openwork.base}/workspace/ws_idle/mcp`, {
+    const added = await fetch(`${offlinegpt.base}/workspace/ws_idle/mcp`, {
       method: "POST",
-      headers: auth(openwork.token),
+      headers: auth(offlinegpt.token),
       body: JSON.stringify({
         name: "posthog",
         config: { type: "remote", url: "https://mcp.posthog.com/mcp", enabled: true, oauth: {} },
@@ -227,8 +227,8 @@ describe("engine instance eviction", () => {
 
     // Both workspaces see traffic, so both instances are tracked.
     for (const workspaceId of ["ws_active", "ws_idle"]) {
-      const proxied = await fetch(`${openwork.base}/workspace/${workspaceId}/opencode/session`, {
-        headers: auth(openwork.token),
+      const proxied = await fetch(`${offlinegpt.base}/workspace/${workspaceId}/opencode/session`, {
+        headers: auth(offlinegpt.token),
       });
       expect(proxied.status).toBe(200);
     }
@@ -254,8 +254,8 @@ describe("engine instance eviction", () => {
 
     // Returning to the evicted workspace re-attaches its runtime-DB MCPs.
     engine.requests.length = 0;
-    const returned = await fetch(`${openwork.base}/workspace/ws_idle/opencode/session`, {
-      headers: auth(openwork.token),
+    const returned = await fetch(`${offlinegpt.base}/workspace/ws_idle/opencode/session`, {
+      headers: auth(offlinegpt.token),
     });
     expect(returned.status).toBe(200);
     const restore = await waitForRequest(
@@ -276,19 +276,19 @@ describe("engine instance eviction", () => {
   }, 30_000);
 
   test("an open engine event stream keeps a stale background instance alive until the client disconnects", async () => {
-    setEnv("OPENWORK_ENGINE_INSTANCE_IDLE_TTL_MS", "250");
+    setEnv("OFFLINEGPT_ENGINE_INSTANCE_IDLE_TTL_MS", "250");
     const activeRoot = await createWorkspaceRoot("active");
     const idleRoot = await createWorkspaceRoot("watched");
-    setEnv("OPENWORK_RUNTIME_DB", join(activeRoot, "runtime.sqlite"));
+    setEnv("OFFLINEGPT_RUNTIME_DB", join(activeRoot, "runtime.sqlite"));
     const engine = startMockEngine();
-    const openwork = await startPooledOpenworkServer({ activeRoot, idleRoot, engineUrl: engine.url });
-    const reaper = engineInstanceReaperForConfig(openwork.config);
+    const offlinegpt = await startPooledOfflineGptServer({ activeRoot, idleRoot, engineUrl: engine.url });
+    const reaper = engineInstanceReaperForConfig(offlinegpt.config);
     if (!reaper) throw new Error("engine instance reaper was not registered");
 
     // A live proxied event stream is exactly what an open tab holds.
     const streamAbort = new AbortController();
-    const streamResponse = await fetch(`${openwork.base}/workspace/ws_idle/opencode/event`, {
-      headers: auth(openwork.token),
+    const streamResponse = await fetch(`${offlinegpt.base}/workspace/ws_idle/opencode/event`, {
+      headers: auth(offlinegpt.token),
       signal: streamAbort.signal,
     });
     expect(streamResponse.ok).toBe(true);

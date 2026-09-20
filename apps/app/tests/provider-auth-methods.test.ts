@@ -22,7 +22,7 @@ function installWindow(options: {
       removeEventListener: () => undefined,
       dispatchEvent: () => true,
       location: { origin: options.origin },
-      __OPENWORK_ELECTRON__: options.electronInfo
+      __OFFLINEGPT_ELECTRON__: options.electronInfo
         ? {
             invokeDesktop: async () => ({
               running: true,
@@ -80,11 +80,11 @@ function createTestStore(workerType: "local" | "remote") {
     providerBaseUrl: () => "https://engine.example",
     selectedWorkspaceRoot: () => workspace.path,
     runtimeWorkspaceId: () => workspace.id,
-    openworkServer: {
+    offlinegptServer: {
       getSnapshot: () => ({
-        openworkServerStatus: "disconnected",
-        openworkServerClient: null,
-        openworkServerCapabilities: null,
+        offlinegptServerStatus: "disconnected",
+        offlinegptServerClient: null,
+        offlinegptServerCapabilities: null,
       }),
     },
     setProviders: () => undefined,

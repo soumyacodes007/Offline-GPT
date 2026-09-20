@@ -1,6 +1,6 @@
 # den-db
 
-`@openwork-ee/den-db` owns the Den database schema and migration history.
+`@offlinegpt-ee/den-db` owns the Den database schema and migration history.
 
 ## Canonical workflow
 

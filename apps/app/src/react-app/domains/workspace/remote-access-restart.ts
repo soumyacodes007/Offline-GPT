@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
 
-import { openworkServerRestart, type OpenworkServerInfo } from "../../../app/lib/desktop";
+import { offlinegptServerRestart, type OfflineGptServerInfo } from "../../../app/lib/desktop";
 import {
-  readOpenworkServerSettings,
-  writeOpenworkServerSettings,
-} from "../../../app/lib/openwork-server";
+  readOfflineGptServerSettings,
+  writeOfflineGptServerSettings,
+} from "../../../app/lib/offlinegpt-server";
 import { t } from "../../../i18n";
 
 export type RemoteAccessRestartPhase =
@@ -15,7 +15,7 @@ export type RemoteAccessRestartPhase =
 
 type UseRemoteAccessRestartOptions = {
   isEnabled: () => boolean;
-  onHostInfo: (info: OpenworkServerInfo) => void;
+  onHostInfo: (info: OfflineGptServerInfo) => void;
   onSettingsChanged: () => void;
 };
 
@@ -27,17 +27,17 @@ export function useRemoteAccessRestart(options: UseRemoteAccessRestartOptions) {
     async (enabled: boolean) => {
       if (phase === "restarting" || phase === "reconnecting") return;
 
-      const previous = readOpenworkServerSettings();
+      const previous = readOfflineGptServerSettings();
       const next = { ...previous, remoteAccessEnabled: enabled };
 
       setPhase("restarting");
       setError(null);
-      writeOpenworkServerSettings(next);
+      writeOfflineGptServerSettings(next);
       options.onSettingsChanged();
 
       try {
-        const info = await openworkServerRestart({ remoteAccessEnabled: enabled }) as OpenworkServerInfo;
-        writeOpenworkServerSettings({
+        const info = await offlinegptServerRestart({ remoteAccessEnabled: enabled }) as OfflineGptServerInfo;
+        writeOfflineGptServerSettings({
           urlOverride: info.baseUrl?.trim() || undefined,
           token:
             info.ownerToken?.trim() ||
@@ -51,7 +51,7 @@ export function useRemoteAccessRestart(options: UseRemoteAccessRestartOptions) {
         options.onSettingsChanged();
         setPhase("idle");
       } catch (caught) {
-        writeOpenworkServerSettings(previous);
+        writeOfflineGptServerSettings(previous);
         options.onSettingsChanged();
         setError(caught instanceof Error ? caught.message : t("app.error_remote_access"));
         setPhase("failed");

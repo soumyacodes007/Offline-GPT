@@ -61,7 +61,7 @@ export function AnalyticsScreen() {
   return (
     <div className={analyticsPageClass}>
       <AnalyticsPageHeader orgSlug={activeOrg?.slug} active="adoption"
-        title="Usage & adoption" description="Understand how your team works in OpenWork, across models and providers."
+        title="Usage & adoption" description="Understand how your team works in OfflineGPT, across models and providers."
         caption="Enterprise analytics · Activity metadata only"
         action={!locked ? <DenButton variant="secondary" disabled={isFetching} onClick={() => void refetch()}><RefreshCw className={`mr-2 h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} aria-hidden="true" />Refresh analytics</DenButton> : null} />
 
@@ -81,7 +81,7 @@ export function AnalyticsScreen() {
       <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<Users className="h-5 w-5 text-[#6F3DFF]" />}
-          title="OpenWork users"
+          title="OfflineGPT users"
           value={isLoading ? "…" : `${data?.members ?? 0}`}
           sub={projectScoped ? "Org total, not project-scoped" : `${data?.pendingInvites ?? 0} pending invites`}
           tone="violet"
@@ -190,7 +190,7 @@ export function AnalyticsScreen() {
       {/* Privacy note */}
       <p className="border-t border-[#e3e7ee] pt-4 text-xs leading-5 text-[#637291]">
         Telemetry never includes prompt contents, code, file contents, diffs, secrets, or terminal output.
-        Usage data appears here once members sign in to the OpenWork app and start running tasks.
+        Usage data appears here once members sign in to the OfflineGPT app and start running tasks.
       </p>
       </>
       )}

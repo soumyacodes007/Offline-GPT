@@ -12,27 +12,27 @@ import {
 test("any desktop build can launch with an isolated blank-slate profile", async () => {
   const normalEnv = {
     HOME: "/Users/installed",
-    OPENWORK_DESKTOP_BOOTSTRAP_PATH: "/Users/installed/.config/openwork/desktop-bootstrap.json",
+    OFFLINEGPT_DESKTOP_BOOTSTRAP_PATH: "/Users/installed/.config/offlinegpt/desktop-bootstrap.json",
   };
   const originalNormalEnv = { ...normalEnv };
   const normalProfile = prepareBlankSlateProfile({ argv: [], env: normalEnv });
-  const normal = resolveBlankSlateLaunch({ appName: "OpenWork Enterprise", profile: normalProfile });
-  assert.deepEqual(normal, { enabled: false, appName: "OpenWork Enterprise", userDataPath: null });
+  const normal = resolveBlankSlateLaunch({ appName: "OfflineGPT Enterprise", profile: normalProfile });
+  assert.deepEqual(normal, { enabled: false, appName: "OfflineGPT Enterprise", userDataPath: null });
   assert.deepEqual(normalEnv, originalNormalEnv);
 
-  const firstEnv = { OPENWORK_DESKTOP_DISTRIBUTION: "enterprise" };
+  const firstEnv = { OFFLINEGPT_DESKTOP_DISTRIBUTION: "enterprise" };
   /** @type {NodeJS.ProcessEnv} */
   const secondEnv = {};
   const firstProfile = prepareBlankSlateProfile({ argv: ["--blank-slate"], env: firstEnv });
   const secondProfile = prepareBlankSlateProfile({ argv: ["--blank-slate"], env: secondEnv });
-  const first = resolveBlankSlateLaunch({ appName: "OpenWork Enterprise", profile: firstProfile });
-  const second = resolveBlankSlateLaunch({ appName: "OpenWork Enterprise", profile: secondProfile });
+  const first = resolveBlankSlateLaunch({ appName: "OfflineGPT Enterprise", profile: firstProfile });
+  const second = resolveBlankSlateLaunch({ appName: "OfflineGPT Enterprise", profile: secondProfile });
 
   try {
     assert.equal(first.enabled, true);
-    assert.equal(first.appName, "OpenWork Enterprise - Test profile");
+    assert.equal(first.appName, "OfflineGPT Enterprise - Test profile");
     assert.notEqual(first.rootPath, second.rootPath);
-    assert.ok(!first.userDataPath.includes("com.differentai.openwork"));
+    assert.ok(!first.userDataPath.includes("com.differentai.offlinegpt"));
 
     for (const key of BLANK_SLATE_PATH_ENV_KEYS) {
       const value = firstEnv[key];
@@ -44,17 +44,17 @@ test("any desktop build can launch with an isolated blank-slate profile", async 
       );
     }
     assert.equal(
-      firstEnv.OPENWORK_DESKTOP_BOOTSTRAP_PATH,
-      first.environment.OPENWORK_DESKTOP_BOOTSTRAP_PATH,
+      firstEnv.OFFLINEGPT_DESKTOP_BOOTSTRAP_PATH,
+      first.environment.OFFLINEGPT_DESKTOP_BOOTSTRAP_PATH,
     );
-    assert.equal(firstEnv.OPENWORK_DESKTOP_DISTRIBUTION, "enterprise");
-    assert.equal("OPENWORK_DEV_MODE" in firstEnv, false);
-    assert.ok(first.appName.startsWith("OpenWork Enterprise"));
+    assert.equal(firstEnv.OFFLINEGPT_DESKTOP_DISTRIBUTION, "enterprise");
+    assert.equal("OFFLINEGPT_DEV_MODE" in firstEnv, false);
+    assert.ok(first.appName.startsWith("OfflineGPT Enterprise"));
     assert.equal(normal.userDataPath, null);
-    assert.equal(normal.appName, "OpenWork Enterprise");
+    assert.equal(normal.appName, "OfflineGPT Enterprise");
     assert.equal(
-      normalEnv.OPENWORK_DESKTOP_BOOTSTRAP_PATH,
-      originalNormalEnv.OPENWORK_DESKTOP_BOOTSTRAP_PATH,
+      normalEnv.OFFLINEGPT_DESKTOP_BOOTSTRAP_PATH,
+      originalNormalEnv.OFFLINEGPT_DESKTOP_BOOTSTRAP_PATH,
     );
   } finally {
     await Promise.all([

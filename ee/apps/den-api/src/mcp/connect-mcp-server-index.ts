@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/server"
 import type { ExternalMcpConnectionRow } from "../capability-sources/external-mcp-connections.js"
 
-export const CONNECT_MCP_SERVER_INDEX_URI = "openwork://connect/mcp-servers/index.json"
-export const CONNECT_MCP_SERVER_INDEX_SCHEMA_VERSION = "openwork.connect/mcp-servers/1"
-export const CONNECT_MCP_APP_HOST_CAPABILITY_HEADER = "x-openwork-mcp-client-capabilities"
+export const CONNECT_MCP_SERVER_INDEX_URI = "offlinegpt://connect/mcp-servers/index.json"
+export const CONNECT_MCP_SERVER_INDEX_SCHEMA_VERSION = "offlinegpt.connect/mcp-servers/1"
+export const CONNECT_MCP_APP_HOST_CAPABILITY_HEADER = "x-offlinegpt-mcp-client-capabilities"
 export const CONNECT_MCP_APP_HOST_CAPABILITY = "mcp-app-host-v1"
 
 export function supportsConnectMcpAppHost(value: string | undefined): boolean {
@@ -64,9 +64,9 @@ export function registerConnectMcpServerIndex(input: {
   connections: ExternalMcpConnectionRow[]
   publicOrigin: string
 }) {
-  input.server.registerResource("openwork-connect-mcp-servers", CONNECT_MCP_SERVER_INDEX_URI, {
-    title: "OpenWork Connect MCP servers",
-    description: "Member-authorized MCP servers available through OpenWork Connect.",
+  input.server.registerResource("offlinegpt-connect-mcp-servers", CONNECT_MCP_SERVER_INDEX_URI, {
+    title: "OfflineGPT Connect MCP servers",
+    description: "Member-authorized MCP servers available through OfflineGPT Connect.",
     mimeType: "application/json",
   }, async () => ({
     contents: [{

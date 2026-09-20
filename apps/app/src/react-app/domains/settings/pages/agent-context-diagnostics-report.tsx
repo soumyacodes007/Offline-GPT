@@ -10,12 +10,12 @@ import type {
   AgentContextDiagnosticsReport,
   AgentContextOrganizationConnectionSummary,
   AgentContextToolPermission,
-} from "@openwork/types/agent-context-diagnostics";
+} from "@offlinegpt/types/agent-context-diagnostics";
 
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { resolveOpenWorkConnectStateSummary } from "@/react-app/domains/connections/openwork-connect-status";
+import { resolveOfflineGPTConnectStateSummary } from "@/react-app/domains/connections/offlinegpt-connect-status";
 import { SettingsInset, SettingsNotice, SettingsSection } from "../settings-section";
 
 const EXPECTED_CLOUD_TOOL_IDS = ["search_capabilities", "execute_capability"];
@@ -36,14 +36,14 @@ const EVIDENCE_LABEL_KEYS: Record<AgentContextDiagnosticEvidenceKind, string> = 
 };
 
 const OWNER_LABEL_KEYS: Record<AgentContextDiagnosticOwner, string> = {
-  "openwork-client": "connect.diagnostics_owner_openwork_client",
-  "openwork-server": "connect.diagnostics_owner_openwork_server",
+  "offlinegpt-client": "connect.diagnostics_owner_offlinegpt_client",
+  "offlinegpt-server": "connect.diagnostics_owner_offlinegpt_server",
   "opencode-engine": "connect.diagnostics_owner_opencode_engine",
   "network-admin": "connect.diagnostics_owner_network_admin",
   "organization-admin": "connect.diagnostics_owner_organization_admin",
   member: "connect.diagnostics_owner_member",
   "member-and-organization-admin": "connect.diagnostics_owner_member_and_organization_admin",
-  "openwork-support": "connect.diagnostics_owner_openwork_support",
+  "offlinegpt-support": "connect.diagnostics_owner_offlinegpt_support",
 };
 
 const PERMISSION_LABEL_KEYS: Record<AgentContextToolPermission, string> = {
@@ -82,7 +82,7 @@ const BRANCH_LABEL_KEYS: Record<AgentContextDiagnosticsReport["connect"]["expect
   "extensions-only": "connect.diagnostics_branch_extensions_only",
 };
 
-const AGENT_STATE_LABEL_KEYS: Record<AgentContextDiagnosticsReport["agent"]["configuredOpenworkAgent"]["state"], string> = {
+const AGENT_STATE_LABEL_KEYS: Record<AgentContextDiagnosticsReport["agent"]["configuredOfflineGptAgent"]["state"], string> = {
   present: "connect.diagnostics_agent_state_present",
   missing: "connect.diagnostics_agent_state_missing",
   "configured-disabled": "connect.diagnostics_agent_state_configured_disabled",
@@ -322,7 +322,7 @@ function AgentEvidence(props: {
   report: AgentContextDiagnosticsReport;
   effectiveEngineObserved: boolean;
 }) {
-  const agent = props.report.agent.configuredOpenworkAgent;
+  const agent = props.report.agent.configuredOfflineGptAgent;
   return (
     <div className="space-y-3">
       <div>
@@ -476,9 +476,9 @@ function CloudCatalog(props: {
 }) {
   const observed = props.report.observedCloudToolIds;
   const cloudMcp = props.report.mcps.find(
-    (mcp) => mcp.source === "config.remote" && mcp.name === "openwork-cloud" && mcp.path === "/mcp/agent",
+    (mcp) => mcp.source === "config.remote" && mcp.name === "offlinegpt-cloud" && mcp.path === "/mcp/agent",
   ) ?? props.report.mcps.find(
-    (mcp) => mcp.name === "openwork-cloud" && mcp.path === "/mcp/agent",
+    (mcp) => mcp.name === "offlinegpt-cloud" && mcp.path === "/mcp/agent",
   );
   const observedTerminalPath = cloudMcp?.path === "/mcp/agent" ? cloudMcp.path : null;
   return (
@@ -591,9 +591,9 @@ export function AgentContextDiagnosticsReportView(props: {
   onCopy: () => void | Promise<void>;
 }) {
   const firstFailure = props.report.firstFailedCheck;
-  const agent = props.report.agent.configuredOpenworkAgent;
+  const agent = props.report.agent.configuredOfflineGptAgent;
   const effectiveEngineObserved = hasObservedEffectiveEngineConfiguration(props.report);
-  const connectStateSummary = resolveOpenWorkConnectStateSummary(
+  const connectStateSummary = resolveOfflineGPTConnectStateSummary(
     props.report.connect.stateStatus,
     props.report.connect.connectEnabled,
   );

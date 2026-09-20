@@ -17,8 +17,8 @@ import { getInferenceRoute, getMembersRoute, getOrgAccessFlags, getWebRoute } fr
 import { ORG_SCOPE_HEADER } from "../../_lib/org-scope";
 import { useDenFlow } from "../../_providers/den-flow-provider";
 import {
-  getOpenWorkWebQuantityDescription,
-  OPENWORK_WEB_QUANTITY_EXPLANATION,
+  getOfflineGPTWebQuantityDescription,
+  OFFLINEGPT_WEB_QUANTITY_EXPLANATION,
   parseStripeWebBilling,
   type StripeWebBilling,
 } from "../_lib/stripe-web-billing";
@@ -337,7 +337,7 @@ export function BillingDashboardScreen() {
   const aiConfigured = stripeBilling?.configured === true;
   const seatsConfigured = seatBilling?.configured === true;
   const webFeatureEnabled = runtimeConfigLoaded
-    && orgContext?.capabilities.openworkWeb === true;
+    && orgContext?.capabilities.offlinegptWeb === true;
   const webConfigured = webBilling?.configured === true;
 
   const aiActive = stripeBilling?.hasActiveSubscription === true;
@@ -386,8 +386,8 @@ export function BillingDashboardScreen() {
         title="Billing"
         description={webFeatureEnabled
           ? webComplimentary
-            ? "OpenWork Web is included for this organization at no charge. Team seats and built-in AI model access remain separate purchases."
-            : "OpenWork Web, team seats, and built-in AI model access are separate purchases. Your expected monthly total reflects the subscriptions shown below."
+            ? "OfflineGPT Web is included for this organization at no charge. Team seats and built-in AI model access remain separate purchases."
+            : "OfflineGPT Web, team seats, and built-in AI model access are separate purchases. Your expected monthly total reflects the subscriptions shown below."
           : "Team seats and built-in AI model access are separate purchases. Your expected monthly total reflects the subscriptions shown below."}
         colors={["#F5F3FF", "#312E81", "#635BFF", "#C4B5FD"]}
       >
@@ -453,8 +453,8 @@ export function BillingDashboardScreen() {
           title="Your subscriptions"
           description={webFeatureEnabled
             ? webComplimentary
-              ? "OpenWork Web is included without a Stripe subscription or per-member charge."
-              : "Each plan is billed separately. OpenWork Web is $50 per joined organization member each month."
+              ? "OfflineGPT Web is included without a Stripe subscription or per-member charge."
+              : "Each plan is billed separately. OfflineGPT Web is $50 per joined organization member each month."
             : "Each plan is billed separately."}
           action={
             <DenButton variant="secondary" size="sm" icon={RefreshCw} loading={stripeBusy} onClick={() => void refreshStripeBilling(false)}>
@@ -493,17 +493,17 @@ export function BillingDashboardScreen() {
             <DenLineItemRow
               className="mx-4 rounded-[18px]"
               leading={<DenMarkTile label={webBilling ? `${webBilling.quantity}x` : "—"} active={webEligible} />}
-              title="OpenWork Web"
+              title="OfflineGPT Web"
               description={
                 !webBilling
                   ? "Billing details are unavailable · browser access remains locked"
                   : webComplimentary
-                    ? `${getOpenWorkWebQuantityDescription(webBilling.quantity)} covered · complimentary access`
+                    ? `${getOfflineGPTWebQuantityDescription(webBilling.quantity)} covered · complimentary access`
                   : !webConfigured
-                    ? "This deployment does not sell OpenWork Web access"
+                    ? "This deployment does not sell OfflineGPT Web access"
                     : webSubscribed
-                      ? `${getOpenWorkWebQuantityDescription(webBilling.quantity)} × ${webPrice} · ${formatSubscriptionStatus(webStatus ?? "unknown")}`
-                      : `${getOpenWorkWebQuantityDescription(webBilling.quantity)} · not subscribed`
+                      ? `${getOfflineGPTWebQuantityDescription(webBilling.quantity)} × ${webPrice} · ${formatSubscriptionStatus(webStatus ?? "unknown")}`
+                      : `${getOfflineGPTWebQuantityDescription(webBilling.quantity)} · not subscribed`
               }
               value={webComplimentary ? formatMoneyMinor(0, webBilling?.currency ?? "usd") : webCountsTowardTotal ? webChargeLabel ?? "" : formatMoneyMinor(0, webBilling?.currency ?? "usd")}
               valueCaption={webComplimentary ? "no charge" : `per ${webBilling?.interval ?? "month"}`}
@@ -558,9 +558,9 @@ export function BillingDashboardScreen() {
       </DenCard>
 
       {webFeatureEnabled ? (
-        <DenCard className="mb-6" data-testid="billing-openwork-web-card">
+        <DenCard className="mb-6" data-testid="billing-offlinegpt-web-card">
           <DenSectionHeader
-            title="OpenWork Web"
+            title="OfflineGPT Web"
             description={webComplimentary
               ? "Browser access is included for every joined organization member at no charge."
               : "Browser access for your organization — $50 per joined member each month."}
@@ -584,7 +584,7 @@ export function BillingDashboardScreen() {
           {!webBilling ? (
             <DenNotice
               className="mt-5"
-              message="OpenWork Web billing details are unavailable. Browser access remains locked until the subscription can be confirmed."
+              message="OfflineGPT Web billing details are unavailable. Browser access remains locked until the subscription can be confirmed."
             />
           ) : (
             <>
@@ -593,33 +593,33 @@ export function BillingDashboardScreen() {
                 tone={webComplimentary ? "info" : !webConfigured ? "neutral" : webPaymentFailed ? "error" : webEligible ? "info" : "warning"}
                 message={
                   webComplimentary
-                    ? "OpenWork Web is included for this organization without a Stripe subscription or per-member charge."
+                    ? "OfflineGPT Web is included for this organization without a Stripe subscription or per-member charge."
                     : !webConfigured
-                    ? "OpenWork Web billing is not configured for this deployment."
+                    ? "OfflineGPT Web billing is not configured for this deployment."
                     : webPaymentFailed
                       ? webPaymentStatus === "payment_failed"
-                        ? "The latest payment failed, so OpenWork Web is locked. Update the payment method to restore access."
-                        : `The payment is ${formatSubscriptionStatus(webPaymentStatus ?? "failed").toLowerCase()}, so OpenWork Web is locked. Update the payment method to restore access.`
+                        ? "The latest payment failed, so OfflineGPT Web is locked. Update the payment method to restore access."
+                        : `The payment is ${formatSubscriptionStatus(webPaymentStatus ?? "failed").toLowerCase()}, so OfflineGPT Web is locked. Update the payment method to restore access.`
                       : webCancelling
                         ? `Cancellation is scheduled. Access continues through ${webRenewsOn ?? "the end of the current billing period"}; the subscription can be reactivated any time before then.`
                         : webEligible
-                          ? "OpenWork Web is active for this organization."
+                          ? "OfflineGPT Web is active for this organization."
                           : webSubscribed
-                            ? `This subscription is ${formatSubscriptionStatus(webStatus ?? "unknown").toLowerCase()}, so OpenWork Web is locked.`
-                            : "No OpenWork Web subscription is active. Purchase it from the OpenWork Web page."
+                            ? `This subscription is ${formatSubscriptionStatus(webStatus ?? "unknown").toLowerCase()}, so OfflineGPT Web is locked.`
+                            : "No OfflineGPT Web subscription is active. Purchase it from the OfflineGPT Web page."
                 }
               />
 
-              <p className="mt-5 text-[14px] leading-6 text-gray-600" data-testid="billing-openwork-web-quantity-definition">
+              <p className="mt-5 text-[14px] leading-6 text-gray-600" data-testid="billing-offlinegpt-web-quantity-definition">
                 {webComplimentary
                   ? "Every joined organization member is covered, including the owner. Pending invitations are not counted until they join."
-                  : OPENWORK_WEB_QUANTITY_EXPLANATION}
+                  : OFFLINEGPT_WEB_QUANTITY_EXPLANATION}
               </p>
-              <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4" data-testid="billing-openwork-web-price-breakdown">
+              <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4" data-testid="billing-offlinegpt-web-price-breakdown">
                 <p className="text-[22px] font-semibold tracking-[-0.03em] text-gray-950">
                   {webComplimentary
-                    ? `${getOpenWorkWebQuantityDescription(webBilling.quantity)} covered`
-                    : `${getOpenWorkWebQuantityDescription(webBilling.quantity)} × ${webPrice}`}
+                    ? `${getOfflineGPTWebQuantityDescription(webBilling.quantity)} covered`
+                    : `${getOfflineGPTWebQuantityDescription(webBilling.quantity)} × ${webPrice}`}
                 </p>
                 <p className="mt-1 text-[14px] text-gray-600">
                   {webComplimentary ? "$0.00 monthly charge" : `${webChargeLabel} per ${webBilling.interval}`}
@@ -627,14 +627,14 @@ export function BillingDashboardScreen() {
               </div>
 
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <BillingStat label="Plan" value="OpenWork Web" />
+                <BillingStat label="Plan" value="OfflineGPT Web" />
                 <BillingStat label={webComplimentary ? "Access" : "Unit price"} value={webComplimentary ? "Complimentary" : `${webPrice ?? "—"} / member / month`} />
                 <BillingStat label={webComplimentary ? "Members covered" : "Members billed"} value={String(webBilling.quantity)} />
                 <BillingStat label="Expected monthly total" value={webComplimentary ? "$0.00" : webChargeLabel ?? "—"} />
               </div>
 
               {!webComplimentary ? (
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3" data-testid="billing-openwork-web-lifecycle">
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3" data-testid="billing-offlinegpt-web-lifecycle">
                   <BillingStat label="Subscription status" value={webStatus ? formatSubscriptionStatus(webStatus) : "Not subscribed"} />
                   <BillingStat label="Payment status" value={webPaymentStatus ? formatSubscriptionStatus(webPaymentStatus) : "Not available"} />
                   <BillingStat
@@ -679,8 +679,8 @@ export function BillingDashboardScreen() {
                   />
                 ) : (
                   <DenActionRow
-                    description={`Purchase from the OpenWork Web page — ${getOpenWorkWebQuantityDescription(webBilling.quantity)} × ${webPrice} per ${webBilling.interval}.`}
-                    action={<DenButton onClick={() => router.push(getWebRoute(activeOrg?.slug))}>View OpenWork Web</DenButton>}
+                    description={`Purchase from the OfflineGPT Web page — ${getOfflineGPTWebQuantityDescription(webBilling.quantity)} × ${webPrice} per ${webBilling.interval}.`}
+                    action={<DenButton onClick={() => router.push(getWebRoute(activeOrg?.slug))}>View OfflineGPT Web</DenButton>}
                   />
                 )}
               </DenActionList>
@@ -776,7 +776,7 @@ export function BillingDashboardScreen() {
       <DenCard data-testid="billing-ai-card">
         <DenSectionHeader
           title="AI model access"
-          description="Use OpenWork's built-in models with no API keys to manage. Separate from seats."
+          description="Use OfflineGPT's built-in models with no API keys to manage. Separate from seats."
           action={
             !aiConfigured
               ? <DenBadge tone="neutral">Not billed</DenBadge>
@@ -837,12 +837,12 @@ export function BillingDashboardScreen() {
             <DenActionRow
               description={
                 aiConfigured
-                  ? `Turning this on costs ${aiChargeLabel} per ${stripeBilling.interval} for your ${activeMemberCount} ${activeMemberCount === 1 ? "member" : "members"}, not ${stripePrice}. You subscribe from the OpenWork Models page.`
-                  : "See which models OpenWork ships with and how your team connects their own provider keys."
+                  ? `Turning this on costs ${aiChargeLabel} per ${stripeBilling.interval} for your ${activeMemberCount} ${activeMemberCount === 1 ? "member" : "members"}, not ${stripePrice}. You subscribe from the OfflineGPT Models page.`
+                  : "See which models OfflineGPT ships with and how your team connects their own provider keys."
               }
               action={
                 <DenButton onClick={() => router.push(getInferenceRoute(activeOrg?.slug))}>
-                  View OpenWork Models
+                  View OfflineGPT Models
                 </DenButton>
               }
             />

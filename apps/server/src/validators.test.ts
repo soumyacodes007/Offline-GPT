@@ -73,11 +73,11 @@ describe("validateMcpName", () => {
 });
 
 describe("validateUserMcpName", () => {
-  test("reserves the OpenWork Connect runtime name", () => {
-    expect(() => validateUserMcpName("openwork-cloud")).toThrow("reserved for OpenWork Connect");
-    expect(() => validateUserMcpName("OPENWORK-CLOUD")).toThrow("reserved for OpenWork Connect");
-    expect(() => validateUserMcpName("openwork-connect-1234")).toThrow("reserved for OpenWork Connect");
-    expect(() => validateUserMcpName("openwork-direct-linear-1234")).toThrow("reserved for OpenWork Connect");
+  test("reserves the OfflineGPT Connect runtime name", () => {
+    expect(() => validateUserMcpName("offlinegpt-cloud")).toThrow("reserved for OfflineGPT Connect");
+    expect(() => validateUserMcpName("OFFLINEGPT-CLOUD")).toThrow("reserved for OfflineGPT Connect");
+    expect(() => validateUserMcpName("offlinegpt-connect-1234")).toThrow("reserved for OfflineGPT Connect");
+    expect(() => validateUserMcpName("offlinegpt-direct-linear-1234")).toThrow("reserved for OfflineGPT Connect");
   });
 
   test("allows ordinary workspace MCP names", () => {

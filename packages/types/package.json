@@ -1,5 +1,5 @@
 {
-  "name": "@openwork/types",
+  "name": "@offlinegpt/types",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,20 +14,20 @@
       "development": "./src/agent-context-diagnostics.ts",
       "default": "./src/agent-context-diagnostics.ts"
     },
-    "./openwork-affordance": {
-      "types": "./src/openwork-affordance.ts",
-      "development": "./src/openwork-affordance.ts",
-      "default": "./src/openwork-affordance.ts"
+    "./offlinegpt-affordance": {
+      "types": "./src/offlinegpt-affordance.ts",
+      "development": "./src/offlinegpt-affordance.ts",
+      "default": "./src/offlinegpt-affordance.ts"
     },
-    "./openwork-context": {
-      "types": "./src/openwork-context.ts",
-      "development": "./src/openwork-context.ts",
-      "default": "./src/openwork-context.ts"
+    "./offlinegpt-context": {
+      "types": "./src/offlinegpt-context.ts",
+      "development": "./src/offlinegpt-context.ts",
+      "default": "./src/offlinegpt-context.ts"
     },
-    "./openwork-provider": {
-      "types": "./src/openwork-provider.ts",
-      "development": "./src/openwork-provider.ts",
-      "default": "./src/openwork-provider.ts"
+    "./offlinegpt-provider": {
+      "types": "./src/offlinegpt-provider.ts",
+      "development": "./src/offlinegpt-provider.ts",
+      "default": "./src/offlinegpt-provider.ts"
     },
     "./automations": {
       "types": "./src/automations.ts",

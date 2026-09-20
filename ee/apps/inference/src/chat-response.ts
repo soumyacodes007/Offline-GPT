@@ -17,8 +17,8 @@ export function inferenceError(code: string, message: string) {
 }
 
 export function upstreamError(status: number) {
-  if (status === 401 || status === 403) return inferenceError("upstream_access_denied", "The managed model provider could not authorize this request. Ask your organization admin to check OpenWork Models access.")
-  if (status === 402) return inferenceError("upstream_quota_exhausted", "The managed provider's allowance is exhausted. Ask your organization admin to check OpenWork Models access.")
+  if (status === 401 || status === 403) return inferenceError("upstream_access_denied", "The managed model provider could not authorize this request. Ask your organization admin to check OfflineGPT Models access.")
+  if (status === 402) return inferenceError("upstream_quota_exhausted", "The managed provider's allowance is exhausted. Ask your organization admin to check OfflineGPT Models access.")
   if (status === 429) return inferenceError("upstream_rate_limited", "This model is temporarily rate limited. Wait for the retry time, then retry the selected model.")
   if (status === 413) return inferenceError("context_length_exceeded", "This request exceeds the selected model's capacity. Reduce the conversation or attachments, or explicitly choose a model with a larger context.")
   if (status === 408 || status === 504) return inferenceError("upstream_timeout", "The selected model timed out. Review any partial work before retrying.")

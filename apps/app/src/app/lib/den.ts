@@ -1,11 +1,11 @@
 import {
   normalizeDesktopConfig,
   type DesktopConfig as SharedDesktopConfig,
-} from "@openwork/types/den/desktop-policies";
+} from "@offlinegpt/types/den/desktop-policies";
 import {
   AUTOMATION_MODEL_ATTENTION_CAPABILITY,
   AUTOMATION_MODEL_ATTENTION_CAPABILITY_HEADER,
-} from "@openwork/types/automations";
+} from "@offlinegpt/types/automations";
 import type {
   AutomationDetail,
   AutomationDesktopRunnerPresence,
@@ -17,8 +17,8 @@ import type {
   CreateAutomation,
   CreateCloudAutomation,
   UpdateAutomation,
-} from "@openwork/types/automations";
-import { generatedArtifactViewSchema, savedAppDetailSchema, savedAppSummarySchema, type SaveApp, type WorkflowDetail } from "@openwork/types/workflows";
+} from "@offlinegpt/types/automations";
+import { generatedArtifactViewSchema, savedAppDetailSchema, savedAppSummarySchema, type SaveApp, type WorkflowDetail } from "@offlinegpt/types/workflows";
 
 // Re-export the shared schema under the local alias so React consumers
 // (e.g. the cloud domain's desktop-config provider) can import it alongside
@@ -27,7 +27,7 @@ import { generatedArtifactViewSchema, savedAppDetailSchema, savedAppSummarySchem
 export type { SharedDesktopConfig };
 export { normalizeDesktopConfig };
 
-import { isDesktopDeployment, isWebDeployment } from "./openwork-deployment";
+import { isDesktopDeployment, isWebDeployment } from "./offlinegpt-deployment";
 import {
   dispatchDenSessionUpdated,
   dispatchDenSettingsChanged,
@@ -40,53 +40,53 @@ import {
   setDesktopBootstrapConfig as setDesktopBootstrapConfigInShell,
   type DesktopBootstrapConfig as ShellDesktopBootstrapConfig,
 } from "./desktop";
-import { getOpenworkGatewayOrigin } from "./gateway-runtime";
+import { getOfflineGptGatewayOrigin } from "./gateway-runtime";
 import { clearDesktopSignInIntent, clearOrgSelectionPending } from "./den-sign-in-intent";
 import { clearDashboardTileCacheStorage } from "./dashboard-cache-storage";
 import { isDesktopRuntime } from "./runtime-env";
 import type { ReloadReason } from "../types";
 import type {
-  OpenWorkExtensionContribution,
-  OpenWorkExtensionContributionType,
-  OpenWorkExtensionLifecycle,
-  OpenWorkExtensionManifest,
-  OpenWorkExtensionResource,
-  OpenWorkExtensionResourceType,
-  OpenWorkExtensionSetup,
-  OpenWorkExtensionSource,
-  OpenWorkExtensionSourceFormat,
+  OfflineGPTExtensionContribution,
+  OfflineGPTExtensionContributionType,
+  OfflineGPTExtensionLifecycle,
+  OfflineGPTExtensionManifest,
+  OfflineGPTExtensionResource,
+  OfflineGPTExtensionResourceType,
+  OfflineGPTExtensionSetup,
+  OfflineGPTExtensionSource,
+  OfflineGPTExtensionSourceFormat,
 } from "../extensions";
 
 declare global {
   interface Window {
-    __openworkOrgDropWarnings?: string[];
+    __offlinegptOrgDropWarnings?: string[];
   }
 }
 
-export const STORAGE_BASE_URL = "openwork.den.baseUrl";
-const LEGACY_STORAGE_API_BASE_URL = "openwork.den.apiBaseUrl";
-const STORAGE_AUTH_TOKEN = "openwork.den.authToken";
+export const STORAGE_BASE_URL = "offlinegpt.den.baseUrl";
+const LEGACY_STORAGE_API_BASE_URL = "offlinegpt.den.apiBaseUrl";
+const STORAGE_AUTH_TOKEN = "offlinegpt.den.authToken";
 /**
  * Origin comparison key (see denOriginComparisonKey) of the Den control plane
  * that issued the retained auth token. Written together with the token so a
  * later boot can prove the retained session belongs to the resolved bootstrap
  * origin before any credential-bearing request is made.
  */
-export const STORAGE_SESSION_ORIGIN = "openwork.den.sessionOrigin";
-const STORAGE_ACTIVE_ORG_ID = "openwork.den.activeOrgId";
-const STORAGE_ACTIVE_ORG_SLUG = "openwork.den.activeOrgSlug";
-const STORAGE_ACTIVE_ORG_NAME = "openwork.den.activeOrgName";
-const DESKTOP_CONFIG_CACHE_PREFIX = "openwork.den.desktopConfig:";
-export const CLOUD_MCP_SYNC_MARKER_STORAGE_KEY = "openwork.den.mcp.sync";
-const ORG_PROXY_HEADER = "x-openwork-legacy-org-id";
-const ORG_SCOPE_HEADER = "x-openwork-org-id";
+export const STORAGE_SESSION_ORIGIN = "offlinegpt.den.sessionOrigin";
+const STORAGE_ACTIVE_ORG_ID = "offlinegpt.den.activeOrgId";
+const STORAGE_ACTIVE_ORG_SLUG = "offlinegpt.den.activeOrgSlug";
+const STORAGE_ACTIVE_ORG_NAME = "offlinegpt.den.activeOrgName";
+const DESKTOP_CONFIG_CACHE_PREFIX = "offlinegpt.den.desktopConfig:";
+export const CLOUD_MCP_SYNC_MARKER_STORAGE_KEY = "offlinegpt.den.mcp.sync";
+const ORG_PROXY_HEADER = "x-offlinegpt-legacy-org-id";
+const ORG_SCOPE_HEADER = "x-offlinegpt-org-id";
 const DEFAULT_DEN_TIMEOUT_MS = 12_000;
 
-export const DEFAULT_DEN_AUTH_NAME = "OpenWork User";
+export const DEFAULT_DEN_AUTH_NAME = "OfflineGPT User";
 const BUILD_DEN_BASE_URL =
   (typeof import.meta !== "undefined" && typeof import.meta.env?.VITE_DEN_BASE_URL === "string"
     ? import.meta.env.VITE_DEN_BASE_URL
-    : "").trim() || "https://app.openworklabs.com";
+    : "").trim() || "https://app.offlinegptlabs.com";
 const BUILD_DEN_REQUIRE_SIGNIN =
   (typeof import.meta !== "undefined" && typeof import.meta.env?.VITE_DEN_REQUIRE_SIGNIN === "string"
     ? /^(1|true|yes|on)$/i.test(import.meta.env.VITE_DEN_REQUIRE_SIGNIN.trim())
@@ -105,13 +105,13 @@ function readBuildDenApiBaseUrl(): string {
 }
 
 function readForceEnvDenSettings(): boolean {
-  return (typeof import.meta !== "undefined" && typeof import.meta.env?.VITE_OPENWORK_FORCE_ENV_SETTINGS === "string"
-    ? /^(1|true|yes|on)$/i.test(import.meta.env.VITE_OPENWORK_FORCE_ENV_SETTINGS.trim())
+  return (typeof import.meta !== "undefined" && typeof import.meta.env?.VITE_OFFLINEGPT_FORCE_ENV_SETTINGS === "string"
+    ? /^(1|true|yes|on)$/i.test(import.meta.env.VITE_OFFLINEGPT_FORCE_ENV_SETTINGS.trim())
     : false);
 }
 
-export const HOSTED_DEFAULT_DEN_BASE_URL = "https://app.openworklabs.com";
-export const HOSTED_DEFAULT_DEN_API_BASE_URL = "https://api.app.openworklabs.com";
+export const HOSTED_DEFAULT_DEN_BASE_URL = "https://app.offlinegptlabs.com";
+export const HOSTED_DEFAULT_DEN_API_BASE_URL = "https://api.app.offlinegptlabs.com";
 export const DEFAULT_DEN_BASE_URL = BUILD_DEN_BASE_URL;
 export const DEN_INFERENCE_PATH = "/dashboard/inference";
 
@@ -271,7 +271,7 @@ export type DenWorkerTokens = {
   clientToken: string | null;
   ownerToken: string | null;
   hostToken: string | null;
-  openworkUrl: string | null;
+  offlinegptUrl: string | null;
   workspaceId: string | null;
 };
 
@@ -314,7 +314,7 @@ export type DenOrgLlmProviderModel = {
 
 export type DenOrgLlmProvider = {
   id: string;
-  source: "models_dev" | "custom" | "openwork";
+  source: "models_dev" | "custom" | "offlinegpt";
   providerId: string;
   name: string;
   providerConfig: Record<string, unknown>;
@@ -431,11 +431,11 @@ export type DenBillingSummary = {
   benefitId: string | null;
 };
 
-export type DenOpenWorkWebAccessSource = "subscription" | "complimentary" | null;
+export type DenOfflineGPTWebAccessSource = "subscription" | "complimentary" | null;
 
-export type DenOpenWorkWebAccess = {
+export type DenOfflineGPTWebAccess = {
   hasAccess: boolean;
-  accessSource: DenOpenWorkWebAccessSource;
+  accessSource: DenOfflineGPTWebAccessSource;
 };
 
 type DenAuthResult = {
@@ -701,10 +701,10 @@ export function denOriginComparisonKey(input: string | null | undefined): string
 }
 
 /**
- * True when the effective Den control plane is not the hosted OpenWork Cloud
- * (app.openworklabs.com). Self-hosted deployments point the app at their own
+ * True when the effective Den control plane is not the hosted OfflineGPT Cloud
+ * (app.offlinegptlabs.com). Self-hosted deployments point the app at their own
  * control plane via VITE_DEN_BASE_URL or the desktop bootstrap config, so
- * hosted-only surfaces (e.g. OpenWork Models upsells) should stay hidden.
+ * hosted-only surfaces (e.g. OfflineGPT Models upsells) should stay hidden.
  */
 export function isSelfHostedControlPlane(): boolean {
   return (
@@ -723,7 +723,7 @@ function isHostedWebAppHost(hostname: string): boolean {
 }
 
 function directHostedApiMcpResourceUrl(input: URL): string | null {
-  if (input.protocol !== "https:" || input.hostname.toLowerCase() !== "app.openworklabs.com") {
+  if (input.protocol !== "https:" || input.hostname.toLowerCase() !== "app.offlinegptlabs.com") {
     return null;
   }
   const pathname = input.pathname.replace(/\/+$/, "");
@@ -731,7 +731,7 @@ function directHostedApiMcpResourceUrl(input: URL): string | null {
     return null;
   }
   const output = new URL(input.toString());
-  output.hostname = "api.app.openworklabs.com";
+  output.hostname = "api.app.offlinegptlabs.com";
   output.pathname = "/mcp";
   output.search = "";
   output.hash = "";
@@ -775,7 +775,7 @@ function ensureDenApiBasePath(input: string | null | undefined): string | null {
   }
 }
 
-const HOSTED_DEN_APEX_HOST = "openworklabs.com";
+const HOSTED_DEN_APEX_HOST = "offlinegptlabs.com";
 
 function isHostedDenHost(hostname: string): boolean {
   const normalized = hostname.trim().toLowerCase();
@@ -787,7 +787,7 @@ function isHostedDenHost(hostname: string): boolean {
  *
  * Only two shapes are known ahead of time:
  * - An explicit API host (`api.*`) is already the API origin.
- * - Hosted OpenWork Cloud (`*.openworklabs.com`) serves its API at the
+ * - Hosted OfflineGPT Cloud (`*.offlinegptlabs.com`) serves its API at the
  *   `api.`-prefixed host.
  *
  * Every other deployment (self-hosted single host, localhost, tunnel or
@@ -824,7 +824,7 @@ export function resolveDenBaseUrls(input: { baseUrl?: string | null; apiBaseUrl?
   const rawBaseUrl = typeof input === "string" ? input : input?.baseUrl;
   const normalizedBaseUrl = normalizeDenBaseUrl(rawBaseUrl);
   const normalizedApiBaseUrl = typeof input === "string" ? null : normalizeDenBaseUrl(input?.apiBaseUrl);
-  const gatewayOrigin = getOpenworkGatewayOrigin();
+  const gatewayOrigin = getOfflineGptGatewayOrigin();
 
   if (gatewayOrigin) {
     const normalizedGatewayOrigin = normalizeDenBaseUrl(gatewayOrigin) ?? gatewayOrigin;
@@ -884,7 +884,7 @@ export function getDenMcpUrl(): string {
 
 /**
  * Detects MCP URLs written by older builds that pointed `/mcp` at the bare
- * web-app origin (e.g. `https://app.openworklabs.com/mcp`). Nothing serves
+ * web-app origin (e.g. `https://app.offlinegptlabs.com/mcp`). Nothing serves
  * MCP there — those entries fail with a 404 and must be reconfigured.
  */
 export function isLegacyWebAppMcpUrl(input: string | null | undefined): boolean {
@@ -900,7 +900,7 @@ export function isLegacyWebAppMcpUrl(input: string | null | undefined): boolean 
 /**
  * Resolve the URL the cloud MCP entry should connect to from a minted
  * token's `resource`. Older den-api builds mint the bare web-app origin
- * (`https://app.openworklabs.com/mcp`) where nothing serves MCP — heal
+ * (`https://app.offlinegptlabs.com/mcp`) where nothing serves MCP — heal
  * those to the `/api/den` proxy on the same origin instead of trusting
  * them verbatim. Returns null when the resource is unusable so callers
  * can keep their bootstrap-derived URL.
@@ -1005,6 +1005,13 @@ async function resolveDenBootstrapConfigWithRuntimeApi(
 ): Promise<DenBootstrapConfig> {
   const resolved = resolveDenBootstrapConfig(input);
   if (!isDesktopRuntime()) {
+    return resolved;
+  }
+  if (
+    resolved.source === "default"
+    && resolved.requireSignin === false
+    && resolved.baseUrl === HOSTED_DEFAULT_DEN_BASE_URL
+  ) {
     return resolved;
   }
 
@@ -1165,7 +1172,7 @@ function shouldWithholdDenCredentials(bootstrapBaseUrl: string): boolean {
 }
 
 export function readDenBootstrapConfig(): DenBootstrapConfig {
-  const gatewayOrigin = getOpenworkGatewayOrigin();
+  const gatewayOrigin = getOfflineGptGatewayOrigin();
   if (gatewayOrigin) {
     if (
       gatewayBootstrapConfig &&
@@ -1194,7 +1201,7 @@ export async function initializeDenBootstrapConfig(): Promise<DenBootstrapConfig
   const generation = ++desktopBootstrapGeneration;
 
   if (!isDesktopRuntime()) {
-    const gatewayOrigin = getOpenworkGatewayOrigin();
+    const gatewayOrigin = getOfflineGptGatewayOrigin();
     // Forced env settings (headless/dev runs): stale stored base URLs from
     // earlier sessions must not override the launcher-provided control plane.
     if (readForceEnvDenSettings() && typeof window !== "undefined") {
@@ -1395,9 +1402,9 @@ export function buildDenAuthUrl(baseUrl: string, mode: "sign-in" | "sign-up"): s
     || (webReturnOrigin !== null && !canUseCloudWebAuthReturn(webReturnOrigin))
   ) {
     // Desktop app, or local/dev web that cannot receive an approved webAuth
-    // redirect: Den shows the copyable openwork:// / grant handoff instead.
+    // redirect: Den shows the copyable offlinegpt:// / grant handoff instead.
     target.searchParams.set("desktopAuth", "1");
-    target.searchParams.set("desktopScheme", "openwork");
+    target.searchParams.set("desktopScheme", "offlinegpt");
   } else if (webReturnOrigin !== null) {
     target.searchParams.set("webAuth", "1");
     target.searchParams.set("webAuthReturn", webReturnOrigin);
@@ -1425,7 +1432,7 @@ export function readDenSettings(): DenSettings {
 
   const bootstrapConfig = readDenBootstrapConfig();
   const baseUrls = resolveDenBaseUrls(
-    isDesktopRuntime() || getOpenworkGatewayOrigin()
+    isDesktopRuntime() || getOfflineGptGatewayOrigin()
       ? bootstrapConfig
       : { baseUrl: window.localStorage.getItem(STORAGE_BASE_URL) ?? bootstrapConfig.baseUrl },
   );
@@ -1546,8 +1553,8 @@ function warnOnUnexpectedActiveOrgDrop(input: {
   const message = `[den-settings] activeOrgId dropped unexpectedly from ${previousActiveOrgId}`;
   const stack = new Error(message).stack ?? message;
   try {
-    window.__openworkOrgDropWarnings ??= [];
-    window.__openworkOrgDropWarnings.push(stack);
+    window.__offlinegptOrgDropWarnings ??= [];
+    window.__offlinegptOrgDropWarnings.push(stack);
     console.warn(stack);
   } catch {
     // Diagnostics must never block the settings write they observe.
@@ -1945,7 +1952,7 @@ function getWorkerTokens(payload: unknown): DenWorkerTokens | null {
     clientToken: typeof tokens.client === "string" ? tokens.client : null,
     ownerToken: typeof tokens.owner === "string" ? tokens.owner : null,
     hostToken: typeof tokens.host === "string" ? tokens.host : null,
-    openworkUrl: connect && typeof connect.openworkUrl === "string" ? connect.openworkUrl : null,
+    offlinegptUrl: connect && typeof connect.offlinegptUrl === "string" ? connect.offlinegptUrl : null,
     workspaceId: connect && typeof connect.workspaceId === "string" ? connect.workspaceId : null,
   };
 }
@@ -2059,7 +2066,7 @@ function parseDenOrgLlmProvider(value: unknown): DenOrgLlmProvider | null {
     typeof value.name !== "string" ||
     (value.source !== "models_dev" &&
       value.source !== "custom" &&
-      value.source !== "openwork")
+      value.source !== "offlinegpt")
   ) {
     return null;
   }
@@ -2253,11 +2260,11 @@ function parsePluginConfigObject(value: unknown): DenPluginConfigObject | null {
   };
 }
 
-function parseExtensionSourceFormat(value: unknown): OpenWorkExtensionSourceFormat | null {
+function parseExtensionSourceFormat(value: unknown): OfflineGPTExtensionSourceFormat | null {
   switch (value) {
     case "agent-plugin":
-    case "openwork-builtin":
-    case "openwork-extension-manifest":
+    case "offlinegpt-builtin":
+    case "offlinegpt-extension-manifest":
     case "claude-plugin":
     case "opencode-plugin":
     case "mcp-directory":
@@ -2268,7 +2275,7 @@ function parseExtensionSourceFormat(value: unknown): OpenWorkExtensionSourceForm
   }
 }
 
-function parseExtensionSourceOrigin(value: unknown): OpenWorkExtensionSource["origin"] | undefined {
+function parseExtensionSourceOrigin(value: unknown): OfflineGPTExtensionSource["origin"] | undefined {
   switch (value) {
     case "builtin":
     case "den":
@@ -2280,7 +2287,7 @@ function parseExtensionSourceOrigin(value: unknown): OpenWorkExtensionSource["or
   }
 }
 
-function parseExtensionSource(value: unknown): OpenWorkExtensionSource | null {
+function parseExtensionSource(value: unknown): OfflineGPTExtensionSource | null {
   if (!isRecord(value) || typeof value.trusted !== "boolean") return null;
   const format = parseExtensionSourceFormat(value.format);
   if (!format) return null;
@@ -2298,7 +2305,7 @@ function parseStringList(value: unknown): string[] | undefined {
   return value;
 }
 
-function parseExtensionResourceType(value: unknown): OpenWorkExtensionResourceType | null {
+function parseExtensionResourceType(value: unknown): OfflineGPTExtensionResourceType | null {
   switch (value) {
     case "skill":
     case "agent":
@@ -2319,17 +2326,17 @@ function parseExtensionResourceType(value: unknown): OpenWorkExtensionResourceTy
   }
 }
 
-function parseExtensionLocalCommandRef(value: unknown): OpenWorkExtensionResource["localCommandRef"] | undefined {
+function parseExtensionLocalCommandRef(value: unknown): OfflineGPTExtensionResource["localCommandRef"] | undefined {
   switch (value) {
-    case "openwork.computerUseMcp":
-    case "openwork.uiMcp":
+    case "offlinegpt.computerUseMcp":
+    case "offlinegpt.uiMcp":
       return value;
     default:
       return undefined;
   }
 }
 
-function parseExtensionResource(value: unknown): OpenWorkExtensionResource | null {
+function parseExtensionResource(value: unknown): OfflineGPTExtensionResource | null {
   if (!isRecord(value) || typeof value.id !== "string") return null;
   const type = parseExtensionResourceType(value.type);
   if (!type) return null;
@@ -2351,7 +2358,7 @@ function parseExtensionResource(value: unknown): OpenWorkExtensionResource | nul
   };
 }
 
-function parseExtensionContributionType(value: unknown): OpenWorkExtensionContributionType | null {
+function parseExtensionContributionType(value: unknown): OfflineGPTExtensionContributionType | null {
   switch (value) {
     case "settings-panel":
     case "setup-instructions":
@@ -2368,7 +2375,7 @@ function parseExtensionContributionType(value: unknown): OpenWorkExtensionContri
   }
 }
 
-function parseExtensionContributionLocation(value: unknown): OpenWorkExtensionContribution["location"] | undefined {
+function parseExtensionContributionLocation(value: unknown): OfflineGPTExtensionContribution["location"] | undefined {
   switch (value) {
     case "settings-detail":
     case "composer":
@@ -2382,7 +2389,7 @@ function parseExtensionContributionLocation(value: unknown): OpenWorkExtensionCo
   }
 }
 
-function parseExtensionContribution(value: unknown): OpenWorkExtensionContribution | null {
+function parseExtensionContribution(value: unknown): OfflineGPTExtensionContribution | null {
   if (!isRecord(value)) return null;
   const type = parseExtensionContributionType(value.type);
   if (!type) return null;
@@ -2397,7 +2404,7 @@ function parseExtensionContribution(value: unknown): OpenWorkExtensionContributi
   };
 }
 
-function parseExtensionSetup(value: unknown): OpenWorkExtensionSetup | undefined {
+function parseExtensionSetup(value: unknown): OfflineGPTExtensionSetup | undefined {
   if (!isRecord(value)) return undefined;
   const requiredEnv = parseStringList(value.requiredEnv);
   return {
@@ -2432,7 +2439,7 @@ function parseReloadReasons(value: unknown): ReloadReason[] | undefined {
   return reasons.length === value.length ? reasons : undefined;
 }
 
-function parseExtensionLifecycle(value: unknown): OpenWorkExtensionLifecycle | undefined {
+function parseExtensionLifecycle(value: unknown): OfflineGPTExtensionLifecycle | undefined {
   if (!isRecord(value)) return undefined;
   const reload = parseReloadReasons(value.reload);
   const detection = parseStringList(value.detection);
@@ -2442,7 +2449,7 @@ function parseExtensionLifecycle(value: unknown): OpenWorkExtensionLifecycle | u
   };
 }
 
-function parseExtensionPlatform(value: unknown): OpenWorkExtensionManifest["platform"] | undefined {
+function parseExtensionPlatform(value: unknown): OfflineGPTExtensionManifest["platform"] | undefined {
   if (!Array.isArray(value)) return undefined;
   const platforms = value.flatMap((item) => {
     switch (item) {
@@ -2458,7 +2465,7 @@ function parseExtensionPlatform(value: unknown): OpenWorkExtensionManifest["plat
   return platforms.length === value.length ? platforms : undefined;
 }
 
-function parseOpenWorkExtensionManifest(value: unknown): OpenWorkExtensionManifest | null {
+function parseOfflineGPTExtensionManifest(value: unknown): OfflineGPTExtensionManifest | null {
   if (
     !isRecord(value) ||
     value.schemaVersion !== 1 ||
@@ -2519,7 +2526,7 @@ function parseDenExtensionProjection(value: unknown): DenOrgExtensionProjection 
     name: value.name,
     description: typeof value.description === "string" ? value.description : null,
     sourceFormat,
-    manifest: parseOpenWorkExtensionManifest(value.manifest),
+    manifest: parseOfflineGPTExtensionManifest(value.manifest),
   };
 }
 
@@ -2763,13 +2770,13 @@ function getBillingSummary(payload: unknown): DenBillingSummary | null {
   };
 }
 
-export function parseDenOpenWorkWebAccess(payload: unknown): DenOpenWorkWebAccess | null {
+export function parseDenOfflineGPTWebAccess(payload: unknown): DenOfflineGPTWebAccess | null {
   if (!isRecord(payload) || !isRecord(payload.billing)) return null;
   const stripe = payload.billing.stripe;
   if (!isRecord(stripe) || !isRecord(stripe.web)) return null;
 
   const web = stripe.web;
-  const accessSource: DenOpenWorkWebAccessSource | undefined =
+  const accessSource: DenOfflineGPTWebAccessSource | undefined =
     web.accessSource === "subscription" || web.accessSource === "complimentary"
       ? web.accessSource
       : web.accessSource === null
@@ -3191,7 +3198,7 @@ export function createDenClient(options: { baseUrl: string; apiBaseUrl?: string 
       return instance;
     },
 
-    async getOpenWorkWebAccess(orgId: string): Promise<DenOpenWorkWebAccess> {
+    async getOfflineGPTWebAccess(orgId: string): Promise<DenOfflineGPTWebAccess> {
       const context = await requestJson<unknown>(baseUrls, "/v1/org", {
         method: "GET",
         token,
@@ -3203,7 +3210,7 @@ export function createDenClient(options: { baseUrl: string; apiBaseUrl?: string 
       // Missing means unsupported. This follows the established Den capability
       // negotiation pattern so a newer hosted client never calls the Web billing
       // route on an older Den deployment that does not advertise the contract.
-      if (capabilities?.openworkWeb !== true) {
+      if (capabilities?.offlinegptWeb !== true) {
         return { hasAccess: false, accessSource: null };
       }
 
@@ -3212,9 +3219,9 @@ export function createDenClient(options: { baseUrl: string; apiBaseUrl?: string 
         token,
         organizationId: orgId,
       });
-      const access = parseDenOpenWorkWebAccess(payload);
+      const access = parseDenOfflineGPTWebAccess(payload);
       if (!access) {
-        throw new DenApiError(500, "invalid_openwork_web_access_payload", "OpenWork Web access response was invalid.");
+        throw new DenApiError(500, "invalid_offlinegpt_web_access_payload", "OfflineGPT Web access response was invalid.");
       }
       return access;
     },
@@ -3297,7 +3304,7 @@ export function createDenClient(options: { baseUrl: string; apiBaseUrl?: string 
       });
     },
 
-    /** Web creation surface: placement is fixed to OpenWork Cloud by the route. */
+    /** Web creation surface: placement is fixed to OfflineGPT Cloud by the route. */
     async createCloudAutomation(orgId: string, input: CreateCloudAutomation): Promise<AutomationDetail> {
       return requestJson<AutomationDetail>(baseUrls, "/v1/cloud-automations", {
         method: "POST",

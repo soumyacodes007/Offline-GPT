@@ -1,5 +1,5 @@
-import { summarizeReview } from "@openwork/review";
-import type { ReviewEvidence, ReviewReport } from "@openwork/review";
+import { summarizeReview } from "@offlinegpt/review";
+import type { ReviewEvidence, ReviewReport } from "@offlinegpt/review";
 
 function Judgments({ items }: { items: ReviewEvidence["judgments"] }) {
   return (

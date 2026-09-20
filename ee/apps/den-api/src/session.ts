@@ -1,6 +1,6 @@
-import { and, eq, gt, lt, lte } from "@openwork-ee/den-db/drizzle"
-import { AuthSessionTable, AuthUserTable } from "@openwork-ee/den-db/schema"
-import { normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+import { and, eq, gt, lt, lte } from "@offlinegpt-ee/den-db/drizzle"
+import { AuthSessionTable, AuthUserTable } from "@offlinegpt-ee/den-db/schema"
+import { normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto"
 import type { Context, MiddlewareHandler } from "hono"
 import { getSignedCookie } from "hono/cookie"
@@ -41,8 +41,8 @@ const INTERNAL_MCP_PRINCIPAL_HEADER = "x-den-internal-mcp-principal"
 const INTERNAL_MCP_PRINCIPAL_TTL_MS = 60_000
 export const INTERNAL_CAPABILITY_CONNECTOR_HEADER = "x-den-internal-capability-connector"
 const BETTER_AUTH_SESSION_COOKIE_NAMES = [
-  "openwork-den.session_token",
-  "__Secure-openwork-den.session_token",
+  "offlinegpt-den.session_token",
+  "__Secure-offlinegpt-den.session_token",
   "better-auth.session_token",
   "__Secure-better-auth.session_token",
   "better-auth-session_token",

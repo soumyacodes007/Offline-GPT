@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto"
 import {
   automationDesktopRunnerCapabilitySchema,
   type AutomationDesktopRunnerCapability,
-} from "@openwork/types/automations"
+} from "@offlinegpt/types/automations"
 import { z } from "zod"
 import { env } from "../env.js"
 import { firstForwardedValue, publicRequestUrl, trustedForwardedOrigin } from "../request-url.js"
@@ -74,7 +74,7 @@ export class AutomationRunnerAuth {
 
   private sign(payload: string) {
     return createHmac("sha256", this.secret)
-      .update(`openwork-automation-runner-v1.${payload}`)
+      .update(`offlinegpt-automation-runner-v1.${payload}`)
       .digest("base64url")
   }
 

@@ -27,7 +27,7 @@ import { useOrgDashboard } from "../../_providers/org-dashboard-provider";
 import { useAutomations } from "../automation-data";
 import { usePlugins } from "../plugin-data";
 
-const OPENWORK_DOCS_URL = "https://openworklabs.com/docs";
+const OFFLINEGPT_DOCS_URL = "https://offlinegptlabs.com/docs";
 const RECENTS_STORAGE_KEY = "den.command-palette.recents";
 const RECENTS_LIMIT = 8;
 
@@ -35,7 +35,7 @@ const EMPTY_CAPABILITIES: DenOrgCapabilities = {
   cloud: false,
   installLinks: false,
   mcpConnections: false,
-  openworkWeb: false,
+  offlinegptWeb: false,
   orgManagedDashboards: false,
   workflows: false,
 };
@@ -195,7 +195,7 @@ export function DenCommandPalette({ open, onOpenChange }: DenCommandPaletteProps
     {
       id: "action:docs",
       label: "Open docs",
-      href: OPENWORK_DOCS_URL,
+      href: OFFLINEGPT_DOCS_URL,
       icon: FileText,
       hint: "Action",
       keywords: ["documentation", "help"],

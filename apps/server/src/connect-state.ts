@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 
 import {
-  readOpenworkCloudMcpHealth,
+  readOfflineGptCloudMcpHealth,
   type CloudMcpHealth,
   type CloudMcpLiveStatusObserver,
   type CloudMcpProviderModelContext,
@@ -23,14 +23,14 @@ import { ensureDir } from "./utils.js";
 const CONNECT_STATE_FILE = "connect-state.json";
 const CONNECT_STATE_MAX_BYTES = 16 * 1024;
 const CONNECT_SNAPSHOT_MAX_RUNTIME_ROWS = 100;
-const OPENWORK_CLOUD_MCP_NAME = "openwork-cloud";
+const OFFLINEGPT_CLOUD_MCP_NAME = "offlinegpt-cloud";
 type WorkspaceOpencodeClient = ReturnType<typeof createOpencodeClient>;
 
 type PersistedConnectState = {
   connectEnabled: boolean;
   updatedAt: number;
   /**
-   * Server-scoped OpenWork Connect (`openwork-cloud`) MCP desired config.
+   * Server-scoped OfflineGPT Connect (`offlinegpt-cloud`) MCP desired config.
    * Connect is identity/org scoped, not per-workspace — workspace runtime
    * copies remain for engine registration, but catalog/skill injection reads
    * this host-level entry.
@@ -115,12 +115,12 @@ function normalizeConnectState(value: Record<string, unknown>): PersistedConnect
 export function googleWorkspaceConnectGuidance(cloudHealthOrReady: CloudMcpHealth | boolean | null): string {
   const usable = typeof cloudHealthOrReady === "boolean" ? cloudHealthOrReady : cloudHealthOrReady?.usable === true;
   if (usable) {
-    return "Google Workspace is available through the OpenWork Cloud connection: call search_capabilities to find the capability, then execute_capability to run it. Do not tell the user to reconfigure extensions; the relevant settings surface is Settings > Connect.";
+    return "Google Workspace is available through the OfflineGPT Cloud connection: call search_capabilities to find the capability, then execute_capability to run it. Do not tell the user to reconfigure extensions; the relevant settings surface is Settings > Connect.";
   }
   if (cloudHealthOrReady && typeof cloudHealthOrReady !== "boolean" && cloudHealthOrReady.desired.present) {
     const failure = cloudHealthOrReady.firstFailure;
     const suffix = failure ? ` Current health check: ${failure.code}.` : "";
-    return `Google Workspace is connected through OpenWork Connect, but agent access needs attention for this workspace. Direct the user to Settings > Connect.${suffix}`;
+    return `Google Workspace is connected through OfflineGPT Connect, but agent access needs attention for this workspace. Direct the user to Settings > Connect.${suffix}`;
   }
   return "Google Workspace is not connected on this device. Direct the user to Settings > Connect to connect their account. Do not direct them to Settings > Extensions.";
 }
@@ -179,12 +179,12 @@ export async function writeConnectState(config: ServerConfig, state: { connectEn
   });
 }
 
-/** Read the host-level openwork-cloud MCP config used for Connect catalog/skills. */
+/** Read the host-level offlinegpt-cloud MCP config used for Connect catalog/skills. */
 export async function readConnectCloudMcp(config: ServerConfig): Promise<Record<string, unknown> | null> {
   return (await readConnectState(config)).cloudMcp;
 }
 
-/** Persist the host-level openwork-cloud MCP config (server-scoped Connect). */
+/** Persist the host-level offlinegpt-cloud MCP config (server-scoped Connect). */
 export async function writeConnectCloudMcp(
   config: ServerConfig,
   cloudMcp: Record<string, unknown> | null,
@@ -266,7 +266,7 @@ async function resolveCloudHealth(config: ServerConfig, options: ConnectSnapshot
       },
     };
   }
-  const cloudHealth = await readOpenworkCloudMcpHealth({
+  const cloudHealth = await readOfflineGptCloudMcpHealth({
     config,
     workspace: resolved.workspace,
     directory: resolved.directory,
@@ -350,7 +350,7 @@ async function inspectConnectRuntime(
   if (globalInspection.status === "unreadable" || globalInspection.status === "invalid-row") {
     return { cloudMcpPresent: false, complete: false };
   }
-  if (Object.hasOwn(runtimeMcpMap(globalInspection.config), OPENWORK_CLOUD_MCP_NAME)) {
+  if (Object.hasOwn(runtimeMcpMap(globalInspection.config), OFFLINEGPT_CLOUD_MCP_NAME)) {
     return { cloudMcpPresent: true, complete: true };
   }
 
@@ -377,7 +377,7 @@ async function inspectConnectRuntime(
     if (inspection.status === "unreadable" || inspection.status === "invalid-row") {
       return { cloudMcpPresent: false, complete: false };
     }
-    if (Object.hasOwn(runtimeMcpMap(inspection.config), OPENWORK_CLOUD_MCP_NAME)) {
+    if (Object.hasOwn(runtimeMcpMap(inspection.config), OFFLINEGPT_CLOUD_MCP_NAME)) {
       return { cloudMcpPresent: true, complete: true };
     }
     if (inspection.status === "database-missing" || inspection.status === "table-missing") {

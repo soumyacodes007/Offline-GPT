@@ -1,8 +1,8 @@
 {
-  "name": "@openwork-ee/cloud-runtime",
+  "name": "@offlinegpt-ee/cloud-runtime",
   "private": true,
   "type": "module",
-  "description": "Provider-neutral contract, bootstrap, and conformance suite for OpenWork Cloud sandbox hosts.",
+  "description": "Provider-neutral contract, bootstrap, and conformance suite for OfflineGPT Cloud sandbox hosts.",
   "main": "./dist/index.js",
   "types": "./src/index.ts",
   "source": "./src/index.ts",

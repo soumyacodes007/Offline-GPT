@@ -7,7 +7,7 @@ import { ADVANCED_SETTINGS_SECTIONS } from "../advanced-sections";
 import { Separator } from "@/components/ui/separator";
 
 import type { OpencodeConnectStatus } from "@/app/types";
-import type { EngineV2PreviewStatus, OpenworkCloudMcpHealth, OpenworkRuntimeConfigStatus, OpenworkServerStatus } from "@/app/lib/openwork-server";
+import type { EngineV2PreviewStatus, OfflineGptCloudMcpHealth, OfflineGptRuntimeConfigStatus, OfflineGptServerStatus } from "@/app/lib/offlinegpt-server";
 import { t } from "@/i18n";
 import { LayoutStack } from "../settings-layout";
 import type { useDenSession } from "../cloud/use-den-session";
@@ -42,17 +42,17 @@ export type AdvancedViewProps = {
   busy: boolean;
   clientConnected: boolean;
   opencodeConnectStatus: OpencodeConnectStatus | null;
-  openworkServerStatus: OpenworkServerStatus;
+  offlinegptServerStatus: OfflineGptServerStatus;
   developerMode: boolean;
   toggleDeveloperMode: () => void;
   opencodeDevModeEnabled: boolean;
   openDebugDeepLink: (rawUrl: string) => Promise<{ ok: boolean; message: string }>;
   canInspectRuntimeConfig: boolean;
-  getRuntimeConfigStatus: () => Promise<OpenworkRuntimeConfigStatus>;
+  getRuntimeConfigStatus: () => Promise<OfflineGptRuntimeConfigStatus>;
   organizationServer: AdvancedOrganizationServerSession;
   cloudMcpUrl: string | null;
-  cloudMcpHealth: OpenworkCloudMcpHealth | null;
-  refreshCloudMcpHealth: () => Promise<OpenworkCloudMcpHealth | null>;
+  cloudMcpHealth: OfflineGptCloudMcpHealth | null;
+  refreshCloudMcpHealth: () => Promise<OfflineGptCloudMcpHealth | null>;
   getEngineV2PreviewStatus: () => Promise<EngineV2PreviewStatus>;
   setEngineV2PreviewEnabled: (enabled: boolean) => Promise<EngineV2PreviewStatus>;
   setEngineV2PreviewChatRouting: (enabled: boolean) => Promise<EngineV2PreviewStatus>;
@@ -77,7 +77,7 @@ export function AdvancedView(props: AdvancedViewProps) {
     advancedLocalReducer,
     initialAdvancedLocalState,
   );
-  const [configStatus, setConfigStatus] = useState<OpenworkRuntimeConfigStatus | null>(null);
+  const [configStatus, setConfigStatus] = useState<OfflineGptRuntimeConfigStatus | null>(null);
   const [configStatusBusy, setConfigStatusBusy] = useState(false);
   const [configStatusError, setConfigStatusError] = useState<string | null>(null);
   const {
@@ -101,8 +101,8 @@ export function AdvancedView(props: AdvancedViewProps) {
     return props.clientConnected ? "ready" : "neutral";
   })();
 
-  const openworkStatusLabel = (() => {
-    switch (props.openworkServerStatus) {
+  const offlinegptStatusLabel = (() => {
+    switch (props.offlinegptServerStatus) {
       case "connected":
         return t("config.status_connected");
       case "limited":
@@ -112,8 +112,8 @@ export function AdvancedView(props: AdvancedViewProps) {
     }
   })();
 
-  const openworkTone: AdvancedStatusTone = (() => {
-    switch (props.openworkServerStatus) {
+  const offlinegptTone: AdvancedStatusTone = (() => {
+    switch (props.offlinegptServerStatus) {
       case "connected":
         return "ready";
       case "limited":
@@ -130,7 +130,7 @@ export function AdvancedView(props: AdvancedViewProps) {
         "Runtime server config sources below can still be inspected.",
       ];
 
-  const openworkDetailLines = props.openworkServerStatus === "connected"
+  const offlinegptDetailLines = props.offlinegptServerStatus === "connected"
     ? ["Runtime DB, workspace config, and migration diagnostics are available."]
     : ["Runtime config diagnostics need the local server connection."];
 
@@ -196,9 +196,9 @@ export function AdvancedView(props: AdvancedViewProps) {
           clientStatusLabel={clientStatusLabel}
           clientTone={clientTone}
           clientDetailLines={clientDetailLines}
-          openworkStatusLabel={openworkStatusLabel}
-          openworkTone={openworkTone}
-          openworkDetailLines={openworkDetailLines}
+          offlinegptStatusLabel={offlinegptStatusLabel}
+          offlinegptTone={offlinegptTone}
+          offlinegptDetailLines={offlinegptDetailLines}
         />
 
         <AdvancedCloudMcpDiagnosticsSection

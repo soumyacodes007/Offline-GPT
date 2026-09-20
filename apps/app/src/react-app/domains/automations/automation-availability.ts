@@ -1,4 +1,4 @@
-import type { AutomationExecutionTarget } from "@openwork/types/automations"
+import type { AutomationExecutionTarget } from "@offlinegpt/types/automations"
 
 import { isDesktopRuntime } from "@/app/lib/runtime-env"
 import { useDesktopConfig } from "@/react-app/domains/cloud/desktop-config-provider"

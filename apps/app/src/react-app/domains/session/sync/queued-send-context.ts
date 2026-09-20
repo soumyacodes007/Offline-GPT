@@ -1,12 +1,12 @@
-import type { OpenworkServerClient } from "@/app/lib/openwork-server";
+import type { OfflineGptServerClient } from "@/app/lib/offlinegpt-server";
 import type { ModelRef } from "@/app/types";
 
 export type QueuedSendContext = {
   workspaceId: string;
   workspaceRoot: string;
   opencodeBaseUrl: string;
-  openworkToken: string;
-  client: OpenworkServerClient;
+  offlinegptToken: string;
+  client: OfflineGptServerClient;
   agent: string | null;
   variant: string | null;
   model: ModelRef | null;

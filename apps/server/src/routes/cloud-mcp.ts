@@ -1,10 +1,10 @@
 import type { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 import {
   isTrustedCloudMcpEndpointForGlobalPersist,
-  OPENWORK_CLOUD_MCP_NAME,
-  readOpenworkCloudMcpHealth,
-  reconcileOpenworkCloudMcp,
-  refreshOpenworkCloudMcpEngine,
+  OFFLINEGPT_CLOUD_MCP_NAME,
+  readOfflineGptCloudMcpHealth,
+  reconcileOfflineGptCloudMcp,
+  refreshOfflineGptCloudMcpEngine,
   type CloudMcpServerMetadata,
   type CloudMcpProviderModelContext,
   type CloudMcpRuntimeRegistrar,
@@ -73,8 +73,8 @@ function assertStrictBody(body: Record<string, unknown>, workspace: WorkspaceInf
   if (typeof body.workspaceId === "string" && body.workspaceId.trim() !== workspace.id) {
     throw new ApiError(400, "workspace_id_mismatch", "workspaceId must match the route workspace");
   }
-  if (typeof body.name === "string" && body.name.trim() !== OPENWORK_CLOUD_MCP_NAME) {
-    throw new ApiError(400, "invalid_mcp_name", "Only openwork-cloud can be reconciled by this endpoint");
+  if (typeof body.name === "string" && body.name.trim() !== OFFLINEGPT_CLOUD_MCP_NAME) {
+    throw new ApiError(400, "invalid_mcp_name", "Only offlinegpt-cloud can be reconciled by this endpoint");
   }
 }
 
@@ -94,10 +94,10 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
     serverMetadata,
   } = options;
 
-  addRoute(routes, "GET", "/workspace/:id/mcp/openwork-cloud/health", "client", async (ctx) => {
+  addRoute(routes, "GET", "/workspace/:id/mcp/offlinegpt-cloud/health", "client", async (ctx) => {
     const workspace = await resolveWorkspace(config, ctx.params.id);
     assertExactWorkspace(ctx.params.id, workspace);
-    const health = await readOpenworkCloudMcpHealth({
+    const health = await readOfflineGptCloudMcpHealth({
       config,
       workspace,
       directory: resolveOpencodeDirectory(workspace),
@@ -110,7 +110,7 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
     return jsonResponse(health);
   });
 
-  addRoute(routes, "POST", "/workspace/:id/mcp/openwork-cloud/engine-refresh", "client", async (ctx) => {
+  addRoute(routes, "POST", "/workspace/:id/mcp/offlinegpt-cloud/engine-refresh", "client", async (ctx) => {
     ensureWritable(config);
     requireClientScope(ctx, "collaborator");
     const workspace = await resolveWorkspace(config, ctx.params.id);
@@ -133,7 +133,7 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
       body = parsed;
     }
     assertStrictBody(body, workspace);
-    const result = await refreshOpenworkCloudMcpEngine({
+    const result = await refreshOfflineGptCloudMcpEngine({
       config,
       workspace,
       directory: resolveOpencodeDirectory(workspace),
@@ -147,7 +147,7 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
     return jsonResponse(result);
   });
 
-  addRoute(routes, "POST", "/workspace/:id/mcp/openwork-cloud/reconcile", "client", async (ctx) => {
+  addRoute(routes, "POST", "/workspace/:id/mcp/offlinegpt-cloud/reconcile", "client", async (ctx) => {
     ensureWritable(config);
     requireClientScope(ctx, "collaborator");
     const workspace = await resolveWorkspace(config, ctx.params.id);
@@ -165,7 +165,7 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
     if (!await isTrustedCloudMcpEndpointForGlobalPersist(endpointUrl)) {
       requireClientScope(ctx, "owner");
     }
-    const health = await reconcileOpenworkCloudMcp({
+    const health = await reconcileOfflineGptCloudMcp({
       config,
       workspace,
       directory: resolveOpencodeDirectory(workspace),

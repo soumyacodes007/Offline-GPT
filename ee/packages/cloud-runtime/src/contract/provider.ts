@@ -1,5 +1,5 @@
 /**
- * Provider-neutral contract between Den and the host that runs an OpenWork
+ * Provider-neutral contract between Den and the host that runs an OfflineGPT
  * Cloud sandbox (Daytona today; Fly Machines, Firecracker, Kubernetes, or a
  * local process tomorrow).
  *

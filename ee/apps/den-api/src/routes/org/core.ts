@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
-import { eq } from "@openwork-ee/den-db/drizzle"
-import { OrganizationTable, ScimProviderTable, SsoConnectionTable } from "@openwork-ee/den-db/schema"
-import { normalizeDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
+import { eq } from "@offlinegpt-ee/den-db/drizzle"
+import { OrganizationTable, ScimProviderTable, SsoConnectionTable } from "@offlinegpt-ee/den-db/schema"
+import { normalizeDenTypeId, type DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
@@ -19,8 +19,8 @@ import { jsonValidator, orgMemberRoute, orgRoleRoute, publicRoute, queryValidato
 import { denTypeIdSchema, enterprisePlanRequiredSchema, forbiddenSchema, invalidRequestSchema, jsonResponse, notFoundSchema, unauthorizedSchema } from "../../openapi.js"
 import { validateInvitationAcceptVerification } from "../../organization-join-verification.js"
 import { normalizeOrganizationMetadata } from "../../organization-limits.js"
-import { isOpenWorkWebAvailableForOrganization } from "../../openwork-web-availability.js"
-import { getOpenWorkWebAccess } from "../../stripe-billing.js"
+import { isOfflineGPTWebAvailableForOrganization } from "../../offlinegpt-web-availability.js"
+import { getOfflineGPTWebAccess } from "../../stripe-billing.js"
 import {
   acceptInvitationForUser,
   createOrganizationForUser,
@@ -662,11 +662,11 @@ export function registerOrgCoreRoutes<T extends { Variables: OrgRouteVariables }
       }
 
       const owner = payload.members.find((member: typeof payload.members[number]) => member.isOwner) ?? null
-      // Cloud is entitled by OpenWork Web access (paid subscription or the
+      // Cloud is entitled by OfflineGPT Web access (paid subscription or the
       // platform-admin complimentary grant) on hosted deployments; there is no
       // separate per-organization Cloud rollout flag.
       const cloudEnabled = cloudHostingAvailable({ orgMode: env.orgMode })
-        && (await getOpenWorkWebAccess(payload.organization.id)).hasAccess
+        && (await getOfflineGPTWebAccess(payload.organization.id)).hasAccess
       const [ssoRows, scimRows] = await Promise.all([
         db
           .select({ id: SsoConnectionTable.id })
@@ -718,7 +718,7 @@ export function registerOrgCoreRoutes<T extends { Variables: OrgRouteVariables }
           // Effective offer: the deployment switch enables Web generally,
           // while the platform-admin complimentary grant enables only this
           // organization when the deployment switch is off.
-          openworkWeb: isOpenWorkWebAvailableForOrganization(payload.organization.metadata),
+          offlinegptWeb: isOfflineGPTWebAvailableForOrganization(payload.organization.metadata),
           ...(cloudEnabled ? { cloud: true } : {}),
         },
         authMethods: {

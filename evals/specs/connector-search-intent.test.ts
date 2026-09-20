@@ -1,6 +1,6 @@
 import { expect } from "vitest";
-import { denFetch } from "@openwork/behaviors";
-import { mcpMock, server, test } from "@openwork/testkit";
+import { denFetch } from "@offlinegpt/behaviors";
+import { mcpMock, server, test } from "@offlinegpt/testkit";
 
 function record(value: unknown): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("Expected an object");
@@ -26,7 +26,7 @@ test("gateway discovery stays quiet until connection setup is explicitly request
   expect(orgs.response.status).toBe(200);
   const orgId = rows(record(orgs.body).orgs).find(org => org.name === orgName)?.id;
   expect(typeof orgId).toBe("string");
-  const headers = { authorization: `Bearer ${den.admin.token}`, "x-openwork-org-id": String(orgId) };
+  const headers = { authorization: `Bearer ${den.admin.token}`, "x-offlinegpt-org-id": String(orgId) };
   const created = await denFetch(den.admin, "/v1/mcp-connections/by-key/search-intent-notes", {
     method: "PUT", headers,
     body: JSON.stringify({ name: "Notes Search Fixture", url: den.mocks.connector.mcpUrl, authType: "oauth", credentialMode: "per_member", access: { orgWide: true } }),

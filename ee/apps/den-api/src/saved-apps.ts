@@ -1,12 +1,12 @@
-import type { SavedAppDetail, SavedAppSummary } from "@openwork/types/workflows"
+import type { SavedAppDetail, SavedAppSummary } from "@offlinegpt/types/workflows"
 import { getArtifactView, getGeneratedArtifactViewRevision, listArtifactViews, loadArtifactViewRevision } from "./artifact-views.js"
 import { getWorkflowDetail, getWorkflowSnapshot } from "./workflows.js"
 import type { PluginArchActorContext } from "./routes/org/plugin-system/access.js"
-import { and, eq, isNull } from "@openwork-ee/den-db/drizzle"
-import { AuthUserTable, DashboardAppTable, MemberTable } from "@openwork-ee/den-db/schema"
+import { and, eq, isNull } from "@offlinegpt-ee/den-db/drizzle"
+import { AuthUserTable, DashboardAppTable, MemberTable } from "@offlinegpt-ee/den-db/schema"
 import { requirePluginArchResourceRole } from "./routes/org/plugin-system/access.js"
 import { createResourceAccessGrant, listResourceAccess } from "./routes/org/plugin-system/store.js"
-import { normalizeDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
+import { normalizeDenTypeId, type DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { db } from "./db.js"
 
 function dashboardScope(context: PluginArchActorContext) {
@@ -84,7 +84,7 @@ export async function getSavedApp(input: {
     eq(DashboardAppTable.artifact_view_id, normalizeDenTypeId("artifactView", view.id)))).limit(1)
   const base = { view, workflowTitle: workflow.title, canManage: workflow.canManage, onDashboard: placements.length > 0, revision }
   if (!revision || revision.buildStatus !== "ready") {
-    return { ...base, html: null, payload: null, previewNotice: "This app is still being prepared. Ask OpenWork to finish its preview." }
+    return { ...base, html: null, payload: null, previewNotice: "This app is still being prepared. Ask OfflineGPT to finish its preview." }
   }
   const { revision: stored } = await loadArtifactViewRevision({ context: input.context, artifactViewId: view.id, revisionId: revision.id })
   const snapshot = input.receiptId
@@ -94,7 +94,7 @@ export async function getSavedApp(input: {
     return { ...base, html: null, payload: null, previewNotice: "Run the workflow to give this app a result to display." }
   }
   if (snapshot.outputSchemaDigest !== revision.outputSchemaDigest) {
-    return { ...base, html: null, payload: null, previewNotice: "The workflow’s results have changed. Ask OpenWork to update this app to match." }
+    return { ...base, html: null, payload: null, previewNotice: "The workflow’s results have changed. Ask OfflineGPT to update this app to match." }
   }
   return {
     ...base,

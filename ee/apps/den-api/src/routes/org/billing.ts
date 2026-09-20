@@ -1,15 +1,15 @@
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
-import { ManagedModelsPolicyError } from "@openwork/types/den/managed-models-policy"
+import { ManagedModelsPolicyError } from "@offlinegpt/types/den/managed-models-policy"
 import { getCloudWorkerBillingStatus } from "../../billing/polar.js"
-import { createInferenceCheckoutSession, createInferencePortalSession, createOpenWorkWebCheckout, createSeatCheckoutSession, getOpenWorkWebBillingSummary, getOrgBillingSummary, syncStripeCheckoutSession } from "../../stripe-billing.js"
+import { createInferenceCheckoutSession, createInferencePortalSession, createOfflineGPTWebCheckout, createSeatCheckoutSession, getOfflineGPTWebBillingSummary, getOrgBillingSummary, syncStripeCheckoutSession } from "../../stripe-billing.js"
 import { orgRoleRoute } from "../../middleware/index.js"
 import { forbiddenSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
 import { getRequiredUserEmail } from "../../user.js"
 import { env } from "../../env.js"
 import { ORGANIZATION_SUPER_ADMIN_ROLE, organizationRoleValueSatisfies } from "../../organization-role-hierarchy.js"
-import { isOpenWorkWebAvailableForOrganization } from "../../openwork-web-availability.js"
+import { isOfflineGPTWebAvailableForOrganization } from "../../offlinegpt-web-availability.js"
 import type { OrgRouteVariables } from "./shared.js"
 import { ensureOrganizationAdmin, ensureOrganizationSuperAdmin, orgAccessFailureStatus } from "./shared.js"
 
@@ -23,15 +23,15 @@ const managedModelsPolicyErrorSchema = z.object({
   error: z.enum(["managed_models_disabled_for_dpa", "managed_models_policy_unavailable"]),
   message: z.string(),
 })
-const openWorkWebUnavailableSchema = z.object({
-  error: z.literal("openwork_web_not_available"),
+const offlineGptWebUnavailableSchema = z.object({
+  error: z.literal("offlinegpt_web_not_available"),
   message: z.string(),
-}).meta({ ref: "OpenWorkWebUnavailableError" })
+}).meta({ ref: "OfflineGPTWebUnavailableError" })
 
-function openWorkWebUnavailableResponse(): { error: "openwork_web_not_available"; message: string } {
+function offlineGptWebUnavailableResponse(): { error: "offlinegpt_web_not_available"; message: string } {
   return {
-    error: "openwork_web_not_available",
-    message: "OpenWork Web is not available for this organization.",
+    error: "offlinegpt_web_not_available",
+    message: "OfflineGPT Web is not available for this organization.",
   }
 }
 
@@ -50,14 +50,14 @@ function billingReturnUrl(c: { req: { raw: Request } }) {
 }
 
 function checkoutSuccessUrl(c: { req: { raw: Request } }) {
-  // `return=models` sends the user back to the OpenWork Models page after a
+  // `return=models` sends the user back to the OfflineGPT Models page after a
   // successful inference checkout — that's where they subscribed from and
   // where the unlocked value (the model lineup) is visible. The billing page
   // remains the status/portal view.
   return env.stripe.billingSuccessUrl ?? `${getRequestOrigin(c)}/dashboard/billing/stripe/checking?session_id={CHECKOUT_SESSION_ID}&return=models`
 }
 
-function openWorkWebCheckoutSuccessUrl(c: { req: { raw: Request } }) {
+function offlineGptWebCheckoutSuccessUrl(c: { req: { raw: Request } }) {
   const fallback = `${getRequestOrigin(c)}/dashboard/billing/stripe/checking?session_id={CHECKOUT_SESSION_ID}&return=web`
   const configured = env.stripe.billingSuccessUrl
   if (!configured) {
@@ -108,7 +108,7 @@ function checkoutCancelUrl(c: { req: { raw: Request } }) {
   return env.stripe.billingCancelUrl ?? billingReturnUrl(c)
 }
 
-function openWorkWebCheckoutCancelUrl(c: { req: { raw: Request } }) {
+function offlineGptWebCheckoutCancelUrl(c: { req: { raw: Request } }) {
   const configured = env.stripe.billingCancelUrl
   try {
     const url = new URL(configured ?? getRequestOrigin(c), getRequestOrigin(c))
@@ -129,20 +129,20 @@ export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariable
     describeRoute({
       tags: ["Organizations"],
       hide: true,
-      summary: "Get OpenWork Web billing eligibility",
+      summary: "Get OfflineGPT Web billing eligibility",
       responses: {
-        200: jsonResponse("OpenWork Web billing eligibility returned successfully.", stripeBillingResponseSchema),
+        200: jsonResponse("OfflineGPT Web billing eligibility returned successfully.", stripeBillingResponseSchema),
         401: jsonResponse("The caller must be an organization member.", unauthorizedSchema),
-        404: jsonResponse("OpenWork Web is not available for this organization.", openWorkWebUnavailableSchema),
+        404: jsonResponse("OfflineGPT Web is not available for this organization.", offlineGptWebUnavailableSchema),
       },
     }),
     orgRoleRoute(["member"]),
     async (c) => {
       const payload = c.get("organizationContext")
-      if (!isOpenWorkWebAvailableForOrganization(payload.organization.metadata)) {
-        return c.json(openWorkWebUnavailableResponse(), 404)
+      if (!isOfflineGPTWebAvailableForOrganization(payload.organization.metadata)) {
+        return c.json(offlineGptWebUnavailableResponse(), 404)
       }
-      const web = await getOpenWorkWebBillingSummary(payload.organization.id)
+      const web = await getOfflineGPTWebBillingSummary(payload.organization.id)
       return c.json({ billing: { stripe: { web } } })
     },
   )
@@ -193,13 +193,13 @@ export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariable
     describeRoute({
       tags: ["Organizations"],
       hide: true,
-      summary: "Create Stripe Checkout session for OpenWork Models",
+      summary: "Create Stripe Checkout session for OfflineGPT Models",
       responses: {
         200: jsonResponse("Stripe Checkout session created successfully.", stripeCheckoutResponseSchema),
         401: jsonResponse("The caller must be signed in to start billing.", unauthorizedSchema),
         403: jsonResponse("Billing access is denied.", z.union([forbiddenSchema, managedModelsPolicyErrorSchema])),
         503: jsonResponse("Managed Models policy is unavailable.", managedModelsPolicyErrorSchema),
-        404: jsonResponse("OpenWork Web is not available for this organization.", openWorkWebUnavailableSchema),
+        404: jsonResponse("OfflineGPT Web is not available for this organization.", offlineGptWebUnavailableSchema),
       },
     }),
     orgRoleRoute(["admin"]),
@@ -220,22 +220,22 @@ export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariable
       }
       const payload = c.get("organizationContext")
       const subscriptionType = parsed.data.type ?? "inference"
-      if (subscriptionType === "web" && !isOpenWorkWebAvailableForOrganization(payload.organization.metadata)) {
-        return c.json(openWorkWebUnavailableResponse(), 404)
+      if (subscriptionType === "web" && !isOfflineGPTWebAvailableForOrganization(payload.organization.metadata)) {
+        return c.json(offlineGptWebUnavailableResponse(), 404)
       }
       if (subscriptionType === "web") {
-        const webBilling = await getOpenWorkWebBillingSummary(payload.organization.id)
+        const webBilling = await getOfflineGPTWebBillingSummary(payload.organization.id)
         if (webBilling.complimentaryAccess) {
           return c.json({
-            error: "openwork_web_complimentary_access_exists",
-            message: "OpenWork Web is already included for this organization without a Stripe subscription.",
+            error: "offlinegpt_web_complimentary_access_exists",
+            message: "OfflineGPT Web is already included for this organization without a Stripe subscription.",
           }, 409)
         }
       }
       const createCheckoutSession = subscriptionType === "seat"
         ? createSeatCheckoutSession
         : subscriptionType === "web"
-          ? createOpenWorkWebCheckout
+          ? createOfflineGPTWebCheckout
           : createInferenceCheckoutSession
       const session = await createCheckoutSession({
         organizationId: payload.organization.id,
@@ -245,12 +245,12 @@ export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariable
         successUrl: subscriptionType === "seat"
           ? seatCheckoutSuccessUrl(c)
           : subscriptionType === "web"
-            ? openWorkWebCheckoutSuccessUrl(c)
+            ? offlineGptWebCheckoutSuccessUrl(c)
             : checkoutSuccessUrl(c),
-        cancelUrl: subscriptionType === "web" ? openWorkWebCheckoutCancelUrl(c) : checkoutCancelUrl(c),
+        cancelUrl: subscriptionType === "web" ? offlineGptWebCheckoutCancelUrl(c) : checkoutCancelUrl(c),
       }).catch((error) => {
         if (error instanceof ManagedModelsPolicyError) return error
-        if (error instanceof Error && error.message === "stripe_openwork_web_subscription_exists") {
+        if (error instanceof Error && error.message === "stripe_offlinegpt_web_subscription_exists") {
           return "subscription_exists" as const
         }
         throw error
@@ -261,7 +261,7 @@ export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariable
       if (session === "subscription_exists") {
         return c.json({
           error: "stripe_subscription_exists",
-          message: "OpenWork Web is already subscribed for this organization. Manage it from Billing.",
+          message: "OfflineGPT Web is already subscribed for this organization. Manage it from Billing.",
         }, 409)
       }
       return c.json({ url: session.url })
@@ -273,7 +273,7 @@ export function registerOrgBillingRoutes<T extends { Variables: OrgRouteVariable
     describeRoute({
       tags: ["Organizations"],
       hide: true,
-      summary: "Create Stripe billing portal session for OpenWork Models",
+      summary: "Create Stripe billing portal session for OfflineGPT Models",
       responses: {
         200: jsonResponse("Stripe billing portal session created successfully.", stripePortalResponseSchema),
         401: jsonResponse("The caller must be signed in to manage billing.", unauthorizedSchema),

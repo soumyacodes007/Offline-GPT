@@ -40,8 +40,8 @@ type MarkdownProfile = {
 
 const MARKDOWN_IMAGE_PREVIEW_MAX_HEIGHT = 160;
 const MARKDOWN_IMAGE_PREVIEW_MAX_WIDTH = 280;
-const CODE_COPY_ICON = `<svg data-openwork-code-copy-icon="" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
-const CODE_COPIED_ICON = `<svg data-openwork-code-copy-check-icon="" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5" aria-hidden="true" hidden><path d="M20 6 9 17l-5-5"/></svg>`;
+const CODE_COPY_ICON = `<svg data-offlinegpt-code-copy-icon="" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+const CODE_COPIED_ICON = `<svg data-offlinegpt-code-copy-check-icon="" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5" aria-hidden="true" hidden><path d="M20 6 9 17l-5-5"/></svg>`;
 const CODE_WRAP_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5" aria-hidden="true"><path d="M3 6h18M3 12h15a3 3 0 1 1 0 6h-3"/><path d="m12 18-3 3 3 3"/></svg>`;
 const INLINE_CODE_FILE_EXTENSIONS = new Set([
   "mp4", "webm", "mov", "m4v", "ogv",
@@ -143,22 +143,22 @@ function createEmojiAliases() {
 const emojiAliases = createEmojiAliases();
 
 function codeCopyButton() {
-  return `<button type="button" data-openwork-code-copy="" class="absolute right-2 top-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/70 bg-background/95 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Copy code block" title="Copy code block">${CODE_COPY_ICON}${CODE_COPIED_ICON}<span data-openwork-code-copy-label="" class="sr-only" aria-live="polite">Copy code block</span></button>`;
+  return `<button type="button" data-offlinegpt-code-copy="" class="absolute right-2 top-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/70 bg-background/95 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Copy code block" title="Copy code block">${CODE_COPY_ICON}${CODE_COPIED_ICON}<span data-offlinegpt-code-copy-label="" class="sr-only" aria-live="polite">Copy code block</span></button>`;
 }
 
 function codeWrapButton() {
-  return `<button type="button" data-openwork-code-wrap="" class="absolute right-11 top-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/70 bg-background/95 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Enable word wrap" aria-pressed="false" title="Enable word wrap">${CODE_WRAP_ICON}</button>`;
+  return `<button type="button" data-offlinegpt-code-wrap="" class="absolute right-11 top-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/70 bg-background/95 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Enable word wrap" aria-pressed="false" title="Enable word wrap">${CODE_WRAP_ICON}</button>`;
 }
 
 function chatCodeBlockContainer(html: string, shiki: boolean) {
-  const shikiAttribute = shiki ? ` data-openwork-shiki="true"` : "";
+  const shikiAttribute = shiki ? ` data-offlinegpt-shiki="true"` : "";
 
-  return `<div data-openwork-code-block=""${shikiAttribute} class="relative my-4 overflow-hidden rounded-[18px] border border-border/70 bg-gray-2/60 font-mono text-xs leading-6 text-foreground">${codeWrapButton()}${codeCopyButton()}${html}</div>`;
+  return `<div data-offlinegpt-code-block=""${shikiAttribute} class="relative my-4 overflow-hidden rounded-[18px] border border-border/70 bg-gray-2/60 font-mono text-xs leading-6 text-foreground">${codeWrapButton()}${codeCopyButton()}${html}</div>`;
 }
 
 function chatCodeBlockHtml(text: string, lang: string | undefined) {
   return chatCodeBlockContainer(
-    `<pre data-openwork-code-scroll="" class="overflow-x-auto px-4 pb-3 pt-11"><code${codeLanguageClass(lang)}>${escapeHtml(text)}</code></pre>`,
+    `<pre data-offlinegpt-code-scroll="" class="overflow-x-auto px-4 pb-3 pt-11"><code${codeLanguageClass(lang)}>${escapeHtml(text)}</code></pre>`,
     false,
   );
 }
@@ -176,7 +176,7 @@ function mermaidBlockHtml(text: string, presentation: MarkdownPresentation) {
   const backgroundClass = presentation === "surface" ? "bg-gray-1/80" : "bg-gray-2/60";
   const buttonClass = "rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50";
 
-  return `<div data-openwork-mermaid="" data-openwork-mermaid-state="source" aria-busy="false" class="my-4 overflow-hidden rounded-[18px] border ${borderClass} ${backgroundClass}"><div class="flex min-h-10 items-center gap-2 border-b ${borderClass} px-3 py-2"><span class="me-auto text-xs font-medium text-muted-foreground">Mermaid diagram</span><div role="group" aria-label="Diagram view" class="flex items-center gap-1"><button type="button" data-openwork-mermaid-view="rendered" class="${buttonClass}" aria-pressed="false" disabled>Rendered</button><button type="button" data-openwork-mermaid-view="source" class="${buttonClass}" aria-pressed="true">Source</button><button type="button" data-openwork-mermaid-download="" class="${buttonClass}" aria-label="Download diagram as SVG" hidden>Download SVG</button></div></div><div data-openwork-mermaid-rendered="" class="overflow-auto p-4 [&amp;&gt;svg]:mx-auto [&amp;&gt;svg]:h-auto [&amp;&gt;svg]:max-w-full" hidden></div><pre data-openwork-mermaid-source="" class="overflow-x-auto p-4 text-xs leading-6 text-foreground"><code class="language-mermaid">${escapeHtml(text)}</code></pre><p data-openwork-mermaid-status="" class="border-t ${borderClass} px-3 py-2 text-xs text-muted-foreground" aria-live="polite">Diagram source</p></div>`;
+  return `<div data-offlinegpt-mermaid="" data-offlinegpt-mermaid-state="source" aria-busy="false" class="my-4 overflow-hidden rounded-[18px] border ${borderClass} ${backgroundClass}"><div class="flex min-h-10 items-center gap-2 border-b ${borderClass} px-3 py-2"><span class="me-auto text-xs font-medium text-muted-foreground">Mermaid diagram</span><div role="group" aria-label="Diagram view" class="flex items-center gap-1"><button type="button" data-offlinegpt-mermaid-view="rendered" class="${buttonClass}" aria-pressed="false" disabled>Rendered</button><button type="button" data-offlinegpt-mermaid-view="source" class="${buttonClass}" aria-pressed="true">Source</button><button type="button" data-offlinegpt-mermaid-download="" class="${buttonClass}" aria-label="Download diagram as SVG" hidden>Download SVG</button></div></div><div data-offlinegpt-mermaid-rendered="" class="overflow-auto p-4 [&amp;&gt;svg]:mx-auto [&amp;&gt;svg]:h-auto [&amp;&gt;svg]:max-w-full" hidden></div><pre data-offlinegpt-mermaid-source="" class="overflow-x-auto p-4 text-xs leading-6 text-foreground"><code class="language-mermaid">${escapeHtml(text)}</code></pre><p data-offlinegpt-mermaid-status="" class="border-t ${borderClass} px-3 py-2 text-xs text-muted-foreground" aria-live="polite">Diagram source</p></div>`;
 }
 
 function parseShikiLanguage(lang: string) {
@@ -189,7 +189,7 @@ export function hasFencedCodeBlock(text: string) {
 }
 
 export function syncMarkdownImagePreviews(root: HTMLElement) {
-  const previews = root.querySelectorAll("[data-openwork-image-preview]");
+  const previews = root.querySelectorAll("[data-offlinegpt-image-preview]");
 
   for (const preview of previews) {
     if (!(preview instanceof HTMLElement)) continue;
@@ -203,11 +203,11 @@ export function syncMarkdownImagePreviews(root: HTMLElement) {
 }
 
 export function setCodeCopyButtonState(button: HTMLButtonElement, copied: boolean) {
-  const label = button.querySelector("[data-openwork-code-copy-label]");
+  const label = button.querySelector("[data-offlinegpt-code-copy-label]");
   if (label) label.textContent = copied ? "Code block copied" : "Copy code block";
 
-  button.querySelector("[data-openwork-code-copy-icon]")?.toggleAttribute("hidden", copied);
-  button.querySelector("[data-openwork-code-copy-check-icon]")?.toggleAttribute("hidden", !copied);
+  button.querySelector("[data-offlinegpt-code-copy-icon]")?.toggleAttribute("hidden", copied);
+  button.querySelector("[data-offlinegpt-code-copy-check-icon]")?.toggleAttribute("hidden", !copied);
 
   button.title = copied ? "Copied" : "Copy code block";
   button.setAttribute("aria-label", copied ? "Code block copied" : "Copy code block");
@@ -223,11 +223,11 @@ export function codeWrapClassStates(wrapped: boolean) {
 }
 
 export function setCodeWrapButtonState(button: HTMLButtonElement, wrapped: boolean) {
-  const codeBlock = button.closest("[data-openwork-code-block]");
+  const codeBlock = button.closest("[data-offlinegpt-code-block]");
   const pre = codeBlock?.querySelector("pre");
 
   for (const [className, enabled] of Object.entries(codeWrapClassStates(wrapped))) {
-    for (const container of codeBlock?.querySelectorAll("[data-openwork-code-scroll]") ?? []) {
+    for (const container of codeBlock?.querySelectorAll("[data-offlinegpt-code-scroll]") ?? []) {
       container.classList.toggle(className, enabled);
     }
   }
@@ -254,21 +254,21 @@ function sanitizeMarkdownHtml(value: string) {
       "preload",
       "checked",
       "class",
-      "data-openwork-math-error",
-      "data-openwork-code-block",
-      "data-openwork-code-copy",
-      "data-openwork-code-copy-check-icon",
-      "data-openwork-code-copy-icon",
-      "data-openwork-code-copy-label",
-      "data-openwork-code-scroll",
-      "data-openwork-code-wrap",
+      "data-offlinegpt-math-error",
+      "data-offlinegpt-code-block",
+      "data-offlinegpt-code-copy",
+      "data-offlinegpt-code-copy-check-icon",
+      "data-offlinegpt-code-copy-icon",
+      "data-offlinegpt-code-copy-label",
+      "data-offlinegpt-code-scroll",
+      "data-offlinegpt-code-wrap",
       "aria-label",
       "aria-pressed",
-      "data-openwork-image-preview",
-      "data-openwork-inline-code-path",
-      "data-openwork-link-href",
-      "data-openwork-link-chevron",
-      "data-openwork-shiki",
+      "data-offlinegpt-image-preview",
+      "data-offlinegpt-inline-code-path",
+      "data-offlinegpt-link-href",
+      "data-offlinegpt-link-chevron",
+      "data-offlinegpt-shiki",
       "decoding",
       "disabled",
       "hidden",
@@ -300,7 +300,7 @@ function markdownProfileForPresentation(presentation: MarkdownPresentation): Mar
       imagePresentation: "simple",
       tableHeaderClassName: "border border-dls-border bg-dls-hover p-2 text-left",
       tableCellClassName: "border border-dls-border p-2 align-top",
-      shikiContainer: `<div data-openwork-shiki="true" class="my-4 overflow-x-auto rounded-[18px] border border-dls-border/70 bg-gray-1/80 p-4 text-xs leading-6">%s</div>`,
+      shikiContainer: `<div data-offlinegpt-shiki="true" class="my-4 overflow-x-auto rounded-[18px] border border-dls-border/70 bg-gray-1/80 p-4 text-xs leading-6">%s</div>`,
       shikiTheme: { kind: "single", theme: "github-light" },
     };
   }
@@ -320,7 +320,7 @@ function markdownProfileForPresentation(presentation: MarkdownPresentation): Mar
     imagePresentation: "chat",
     tableHeaderClassName: "border border-border p-2 bg-muted text-left",
     tableCellClassName: "border border-border p-2 align-top",
-    shikiContainer: chatCodeBlockContainer(`<div data-openwork-code-scroll="" class="overflow-x-auto px-4 pb-3 pt-11">%s</div>`, true),
+    shikiContainer: chatCodeBlockContainer(`<div data-offlinegpt-code-scroll="" class="overflow-x-auto px-4 pb-3 pt-11">%s</div>`, true),
     shikiTheme: { kind: "dual", light: "github-light", dark: "github-dark" },
   };
 }
@@ -332,8 +332,8 @@ function renderVideo(href: string, label: string) {
   const source = remote ? ` src="${escapeAttribute(safeHref(href))}"` : "";
   const fileLink = remote
     ? `href="${escapeAttribute(safeHref(href))}" target="_blank" rel="noopener noreferrer"`
-    : `href="#" data-openwork-inline-code-path="${escapeAttribute(href)}"`;
-  return `<span class="my-4 inline-block w-full max-w-lg align-top"><video data-openwork-video-path="${escapeAttribute(href)}"${source} controls playsinline preload="metadata" aria-label="${escapeAttribute(label)}" class="block max-h-80 w-full rounded-lg border border-border/70 bg-black"></video><span data-openwork-video-error="" hidden class="text-sm text-muted-foreground">Video preview unavailable. Open the file to play it.</span><a ${fileLink} class="text-sm text-indigo-10">${escapeHtml(label)}</a></span>`;
+    : `href="#" data-offlinegpt-inline-code-path="${escapeAttribute(href)}"`;
+  return `<span class="my-4 inline-block w-full max-w-lg align-top"><video data-offlinegpt-video-path="${escapeAttribute(href)}"${source} controls playsinline preload="metadata" aria-label="${escapeAttribute(label)}" class="block max-h-80 w-full rounded-lg border border-border/70 bg-black"></video><span data-offlinegpt-video-error="" hidden class="text-sm text-muted-foreground">Video preview unavailable. Open the file to play it.</span><a ${fileLink} class="text-sm text-indigo-10">${escapeHtml(label)}</a></span>`;
 }
 
 function renderLink(profile: MarkdownProfile, href: string, title: string | null | undefined, text: string) {
@@ -350,7 +350,7 @@ function renderLink(profile: MarkdownProfile, href: string, title: string | null
       const fileIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-muted-foreground"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/></svg>`;
       const chevron = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-muted-foreground"><path d="m6 9 6 6 6-6"/></svg>`;
 
-      return `<span class="inline-flex items-stretch overflow-hidden rounded-md border border-border/60 bg-muted/40 text-xs font-medium text-foreground align-middle"><a href="${safe}" data-openwork-link-href="${originalHref}"${titleAttr} target="_blank" rel="noreferrer noopener" class="inline-flex items-center gap-1 px-1.5 py-0.5 no-underline transition-colors hover:bg-muted">${fileIcon}${text}</a><button type="button" data-openwork-link-chevron="${originalHref}" class="inline-flex items-center border-l border-border/60 px-1 transition-colors hover:bg-muted" aria-label="Open with">${chevron}</button></span>`;
+      return `<span class="inline-flex items-stretch overflow-hidden rounded-md border border-border/60 bg-muted/40 text-xs font-medium text-foreground align-middle"><a href="${safe}" data-offlinegpt-link-href="${originalHref}"${titleAttr} target="_blank" rel="noreferrer noopener" class="inline-flex items-center gap-1 px-1.5 py-0.5 no-underline transition-colors hover:bg-muted">${fileIcon}${text}</a><button type="button" data-offlinegpt-link-chevron="${originalHref}" class="inline-flex items-center border-l border-border/60 px-1 transition-colors hover:bg-muted" aria-label="Open with">${chevron}</button></span>`;
     }
 
     const favicon = faviconUrlForHref(href);
@@ -358,7 +358,7 @@ function renderLink(profile: MarkdownProfile, href: string, title: string | null
       ? `<img src="${escapeAttribute(favicon)}" alt="" aria-hidden="true" loading="lazy" decoding="async" class="me-1 inline-block size-3.5 rounded-[3px] align-[-2px]" />`
       : "";
 
-    return `<a href="${safe}" data-openwork-link-href="${originalHref}"${titleAttr} target="_blank" rel="noreferrer noopener" class="text-indigo-10 no-underline transition-colors hover:text-indigo-8">${faviconHtml}${text}</a>`;
+    return `<a href="${safe}" data-offlinegpt-link-href="${originalHref}"${titleAttr} target="_blank" rel="noreferrer noopener" class="text-indigo-10 no-underline transition-colors hover:text-indigo-8">${faviconHtml}${text}</a>`;
   }
 
   return `<a href="${safe}"${titleAttr} target="_blank" rel="noreferrer noopener" class="text-indigo-10 no-underline transition-colors hover:text-indigo-8">${text}</a>`;
@@ -371,7 +371,7 @@ function renderImage(profile: MarkdownProfile, href: string, title: string | nul
   const titleAttr = title ? ` title="${escapeAttribute(title)}"` : "";
 
   if (profile.imagePresentation === "chat") {
-    return `<button type="button" data-openwork-image-preview="" class="my-4 inline-block max-w-full cursor-zoom-in align-top text-left transition-opacity hover:opacity-90" aria-label="Expand ${escapeAttribute(text)}"><img src="${safe}" alt="${escapeAttribute(text)}"${titleAttr} loading="lazy" decoding="async" class="block h-auto w-auto rounded-lg border border-border/70 object-contain" style="max-height: ${MARKDOWN_IMAGE_PREVIEW_MAX_HEIGHT}px; max-width: ${MARKDOWN_IMAGE_PREVIEW_MAX_WIDTH}px"></button>`;
+    return `<button type="button" data-offlinegpt-image-preview="" class="my-4 inline-block max-w-full cursor-zoom-in align-top text-left transition-opacity hover:opacity-90" aria-label="Expand ${escapeAttribute(text)}"><img src="${safe}" alt="${escapeAttribute(text)}"${titleAttr} loading="lazy" decoding="async" class="block h-auto w-auto rounded-lg border border-border/70 object-contain" style="max-height: ${MARKDOWN_IMAGE_PREVIEW_MAX_HEIGHT}px; max-width: ${MARKDOWN_IMAGE_PREVIEW_MAX_WIDTH}px"></button>`;
   }
 
   return `<img src="${safe}" alt="${escapeAttribute(text)}"${titleAttr} loading="lazy" decoding="async" class="my-4 max-w-full rounded-[18px] border border-dls-border/70">`;
@@ -386,7 +386,7 @@ function createMarkedOptions(profile: MarkdownProfile, presentation: MarkdownPre
     silent: true,
     renderer: {
       html({ text }) {
-        return profile.rawHtmlMode === "shiki-only" && !text.includes('data-openwork-shiki="true"') ? "" : text;
+        return profile.rawHtmlMode === "shiki-only" && !text.includes('data-offlinegpt-shiki="true"') ? "" : text;
       },
       paragraph({ tokens }) {
         return `<p class="my-3 leading-relaxed">${this.parser.parseInline(tokens)}</p>`;
@@ -420,7 +420,7 @@ function createMarkedOptions(profile: MarkdownProfile, presentation: MarkdownPre
         const video = path ? renderVideo(path, path) : null;
         if (video) return video;
         const pathAttributes = path
-          ? ` data-openwork-inline-code-path="${escapeAttribute(path)}" role="button" tabindex="0" aria-label="Open ${escapeAttribute(path)}"`
+          ? ` data-offlinegpt-inline-code-path="${escapeAttribute(path)}" role="button" tabindex="0" aria-label="Open ${escapeAttribute(path)}"`
           : "";
         const pathClassName = path ? " cursor-pointer transition-colors hover:bg-gray-3/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" : "";
         return `<code${pathAttributes} class="${profile.codeSpanClassName}${pathClassName}">${escapeHtml(text)}</code>`;

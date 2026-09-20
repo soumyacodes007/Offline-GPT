@@ -30,7 +30,7 @@ const nextConfig = {
   reactStrictMode: true,
   skipTrailingSlashRedirect: true,
   poweredByHeader: false,
-  transpilePackages: ["@openwork/ui", "@openwork-ee/utils", "@openwork-ee/telemetry-contracts"],
+  transpilePackages: ["@offlinegpt/ui", "@offlinegpt-ee/utils", "@offlinegpt-ee/telemetry-contracts"],
   outputFileTracingRoot: path.join(__dirname, "../../.."),
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];

@@ -8,7 +8,7 @@ import { createRoot } from "react-dom/client";
 import { createClient } from "../src/app/lib/opencode";
 import { createClientV2 } from "../src/app/lib/opencode-v2-adapter";
 import { useSessionInteractions, type UseSessionInteractionsInput } from "../src/react-app/domains/session/sync/use-session-interactions";
-import type { OpenworkSessionSnapshot } from "../src/app/lib/openwork-server";
+import type { OfflineGptSessionSnapshot } from "../src/app/lib/offlinegpt-server";
 import { getReactQueryClient } from "../src/react-app/infra/query-client";
 import { useSessionActivityStore } from "../src/react-app/domains/session/status/session-activity-store";
 import {
@@ -85,7 +85,7 @@ function uiMessage(id: string, role: "user" | "assistant", text: string): UIMess
 function snapshotWithMessages(
   messages: Array<{ id: string; role: "user" | "assistant"; text: string }>,
   sessionId = "session-a",
-): OpenworkSessionSnapshot {
+): OfflineGptSessionSnapshot {
   return {
     session: {
       id: sessionId,
@@ -114,7 +114,7 @@ function snapshotWithMessages(
     })),
     todos: [],
     status: { type: "idle" },
-  } as unknown as OpenworkSessionSnapshot;
+  } as unknown as OfflineGptSessionSnapshot;
 }
 
 afterEach(() => {
@@ -208,7 +208,7 @@ describe("session permission sync", () => {
   }
 
   test("terminal cancellation and reconnect reconcile native permissions without reply events", async () => {
-    const input = { workspaceId: "workspace-a", baseUrl: "http://permissions.test/opencode2", openworkToken: "token" };
+    const input = { workspaceId: "workspace-a", baseUrl: "http://permissions.test/opencode2", offlinegptToken: "token" };
     const cleanup = __createWorkspaceSessionSyncForTest(input);
     const reads: string[] = [];
     __setWorkspaceSessionSyncPermissionFetcherForTest(async (_url, _token, sessionID) => {
@@ -240,7 +240,7 @@ describe("session permission sync", () => {
   });
 
   test("late reads cannot clear a same-clock new approval, resurrect a reply, or undo a newer cancellation snapshot", async () => {
-    const input = { workspaceId: "workspace-a", baseUrl: "http://permissions.test/opencode2", openworkToken: "token" };
+    const input = { workspaceId: "workspace-a", baseUrl: "http://permissions.test/opencode2", offlinegptToken: "token" };
     const cleanup = __createWorkspaceSessionSyncForTest(input);
     let resolve: (items: PermissionV2Request[]) => void = () => {};
     __setWorkspaceSessionSyncPermissionFetcherForTest(() => new Promise((done) => { resolve = done; }));
@@ -262,7 +262,7 @@ describe("session permission sync", () => {
   });
 
   test("failed permission reconciliation preserves the pending request", async () => {
-    const input = { workspaceId: "workspace-a", baseUrl: "http://permissions.test/opencode2", openworkToken: "token" };
+    const input = { workspaceId: "workspace-a", baseUrl: "http://permissions.test/opencode2", offlinegptToken: "token" };
     const cleanup = __createWorkspaceSessionSyncForTest(input);
     __setWorkspaceSessionSyncPermissionFetcherForTest(async () => { throw new Error("offline"); });
     try {
@@ -344,7 +344,7 @@ describe("session permission sync", () => {
   });
 
   test("adds and removes live v2 permission events", () => {
-    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", openworkToken: "token" };
+    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", offlinegptToken: "token" };
     const cleanup = __createWorkspaceSessionSyncForTest(syncInput);
     const releaseSession = trackWorkspaceSessionSync(syncInput, "session-a");
 
@@ -371,7 +371,7 @@ describe("session permission sync", () => {
   });
 
   test("keeps a child permission that arrives before the child session is tracked", () => {
-    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", openworkToken: "token" };
+    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", offlinegptToken: "token" };
     const cleanup = __createWorkspaceSessionSyncForTest(syncInput);
 
     try {
@@ -415,7 +415,7 @@ describe("session question sync", () => {
   });
 
   test("retains a child question before its transcript is tracked and settles only that request", () => {
-    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", openworkToken: "token" };
+    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", offlinegptToken: "token" };
     const cleanup = __createWorkspaceSessionSyncForTest(syncInput);
     try {
       for (const request of [question("question-child", "session-child"), question("question-other", "session-b")]) {
@@ -476,7 +476,7 @@ describe("session question sync", () => {
   });
 
   test("adds and removes live question events", () => {
-    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", openworkToken: "token" };
+    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", offlinegptToken: "token" };
     const cleanup = __createWorkspaceSessionSyncForTest(syncInput);
     const releaseSession = trackWorkspaceSessionSync(syncInput, "session-a");
 
@@ -582,7 +582,7 @@ describe("session transcript sync", () => {
     const syncInput = {
       workspaceId: "workspace-priority",
       baseUrl: "http://127.0.0.1:4321",
-      openworkToken: "token",
+      offlinegptToken: "token",
       visibleSessionId: "session-visible",
     };
     const cleanup = __createWorkspaceSessionSyncForTest(syncInput);
@@ -696,7 +696,7 @@ describe("session transcript sync", () => {
   });
 
   test("todo hydration rejects old reads and cached reapplication but accepts newer snapshots", () => {
-    const input = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", openworkToken: "token" };
+    const input = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", offlinegptToken: "token" };
     const cleanup = __createWorkspaceSessionSyncForTest(input);
     const release = trackWorkspaceSessionSync(input, "session-a");
     const old = snapshotWithMessages([]);
@@ -739,7 +739,7 @@ describe("session transcript sync", () => {
         scheduled.push(run);
         return () => {};
       });
-      const input = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", openworkToken: "token" };
+      const input = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", offlinegptToken: "token" };
       const cleanup = __createWorkspaceSessionSyncForTest(input);
       const release = trackWorkspaceSessionSync(input, "session-a");
       const queryClient = getReactQueryClient();
@@ -792,7 +792,7 @@ describe("session transcript sync", () => {
   });
 
   test("continues accepting stream deltas for a recently unselected session", async () => {
-    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", openworkToken: "token" };
+    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", offlinegptToken: "token" };
     const cleanup = __createWorkspaceSessionSyncForTest(syncInput);
 
     try {
@@ -838,7 +838,7 @@ describe("session transcript sync", () => {
   });
 
   test("keeps workspace stream alive while retained sessions remain after route unmount", async () => {
-    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", openworkToken: "token" };
+    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", offlinegptToken: "token" };
     const releaseWorkspace = ensureWorkspaceSessionSync(syncInput);
     const releaseSessionA = trackWorkspaceSessionSync(syncInput, "session-a");
 

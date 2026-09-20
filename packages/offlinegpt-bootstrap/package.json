@@ -1,0 +1,22 @@
+{
+  "name": "offlinegpt-bootstrap",
+  "version": "0.1.0",
+  "description": "Script-installable OfflineGPT bootstrap CLI for agents",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "offlinegpt-bootstrap": "bin/offlinegpt.mjs"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "start.md"
+  ],
+  "scripts": {
+    "check": "node --check bin/offlinegpt.mjs && node --check evals/agent-test-evidence-offlinegpt-bootstrap.mjs && node --check evals/agent-test-evidence-offlinegpt-app-install.mjs && node --check evals/agent-test-evidence-linux-container.mjs",
+    "test": "node test/offlinegpt-bootstrap.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

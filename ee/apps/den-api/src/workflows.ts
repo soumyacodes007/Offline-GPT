@@ -1,14 +1,14 @@
 import type {
   AutomationAction,
-} from "@openwork/types/automations"
+} from "@offlinegpt/types/automations"
 import type {
   WorkflowArtifactSnapshot,
   WorkflowDetail,
   WorkflowRunPreview,
   WorkflowVersion,
-} from "@openwork/types/workflows"
-import { WorkflowGraph } from "@openwork/codemode"
-import { and, asc, desc, eq, gt, inArray, isNotNull, isNull } from "@openwork-ee/den-db/drizzle"
+} from "@offlinegpt/types/workflows"
+import { WorkflowGraph } from "@offlinegpt/codemode"
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull } from "@offlinegpt-ee/den-db/drizzle"
 import {
   AutomationRevisionTable,
   AutomationRunTable,
@@ -21,8 +21,8 @@ import {
   PluginConfigObjectTable,
   PluginTable,
   TeamMemberTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId, normalizeDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId, normalizeDenTypeId, type DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { codemodeCodeDigest, parseCodemodeToolCalls } from "./workflow-runs.js"
 import { db } from "./db.js"
 import { resolveOrganizationMemberAuthority } from "./organization-team-roles.js"

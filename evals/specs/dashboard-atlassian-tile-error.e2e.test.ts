@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { spec } from "@openwork/testkit";
+import { spec } from "@offlinegpt/testkit";
 import {
   atlassianDashboardTiles,
   confluenceTileTitle,

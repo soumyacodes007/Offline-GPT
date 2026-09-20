@@ -1,10 +1,10 @@
 extends: ./electron-builder.base.yml
-appId: com.differentai.openwork
+appId: com.differentai.offlinegpt
 productName: OfflineGPT
 protocols:
-  - name: OpenWork
+  - name: OfflineGPT
     schemes:
-      - openwork
+      - offlinegpt
 linux:
-  executableName: openwork
-artifactName: openwork-${os}-${arch}-${version}.${ext}
+  executableName: offlinegpt
+artifactName: offlinegpt-${os}-${arch}-${version}.${ext}

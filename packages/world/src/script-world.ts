@@ -105,7 +105,7 @@ export function isProcessAlive(pid: number): boolean {
 
 export function scriptWorldSnapshotDirectory(repoRoot: string): string {
   return resolve(
-    process.env.OPENWORK_WORLD_SNAPSHOT_DIR
+    process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR
       ?? join(repoRoot, "evals", "results", ".worlds", "scripts"),
   );
 }
@@ -238,16 +238,16 @@ export async function launchScriptWorld(options: LaunchScriptWorldOptions): Prom
   const logPath = scriptWorldLogPath(options.snapshotDirectory, stagedName);
   const env: NodeJS.ProcessEnv = {
     ...process.env,
-    OPENWORK_WORLD_SNAPSHOT_DIR: options.snapshotDirectory,
+    OFFLINEGPT_WORLD_SNAPSHOT_DIR: options.snapshotDirectory,
     [LEDGER_ENV]: ledgerPath(options.snapshotDirectory, stagedName),
     [EVENTS_ENV]: eventPath,
   };
-  if (options.stage === undefined) delete env.OPENWORK_WORLD_STAGE;
-  else env.OPENWORK_WORLD_STAGE = options.stage;
-  if (options.recipeHash === undefined) delete env.OPENWORK_WORLD_RECIPE_HASH;
-  else env.OPENWORK_WORLD_RECIPE_HASH = options.recipeHash;
-  if (options.place === undefined) delete env.OPENWORK_WORLD_PLACE;
-  else env.OPENWORK_WORLD_PLACE = options.place;
+  if (options.stage === undefined) delete env.OFFLINEGPT_WORLD_STAGE;
+  else env.OFFLINEGPT_WORLD_STAGE = options.stage;
+  if (options.recipeHash === undefined) delete env.OFFLINEGPT_WORLD_RECIPE_HASH;
+  else env.OFFLINEGPT_WORLD_RECIPE_HASH = options.recipeHash;
+  if (options.place === undefined) delete env.OFFLINEGPT_WORLD_PLACE;
+  else env.OFFLINEGPT_WORLD_PLACE = options.place;
   await assertNoRunningSnapshot(snapshotPath, stagedName);
   await rm(eventPath, { force: true });
 

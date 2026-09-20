@@ -1,6 +1,6 @@
 import { expect } from "vitest";
-import type { Target } from "@openwork/cdp";
-import { spec } from "@openwork/testkit";
+import type { Target } from "@offlinegpt/cdp";
+import { spec } from "@offlinegpt/testkit";
 import { archiveSessions } from "../worlds/session-shell.ts";
 
 const test = spec.world(archiveSessions);

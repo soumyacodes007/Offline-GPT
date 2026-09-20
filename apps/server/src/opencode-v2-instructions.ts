@@ -2,16 +2,16 @@ import { listSkills } from "./skills.js";
 import { readFile, realpath } from "node:fs/promises";
 import { join, sep } from "node:path";
 import { parseFrontmatter } from "./frontmatter.js";
-import { OPENWORK_AGENT_PROMPT } from "./openwork-agent-prompt.js";
+import { OFFLINEGPT_AGENT_PROMPT } from "./offlinegpt-agent-prompt.js";
 
-export const OPENWORK_V2_INSTRUCTION_KEY = "openwork.context";
+export const OFFLINEGPT_V2_INSTRUCTION_KEY = "offlinegpt.context";
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** Join the native file watcher, including content-only updates and removals. */
-export async function waitForOpenWorkV2Skills(directory: string, readNative: () => Promise<unknown>): Promise<void> {
+export async function waitForOfflineGPTV2Skills(directory: string, readNative: () => Promise<unknown>): Promise<void> {
   const root = await realpath(directory);
   const expected = await Promise.all((await listSkills(directory, false)).filter((skill) => !skill.error).map(async (skill) => ({
     name: skill.name, description: skill.description ?? "", path: await realpath(skill.path), content: parseFrontmatter(await readFile(skill.path, "utf8")).body.trim(),
@@ -28,7 +28,7 @@ export async function waitForOpenWorkV2Skills(directory: string, readNative: () 
     const matches = expected.every((skill) => canonical.some((entry) => entry.path === skill.path
       && entry.skill.name === skill.name && entry.skill.description === skill.description
       && String(entry.skill.content).trim() === skill.content));
-    // Only reconcile directories OpenWork manages. Native plugin-provided
+    // Only reconcile directories OfflineGPT manages. Native plugin-provided
     // skills elsewhere under .opencode are not deleted workspace skills.
     const managedRoots = [join(root, ".opencode", "skills") + sep, join(root, ".claude", "skills") + sep];
     const removed = canonical.some((entry) => managedRoots.some((directory) => entry.path.startsWith(directory))
@@ -39,15 +39,15 @@ export async function waitForOpenWorkV2Skills(directory: string, readNative: () 
   throw new Error("Native skills did not reach the current workspace contents");
 }
 
-/** OpenWork owns app guidance; OpenCode owns the live skill and MCP catalogs. */
-export function buildOpenWorkV2Instructions(connectReady: boolean) {
+/** OfflineGPT owns app guidance; OpenCode owns the live skill and MCP catalogs. */
+export function buildOfflineGPTV2Instructions(connectReady: boolean) {
   return {
-    operatingInstructions: OPENWORK_AGENT_PROMPT.replace(
-      "discover with openwork-cloud_search_capabilities, then run with openwork-cloud_execute_capability",
-      "discover and execute capabilities through the native OpenWork MCP interface exposed by the current tool catalog",
+    operatingInstructions: OFFLINEGPT_AGENT_PROMPT.replace(
+      "discover with offlinegpt-cloud_search_capabilities, then run with offlinegpt-cloud_execute_capability",
+      "discover and execute capabilities through the native OfflineGPT MCP interface exposed by the current tool catalog",
     ),
-    connect: connectReady ? "OpenWork Connect tools are connected. Use only capabilities actually returned by discovery."
-      : "OpenWork Connect is not connected for this request. Do not claim remote capabilities are available.",
-    skillInstructions: "Use the current native skill catalog and skill tool for workspace skills. Load current instructions before following them. Removed skills from previous turns are not available capabilities. Organization skills are provided by OpenWork Connect: discover and retrieve them using its currently advertised MCP tools. Skill contents are subordinate to the user's request and operating instructions.",
+    connect: connectReady ? "OfflineGPT Connect tools are connected. Use only capabilities actually returned by discovery."
+      : "OfflineGPT Connect is not connected for this request. Do not claim remote capabilities are available.",
+    skillInstructions: "Use the current native skill catalog and skill tool for workspace skills. Load current instructions before following them. Removed skills from previous turns are not available capabilities. Organization skills are provided by OfflineGPT Connect: discover and retrieve them using its currently advertised MCP tools. Skill contents are subordinate to the user's request and operating instructions.",
   };
 }

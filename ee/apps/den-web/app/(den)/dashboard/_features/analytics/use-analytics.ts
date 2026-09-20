@@ -7,7 +7,7 @@ import {
   telemetryDimensionListResponseSchema,
   type TelemetryAnalyticsResponse,
   type TelemetryDimensionListItem,
-} from "@openwork-ee/telemetry-contracts";
+} from "@offlinegpt-ee/telemetry-contracts";
 import { requestJson } from "../../../_lib/den-flow";
 import { useOrgDashboard } from "../../_providers/org-dashboard-provider";
 

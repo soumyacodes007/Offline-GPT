@@ -1,4 +1,4 @@
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { beforeAll, describe, expect, test } from "bun:test"
 
 type WorkerSharedModule = typeof import("../src/routes/workers/shared.js")
@@ -8,7 +8,7 @@ type StatusUpdate = Parameters<Store["updateWorkerStatus"]>[0]
 type InstanceInsert = Parameters<Store["insertWorkerInstance"]>[0]
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DEN_DB_ENCRYPTION_KEY = process.env.DEN_DB_ENCRYPTION_KEY ?? "x".repeat(32)
   process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "y".repeat(32)
   process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://127.0.0.1:8790"
@@ -46,13 +46,13 @@ describe("cloud provisioning image version", () => {
       clientToken: "client-token",
       activityToken: "activity-token",
     }, {
-      getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
       store,
       provisionWorker: async () => ({
         provider: "daytona",
         url: "https://initial.preview.example.test",
         status: "healthy",
-        imageVersion: "openwork-0.18.8",
+        imageVersion: "offlinegpt-0.18.8",
       }),
       materializeProviders: async (input) => {
         materializedUrls.push(input.instanceUrl)
@@ -63,7 +63,7 @@ describe("cloud provisioning image version", () => {
     expect(updates).toHaveLength(1)
     expect(updates[0]?.workerId).toBe(workerId)
     expect(updates[0]?.status).toBe("healthy")
-    expect(updates[0]?.imageVersion).toBe("openwork-0.18.8")
+    expect(updates[0]?.imageVersion).toBe("offlinegpt-0.18.8")
     expect(inserts).toHaveLength(1)
     expect(materializedUrls).toEqual(["https://initial.preview.example.test"])
   })
@@ -92,7 +92,7 @@ describe("cloud provisioning image version", () => {
       clientToken: "client-token",
       activityToken: "activity-token",
     }, {
-      getOpenWorkWebAccess: async () => ({ hasAccess: false }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: false }),
       store,
       provisionWorker: async () => {
         provisions += 1

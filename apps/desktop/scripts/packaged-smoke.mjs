@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 if (process.platform !== "linux") throw new Error("The fast packaged smoke gate currently targets Linux.");
-const output = resolve(process.env.OPENWORK_PACKAGED_SMOKE_DIR || join(tmpdir(), `openwork-packaged-smoke-${process.pid}`));
+const output = resolve(process.env.OFFLINEGPT_PACKAGED_SMOKE_DIR || join(tmpdir(), `offlinegpt-packaged-smoke-${process.pid}`));
 mkdirSync(output, { recursive: true });
 const report = { commit: execFileSync("git", ["rev-parse", "HEAD"], { cwd: repo, encoding: "utf8" }).trim(), phases: [], passed: false };
 const started = performance.now();
@@ -33,7 +33,7 @@ try {
       `--config.directories.output=${output}`], 120_000,
     { CSC_IDENTITY_AUTO_DISCOVERY: "false" });
   }
-  const binary = join(output, "linux-unpacked/openwork");
+  const binary = join(output, "linux-unpacked/offlinegpt");
   const resources = join(output, "linux-unpacked/resources");
   const archive = join(resources, "app.asar");
   if (!existsSync(archive)) throw new Error(`Missing packaged archive: ${archive}`);
@@ -46,10 +46,10 @@ try {
     `const server = await import(${JSON.stringify(embedded)}); if (typeof server.startEmbeddedServer !== "function") throw new Error("Missing embedded server export");`],
   15_000, { ELECTRON_RUN_AS_NODE: "1", NODE_PATH: "", NODE_OPTIONS: "" }, output);
   run("desktop-boot", "xvfb-run", ["-a", "pnpm", "evals:e2e", "app-smoke", "--local"], 90_000, {
-    OPENWORK_EVAL_ELECTRON_BINARY: binary,
-    OPENWORK_EVAL_ELECTRON_RESOURCES_PREPARED: "1",
-    OPENWORK_EVAL_ENGINE: "v1",
-    OPENWORK_EVAL_SURFACES_DIR: join(output, "profiles"),
+    OFFLINEGPT_EVAL_ELECTRON_BINARY: binary,
+    OFFLINEGPT_EVAL_ELECTRON_RESOURCES_PREPARED: "1",
+    OFFLINEGPT_EVAL_ENGINE: "v1",
+    OFFLINEGPT_EVAL_SURFACES_DIR: join(output, "profiles"),
     ELECTRON_RUN_AS_NODE: "",
     NODE_PATH: "", NODE_OPTIONS: "",
   });

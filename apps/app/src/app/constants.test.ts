@@ -5,30 +5,30 @@ declare const expect: (value: unknown) => {
 };
 
 import {
-  OPENWORK_EXTENSION_CATALOG,
-  filterOpenWorkExtensionCatalogForPlatform,
-  resolveOpenWorkExtensionCatalogPlatform,
+  OFFLINEGPT_EXTENSION_CATALOG,
+  filterOfflineGPTExtensionCatalogForPlatform,
+  resolveOfflineGPTExtensionCatalogPlatform,
 } from "./constants";
 
 function filteredIds(platform: "darwin" | "linux" | "windows" | "web") {
-  return filterOpenWorkExtensionCatalogForPlatform(OPENWORK_EXTENSION_CATALOG, platform)
+  return filterOfflineGPTExtensionCatalogForPlatform(OFFLINEGPT_EXTENSION_CATALOG, platform)
     .flatMap((entry) => entry.id ? [entry.id] : []);
 }
 
-describe("OpenWork extension catalog platform filter", () => {
+describe("OfflineGPT extension catalog platform filter", () => {
   test("resolves browser runtime to web and desktop runtime to OS", () => {
-    expect(resolveOpenWorkExtensionCatalogPlatform("web", "macos")).toEqual("web");
-    expect(resolveOpenWorkExtensionCatalogPlatform("desktop", "macos")).toEqual("darwin");
-    expect(resolveOpenWorkExtensionCatalogPlatform("desktop", "windows")).toEqual("windows");
-    expect(resolveOpenWorkExtensionCatalogPlatform("desktop", "linux")).toEqual("linux");
+    expect(resolveOfflineGPTExtensionCatalogPlatform("web", "macos")).toEqual("web");
+    expect(resolveOfflineGPTExtensionCatalogPlatform("desktop", "macos")).toEqual("darwin");
+    expect(resolveOfflineGPTExtensionCatalogPlatform("desktop", "windows")).toEqual("windows");
+    expect(resolveOfflineGPTExtensionCatalogPlatform("desktop", "linux")).toEqual("linux");
   });
 
   test("hides desktop-only extensions in web", () => {
     expect(filteredIds("web")).toEqual(["ollama"]);
   });
 
-  test("keeps OpenWork Browser desktop-only and Computer Use mac-only", () => {
-    expect(filteredIds("darwin")).toEqual(["openwork-browser", "computer-use", "ollama"]);
-    expect(filteredIds("linux")).toEqual(["openwork-browser", "ollama"]);
+  test("keeps OfflineGPT Browser desktop-only and Computer Use mac-only", () => {
+    expect(filteredIds("darwin")).toEqual(["offlinegpt-browser", "computer-use", "ollama"]);
+    expect(filteredIds("linux")).toEqual(["offlinegpt-browser", "ollama"]);
   });
 });

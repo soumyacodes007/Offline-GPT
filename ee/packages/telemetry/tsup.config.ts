@@ -7,5 +7,5 @@ export default defineConfig({
   // The contracts package exports TypeScript source (so den-web can transpile
   // it without a build step). Node consumers of this package load dist, so the
   // contracts source must be bundled in rather than left as a runtime import.
-  noExternal: ["@openwork-ee/telemetry-contracts"],
+  noExternal: ["@offlinegpt-ee/telemetry-contracts"],
 })

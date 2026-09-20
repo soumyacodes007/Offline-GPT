@@ -6,7 +6,7 @@
       "components": ["server"],
       "purpose": "Google Workspace OAuth authorization page opened when a user connects Google Workspace.",
       "requirement": "opt-in",
-      "blockedEffect": "Users cannot complete Google Workspace sign-in from OpenWork.",
+      "blockedEffect": "Users cannot complete Google Workspace sign-in from OfflineGPT.",
       "override": null
     },
     {
@@ -22,10 +22,10 @@
       "host": "api.github.com",
       "kind": "fetched",
       "components": ["server"],
-      "purpose": "GitHub API calls for importing and previewing GitHub-hosted Claude Code/OpenWork plugins.",
+      "purpose": "GitHub API calls for importing and previewing GitHub-hosted Claude Code/OfflineGPT plugins.",
       "requirement": "opt-in",
       "blockedEffect": "GitHub plugin import cannot inspect repositories, branches, or plugin manifests.",
-      "override": "OPENWORK_GITHUB_API_BASE"
+      "override": "OFFLINEGPT_GITHUB_API_BASE"
     },
     {
       "host": "api.githubcopilot.com",
@@ -46,46 +46,46 @@
       "override": null
     },
     {
-      "host": "api.openwork.software",
+      "host": "api.offlinegpt.software",
       "kind": "fetched",
       "components": ["server"],
-      "purpose": "Legacy hosted OpenWork Connect API origin retained for older Cloud configurations.",
+      "purpose": "Legacy hosted OfflineGPT Connect API origin retained for older Cloud configurations.",
       "requirement": "optional",
-      "blockedEffect": "Older hosted configurations that still use the legacy API origin cannot reconcile OpenWork Connect or native MCP Apps.",
+      "blockedEffect": "Older hosted configurations that still use the legacy API origin cannot reconcile OfflineGPT Connect or native MCP Apps.",
       "override": "self-hosted Den API origin"
     },
     {
-      "host": "api.openworklabs.com",
+      "host": "api.offlinegptlabs.com",
       "kind": "fetched",
       "components": ["installer", "server"],
-      "purpose": "Legacy hosted OpenWork public API origin retained for older install and Cloud configurations.",
+      "purpose": "Legacy hosted OfflineGPT public API origin retained for older install and Cloud configurations.",
       "requirement": "optional",
-      "blockedEffect": "Older hosted install or API configurations that still use this legacy origin cannot reach OpenWork Cloud.",
+      "blockedEffect": "Older hosted install or API configurations that still use this legacy origin cannot reach OfflineGPT Cloud.",
       "override": "installer apiUrl / self-hosted Den API origin"
     },
     {
-      "host": "api.app.openworklabs.com",
+      "host": "api.app.offlinegptlabs.com",
       "kind": "fetched",
       "components": ["desktop", "renderer", "server"],
-      "purpose": "Hosted OpenWork Den API origin derived from app.openworklabs.com for desktop Den API and OpenWork Connect MCP calls.",
+      "purpose": "Hosted OfflineGPT Den API origin derived from app.offlinegptlabs.com for desktop Den API and OfflineGPT Connect MCP calls.",
       "requirement": "required-for-cloud",
-      "blockedEffect": "Hosted Cloud desktop configuration, telemetry, sign-out, and OpenWork Connect MCP calls cannot reach the Den API.",
+      "blockedEffect": "Hosted Cloud desktop configuration, telemetry, sign-out, and OfflineGPT Connect MCP calls cannot reach the Den API.",
       "override": "desktop apiBaseUrl / self-hosted Den API origin"
     },
     {
-      "host": "app.openwork.software",
+      "host": "app.offlinegpt.software",
       "kind": "fetched",
       "components": ["server"],
-      "purpose": "Legacy hosted OpenWork Cloud web origin retained for older desktop configurations.",
+      "purpose": "Legacy hosted OfflineGPT Cloud web origin retained for older desktop configurations.",
       "requirement": "optional",
-      "blockedEffect": "Older hosted configurations that still derive Den MCP calls from the legacy web origin cannot reconcile OpenWork Connect or native MCP Apps.",
+      "blockedEffect": "Older hosted configurations that still derive Den MCP calls from the legacy web origin cannot reconcile OfflineGPT Connect or native MCP Apps.",
       "override": "desktop base URL (self-hosted Den replaces this host)"
     },
     {
-      "host": "app.openworklabs.com",
+      "host": "app.offlinegptlabs.com",
       "kind": "fetched",
       "components": ["desktop", "renderer", "bootstrap"],
-      "purpose": "Hosted OpenWork Cloud web origin; the desktop derives Den API and MCP calls from this base URL.",
+      "purpose": "Hosted OfflineGPT Cloud web origin; the desktop derives Den API and MCP calls from this base URL.",
       "requirement": "required-for-cloud",
       "blockedEffect": "Hosted Cloud sign-in, org settings, marketplace, and remote workspace flows cannot load.",
       "override": "desktop base URL (self-hosted Den replaces this host)"
@@ -114,7 +114,7 @@
       "components": ["server"],
       "purpose": "Source-code comment pointing maintainers to the Claude Code plugin format reference.",
       "requirement": "optional",
-      "blockedEffect": "No runtime effect; it is not opened or fetched by OpenWork.",
+      "blockedEffect": "No runtime effect; it is not opened or fetched by OfflineGPT.",
       "override": null
     },
     {
@@ -132,7 +132,7 @@
       "components": ["den"],
       "purpose": "Container registry for self-hosted Den API, web, inference images, and Helm chart pulls.",
       "requirement": "required",
-      "blockedEffect": "A self-hosted Den deployment cannot pull OpenWork images or the Helm chart from GitHub Container Registry.",
+      "blockedEffect": "A self-hosted Den deployment cannot pull OfflineGPT images or the Helm chart from GitHub Container Registry.",
       "override": "container registry mirror / Helm image.repository values"
     },
     {
@@ -159,7 +159,7 @@
       "components": ["renderer"],
       "purpose": "Sample link in the deterministic demo transcript used to exercise link rendering.",
       "requirement": "optional",
-      "blockedEffect": "Clicking that sample Linear link fails; OpenWork functionality is unaffected.",
+      "blockedEffect": "Clicking that sample Linear link fails; OfflineGPT functionality is unaffected.",
       "override": null
     },
     {
@@ -226,7 +226,7 @@
       "override": "MCP server URL setting"
     },
     {
-      "host": "models.openworklabs.com",
+      "host": "models.offlinegptlabs.com",
       "kind": "fetched",
       "components": ["server"],
       "purpose": "First-party OpenCode model catalog mirror passed to managed OpenCode as OPENCODE_MODELS_URL.",
@@ -241,15 +241,15 @@
       "purpose": "Google OAuth token exchange, refresh, and revocation for Google Workspace connections.",
       "requirement": "opt-in",
       "blockedEffect": "Google Workspace accounts cannot finish OAuth, refresh tokens, or revoke tokens cleanly.",
-      "override": "OPENWORK_GOOGLE_WORKSPACE_TOKEN_BROKER_URL for token exchange/refresh only"
+      "override": "OFFLINEGPT_GOOGLE_WORKSPACE_TOKEN_BROKER_URL for token exchange/refresh only"
     },
     {
       "host": "release-assets.githubusercontent.com",
       "kind": "redirect-target",
       "components": ["desktop", "installer"],
-      "purpose": "Current GitHub release-asset download target reached after github.com redirects installer and updater downloads. Verified live against a real OpenWork release asset.",
+      "purpose": "Current GitHub release-asset download target reached after github.com redirects installer and updater downloads. Verified live against a real OfflineGPT release asset.",
       "requirement": "required-in-practice",
-      "blockedEffect": "OpenWork downloads start from github.com and then fail partway through when the redirect target is blocked.",
+      "blockedEffect": "OfflineGPT downloads start from github.com and then fail partway through when the redirect target is blocked.",
       "override": null
     },
     {
@@ -258,7 +258,7 @@
       "components": ["desktop", "installer"],
       "purpose": "Legacy GitHub release-asset download target. GitHub has migrated to release-assets.githubusercontent.com, but allow both so older clients and any staged rollback keep working.",
       "requirement": "required-in-practice",
-      "blockedEffect": "OpenWork downloads start from github.com and then fail partway through if GitHub serves this legacy redirect target and it is blocked.",
+      "blockedEffect": "OfflineGPT downloads start from github.com and then fail partway through if GitHub serves this legacy redirect target and it is blocked.",
       "override": null
     },
     {
@@ -289,7 +289,7 @@
       "override": "provider options.baseURL"
     },
     {
-      "host": "openwork.dev",
+      "host": "offlinegpt.dev",
       "kind": "link-only",
       "components": ["renderer"],
       "purpose": "Documentation and feedback links in the command palette.",
@@ -298,13 +298,13 @@
       "override": null
     },
     {
-      "host": "openworklabs.com",
+      "host": "offlinegptlabs.com",
       "kind": "link-only",
       "components": ["desktop", "renderer"],
-      "purpose": "Documentation, feedback, support, and sample OpenWork links.",
+      "purpose": "Documentation, feedback, support, and sample OfflineGPT links.",
       "requirement": "optional",
       "blockedEffect": "Documentation or feedback links do not open; core app networking is unaffected.",
-      "override": "VITE_OPENWORK_FEEDBACK_URL for the feedback link only"
+      "override": "VITE_OFFLINEGPT_FEEDBACK_URL for the feedback link only"
     },
     {
       "host": "raw.githubusercontent.com",
@@ -313,22 +313,22 @@
       "purpose": "Raw file downloads for GitHub-hosted plugin manifests, MCP configs, skills, commands, and agents.",
       "requirement": "opt-in",
       "blockedEffect": "GitHub plugin import can discover metadata but cannot download component contents.",
-      "override": "OPENWORK_GITHUB_RAW_BASE"
+      "override": "OFFLINEGPT_GITHUB_RAW_BASE"
     },
     {
       "host": "registry.npmjs.org",
       "kind": "subprocess",
       "components": ["desktop", "renderer"],
-      "purpose": "npx package resolution for openwork-ui-mcp and development-only MCP helper commands.",
+      "purpose": "npx package resolution for offlinegpt-ui-mcp and development-only MCP helper commands.",
       "requirement": "required-in-practice",
-      "blockedEffect": "The OpenWork UI-control MCP is silently unavailable when npx cannot download openwork-ui-mcp.",
+      "blockedEffect": "The OfflineGPT UI-control MCP is silently unavailable when npx cannot download offlinegpt-ui-mcp.",
       "override": "npm registry configuration used by npx"
     },
     {
       "host": "schemas.agentskills.io",
       "kind": "schema-string",
       "components": ["server"],
-      "purpose": "Skill index $schema identifier used for validation; OpenWork does not fetch the schema URL.",
+      "purpose": "Skill index $schema identifier used for validation; OfflineGPT does not fetch the schema URL.",
       "requirement": "optional",
       "blockedEffect": "No runtime network effect.",
       "override": null
@@ -340,7 +340,7 @@
       "purpose": "Optional product analytics endpoint when analytics are enabled and a PostHog key is configured.",
       "requirement": "optional",
       "blockedEffect": "Analytics events are dropped silently; user-facing app behavior is unaffected.",
-      "override": "VITE_OPENWORK_POSTHOG_HOST; users can disable analytics with the analyticsEnabled preference"
+      "override": "VITE_OFFLINEGPT_POSTHOG_HOST; users can disable analytics with the analyticsEnabled preference"
     },
     {
       "host": "www.google.com",

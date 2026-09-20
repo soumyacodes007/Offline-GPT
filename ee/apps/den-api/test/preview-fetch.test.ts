@@ -95,7 +95,7 @@ describe("preview fetch", () => {
       request.on("end", () => {
         targetRequests.push({
           authorization: request.headers.authorization ?? null,
-          hostToken: typeof request.headers["x-openwork-host-token"] === "string" ? request.headers["x-openwork-host-token"] : null,
+          hostToken: typeof request.headers["x-offlinegpt-host-token"] === "string" ? request.headers["x-offlinegpt-host-token"] : null,
           body: Buffer.concat(chunks).toString("utf8"),
         })
         response.end("unexpected")
@@ -117,7 +117,7 @@ describe("preview fetch", () => {
             method: "PUT",
             headers: {
               Authorization: "Bearer client-secret",
-              "X-OpenWork-Host-Token": "host-secret",
+              "X-OfflineGPT-Host-Token": "host-secret",
             },
             body: JSON.stringify({ secret: "body-secret" }),
           },

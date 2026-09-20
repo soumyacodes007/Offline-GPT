@@ -156,25 +156,25 @@ importers:
       '@opencode-ai/sdk':
         specifier: ^1.18.15
         version: 1.18.18
-      '@openwork-ee/telemetry-contracts':
+      '@offlinegpt-ee/telemetry-contracts':
         specifier: workspace:*
         version: link:../../ee/packages/telemetry-contracts
-      '@openwork/browser-logins':
+      '@offlinegpt/browser-logins':
         specifier: workspace:*
         version: link:../../packages/browser-logins
-      '@openwork/browser-tabs':
+      '@offlinegpt/browser-tabs':
         specifier: workspace:*
         version: link:../../packages/browser-tabs
-      '@openwork/install-config':
+      '@offlinegpt/install-config':
         specifier: workspace:*
         version: link:../../packages/install-config
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@openwork/ui':
+      '@offlinegpt/ui':
         specifier: workspace:*
         version: link:../../packages/ui
-      '@openwork/workbook':
+      '@offlinegpt/workbook':
         specifier: workspace:*
         version: link:../../packages/workbook
       '@paper-design/shaders-react':
@@ -340,22 +340,22 @@ importers:
       '@opencode-ai/sdk':
         specifier: ^1.18.15
         version: 1.18.18
-      '@openwork/browser-logins':
+      '@offlinegpt/browser-logins':
         specifier: workspace:*
         version: link:../../packages/browser-logins
-      '@openwork/browser-tabs':
+      '@offlinegpt/browser-tabs':
         specifier: workspace:*
         version: link:../../packages/browser-tabs
-      '@openwork/enterprise-mcp-client':
+      '@offlinegpt/enterprise-mcp-client':
         specifier: workspace:*
         version: link:../../packages/enterprise-mcp-client
-      '@openwork/headless-threads':
+      '@offlinegpt/headless-threads':
         specifier: workspace:*
         version: link:../../packages/headless-threads
-      '@openwork/paths':
+      '@offlinegpt/paths':
         specifier: workspace:*
         version: link:../../packages/paths
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@sentry/electron':
@@ -416,7 +416,7 @@ importers:
 
   apps/review:
     dependencies:
-      '@openwork/review':
+      '@offlinegpt/review':
         specifier: workspace:*
         version: link:../../packages/review
       next:
@@ -453,10 +453,10 @@ importers:
       '@opencode-ai/sdk':
         specifier: ^1.18.15
         version: 1.18.18
-      '@openwork/enterprise-mcp-client':
+      '@offlinegpt/enterprise-mcp-client':
         specifier: workspace:*
         version: link:../../packages/enterprise-mcp-client
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../../packages/types
       better-sqlite3:
@@ -487,13 +487,13 @@ importers:
       '@hyzyla/pdfium':
         specifier: 2.1.13
         version: 2.1.13
-      '@openwork/headless-threads':
+      '@offlinegpt/headless-threads':
         specifier: workspace:*
         version: link:../../packages/headless-threads
-      '@openwork/paths':
+      '@offlinegpt/paths':
         specifier: workspace:*
         version: link:../../packages/paths
-      '@openwork/workbook':
+      '@offlinegpt/workbook':
         specifier: workspace:*
         version: link:../../packages/workbook
       '@types/better-sqlite3':
@@ -523,7 +523,7 @@ importers:
 
   apps/ui-demo:
     dependencies:
-      '@openwork/ui':
+      '@offlinegpt/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       react:
@@ -620,43 +620,43 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: 1.42.0
         version: 1.42.0
-      '@openwork-ee/cloud-runtime':
+      '@offlinegpt-ee/cloud-runtime':
         specifier: workspace:*
         version: link:../../packages/cloud-runtime
-      '@openwork-ee/den-db':
+      '@offlinegpt-ee/den-db':
         specifier: workspace:*
         version: link:../../packages/den-db
-      '@openwork-ee/telemetry':
+      '@offlinegpt-ee/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry
-      '@openwork-ee/utils':
+      '@offlinegpt-ee/utils':
         specifier: workspace:*
         version: link:../../packages/utils
-      '@openwork/automations':
+      '@offlinegpt/automations':
         specifier: workspace:*
         version: link:../../../packages/automations
-      '@openwork/codemode':
+      '@offlinegpt/codemode':
         specifier: workspace:*
         version: link:../../../packages/codemode
-      '@openwork/connect-link':
+      '@offlinegpt/connect-link':
         specifier: workspace:*
         version: link:../../../packages/connect-link
-      '@openwork/email':
+      '@offlinegpt/email':
         specifier: workspace:*
         version: link:../../../packages/email
-      '@openwork/enterprise-mcp-client':
+      '@offlinegpt/enterprise-mcp-client':
         specifier: workspace:*
         version: link:../../../packages/enterprise-mcp-client
-      '@openwork/headless-threads':
+      '@offlinegpt/headless-threads':
         specifier: workspace:*
         version: link:../../../packages/headless-threads
-      '@openwork/install-config':
+      '@offlinegpt/install-config':
         specifier: workspace:*
         version: link:../../../packages/install-config
-      '@openwork/mcp-apps':
+      '@offlinegpt/mcp-apps':
         specifier: workspace:*
         version: link:../../../packages/mcp-apps
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../../../packages/types
       '@sentry/hono':
@@ -780,7 +780,7 @@ importers:
       '@hono/node-server':
         specifier: 2.0.12
         version: 2.0.12(hono@4.12.34)
-      '@openwork-ee/utils':
+      '@offlinegpt-ee/utils':
         specifier: workspace:*
         version: link:../../packages/utils
       dotenv:
@@ -841,16 +841,16 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: 1.42.0
         version: 1.42.0
-      '@openwork-ee/telemetry-contracts':
+      '@offlinegpt-ee/telemetry-contracts':
         specifier: workspace:*
         version: link:../../packages/telemetry-contracts
-      '@openwork-ee/utils':
+      '@offlinegpt-ee/utils':
         specifier: workspace:*
         version: link:../../packages/utils
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../../../packages/types
-      '@openwork/ui':
+      '@offlinegpt/ui':
         specifier: workspace:*
         version: link:../../../packages/ui
       '@paper-design/shaders-react':
@@ -908,7 +908,7 @@ importers:
 
   ee/apps/diagnostics:
     dependencies:
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../../../packages/types
       next:
@@ -939,7 +939,7 @@ importers:
       '@hono/node-server':
         specifier: 2.0.12
         version: 2.0.12(hono@4.12.34)
-      '@openwork/enterprise-mcp-mock-server':
+      '@offlinegpt/enterprise-mcp-mock-server':
         specifier: workspace:*
         version: link:../../../packages/enterprise-mcp-mock-server
       hono:
@@ -964,16 +964,16 @@ importers:
       '@hono/node-server':
         specifier: 2.0.12
         version: 2.0.12(hono@4.12.34)
-      '@openwork-ee/den-db':
+      '@offlinegpt-ee/den-db':
         specifier: workspace:*
         version: link:../../packages/den-db
-      '@openwork-ee/telemetry':
+      '@offlinegpt-ee/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry
-      '@openwork-ee/utils':
+      '@offlinegpt-ee/utils':
         specifier: workspace:*
         version: link:../../packages/utils
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../../../packages/types
       '@sentry/hono':
@@ -1007,10 +1007,10 @@ importers:
 
   ee/apps/landing:
     dependencies:
-      '@openwork/email':
+      '@offlinegpt/email':
         specifier: workspace:*
         version: link:../../../packages/email
-      '@openwork/ui':
+      '@offlinegpt/ui':
         specifier: workspace:*
         version: link:../../../packages/ui
       botid:
@@ -1083,10 +1083,10 @@ importers:
 
   ee/packages/den-db:
     dependencies:
-      '@openwork-ee/utils':
+      '@offlinegpt-ee/utils':
         specifier: workspace:*
         version: link:../utils
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../../../packages/types
       '@planetscale/database':
@@ -1117,13 +1117,13 @@ importers:
 
   ee/packages/telemetry:
     dependencies:
-      '@openwork-ee/den-db':
+      '@offlinegpt-ee/den-db':
         specifier: workspace:*
         version: link:../den-db
-      '@openwork-ee/telemetry-contracts':
+      '@offlinegpt-ee/telemetry-contracts':
         specifier: workspace:*
         version: link:../telemetry-contracts
-      '@openwork-ee/utils':
+      '@offlinegpt-ee/utils':
         specifier: workspace:*
         version: link:../utils
       zod:
@@ -1180,7 +1180,7 @@ importers:
 
   packages/automations:
     dependencies:
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../types
       zod:
@@ -1242,7 +1242,7 @@ importers:
 
   packages/connect-link:
     dependencies:
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../types
       zod:
@@ -1382,7 +1382,7 @@ importers:
       '@modelcontextprotocol/ext-apps':
         specifier: ^1.7.5
         version: 1.7.5(@modelcontextprotocol/sdk@1.29.0(patch_hash=b9b29e6a319e94ea968476aa440eb8586b5da9db6b8011ce749c384d186f8a10)(zod@4.3.6))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.6)
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: workspace:*
         version: link:../types
       react:
@@ -1414,9 +1414,9 @@ importers:
         specifier: ^2.3.0
         version: 2.3.3(rollup@4.62.2)(vite@6.4.3(@types/node@25.6.0)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.0))
 
-  packages/openwork-bootstrap: {}
+  packages/offlinegpt-bootstrap: {}
 
-  packages/openwork-ui-mcp:
+  packages/offlinegpt-ui-mcp:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
@@ -1515,7 +1515,7 @@ importers:
 
   packages/world:
     dependencies:
-      '@openwork/paths':
+      '@offlinegpt/paths':
         specifier: workspace:*
         version: link:../paths
     devDependencies:

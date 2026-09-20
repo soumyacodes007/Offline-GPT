@@ -1,4 +1,4 @@
-import { openworkPluginPath } from "./openwork-extensions-plugin-path.js";
+import { offlinegptPluginPath } from "./offlinegpt-extensions-plugin-path.js";
 export function managedPolicyPluginPath(next = false): string {
-  return openworkPluginPath(next ? "managed-policy-next" : "managed-policy");
+  return offlinegptPluginPath(next ? "managed-policy-next" : "managed-policy");
 }

@@ -13,7 +13,7 @@ Kavach should adapt the projection pattern used by DeepSeek Harness, not port it
 
 DeepSeek Harness builds its Trajectory view from one authoritative, append-only Session event log. Chat, trajectory, replay, export, persistence, usage reporting, and telemetry are projections of that same log. That is a strong long-term architecture, but reproducing its versioned session formats, migration chain, Zstandard framing, write leases, request reconstruction, client definition registry, timeline, and virtualization would be disproportionate for Kavach V1.
 
-OpenWork already receives and persists the information required for a useful trail through OpenCode session snapshots:
+OfflineGPT already receives and persists the information required for a useful trail through OpenCode session snapshots:
 
 - user and assistant messages;
 - message creation and completion timestamps;
@@ -24,7 +24,7 @@ OpenWork already receives and persists the information required for a useful tra
 - generated file attachments and artifacts;
 - session errors and task status.
 
-OpenWork also has a separate workspace audit log for configuration changes, file uploads, engine reloads, workspace operations, and other server actions. V1 should project session activity from the existing OpenCode snapshot, merge it with the existing workspace audit entries for display, and add no new transcript persistence.
+OfflineGPT also has a separate workspace audit log for configuration changes, file uploads, engine reloads, workspace operations, and other server actions. V1 should project session activity from the existing OpenCode snapshot, merge it with the existing workspace audit entries for display, and add no new transcript persistence.
 
 This produces a lightweight **observability trail**. It must not be described as tamper-proof or compliance-grade until the later evidence-log phase is implemented.
 
@@ -64,7 +64,7 @@ DeepSeek Harness is MIT licensed. If implementation code is copied rather than i
 
 | Existing code | Current capability | V1 use |
 |---|---|---|
-| `apps/app/src/app/lib/openwork-server.ts` | `OpenworkSessionSnapshot`, `OpenworkAuditEntry`, and `listAudit()` client | Source types and workspace-audit query |
+| `apps/app/src/app/lib/offlinegpt-server.ts` | `OfflineGptSessionSnapshot`, `OfflineGptAuditEntry`, and `listAudit()` client | Source types and workspace-audit query |
 | `apps/app/src/app/lib/opencode-session-native.ts` | Composes session, messages, todos, and status | Existing snapshot acquisition; do not create another fetch path |
 | `apps/app/src/react-app/domains/session/sync/session-sync.ts` | Keeps snapshot and transcript query caches current from live events | Makes projected records update during a run |
 | `apps/app/src/react-app/domains/session/sync/parse-tool-parts.ts` | Normalizes pending, completed, and failed tools | Reuse its status and safe-output conventions |
@@ -139,7 +139,7 @@ Do not label V1 as immutable, tamper-proof, signed, compliance-grade, or legally
 ```mermaid
 flowchart LR
     A[OpenCode session snapshot] --> C[Pure session audit projector]
-    B[OpenWork workspace audit JSONL] --> D[Workspace audit normalizer]
+    B[OfflineGPT workspace audit JSONL] --> D[Workspace audit normalizer]
     C --> E[Merge, sort, deduplicate and redact]
     D --> E
     E --> F[AuditTrailMiniPanel]
@@ -336,7 +336,7 @@ Goal: remove the 140-message/200-workspace-entry limits when the product needs a
 Work:
 
 - add cursor-based OpenCode session-history retrieval or reuse an upstream paging capability if available;
-- add `before`, `limit`, `sessionId`, and action filters to the OpenWork audit endpoint;
+- add `before`, `limit`, `sessionId`, and action filters to the OfflineGPT audit endpoint;
 - stream or page exports instead of buffering unbounded histories;
 - load older records explicitly rather than automatically;
 - introduce row virtualization only after a measured threshold.

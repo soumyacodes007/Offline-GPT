@@ -8,7 +8,7 @@ import { compareBaseline, countRawEscapes } from "./spec-channel-ratchet.mjs";
 
 test("countRawEscapes counts raw rails only when their exact syntax is present", () => {
   const source = `
-    import { evalIn } from "@openwork/behaviors";
+    import { evalIn } from "@offlinegpt/behaviors";
     evalIn(app, "read");
     denFetch(den, "/v1/write");
     browser.client.send("Input.insertText");

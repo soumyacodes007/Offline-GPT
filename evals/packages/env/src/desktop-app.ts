@@ -1,11 +1,11 @@
-import { browserScript } from "@openwork/cdp";
-import { createAndSelectWorkspace, signInDesktopAs } from "@openwork/behaviors";
-import { attachSurface, evaluateOnSurface, isInteractive, probeAppStateOnSurface } from "@openwork/cdp";
-import type { Surface } from "@openwork/cdp";
-import { desktop } from "@openwork/hosts";
-import { liveSharedProductionStateEnv } from "@openwork/hosts";
-import { progress, trackResource } from "@openwork/world";
-import type { AppReadiness, DesktopHandle, Host, InstalledProductionDesktopState } from "@openwork/hosts";
+import { browserScript } from "@offlinegpt/cdp";
+import { createAndSelectWorkspace, signInDesktopAs } from "@offlinegpt/behaviors";
+import { attachSurface, evaluateOnSurface, isInteractive, probeAppStateOnSurface } from "@offlinegpt/cdp";
+import type { Surface } from "@offlinegpt/cdp";
+import { desktop } from "@offlinegpt/hosts";
+import { liveSharedProductionStateEnv } from "@offlinegpt/hosts";
+import { progress, trackResource } from "@offlinegpt/world";
+import type { AppReadiness, DesktopHandle, Host, InstalledProductionDesktopState } from "@offlinegpt/hosts";
 import type { Den } from "./den.ts";
 import type { Place } from "./place.ts";
 
@@ -23,7 +23,7 @@ interface SharedAppOptions {
   enterpriseActivated?: boolean;
   /** Reuse this caller-owned local Electron profile root instead of creating one. */
   profileDir?: string;
-  /** Eval-only delay before the desktop starts its embedded OpenWork server. */
+  /** Eval-only delay before the desktop starts its embedded OfflineGPT server. */
   localServerDelayMs?: number;
   /** Observe a fresh profile after workspace setup but before Cloud sign-in. */
   beforeSignIn?: (surface: Surface) => Promise<void>;
@@ -54,7 +54,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 
 async function mirrorInstalledProductionRendererState(target: Surface): Promise<AppReadiness> {
-  const cdpUrl = process.env.OPENWORK_EVAL_INSTALLED_PRODUCTION_CDP_URL?.trim() || "http://127.0.0.1:9223";
+  const cdpUrl = process.env.OFFLINEGPT_EVAL_INSTALLED_PRODUCTION_CDP_URL?.trim() || "http://127.0.0.1:9223";
   await using source = await attachSurface({
     name: "installed-production-source",
     kind: "electron",
@@ -63,7 +63,7 @@ async function mirrorInstalledProductionRendererState(target: Surface): Promise<
   });
   const raw = await evaluateOnSurface(source, () => (({
     route: location.hash,
-    entries: Object.entries(localStorage).filter(([key]) => key.startsWith("openwork.")),
+    entries: Object.entries(localStorage).filter(([key]) => key.startsWith("offlinegpt.")),
   })));
   if (!isRecord(raw) || typeof raw.route !== "string" || !Array.isArray(raw.entries)) {
     throw new Error(`Installed production desktop at ${cdpUrl} returned invalid renderer state.`);
@@ -140,9 +140,9 @@ export async function liveSharedProductionApp(options: {
 export async function app(options: AppOptions): Promise<App> {
   if (options.signIn === false) {
     const env: Record<string, string> = { ...options.env };
-    if (options.model) env.OPENWORK_EVAL_MODEL = options.model;
+    if (options.model) env.OFFLINEGPT_EVAL_MODEL = options.model;
     if (options.localServerDelayMs !== undefined) {
-      env.OPENWORK_EVAL_LOCAL_SERVER_DELAY_MS = String(options.localServerDelayMs);
+      env.OFFLINEGPT_EVAL_LOCAL_SERVER_DELAY_MS = String(options.localServerDelayMs);
     }
     const electronStep = steps.step("electron-fresh", "Electron (fresh)");
     let surface: Awaited<ReturnType<typeof desktop>>;
@@ -167,13 +167,13 @@ export async function app(options: AppOptions): Promise<App> {
     await electronStep.note(`log ${surface.handle.meta?.log}`);
     await electronStep.ok(surface.handle.cdpUrl);
     if (surface.handle.pid !== undefined) {
-      await trackResource({ kind: "process", id: String(surface.handle.pid), label: "electron", match: process.env.OPENWORK_EVAL_ELECTRON_BINARY?.trim() || "dev:electron" });
+      await trackResource({ kind: "process", id: String(surface.handle.pid), label: "electron", match: process.env.OFFLINEGPT_EVAL_ELECTRON_BINARY?.trim() || "dev:electron" });
     }
     if (surface.handle.meta?.profileOwner !== "caller" && typeof surface.handle.profileDir === "string") {
       await trackResource({ kind: "tmpdir", id: surface.handle.profileDir, label: "electron-profile" });
     }
     try {
-      const path = options.workspacePath ?? `/tmp/openwork-fresh-${Date.now()}`;
+      const path = options.workspacePath ?? `/tmp/offlinegpt-fresh-${Date.now()}`;
       const workspaceStep = steps.step("workspace-fresh", "Create workspace");
       const { workspaceId } = await createAndSelectWorkspace(surface, { path });
       await workspaceStep.ok(workspaceId);
@@ -198,9 +198,9 @@ export async function app(options: AppOptions): Promise<App> {
     throw new Error(`Unknown Den member ${JSON.stringify(options.as)}. Available: ${available}`);
   }
   const env: Record<string, string> = { ...options.env };
-  if (options.model) env.OPENWORK_EVAL_MODEL = options.model;
+  if (options.model) env.OFFLINEGPT_EVAL_MODEL = options.model;
   if (options.localServerDelayMs !== undefined) {
-    env.OPENWORK_EVAL_LOCAL_SERVER_DELAY_MS = String(options.localServerDelayMs);
+    env.OFFLINEGPT_EVAL_LOCAL_SERVER_DELAY_MS = String(options.localServerDelayMs);
   }
   const electronStep = steps.step(`electron-${options.as}`, `Electron (${options.as})`);
   let surface: Awaited<ReturnType<typeof desktop>>;
@@ -225,7 +225,7 @@ export async function app(options: AppOptions): Promise<App> {
   await electronStep.note(`log ${surface.handle.meta?.log}`);
   await electronStep.ok(surface.handle.cdpUrl);
   if (surface.handle.pid !== undefined) {
-    await trackResource({ kind: "process", id: String(surface.handle.pid), label: "electron", match: process.env.OPENWORK_EVAL_ELECTRON_BINARY?.trim() || "dev:electron" });
+    await trackResource({ kind: "process", id: String(surface.handle.pid), label: "electron", match: process.env.OFFLINEGPT_EVAL_ELECTRON_BINARY?.trim() || "dev:electron" });
   }
   if (surface.handle.meta?.profileOwner !== "caller" && typeof surface.handle.profileDir === "string") {
     await trackResource({ kind: "tmpdir", id: surface.handle.profileDir, label: "electron-profile" });
@@ -233,7 +233,7 @@ export async function app(options: AppOptions): Promise<App> {
   try {
     // Workspace first, then the org sign-in: the signed-in org shell offers no
     // Add workspace entry, so a member's workspace exists before they connect.
-    const path = options.workspacePath ?? `/tmp/openwork-${options.as}-${Date.now()}`;
+    const path = options.workspacePath ?? `/tmp/offlinegpt-${options.as}-${Date.now()}`;
     const workspaceStep = steps.step(`workspace-${options.as}`, "Create workspace");
     const { workspaceId: initialWorkspaceId } = await createAndSelectWorkspace(surface, { path });
     await workspaceStep.ok(initialWorkspaceId);

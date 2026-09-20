@@ -1,7 +1,7 @@
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
-import { ManagedModelsPolicyError } from "@openwork/types/den/managed-models-policy"
+import { ManagedModelsPolicyError } from "@offlinegpt/types/den/managed-models-policy"
 import { assertOrganizationManagedModelsAllowed } from "../../organization-metadata.js"
 import { getInferenceStatus, setInferenceEnabled } from "../../inference.js"
 import { organizationHasActiveInferenceSubscription } from "../../stripe-billing.js"
@@ -53,7 +53,7 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
     describeRoute({
       tags: ["Inference"],
       summary: "Get inference settings",
-      description: "Returns OpenWork Models enablement and limit context for the active organization.",
+      description: "Returns OfflineGPT Models enablement and limit context for the active organization.",
       responses: {
         200: jsonResponse("Inference settings returned successfully.", inferenceStatusResponseSchema),
         401: jsonResponse("The caller must be signed in to read inference settings.", unauthorizedSchema),
@@ -77,7 +77,7 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
     describeRoute({
       tags: ["Inference"],
       summary: "Update inference settings",
-      description: "Enables or disables OpenWork Models for the active organization.",
+      description: "Enables or disables OfflineGPT Models for the active organization.",
       responses: {
         200: jsonResponse("Inference settings updated successfully.", inferenceStatusResponseSchema),
         400: jsonResponse("The inference settings request was invalid.", z.union([invalidRequestSchema, inferenceProviderMissingSchema])),
@@ -124,7 +124,7 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
         if (error instanceof Error && error.message === "openrouter_management_api_key_missing") {
           return c.json({
             error: "openrouter_management_api_key_missing",
-            message: "Set OPENROUTER_MANAGEMENT_API_KEY on Den API before enabling OpenWork Models.",
+            message: "Set OPENROUTER_MANAGEMENT_API_KEY on Den API before enabling OfflineGPT Models.",
           }, 400)
         }
         throw error

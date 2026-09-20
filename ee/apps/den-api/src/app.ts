@@ -1,8 +1,8 @@
 import "./load-env.js"
-import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { swaggerUI } from "@hono/swagger-ui"
-import { and, eq, isNull, sql } from "@openwork-ee/den-db/drizzle"
-import { MemberTable, OrganizationTable } from "@openwork-ee/den-db/schema"
+import { and, eq, isNull, sql } from "@offlinegpt-ee/den-db/drizzle"
+import { MemberTable, OrganizationTable } from "@offlinegpt-ee/den-db/schema"
 import { cors } from "hono/cors"
 import { Hono } from "hono"
 import type { RequestIdVariables } from "hono/request-id"
@@ -135,7 +135,7 @@ if (env.corsOrigins.length > 0 && !env.corsHandledByEdge) {
       cors({
         origin: env.corsOrigins,
         credentials: true,
-        allowHeaders: ["Content-Type", "Authorization", "X-Api-Key", "X-Request-Id", "X-OpenWork-Legacy-Org-Id", "X-OpenWork-Org-Id"],
+        allowHeaders: ["Content-Type", "Authorization", "X-Api-Key", "X-Request-Id", "X-OfflineGPT-Legacy-Org-Id", "X-OfflineGPT-Org-Id"],
         allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         exposeHeaders: ["Content-Length"],
         maxAge: 600,
@@ -318,7 +318,7 @@ app.get(
           "Authentication:",
           "- Use `Authorization: Bearer <session-token>` for user-authenticated routes that require a Den session.",
           "- Use `x-api-key: <den-api-key>` for organization API-key calls. API keys resolve to the issuing user and the organization member they were scoped to when created, so they can call ordinary user and organization routes without a separate signed-in session.",
-          "  Example: `curl https://api.openworklabs.com/v1/me -H \"x-api-key: den_...\"`.",
+          "  Example: `curl https://api.offlinegptlabs.com/v1/me -H \"x-api-key: den_...\"`.",
           "- Session-only flows still require a signed-in user session, including organization creation, invitation acceptance, active-organization switching, and MCP token minting.",
           "- Public routes like health and documentation do not require authentication.",
           "",

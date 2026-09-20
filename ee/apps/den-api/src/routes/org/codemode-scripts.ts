@@ -12,7 +12,7 @@ import {
   savedAppSummarySchema,
   savedAppDetailSchema,
   saveAppSchema,
-} from "@openwork/types/workflows"
+} from "@offlinegpt/types/workflows"
 import {
   createWorkflowVersion,
   deleteWorkflowSnapshotContent,
@@ -59,7 +59,7 @@ const scriptSchema = z.object({
 })
 const listSchema = z.object({ items: z.array(scriptSchema) })
 const saveSchema = z.object({
-  pluginId: z.string().trim().min(1).max(160).optional().describe("Existing OpenWork Connect Plugin that will contain and share this Workflow. Omit to use the member's private My Workflows Plugin."),
+  pluginId: z.string().trim().min(1).max(160).optional().describe("Existing OfflineGPT Connect Plugin that will contain and share this Workflow. Omit to use the member's private My Workflows Plugin."),
   name: z.string().trim().min(1).max(255),
   description: z.string().trim().max(4_000).optional(),
   code: z.string().min(1).max(200_000),
@@ -183,7 +183,7 @@ function appRouteFailure(error: unknown) {
   const message = code.includes("not_found")
     ? "This app is unavailable or you no longer have access."
     : code === "artifact_view_schema_incompatible"
-      ? "The workflow’s results have changed. Ask OpenWork to update this app before saving."
+      ? "The workflow’s results have changed. Ask OfflineGPT to update this app before saving."
       : code === "artifact_view_revision_not_ready"
         ? "This app is still being prepared. Wait for its preview before saving."
         : null
@@ -243,7 +243,7 @@ export function registerOrgWorkflowRoutes<T extends { Variables: OrgRouteVariabl
     "/v1/workflows",
     describeRoute({
       operationId: saveWorkflowOperationId,
-      tags: ["Workflows"], summary: "Save a successful Code Mode run as a Workflow inside an OpenWork Connect Plugin",
+      tags: ["Workflows"], summary: "Save a successful Code Mode run as a Workflow inside an OfflineGPT Connect Plugin",
       responses: {
         201: jsonResponse("Workflow saved.", savedSchema),
         400: jsonResponse("Invalid request.", invalidRequestSchema),

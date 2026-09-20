@@ -57,8 +57,8 @@ export const FRIENDLY_PROVIDER_LABELS: Record<string, string> = {
  */
 export const FRIENDLY_MODEL_LABELS: [pattern: string, label: string][] = [
   // GPT-backed models use GLM display aliases. Provider/model IDs stay unchanged.
-  ["gpt-5.6-terra", "GLM-5.1"],
-  ["gpt-5.6-luna", "GLM-4.7"],
+  ["gpt-5.6-sol", "GLM-5.1"],
+  ["gpt-5.6-terra", "GLM-4.7"],
   ["gpt-5.5", "GLM-5.1"],
   ["gpt-5", "GLM-5.1"],
   ["gpt-4.1-mini", "GLM-4.7"],
@@ -147,7 +147,7 @@ export function usesGlmModelPresentation(
 
 export function isSupportedGlmBackendModel(model: ModelRef) {
   const modelID = model.modelID.trim().toLowerCase();
-  return modelID.includes("gpt-5.6-terra") || modelID.includes("gpt-5.6-luna");
+  return modelID.includes("gpt-5.6-sol") || modelID.includes("gpt-5.6-terra");
 }
 
 export function findSupportedGlmBackendModel(
@@ -155,7 +155,7 @@ export function findSupportedGlmBackendModel(
   connectedProviderIds: readonly string[],
 ): ModelRef | null {
   const connected = new Set(connectedProviderIds);
-  for (const marker of ["gpt-5.6-terra", "gpt-5.6-luna"]) {
+  for (const marker of ["gpt-5.6-sol", "gpt-5.6-terra"]) {
     for (const provider of providers) {
       if (!connected.has(provider.id)) continue;
       const modelID = Object.keys(provider.models ?? {}).find(
@@ -178,7 +178,7 @@ export function resolveSupportedGlmBackendModel(
   }
   return findSupportedGlmBackendModel(providers, connectedProviderIds) ?? {
     providerID: model.providerID,
-    modelID: "gpt-5.6-terra",
+    modelID: "gpt-5.6-sol",
   };
 }
 
@@ -298,9 +298,9 @@ export function isMacPlatform() {
   return /mac/i.test(platform) || /macintosh|mac os x/i.test(ua);
 }
 
-const STARTUP_PREF_KEY = "openwork.startupPref";
-const LEGACY_PREF_KEY = "openwork.modePref";
-const LEGACY_PREF_KEY_ALT = "openwork_mode_pref";
+const STARTUP_PREF_KEY = "offlinegpt.startupPref";
+const LEGACY_PREF_KEY = "offlinegpt.modePref";
+const LEGACY_PREF_KEY_ALT = "offlinegpt_mode_pref";
 
 export function readStartupPreference(): "local" | "server" | null {
   if (typeof window === "undefined") return null;
@@ -566,7 +566,7 @@ export function getWorkspaceTaskLoadErrorDisplay(workspace: WorkspaceInfo, error
   const normalized = raw.toLowerCase();
   const hasDockerHint = SANDBOX_DOCKER_OFFLINE_HINTS.some((hint) => normalized.includes(hint));
   const hasNetworkHint = SANDBOX_NETWORK_HINTS.some((hint) => normalized.includes(hint));
-  const host = `${workspace.baseUrl ?? ""} ${workspace.openworkHostUrl ?? ""}`.toLowerCase();
+  const host = `${workspace.baseUrl ?? ""} ${workspace.offlinegptHostUrl ?? ""}`.toLowerCase();
   const localHost = host.includes("localhost") || host.includes("127.0.0.1");
 
   if (!hasDockerHint && !(localHost && hasNetworkHint)) {
@@ -1090,8 +1090,8 @@ const ARTIFACT_OUTPUT_SKIP_TOOLS = new Set(["webfetch"]);
 
 // Patterns that indicate a path is a truncated system/absolute path rather than a workspace-relative path
 const TRUNCATED_SYSTEM_PATH_PATTERNS = [
-  /com\.[^/]+\.(openwork|opencode)/i, // macOS app bundle identifiers
-  /\.openwork\.dev\//i, // OpenWork dev paths
+  /com\.[^/]+\.(offlinegpt|opencode)/i, // macOS app bundle identifiers
+  /\.offlinegpt\.dev\//i, // OfflineGPT dev paths
   /Application Support\//i, // macOS Application Support
   /AppData[/\\]/i, // Windows AppData
   /\.local\/share\//i, // Linux XDG data

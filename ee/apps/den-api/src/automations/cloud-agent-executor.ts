@@ -1,16 +1,16 @@
 import { createHash } from "node:crypto"
-import { createHeadlessThreadClient, type HeadlessThreadTranscript } from "@openwork/headless-threads"
-import { and, asc, eq, isNull } from "@openwork-ee/den-db/drizzle"
-import { MemberTable, WorkerTable } from "@openwork-ee/den-db/schema"
-import { normalizeDenTypeId } from "@openwork-ee/utils/typeid"
-import type { AutomationAction, AutomationError, AutomationUsage } from "@openwork/types/automations"
+import { createHeadlessThreadClient, type HeadlessThreadTranscript } from "@offlinegpt/headless-threads"
+import { and, asc, eq, isNull } from "@offlinegpt-ee/den-db/drizzle"
+import { MemberTable, WorkerTable } from "@offlinegpt-ee/den-db/schema"
+import { normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
+import type { AutomationAction, AutomationError, AutomationUsage } from "@offlinegpt/types/automations"
 import { db } from "../db.js"
 import { env } from "../env.js"
 import {
-  getOpenWorkWebRuntimeAccess,
-  OPENWORK_WEB_ACCESS_REQUIRED_CODE,
-  OPENWORK_WEB_ACCESS_REQUIRED_MESSAGE,
-} from "../openwork-web-runtime-access.js"
+  getOfflineGPTWebRuntimeAccess,
+  OFFLINEGPT_WEB_ACCESS_REQUIRED_CODE,
+  OFFLINEGPT_WEB_ACCESS_REQUIRED_MESSAGE,
+} from "../offlinegpt-web-runtime-access.js"
 import { resolveCloudRuntimeAccess, type CloudWorkerAccess } from "../workers/worker-access.js"
 import { cloudHostingAvailable } from "../capability-sources/cloud-hosting.js"
 import { CLOUD_INSTANCE_BACKEND } from "../workers/cloud-constants.js"
@@ -162,7 +162,7 @@ export async function cloudAgentRuntimeAvailable(scope: OwnerScope): Promise<boo
   )).limit(1)
   if (!members[0]) return false
   if (!cloudHostingAvailable({ orgMode: env.orgMode })) return false
-  const webAccess = await getOpenWorkWebRuntimeAccess(organizationId)
+  const webAccess = await getOfflineGPTWebRuntimeAccess(organizationId)
   if (!webAccess.hasAccess) return false
   const worker = await ownerCloudWorker(scope)
   return worker !== null && worker.status !== "failed"
@@ -172,7 +172,7 @@ function workerHeaders(access: CloudWorkerAccess) {
   return {
     Accept: "application/json",
     Authorization: `Bearer ${access.clientToken}`,
-    "X-OpenWork-Host-Token": access.hostToken,
+    "X-OfflineGPT-Host-Token": access.hostToken,
   }
 }
 
@@ -221,13 +221,13 @@ export async function resolveCloudAgentReadyWorker(
     sleep: options.sleep ?? abortableSleep,
   }
   const userId = await deps.ownerUserId(scope)
-  if (!userId) return { ok: false, reason: "missing", message: "Set up OpenWork Cloud before creating a Cloud Automation." }
+  if (!userId) return { ok: false, reason: "missing", message: "Set up OfflineGPT Cloud before creating a Cloud Automation." }
   let deadline = deps.now() + WORKER_READY_TIMEOUT_MS
   let waitedForLifecycle = false
   let pending: Extract<CloudAgentRuntimeResult, { ok: false }> = {
     ok: false,
     reason: "waking",
-    message: "OpenWork Cloud is still starting for this Automation run.",
+    message: "OfflineGPT Cloud is still starting for this Automation run.",
   }
   while (!signal.aborted && deps.now() < deadline) {
     const access = await deps.resolveAccess({
@@ -235,7 +235,7 @@ export async function resolveCloudAgentReadyWorker(
       userId,
     })
     if (access.status === "missing") {
-      return { ok: false, reason: "missing", message: "Set up OpenWork Cloud before creating a Cloud Automation." }
+      return { ok: false, reason: "missing", message: "Set up OfflineGPT Cloud before creating a Cloud Automation." }
     }
     if (
       !waitedForLifecycle &&
@@ -248,19 +248,19 @@ export async function resolveCloudAgentReadyWorker(
       continue
     }
     if (access.status !== "ready" && access.reason === "unreachable") {
-      pending = { ok: false, reason: "unreachable", message: "The OpenWork Cloud runtime is healthy but unreachable for this Automation run." }
+      pending = { ok: false, reason: "unreachable", message: "The OfflineGPT Cloud runtime is healthy but unreachable for this Automation run." }
       await deps.sleep(WORKER_READY_POLL_MS, signal)
       continue
     }
     if (access.status === "failed") {
-      return { ok: false, reason: "failed", message: "The OpenWork Cloud runtime needs repair before this Automation can run." }
+      return { ok: false, reason: "failed", message: "The OfflineGPT Cloud runtime needs repair before this Automation can run." }
     }
     if (access.status === "ready") {
       const workspace = await deps.resolveWorkspace(access, signal)
       if (workspace) return { ok: true, workerId: access.workerId, access, ...workspace }
-      pending = { ok: false, reason: "unreachable", message: "The OpenWork Cloud runtime session API is unreachable for this Automation run." }
+      pending = { ok: false, reason: "unreachable", message: "The OfflineGPT Cloud runtime session API is unreachable for this Automation run." }
     } else {
-      pending = { ok: false, reason: "waking", message: "OpenWork Cloud is still starting for this Automation run." }
+      pending = { ok: false, reason: "waking", message: "OfflineGPT Cloud is still starting for this Automation run." }
     }
     await deps.sleep(WORKER_READY_POLL_MS, signal)
   }
@@ -281,7 +281,7 @@ export function cloudAgentRuntimeUnavailableResult(input: {
       ok: false,
       status: "failed",
       code: "execution_timed_out",
-      message: "The Automation run exceeded its maximum runtime while starting OpenWork Cloud.",
+      message: "The Automation run exceeded its maximum runtime while starting OfflineGPT Cloud.",
       retryable: false,
     }
   }
@@ -322,10 +322,10 @@ async function connectHealth(input: {
     const value: unknown = await response.json()
     return isRecord(value) ? value : null
   }
-  let value = await request("GET", `/workspace/${encodedWorkspace}/mcp/openwork-cloud/health?${query}`)
+  let value = await request("GET", `/workspace/${encodedWorkspace}/mcp/offlinegpt-cloud/health?${query}`)
   let health = value
   if (health?.usable !== true || health.usableByCurrentModel !== true) {
-    value = await request("POST", `/workspace/${encodedWorkspace}/mcp/openwork-cloud/engine-refresh`, {
+    value = await request("POST", `/workspace/${encodedWorkspace}/mcp/offlinegpt-cloud/engine-refresh`, {
       provider: input.action.model.providerId,
       model: input.action.model.modelId,
       trigger: "automation_run",
@@ -334,7 +334,7 @@ async function connectHealth(input: {
   }
   if (health?.usable === true && health.usableByCurrentModel === true) return { ok: true }
   if (health?.usable === true && health.usableByCurrentModel !== true) {
-    return { ok: false, code: "model_access_lost", message: "The selected model cannot use the current OpenWork Connect capabilities." }
+    return { ok: false, code: "model_access_lost", message: "The selected model cannot use the current OfflineGPT Connect capabilities." }
   }
   const failure = isRecord(health?.firstFailure) ? health.firstFailure : null
   return {
@@ -342,7 +342,7 @@ async function connectHealth(input: {
     code: "connect_access_unavailable",
     message: typeof failure?.message === "string"
       ? failure.message
-      : "OpenWork Connect is not ready in the Cloud runtime. Reconnect it before retrying this Automation.",
+      : "OfflineGPT Connect is not ready in the Cloud runtime. Reconnect it before retrying this Automation.",
   }
 }
 
@@ -418,13 +418,13 @@ async function abortAndObserve(
 }
 
 async function currentAgentAuthority(input: OwnerScope & { action: AgentAction }): Promise<CloudAgentExecution | null> {
-  const webAccess = await getOpenWorkWebRuntimeAccess(input.organizationId)
+  const webAccess = await getOfflineGPTWebRuntimeAccess(input.organizationId)
   if (!webAccess.hasAccess) {
     return {
       ok: false,
       status: "failed",
-      code: OPENWORK_WEB_ACCESS_REQUIRED_CODE,
-      message: OPENWORK_WEB_ACCESS_REQUIRED_MESSAGE,
+      code: OFFLINEGPT_WEB_ACCESS_REQUIRED_CODE,
+      message: OFFLINEGPT_WEB_ACCESS_REQUIRED_MESSAGE,
       retryable: false,
       needsAttention: true,
     }
@@ -523,7 +523,7 @@ export async function executeCloudAgent(input: CloudAgentExecutorInput): Promise
           ok: false,
           status: "failed",
           code: "execution_failed",
-          message: "Model authority was revoked, but OpenWork Cloud could not confirm that the native thread stopped. Inspect the native run before retrying.",
+          message: "Model authority was revoked, but OfflineGPT Cloud could not confirm that the native thread stopped. Inspect the native run before retrying.",
           retryable: false,
           needsAttention: true,
           events: [{ type: "warning", payload: { code: "authority_revoked_abort_not_observed", nativeThreadId } }],
@@ -554,7 +554,7 @@ export async function executeCloudAgent(input: CloudAgentExecutorInput): Promise
           ok: false,
           status: "failed",
           code: "execution_failed",
-          message: "OpenWork Cloud could not confirm that the cancelled agent thread stopped. Inspect the native run before retrying.",
+          message: "OfflineGPT Cloud could not confirm that the cancelled agent thread stopped. Inspect the native run before retrying.",
           retryable: false,
           needsAttention: true,
           events: [{ type: "warning", payload: { code: "abort_not_observed", nativeThreadId } }],
@@ -573,7 +573,7 @@ export async function executeCloudAgent(input: CloudAgentExecutorInput): Promise
     const transcript = await client.exportTranscript(nativeThreadId, { signal })
     const usage = usageFromTranscript(transcript.usage)
     if (transcript.terminalError) return terminalFailure({ error: transcript.terminalError, transcript, usage })
-    const resultSummary = transcript.finalAssistantText.trim() || "OpenWork Cloud completed the Automation run."
+    const resultSummary = transcript.finalAssistantText.trim() || "OfflineGPT Cloud completed the Automation run."
     return {
       ok: true,
       threadId: nativeThreadId,
@@ -598,7 +598,7 @@ export async function executeCloudAgent(input: CloudAgentExecutorInput): Promise
           ok: false,
           status: "failed",
           code: "execution_failed",
-          message: "OpenWork Cloud could not confirm that the interrupted agent thread stopped. Inspect the native run before retrying.",
+          message: "OfflineGPT Cloud could not confirm that the interrupted agent thread stopped. Inspect the native run before retrying.",
           retryable: false,
           needsAttention: true,
           events: [{ type: "warning", payload: { code: "abort_not_observed", nativeThreadId } }],

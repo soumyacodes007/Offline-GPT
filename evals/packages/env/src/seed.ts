@@ -1,8 +1,8 @@
-import type { BrowserEvaluation, EvaluateOptions } from "@openwork/cdp";
-import type { DenFetchResult, DenSession, NativeConnectorInput } from "@openwork/behaviors";
-import type { AttachedSurface, Surface } from "@openwork/cdp";
-import type { StartMockMcpOptions } from "@openwork/labs";
-import type { DaytonaExec, DesktopHandle } from "@openwork/hosts";
+import type { BrowserEvaluation, EvaluateOptions } from "@offlinegpt/cdp";
+import type { DenFetchResult, DenSession, NativeConnectorInput } from "@offlinegpt/behaviors";
+import type { AttachedSurface, Surface } from "@offlinegpt/cdp";
+import type { StartMockMcpOptions } from "@offlinegpt/labs";
+import type { DaytonaExec, DesktopHandle } from "@offlinegpt/hosts";
 import type { App } from "./desktop-app.ts";
 import type { Den, ServerOptions } from "./den.ts";
 import type { FaultProxy } from "./faults.ts";

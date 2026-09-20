@@ -2,10 +2,10 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { allocateFreePort } from "@openwork/cdp";
-import { provisionOrg } from "@openwork/behaviors";
-import { createDaytonaHost, defaultDaytonaExec, execInSandbox } from "@openwork/hosts";
-import type { Seed } from "@openwork/env";
+import { allocateFreePort } from "@offlinegpt/cdp";
+import { provisionOrg } from "@offlinegpt/behaviors";
+import { createDaytonaHost, defaultDaytonaExec, execInSandbox } from "@offlinegpt/hosts";
+import type { Seed } from "@offlinegpt/env";
 function modelsFixtureKey(memberId: string) { return `ow_inf_models-analytics-fixture-${memberId}`; }
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -21,7 +21,7 @@ function object(value: unknown): Record<string, unknown> {
 }
 
 async function createModelsWorld(seed: Seed, analyticsUpgrade: boolean, usageSettlement = false) {
-  if (!analyticsUpgrade && process.env.OPENWORK_EVAL_DEN_API_URL) throw new Error("DPA proof requires a fresh isolated Den, not a reused service");
+  if (!analyticsUpgrade && process.env.OFFLINEGPT_EVAL_DEN_API_URL) throw new Error("DPA proof requires a fresh isolated Den, not a reused service");
   const egressFile = seed.tmpPath("models-egress") + ".jsonl";
   const dpaWitnessPort = analyticsUpgrade ? null : await allocateFreePort();
   const guard = "evals/packages/labs/src/models-egress-guard.mjs";
@@ -48,10 +48,10 @@ async function createModelsWorld(seed: Seed, analyticsUpgrade: boolean, usageSet
   const host = remote ? createDaytonaHost({ sandboxId: remote, repoRoot: root, log: () => {} }) : null;
   const inferenceUrl = host ? await host.previewUrl(inferencePort) : `http://127.0.0.1:${inferencePort}`;
   const witnessUrl = host ? await host.previewUrl(witnessPort) : `http://127.0.0.1:${witnessPort}`;
-  const databaseUrl = remote ? "mysql://root:password@127.0.0.1:3306/openwork_den" : den.database?.url;
+  const databaseUrl = remote ? "mysql://root:password@127.0.0.1:3306/offlinegpt_den" : den.database?.url;
   if (!databaseUrl) throw new Error("The upgrade world requires its own isolated Den database");
   const env = {
-    OPENWORK_DEV_MODE: "1", DATABASE_URL: databaseUrl, DB_MODE: "mysql",
+    OFFLINEGPT_DEV_MODE: "1", DATABASE_URL: databaseUrl, DB_MODE: "mysql",
     ...isolatedEnv, ...fixtureSecrets, SENTRY_DSN: "", NEXT_PUBLIC_SENTRY_DSN: "",
     PORT: String(inferencePort), MODELS_WITNESS_PORT: String(witnessPort),
     ...(usageSettlement ? { MODELS_USAGE_FIXTURE: "1", INFERENCE_WEBHOOK_SECRET: "paid-usage-fixture-secret" } : {}),
@@ -105,7 +105,7 @@ async function createModelsWorld(seed: Seed, analyticsUpgrade: boolean, usageSet
     async anotherSubscriber() {
       const other = await provisionOrg(den.ref, {});
       await arrange("subscription", other.orgId);
-      const scoped = { "x-openwork-org-id": other.orgId };
+      const scoped = { "x-offlinegpt-org-id": other.orgId };
       const enabled = await seed.api(other.admin, "/v1/inference", { method: "PATCH", headers: scoped, body: JSON.stringify({ enabled: true }) });
       if (!enabled.response.ok) throw new Error("Second subscriber setup failed");
       const rollout = await seed.api(den.admin, `/v1/admin/organizations/${other.orgId}/capabilities`, { method: "PUT", body: JSON.stringify({ capabilities: { modelsAnalytics: true } }) });
@@ -128,9 +128,9 @@ async function createModelsWorld(seed: Seed, analyticsUpgrade: boolean, usageSet
         { kind: "status", pathPrefix: "/api/runtime-config", statusCode: 200, times: 10_000, body: { ...runtimeConfig, denApiUrl: desktopDen.apiUrl } },
         { kind: "status", pathPrefix: "/v1/inference/analytics", statusCode: 404, times: 10_000, body: { error: "not_found" } },
       ]);
-      const modelsAccess = await fetch(`${desktopDen.apiUrl}/v1/inference`, { headers: { authorization: `Bearer ${den.admin.token}`, "x-openwork-org-id": orgId }, signal: AbortSignal.timeout(10_000) });
+      const modelsAccess = await fetch(`${desktopDen.apiUrl}/v1/inference`, { headers: { authorization: `Bearer ${den.admin.token}`, "x-offlinegpt-org-id": orgId }, signal: AbortSignal.timeout(10_000) });
       if (!modelsAccess.ok) throw new Error(`Observed Den link cannot access the existing Models subscription: HTTP ${modelsAccess.status}`);
-      const app = await seed.desktop({ den: { ...den, ref: desktopDen }, as: "admin", model: "openwork/z-ai/glm-5.2" });
+      const app = await seed.desktop({ den: { ...den, ref: desktopDen }, as: "admin", model: "offlinegpt/z-ai/glm-5.2" });
       const workspacePath = seed.tmpPath("models-analytics-upgrade");
       const skillPath = join(workspacePath, ".opencode/skills/analytics-fixture");
       const skill = "---\nname: analytics-fixture\ndescription: A harmless skill for the Models analytics upgrade journey.\n---\n\nReport that Models are working. No files or external services are needed.\n";
@@ -156,7 +156,7 @@ async function createModelsWorld(seed: Seed, analyticsUpgrade: boolean, usageSet
     async complete(input: { sessionId: string; taskId: string; model?: string; prompt?: string; stream?: boolean }) {
       const response = await fetch(`${inferenceUrl}/api/v1/chat/completions`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${modelsFixtureKey(memberId)}`,
-          "x-openwork-session-id": input.sessionId, "x-openwork-task-id": input.taskId },
+          "x-offlinegpt-session-id": input.sessionId, "x-offlinegpt-task-id": input.taskId },
         body: JSON.stringify({ model: input.model ?? "z-ai/glm-5.2", messages: [{ role: "user", content: input.prompt ?? "A private task prompt" }], stream: input.stream ?? true }), signal: AbortSignal.timeout(15_000),
       });
       return { status: response.status, body: await response.text() };

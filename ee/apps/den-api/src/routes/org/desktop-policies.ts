@@ -1,19 +1,19 @@
 import { declarativeDeleteSchema, declarativeResponses, externalKeyParamsSchema, isDuplicateEntry, type ResourceActionContext, type ResourceOrganizationContext } from "./declarative.js"
-import { and, asc, desc, eq, inArray, isNull } from "@openwork-ee/den-db/drizzle"
+import { and, asc, desc, eq, inArray, isNull } from "@offlinegpt-ee/den-db/drizzle"
 import {
   DesktopPolicyMemberTable,
   DesktopPolicyTable,
   MemberTable,
   TeamTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import {
   desktopPolicyDefinitions,
   desktopPolicyDocumentWriteSchema,
   normalizeDefaultDesktopPolicyDocument,
   normalizeDesktopPolicyDocument,
   resolveDesktopPolicyDocumentWrite,
-} from "@openwork/types/den/desktop-policies"
+} from "@offlinegpt/types/den/desktop-policies"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"

@@ -16,8 +16,8 @@ describe("resolveDesktopDistribution", () => {
     assert.deepEqual(PUBLIC_DESKTOP_DISTRIBUTION, {
       flavor: "public",
       appName: "OfflineGPT",
-      appIdentifier: "com.differentai.openwork",
-      protocolScheme: "openwork",
+      appIdentifier: "com.differentai.offlinegpt",
+      protocolScheme: "offlinegpt",
       requireSignin: false,
       requireActivation: false,
     });
@@ -32,9 +32,9 @@ describe("resolveDesktopDistribution", () => {
       }),
       {
         flavor: "cloud",
-        appName: "OpenWork Cloud",
-        appIdentifier: "com.differentai.openwork",
-        protocolScheme: "openwork",
+        appName: "OfflineGPT Cloud",
+        appIdentifier: "com.differentai.offlinegpt",
+        protocolScheme: "offlinegpt",
         requireSignin: true,
         requireActivation: false,
       },
@@ -50,9 +50,9 @@ describe("resolveDesktopDistribution", () => {
 
     assert.deepEqual(distribution, {
       flavor: "enterprise",
-      appName: "OpenWork Enterprise",
-      appIdentifier: "com.differentai.openwork",
-      protocolScheme: "openwork",
+      appName: "OfflineGPT Enterprise",
+      appIdentifier: "com.differentai.offlinegpt",
+      protocolScheme: "offlinegpt",
       requireSignin: true,
       requireActivation: true,
     });
@@ -123,7 +123,7 @@ describe("enterpriseActivationComplete", () => {
     assert.equal(enterpriseActivationComplete({
       enterpriseActivation: {
         activatedAt: "2026-07-27T10:00:00.000Z",
-        denBaseUrl: "https://app.openworklabs.com",
+        denBaseUrl: "https://app.offlinegptlabs.com",
       },
     }), true);
   });

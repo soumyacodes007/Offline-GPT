@@ -13,9 +13,9 @@ import { formatMoneyMinor, formatSubscriptionStatus, getErrorMessage, getRequest
 import { getBillingRoute, getOrgAccessFlags } from "../../_lib/den-org";
 import { ORG_SCOPE_HEADER } from "../../_lib/org-scope";
 import {
-  getOpenWorkWebQuantityDescription,
-  OPENWORK_WEB_CHECKOUT_TYPE,
-  OPENWORK_WEB_QUANTITY_EXPLANATION,
+  getOfflineGPTWebQuantityDescription,
+  OFFLINEGPT_WEB_CHECKOUT_TYPE,
+  OFFLINEGPT_WEB_QUANTITY_EXPLANATION,
   parseStripeWebBilling,
   type StripeWebBilling,
 } from "../_lib/stripe-web-billing";
@@ -38,7 +38,7 @@ export function isExistingWebAccessResponse(response: Response, payload: unknown
       payload
       && typeof payload === "object"
       && "error" in payload
-      && (payload.error === "stripe_subscription_exists" || payload.error === "openwork_web_complimentary_access_exists"),
+      && (payload.error === "stripe_subscription_exists" || payload.error === "offlinegpt_web_complimentary_access_exists"),
     );
 }
 
@@ -89,10 +89,10 @@ function CheckingWorkspaceAccess({ message = "Checking workspace access" }: { me
   );
 }
 
-export function WebOpenButton({ openworkWebUrl }: { openworkWebUrl: string }) {
+export function WebOpenButton({ offlinegptWebUrl }: { offlinegptWebUrl: string }) {
   return (
-    <DenButton href={openworkWebUrl} target="_blank" rel="noopener noreferrer" icon={ExternalLink}>
-      Open OpenWork Web
+    <DenButton href={offlinegptWebUrl} target="_blank" rel="noopener noreferrer" icon={ExternalLink}>
+      Open OfflineGPT Web
     </DenButton>
   );
 }
@@ -100,7 +100,7 @@ export function WebOpenButton({ openworkWebUrl }: { openworkWebUrl: string }) {
 export function WebPurchaseButton({ disabled, loading, onClick }: { disabled: boolean; loading: boolean; onClick: () => void }) {
   return (
     <DenButton disabled={disabled} loading={loading} onClick={onClick}>
-      Purchase OpenWork Web — $50 per member/month
+      Purchase OfflineGPT Web — $50 per member/month
     </DenButton>
   );
 }
@@ -121,7 +121,7 @@ export default function WebPage() {
   const { runtimeConfig, runtimeConfigLoaded } = useDenFlow();
   const orgId = orgContext?.organization.id ?? null;
   const webAvailable = runtimeConfigLoaded
-    && orgContext?.capabilities.openworkWeb === true;
+    && orgContext?.capabilities.offlinegptWeb === true;
   const [billingRecord, setBillingRecord] = useState<{ orgId: string; billing: StripeWebBilling } | null>(null);
   const [errorRecord, setErrorRecord] = useState<{ orgId: string; message: string } | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
@@ -152,9 +152,9 @@ export default function WebPage() {
         { method: "GET", headers: { [ORG_SCOPE_HEADER]: expectedOrgId } },
         12000,
       );
-      if (!response.ok) throw new Error(getErrorMessage(payload, `OpenWork Web billing lookup failed (${response.status}).`));
+      if (!response.ok) throw new Error(getErrorMessage(payload, `OfflineGPT Web billing lookup failed (${response.status}).`));
       const parsed = parseStripeWebBilling(payload);
-      if (!parsed) throw new Error("OpenWork Web billing response was incomplete.");
+      if (!parsed) throw new Error("OfflineGPT Web billing response was incomplete.");
       if (!mountedRef.current || currentOrgIdRef.current !== expectedOrgId) return null;
       setBillingRecord({ orgId: expectedOrgId, billing: parsed });
       setErrorRecord(null);
@@ -163,7 +163,7 @@ export default function WebPage() {
       if (!quiet && mountedRef.current && currentOrgIdRef.current === expectedOrgId) {
         setErrorRecord({
           orgId: expectedOrgId,
-          message: error instanceof Error ? error.message : "Could not load OpenWork Web billing.",
+          message: error instanceof Error ? error.message : "Could not load OfflineGPT Web billing.",
         });
       }
       return null;
@@ -187,7 +187,7 @@ export default function WebPage() {
   useEffect(() => {
     if (!orgId || orgBusy || !webAvailable || typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("stripe_checkout") !== OPENWORK_WEB_CHECKOUT_TYPE) return;
+    if (params.get("stripe_checkout") !== OFFLINEGPT_WEB_CHECKOUT_TYPE) return;
 
     const sessionId = params.get("session_id")?.trim() ?? "";
     if (!sessionId) {
@@ -214,13 +214,13 @@ export default function WebPage() {
         if (!syncPromise) {
           syncPromise = (async () => {
             let synced: boolean = false;
-            await runReauthableAction("openwork-web-checkout-sync", async () => {
+            await runReauthableAction("offlinegpt-web-checkout-sync", async () => {
               const { response, payload } = await requestJson(
                 "/v1/billing/stripe/checkout/sync",
                 {
                   method: "POST",
                   headers: { [ORG_SCOPE_HEADER]: expectedOrgId },
-                  body: JSON.stringify({ sessionId, type: OPENWORK_WEB_CHECKOUT_TYPE }),
+                  body: JSON.stringify({ sessionId, type: OFFLINEGPT_WEB_CHECKOUT_TYPE }),
                 },
                 12000,
               );
@@ -238,7 +238,7 @@ export default function WebPage() {
           setReturnChecking(false);
           setErrorRecord({
             orgId: expectedOrgId,
-            message: error instanceof Error ? error.message : "Could not confirm this checkout. OpenWork Web remains locked.",
+            message: error instanceof Error ? error.message : "Could not confirm this checkout. OfflineGPT Web remains locked.",
           });
           clearStripeReturnParameters();
         }
@@ -280,11 +280,11 @@ export default function WebPage() {
   async function startWebCheckout() {
     if (!orgId || checkoutStartingRef.current) return;
     if (!canPurchaseWeb) {
-      setErrorRecord({ orgId, message: "Ask a workspace owner or admin to purchase OpenWork Web for this organization." });
+      setErrorRecord({ orgId, message: "Ask a workspace owner or admin to purchase OfflineGPT Web for this organization." });
       return;
     }
     if (!billing?.configured) {
-      setErrorRecord({ orgId, message: "OpenWork Web billing is not configured for this deployment." });
+      setErrorRecord({ orgId, message: "OfflineGPT Web billing is not configured for this deployment." });
       return;
     }
     if (billing.hasAccess || hasOngoingWebSubscription(billing)) return;
@@ -293,13 +293,13 @@ export default function WebPage() {
     setCheckoutBusy(true);
     setErrorRecord(null);
     try {
-      await runReauthableAction("openwork-web-checkout", async () => {
+      await runReauthableAction("offlinegpt-web-checkout", async () => {
         const { response, payload } = await requestJson(
           "/v1/billing/stripe/checkout",
           {
             method: "POST",
             headers: { [ORG_SCOPE_HEADER]: orgId },
-            body: JSON.stringify({ type: OPENWORK_WEB_CHECKOUT_TYPE }),
+            body: JSON.stringify({ type: OFFLINEGPT_WEB_CHECKOUT_TYPE }),
           },
           12000,
         );
@@ -307,9 +307,9 @@ export default function WebPage() {
           await requestWebBilling(orgId, false);
           return;
         }
-        if (!response.ok) throw getRequestError(payload, response, `OpenWork Web checkout failed (${response.status}).`);
+        if (!response.ok) throw getRequestError(payload, response, `OfflineGPT Web checkout failed (${response.status}).`);
         const url = payload && typeof payload === "object" && "url" in payload && typeof payload.url === "string" ? payload.url : null;
-        if (!url) throw new Error("OpenWork Web checkout response did not include a URL.");
+        if (!url) throw new Error("OfflineGPT Web checkout response did not include a URL.");
         if (!mountedRef.current || currentOrgIdRef.current !== orgId) {
           throw new Error("The active organization changed before checkout opened. Please try again.");
         }
@@ -317,7 +317,7 @@ export default function WebPage() {
       });
     } catch (error) {
       if (mountedRef.current && currentOrgIdRef.current === orgId) {
-        setErrorRecord({ orgId, message: error instanceof Error ? error.message : "Could not start OpenWork Web checkout." });
+        setErrorRecord({ orgId, message: error instanceof Error ? error.message : "Could not start OfflineGPT Web checkout." });
       }
     } finally {
       checkoutStartingRef.current = false;
@@ -354,14 +354,14 @@ export default function WebPage() {
   return (
     <DashboardPageTemplate
       icon={Globe}
-      title="OpenWork Web"
-      description="Use OpenWork in your browser with an organization subscription."
+      title="OfflineGPT Web"
+      description="Use OfflineGPT in your browser with an organization subscription."
       colors={["#EFF6FF", "#0F172A", "#2563EB", "#BAE6FD"]}
     >
-      <div data-testid="openwork-web-access" data-access-state={accessState} data-access-source={billing?.accessSource ?? "none"}>
+      <div data-testid="offlinegpt-web-access" data-access-state={accessState} data-access-source={billing?.accessSource ?? "none"}>
         {accessState === "error" ? (
-          <DenCard size="spacious" data-testid="openwork-web-error">
-            <p className="text-[18px] font-medium text-gray-950">OpenWork Web remains locked</p>
+          <DenCard size="spacious" data-testid="offlinegpt-web-error">
+            <p className="text-[18px] font-medium text-gray-950">OfflineGPT Web remains locked</p>
             <DenNotice className="mt-4" message={billingError ?? "Billing could not be confirmed."} />
             <DenButton className="mt-5" variant="secondary" icon={RefreshCw} onClick={() => void retryBilling()}>
               Try again
@@ -370,11 +370,11 @@ export default function WebPage() {
         ) : null}
 
         {accessState === "confirming" ? (
-          <DenCard size="spacious" data-testid="openwork-web-confirming">
+          <DenCard size="spacious" data-testid="offlinegpt-web-confirming">
             <div className="flex items-start gap-4">
               <Loader2 className="mt-1 size-5 animate-spin text-blue-600" aria-hidden="true" />
               <div>
-                <p className="text-[18px] font-medium text-gray-950">Confirming your OpenWork Web subscription</p>
+                <p className="text-[18px] font-medium text-gray-950">Confirming your OfflineGPT Web subscription</p>
                 <p className="mt-2 text-[14px] leading-6 text-gray-500">
                   This usually takes a moment. Access opens automatically as soon as your payment is confirmed.
                 </p>
@@ -384,30 +384,30 @@ export default function WebPage() {
         ) : null}
 
         {accessState === "unsubscribed" && billing ? (
-          <DenCard size="spacious" data-testid="openwork-web-purchase">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-blue-600">OpenWork Web</p>
+          <DenCard size="spacious" data-testid="offlinegpt-web-purchase">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-blue-600">OfflineGPT Web</p>
             <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-gray-950">Browser access for your organization</h2>
-            <p className="mt-3 text-[14px] leading-6 text-gray-600">{OPENWORK_WEB_QUANTITY_EXPLANATION}</p>
-            <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4" data-testid="openwork-web-price-breakdown">
+            <p className="mt-3 text-[14px] leading-6 text-gray-600">{OFFLINEGPT_WEB_QUANTITY_EXPLANATION}</p>
+            <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4" data-testid="offlinegpt-web-price-breakdown">
               <p className="text-[22px] font-semibold tracking-[-0.03em] text-gray-950">
-                {getOpenWorkWebQuantityDescription(billing.quantity)} × {unitPrice}
+                {getOfflineGPTWebQuantityDescription(billing.quantity)} × {unitPrice}
               </p>
               <p className="mt-1 text-[14px] text-gray-600">
                 {expectedTotal} per {billing.interval}
               </p>
             </div>
-            <p className="mt-5 text-[13px] leading-5 text-gray-600" data-testid="openwork-web-checkout-explainer">
+            <p className="mt-5 text-[13px] leading-5 text-gray-600" data-testid="offlinegpt-web-checkout-explainer">
               Access opens as soon as your payment is confirmed. Billing follows your joined member count automatically as your team changes — pending invitations are never billed.
             </p>
             {!billing.configured ? (
-              <DenNotice className="mt-5" tone="neutral" message="OpenWork Web billing is not configured for this deployment." />
+              <DenNotice className="mt-5" tone="neutral" message="OfflineGPT Web billing is not configured for this deployment." />
             ) : hasOngoingSubscription ? (
               <div className="mt-5 grid gap-4">
                 <DenNotice
                   tone="warning"
                   message={billing.subscription?.paymentStatus === "payment_failed"
-                    ? "This organization already has an OpenWork Web subscription with a failed payment. Update the payment method from Billing to restore access."
-                    : `This organization already has an OpenWork Web subscription (${formatSubscriptionStatus(billing.subscription?.status ?? "unknown").toLowerCase()}). Manage the existing subscription from Billing.`}
+                    ? "This organization already has an OfflineGPT Web subscription with a failed payment. Update the payment method from Billing to restore access."
+                    : `This organization already has an OfflineGPT Web subscription (${formatSubscriptionStatus(billing.subscription?.status ?? "unknown").toLowerCase()}). Manage the existing subscription from Billing.`}
                 />
                 <DenButton variant="secondary" href={getBillingRoute(activeOrg?.slug)}>View billing</DenButton>
               </div>
@@ -419,25 +419,25 @@ export default function WebPage() {
               <DenNotice
                 className="mt-5"
                 tone="warning"
-                message="Ask a workspace owner or admin to purchase OpenWork Web for this organization. You'll get access as soon as it's active."
+                message="Ask a workspace owner or admin to purchase OfflineGPT Web for this organization. You'll get access as soon as it's active."
               />
             )}
           </DenCard>
         ) : null}
 
         {accessState === "eligible" && billing ? (
-          <DenCard size="spacious" data-testid="openwork-web-eligible">
+          <DenCard size="spacious" data-testid="offlinegpt-web-eligible">
             <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
               {billing.accessSource === "complimentary" ? "Complimentary access" : "Subscription active"}
             </p>
-            <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-gray-950">OpenWork Web is ready</h2>
+            <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-gray-950">OfflineGPT Web is ready</h2>
             <p className="mt-3 text-[14px] leading-6 text-gray-600">
               {billing.accessSource === "complimentary"
-                ? `OpenWork Web is included for all ${getOpenWorkWebQuantityDescription(billing.quantity)} in this organization, with no Stripe subscription or per-member charge.`
-                : `OpenWork Web is active for ${getOpenWorkWebQuantityDescription(billing.quantity)} in this organization.`}
+                ? `OfflineGPT Web is included for all ${getOfflineGPTWebQuantityDescription(billing.quantity)} in this organization, with no Stripe subscription or per-member charge.`
+                : `OfflineGPT Web is active for ${getOfflineGPTWebQuantityDescription(billing.quantity)} in this organization.`}
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
-              <WebOpenButton openworkWebUrl={runtimeConfig.openworkWebUrl} />
+              <WebOpenButton offlinegptWebUrl={runtimeConfig.offlinegptWebUrl} />
               <DenButton variant="secondary" href={getBillingRoute(activeOrg?.slug)}>View billing</DenButton>
             </div>
           </DenCard>

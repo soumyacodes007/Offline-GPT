@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { INFERENCE_MODEL_ALIASES } from "@openwork/types/den/inference";
+import { INFERENCE_MODEL_ALIASES } from "@offlinegpt/types/den/inference";
 import { DenButton } from "../../_components/ui/button";
 import { DenPageHeader } from "../../_components/ui/page-header";
 import { DenCard } from "../../_components/ui/card";
@@ -46,7 +46,7 @@ const MODEL_LINEUP: LineupModel[] = Object.entries(INFERENCE_MODEL_ALIASES)
     const detail = MODEL_DETAILS[id];
     return {
       id,
-      name: model.displayName.replace(/^OpenWork:\s*/, ""),
+      name: model.displayName.replace(/^OfflineGPT:\s*/, ""),
       bestFor: detail?.bestFor ?? "General knowledge work",
       monogram: detail?.monogram ?? id.split("/")[0].slice(0, 2).toUpperCase(),
     };
@@ -116,7 +116,7 @@ export function InferenceScreen() {
     orgContext?.roles,
   );
   const canManageModels = access.isAdmin;
-  // OpenWork Models are a hosted OpenWork Cloud offering; self-hosted
+  // OfflineGPT Models are a hosted OfflineGPT Cloud offering; self-hosted
   // (single-org) deployments manage their own LLM providers instead.
   const isSelfHosted = runtimeConfigLoaded && runtimeConfig.orgMode === "single_org";
   const activeOrgSlug = activeOrg?.slug ?? null;
@@ -155,7 +155,7 @@ export function InferenceScreen() {
   // status/portal view.
   async function startSubscribeCheckout() {
     if (!canManageModels) {
-      setError("Only workspace admins can start OpenWork Models checkout.");
+      setError("Only workspace admins can start OfflineGPT Models checkout.");
       return;
     }
 
@@ -185,7 +185,7 @@ export function InferenceScreen() {
 
   async function toggleEnabled() {
     if (!canManageModels) {
-      setError("Only workspace admins can manage OpenWork Models.");
+      setError("Only workspace admins can manage OfflineGPT Models.");
       return;
     }
     if (!status) return;
@@ -239,7 +239,7 @@ export function InferenceScreen() {
 
   return (
     <div className="mx-auto grid w-full max-w-[960px] gap-6 px-4 pb-12 pt-5 sm:px-6 lg:px-8">
-      <DenPageHeader title="OpenWork Models"
+      <DenPageHeader title="OfflineGPT Models"
         description="Reliable, hand-picked models for knowledge work. No API keys to manage."
         caption={`$10 / user / month · ${memberCaption}`}
         action={<DenButton type="button" onClick={subscribed ? toggleEnabled : () => void startSubscribeCheckout()}
@@ -252,12 +252,12 @@ export function InferenceScreen() {
       {canManageModels ? null : (
         <DenNotice
           tone="info"
-          message="Only workspace admins can subscribe or enable OpenWork Models. Ask an owner, super-admin, or admin for this workspace."
+          message="Only workspace admins can subscribe or enable OfflineGPT Models. Ask an owner, super-admin, or admin for this workspace."
         />
       )}
 
       {showGettingStarted ? <DenCard>
-        <p className="text-sm leading-6 text-[#637291]">One subscription activates models for everyone in your workspace. After subscribing, choose a model from the OpenWork group in the app and start a task.</p>
+        <p className="text-sm leading-6 text-[#637291]">One subscription activates models for everyone in your workspace. After subscribing, choose a model from the OfflineGPT group in the app and start a task.</p>
       </DenCard> : null}
 
       <ModelsLineup subscribed={subscribed} />

@@ -36,7 +36,7 @@ export type PluginImportDraft = {
   selectedSkillKeys: string[];
 };
 
-const STORAGE_KEY = "openwork.plugin-import-draft.v1";
+const STORAGE_KEY = "offlinegpt.plugin-import-draft.v1";
 const CREDENTIAL_QUERY_KEYS = new Set([
   "accesstoken",
   "apikey",

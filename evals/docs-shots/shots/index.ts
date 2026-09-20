@@ -1,5 +1,5 @@
 import type { Shot } from "./shot.ts";
-import { denOpenworkWeb, denPluginDetail, denSkillEditor } from "./den-web.ts";
+import { denOfflineGptWeb, denPluginDetail, denSkillEditor } from "./den-web.ts";
 import {
   desktopTeamPromptCards,
   libraryAddMcpModal,
@@ -8,7 +8,7 @@ import {
   librarySkills,
   skillCreatedCard,
 } from "./desktop.ts";
-import { openworkWebTab } from "./web-tab.ts";
+import { offlinegptWebTab } from "./web-tab.ts";
 
 export const shots: Shot[] = [
   desktopTeamPromptCards,
@@ -19,6 +19,6 @@ export const shots: Shot[] = [
   skillCreatedCard,
   denPluginDetail,
   denSkillEditor,
-  denOpenworkWeb,
-  openworkWebTab,
+  denOfflineGptWeb,
+  offlinegptWebTab,
 ];

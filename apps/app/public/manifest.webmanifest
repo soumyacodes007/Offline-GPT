@@ -1,6 +1,6 @@
 {
-  "name": "OpenWork",
-  "short_name": "OpenWork",
+  "name": "OfflineGPT",
+  "short_name": "OfflineGPT",
   "description": "Local-first agent workspace",
   "start_url": "/",
   "display": "standalone",

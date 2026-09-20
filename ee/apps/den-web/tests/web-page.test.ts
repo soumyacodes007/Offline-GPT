@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 
-import { DEFAULT_OPENWORK_WEB_URL } from "../app/(den)/_lib/runtime-config";
+import { DEFAULT_OFFLINEGPT_WEB_URL } from "../app/(den)/_lib/runtime-config";
 import {
   getWebPageAccessState,
   hasOngoingWebSubscription,
@@ -18,7 +18,7 @@ const originalEnv = {
   DEN_API_BASE: process.env.DEN_API_BASE,
   DEN_API_PUBLIC_URL: process.env.DEN_API_PUBLIC_URL,
   DEN_BASE_URL: process.env.DEN_BASE_URL,
-  DEN_WEB_OPENWORK_WEB_URL: process.env.DEN_WEB_OPENWORK_WEB_URL,
+  DEN_WEB_OFFLINEGPT_WEB_URL: process.env.DEN_WEB_OFFLINEGPT_WEB_URL,
 };
 
 function restoreEnvValue(name: keyof typeof originalEnv) {
@@ -43,7 +43,7 @@ afterEach(() => {
   restoreEnvValue("DEN_API_BASE");
   restoreEnvValue("DEN_API_PUBLIC_URL");
   restoreEnvValue("DEN_BASE_URL");
-  restoreEnvValue("DEN_WEB_OPENWORK_WEB_URL");
+  restoreEnvValue("DEN_WEB_OFFLINEGPT_WEB_URL");
 });
 
 describe("Web dashboard page", () => {
@@ -112,13 +112,13 @@ describe("Web dashboard page", () => {
 
   test("renders the external Web button with the configured href", () => {
     const html = renderToStaticMarkup(createElement(WebOpenButton, {
-      openworkWebUrl: DEFAULT_OPENWORK_WEB_URL,
+      offlinegptWebUrl: DEFAULT_OFFLINEGPT_WEB_URL,
     }));
 
-    expect(html).toContain(`href="${DEFAULT_OPENWORK_WEB_URL}"`);
+    expect(html).toContain(`href="${DEFAULT_OFFLINEGPT_WEB_URL}"`);
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
-    expect(html).toContain("Open OpenWork Web");
+    expect(html).toContain("Open OfflineGPT Web");
   });
 
   test("renders the exact per-user purchase action", () => {
@@ -128,7 +128,7 @@ describe("Web dashboard page", () => {
       onClick: () => undefined,
     }));
 
-    expect(html).toContain("Purchase OpenWork Web — $50 per member/month");
+    expect(html).toContain("Purchase OfflineGPT Web — $50 per member/month");
   });
 
   test("does not offer a second checkout for an ineligible ongoing subscription", () => {
@@ -165,7 +165,7 @@ describe("Web dashboard page", () => {
     )).toBeTrue();
     expect(isExistingWebAccessResponse(
       new Response(null, { status: 409 }),
-      { error: "openwork_web_complimentary_access_exists" },
+      { error: "offlinegpt_web_complimentary_access_exists" },
     )).toBeTrue();
     expect(isExistingWebAccessResponse(
       new Response(null, { status: 409 }),
@@ -184,11 +184,11 @@ describe("Web dashboard page", () => {
     expect(source).toContain('"/v1/billing/web"');
     expect(source).toContain('"/v1/billing/stripe/checkout"');
     expect(source).toContain('"/v1/billing/stripe/checkout/sync"');
-    expect(source).toContain("JSON.stringify({ type: OPENWORK_WEB_CHECKOUT_TYPE })");
-    expect(source).toContain("JSON.stringify({ sessionId, type: OPENWORK_WEB_CHECKOUT_TYPE })");
+    expect(source).toContain("JSON.stringify({ type: OFFLINEGPT_WEB_CHECKOUT_TYPE })");
+    expect(source).toContain("JSON.stringify({ sessionId, type: OFFLINEGPT_WEB_CHECKOUT_TYPE })");
     expect(source).toContain("headers: { [ORG_SCOPE_HEADER]: orgId }");
     expect(source).toContain("nextBilling?.hasAccess");
-    expect(source).toContain("OpenWork Web remains locked");
+    expect(source).toContain("OfflineGPT Web remains locked");
     expect(source).toContain("Ask a workspace owner or admin");
     expect(source).toContain("Access opens as soon as your payment is confirmed.");
     expect(source).toContain("pending invitations are never billed");
@@ -197,7 +197,7 @@ describe("Web dashboard page", () => {
     expect(source).not.toContain("Stripe will show");
     expect(source).toContain("await requestWebBilling(orgId, false)");
     expect(source).not.toContain('runtimeConfig.orgMode === "multi_org"');
-    expect(source).toContain("orgContext?.capabilities.openworkWeb === true");
+    expect(source).toContain("orgContext?.capabilities.offlinegptWeb === true");
     expect(source).not.toContain("orgContext?.capabilities.cloud");
     expect(checking).toContain('returnTarget === "web"');
     expect(checking).toContain("?stripe_checkout=web&session_id=");
@@ -205,29 +205,29 @@ describe("Web dashboard page", () => {
 
   test("runtime config exposes the default Web URL and deployment override", async () => {
     delete process.env.DEN_API_BASE;
-    process.env.DEN_BASE_URL = "https://app.openworklabs.com";
-    delete process.env.DEN_WEB_OPENWORK_WEB_URL;
+    process.env.DEN_BASE_URL = "https://app.offlinegptlabs.com";
+    delete process.env.DEN_WEB_OFFLINEGPT_WEB_URL;
 
     const defaultPayload: unknown = await (await GET()).json();
-    expect(readStringProperty(defaultPayload, "openworkWebUrl")).toBe(DEFAULT_OPENWORK_WEB_URL);
+    expect(readStringProperty(defaultPayload, "offlinegptWebUrl")).toBe(DEFAULT_OFFLINEGPT_WEB_URL);
 
-    process.env.DEN_WEB_OPENWORK_WEB_URL = "https://self-hosted.example.test";
+    process.env.DEN_WEB_OFFLINEGPT_WEB_URL = "https://self-hosted.example.test";
     const overridePayload: unknown = await (await GET()).json();
-    expect(readStringProperty(overridePayload, "openworkWebUrl")).toBe("https://self-hosted.example.test");
+    expect(readStringProperty(overridePayload, "offlinegptWebUrl")).toBe("https://self-hosted.example.test");
   });
 
   test("runtime config exposes the public Den API URL without leaking the internal API base", async () => {
     process.env.DEN_BASE_URL = "https://den.example.test";
     process.env.DEN_API_PUBLIC_URL = "https://public-api.example.test";
-    process.env.DEN_API_BASE = "http://openwork-ee-den-api:8788";
+    process.env.DEN_API_BASE = "http://offlinegpt-ee-den-api:8788";
 
     const publicPayload: unknown = await (await GET()).json();
     expect(readStringProperty(publicPayload, "denApiUrl")).toBe("https://public-api.example.test");
-    expect(JSON.stringify(publicPayload)).not.toContain("openwork-ee-den-api");
+    expect(JSON.stringify(publicPayload)).not.toContain("offlinegpt-ee-den-api");
 
     delete process.env.DEN_API_PUBLIC_URL;
     const derivedPayload: unknown = await (await GET()).json();
     expect(readStringProperty(derivedPayload, "denApiUrl")).toBe("https://api.den.example.test");
-    expect(JSON.stringify(derivedPayload)).not.toContain("openwork-ee-den-api");
+    expect(JSON.stringify(derivedPayload)).not.toContain("offlinegpt-ee-den-api");
   });
 });

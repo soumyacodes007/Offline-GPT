@@ -1,7 +1,7 @@
 import {
   desktopPolicyUserNotices,
   type DesktopPolicyKey,
-} from "@openwork/types/den/desktop-policies";
+} from "@offlinegpt/types/den/desktop-policies";
 import type { DenDesktopConfig } from "../lib/den";
 import type { ModelRef, SettingsTab } from "../types";
 

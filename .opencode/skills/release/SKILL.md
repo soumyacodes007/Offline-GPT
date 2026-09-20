@@ -1,11 +1,11 @@
 ---
 name: release
-description: Cut an OpenWork release, release the app, publish a new version, rerun or recover a release tag, verify release assets. Tag-driven GitHub Actions release that makes zero commits to the repo.
+description: Cut an OfflineGPT release, release the app, publish a new version, rerun or recover a release tag, verify release assets. Tag-driven GitHub Actions release that makes zero commits to the repo.
 ---
 
 # Skill: release
 
-Cut an OpenWork release. The "Release App" workflow
+Cut an OfflineGPT release. The "Release App" workflow
 (`.github/workflows/release-macos-aarch64.yml`) builds, signs, and publishes
 the desktop app assets on the GitHub release. Full runbook:
 `docs/RELEASING.md`.
@@ -33,7 +33,7 @@ pnpm release:cut:watch      # same as release:cut, then tails the run
 Equivalent by hand:
 
 ```bash
-gh workflow run "Release App" --repo different-ai/openwork -f bump=patch
+gh workflow run "Release App" --repo different-ai/offlinegpt -f bump=patch
 ```
 
 The run resolves the next version from existing `v*` tags, creates the tag on
@@ -67,8 +67,8 @@ rules.
 ## Watch
 
 ```bash
-gh run list --repo different-ai/openwork --workflow "Release App" --limit 1
-gh run watch <run-id> --repo different-ai/openwork --exit-status --interval 90
+gh run list --repo different-ai/offlinegpt --workflow "Release App" --limit 1
+gh run watch <run-id> --repo different-ai/offlinegpt --exit-status --interval 90
 ```
 
 Publishing is gated on the electron matrix, electron assets, and npm publish.
@@ -80,7 +80,7 @@ workflow with the same tag once the channel recovers.
 non-blocking channels:
 
 ```bash
-gh workflow run "Release App" --repo different-ai/openwork -f tag=vX.Y.Z
+gh workflow run "Release App" --repo different-ai/offlinegpt -f tag=vX.Y.Z
 ```
 
 Recovery runs skip tag creation and monotonicity, build source pinned to the
@@ -102,25 +102,25 @@ git push --delete origin vX.Y.Z
 ## Verify
 
 ```bash
-gh release view vX.Y.Z --repo different-ai/openwork --json assets --jq '.assets[].name'
+gh release view vX.Y.Z --repo different-ai/offlinegpt --json assets --jq '.assets[].name'
 ```
 
-Expect the app assets (`openwork-<platform>-X.Y.Z.*`, `latest*.yml` updater
+Expect the app assets (`offlinegpt-<platform>-X.Y.Z.*`, `latest*.yml` updater
 manifests), including:
 
-- `openwork-mac-arm64-X.Y.Z.dmg`
-- `openwork-mac-x64-X.Y.Z.dmg`
-- `openwork-win-x64-X.Y.Z.exe`
+- `offlinegpt-mac-arm64-X.Y.Z.dmg`
+- `offlinegpt-mac-x64-X.Y.Z.dmg`
+- `offlinegpt-win-x64-X.Y.Z.exe`
 
 The desktop updater 404s on `latest*.yml` until the release is published —
 that error in a running app during the build window is expected and
 self-heals. Spot-check a download URL resolves (302 to release-assets CDN):
 
 ```bash
-curl -sI "https://github.com/different-ai/openwork/releases/download/vX.Y.Z/openwork-mac-arm64-X.Y.Z.dmg" | head -2
+curl -sI "https://github.com/different-ai/offlinegpt/releases/download/vX.Y.Z/offlinegpt-mac-arm64-X.Y.Z.dmg" | head -2
 ```
 
-Confirm `npm view openwork-server version` matches.
+Confirm `npm view offlinegpt-server version` matches.
 
 ---
 

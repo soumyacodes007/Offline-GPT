@@ -1,5 +1,5 @@
 import type { MiddlewareHandler } from "hono"
-import { normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+import { normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { AuthContextVariables } from "../session.js"
 
 export const requireUserMiddleware: MiddlewareHandler<{ Variables: AuthContextVariables }> = async (c, next) => {

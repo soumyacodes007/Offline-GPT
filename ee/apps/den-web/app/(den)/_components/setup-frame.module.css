@@ -43,8 +43,8 @@
 .panel button:active:not(:disabled) { transform: translateY(1px); }
 .panel button:focus-visible, .panel input:focus-visible, .panel a:focus-visible { outline: 2px solid #444; outline-offset: 3px; }
 .customPreview { margin-top: 30px; }
-.panel :global([data-testid="download-openwork-card"]) > :global(.grid) { grid-template-columns: 1fr; }
-.panel :global([data-testid="download-openwork-card"]) > div:first-child > div { flex-wrap: wrap; }
+.panel :global([data-testid="download-offlinegpt-card"]) > :global(.grid) { grid-template-columns: 1fr; }
+.panel :global([data-testid="download-offlinegpt-card"]) > div:first-child > div { flex-wrap: wrap; }
 .preview { margin: 32px 0 0; max-width: 440px; min-width: 0; }
 .previewLabel { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 8px; letter-spacing: .12em; color: #777; }
 .previewLabel > span:last-child { letter-spacing: 0; padding: 3px 7px; border: 1px solid #e2e2e2; border-radius: 5px; background: white; font-size: 9px; }

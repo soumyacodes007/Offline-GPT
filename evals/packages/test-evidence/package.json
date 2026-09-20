@@ -1,5 +1,5 @@
 {
-  "name": "@openwork/test-evidence",
+  "name": "@offlinegpt/test-evidence",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -19,8 +19,8 @@
     }
   },
   "dependencies": {
-    "@openwork/cdp": "workspace:*",
-    "@openwork/env": "workspace:*",
-    "@openwork/timeline": "workspace:*"
+    "@offlinegpt/cdp": "workspace:*",
+    "@offlinegpt/env": "workspace:*",
+    "@offlinegpt/timeline": "workspace:*"
   }
 }

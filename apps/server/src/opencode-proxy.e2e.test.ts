@@ -24,7 +24,7 @@ afterEach(async () => {
 });
 
 async function createWorkspaceRoot(folderName?: string) {
-  const root = await mkdtemp(join(tmpdir(), "openwork-opencode-proxy-"));
+  const root = await mkdtemp(join(tmpdir(), "offlinegpt-opencode-proxy-"));
   const workspaceRoot = folderName ? join(root, folderName) : root;
   await mkdir(join(workspaceRoot, ".opencode"), { recursive: true });
   roots.push(root);
@@ -173,7 +173,7 @@ function startMockOpencode(input?: { holdCommand?: Promise<void>; foreignSession
   return { server, requests };
 }
 
-async function startOpenworkServer(input: {
+async function startOfflineGptServer(input: {
   workspaceRoot: string;
   secondWorkspaceRoot?: string;
   opencodeBaseUrl?: string;
@@ -242,14 +242,14 @@ describe("workspace OpenCode proxy", () => {
     const workspaceRoot = await createWorkspaceRoot();
     const recovery = { active: false, turn: 0 };
     const mock = startMockOpencode({ recovery });
-    const openwork = await startOpenworkServer({ workspaceRoot, opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`, readOnly: false, resumeInterruptedTasks: true });
-    const response = await fetch(`http://127.0.0.1:${openwork.server.port}/workspace/ws_1/opencode/session/ses_1/prompt_async`, {
-      method: "POST", headers: { ...auth(openwork.token), "content-type": "application/json" }, body: JSON.stringify({ parts: [{ type: "text", text: "Finish the task" }] }),
+    const offlinegpt = await startOfflineGptServer({ workspaceRoot, opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`, readOnly: false, resumeInterruptedTasks: true });
+    const response = await fetch(`http://127.0.0.1:${offlinegpt.server.port}/workspace/ws_1/opencode/session/ses_1/prompt_async`, {
+      method: "POST", headers: { ...auth(offlinegpt.token), "content-type": "application/json" }, body: JSON.stringify({ parts: [{ type: "text", text: "Finish the task" }] }),
     });
     expect(response.status).toBe(204);
-    await openwork.server.stop();
+    await offlinegpt.server.stop();
     recovery.active = false;
-    const restarted = await startServer({ ...openwork.config, port: 0 });
+    const restarted = await startServer({ ...offlinegpt.config, port: 0 });
     stops.push(() => restarted.stop());
     const resumed = () => mock.requests.filter((request) => request.method === "POST" && JSON.stringify(request.body).includes("Continue the interrupted task"));
     const deadline = Date.now() + 5_000;
@@ -264,16 +264,16 @@ describe("workspace OpenCode proxy", () => {
   test("accepts empty engine request bodies and rejects malformed JSON before forwarding", async () => {
     const workspaceRoot = await createWorkspaceRoot();
     const mock = startMockOpencode();
-    const openwork = await startOpenworkServer({ workspaceRoot, opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`, readOnly: false });
-    const url = `http://127.0.0.1:${openwork.server.port}/workspace/ws_1/opencode/session`;
+    const offlinegpt = await startOfflineGptServer({ workspaceRoot, opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`, readOnly: false });
+    const url = `http://127.0.0.1:${offlinegpt.server.port}/workspace/ws_1/opencode/session`;
     for (const body of [undefined, ""]) {
-      const response = await fetch(url, { method: "POST", headers: auth(openwork.token), body });
+      const response = await fetch(url, { method: "POST", headers: auth(offlinegpt.token), body });
       expect(response.status).toBe(200);
       expect((await response.json()).id).toBe("ses_created");
     }
     const sessionPosts = () => mock.requests.filter((request) => request.method === "POST" && request.pathname === "/session");
     expect(sessionPosts()).toHaveLength(2);
-    const malformed = await fetch(url, { method: "POST", headers: auth(openwork.token), body: "{" });
+    const malformed = await fetch(url, { method: "POST", headers: auth(offlinegpt.token), body: "{" });
     expect(malformed.status).toBe(400);
     expect(sessionPosts()).toHaveLength(2);
   });
@@ -281,13 +281,13 @@ describe("workspace OpenCode proxy", () => {
   test("accepts guest-side rem_ workspace aliases", async () => {
     const workspaceRoot = await createWorkspaceRoot();
     const mock = startMockOpencode();
-    const openwork = await startOpenworkServer({
+    const offlinegpt = await startOfflineGptServer({
       workspaceRoot,
       opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`,
     });
 
-    const response = await fetch(`http://127.0.0.1:${openwork.server.port}/workspace/rem_ws_1/opencode/session`, {
-      headers: auth(openwork.token),
+    const response = await fetch(`http://127.0.0.1:${offlinegpt.server.port}/workspace/rem_ws_1/opencode/session`, {
+      headers: auth(offlinegpt.token),
     });
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -299,13 +299,13 @@ describe("workspace OpenCode proxy", () => {
   test("encodes non-ASCII workspace directory headers for opencode proxy requests", async () => {
     const workspaceRoot = await createWorkspaceRoot("项目");
     const mock = startMockOpencode();
-    const openwork = await startOpenworkServer({
+    const offlinegpt = await startOfflineGptServer({
       workspaceRoot,
       opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`,
     });
 
-    const response = await fetch(`http://127.0.0.1:${openwork.server.port}/workspace/ws_1/opencode/session`, {
-      headers: auth(openwork.token),
+    const response = await fetch(`http://127.0.0.1:${offlinegpt.server.port}/workspace/ws_1/opencode/session`, {
+      headers: auth(offlinegpt.token),
     });
 
     expect(response.status).toBe(200);
@@ -317,17 +317,17 @@ describe("workspace OpenCode proxy", () => {
   test("prevents opencode proxy callers from escaping the mounted workspace directory", async () => {
     const workspaceRoot = await createWorkspaceRoot();
     const mock = startMockOpencode();
-    const openwork = await startOpenworkServer({
+    const offlinegpt = await startOfflineGptServer({
       workspaceRoot,
       opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`,
     });
 
     const foreignDirectory = "/tmp/foreign-workspace";
     const response = await fetch(
-      `http://127.0.0.1:${openwork.server.port}/workspace/ws_1/opencode/session?directory=${encodeURIComponent(foreignDirectory)}&roots=true`,
+      `http://127.0.0.1:${offlinegpt.server.port}/workspace/ws_1/opencode/session?directory=${encodeURIComponent(foreignDirectory)}&roots=true`,
       {
         headers: {
-          ...auth(openwork.token),
+          ...auth(offlinegpt.token),
           "x-opencode-directory": foreignDirectory,
         },
       },
@@ -343,7 +343,7 @@ describe("workspace OpenCode proxy", () => {
   test("pins the workspace directory against repeated, encoded, and traversal spoof variants", async () => {
     const workspaceRoot = await createWorkspaceRoot();
     const mock = startMockOpencode();
-    const openwork = await startOpenworkServer({
+    const offlinegpt = await startOfflineGptServer({
       workspaceRoot,
       opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`,
     });
@@ -360,11 +360,11 @@ describe("workspace OpenCode proxy", () => {
     for (const [index, query] of hostileQueries.entries()) {
       mock.requests.length = 0;
       const response = await fetch(
-        `http://127.0.0.1:${openwork.server.port}/workspace/ws_1/opencode/session?${query}`,
+        `http://127.0.0.1:${offlinegpt.server.port}/workspace/ws_1/opencode/session?${query}`,
         {
           method: "GET",
           headers: {
-            ...auth(openwork.token),
+            ...auth(offlinegpt.token),
             "x-opencode-directory": "/tmp/foreign-header",
           },
         },
@@ -386,25 +386,25 @@ describe("workspace OpenCode proxy", () => {
     const workspaceRoot = await createWorkspaceRoot();
     const secondWorkspaceRoot = await createWorkspaceRoot();
     const mock = startMockOpencode({ foreignSessionDirectory: secondWorkspaceRoot });
-    const openwork = await startOpenworkServer({
+    const offlinegpt = await startOfflineGptServer({
       workspaceRoot,
       secondWorkspaceRoot,
       opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`,
     });
-    const base = `http://127.0.0.1:${openwork.server.port}`;
+    const base = `http://127.0.0.1:${offlinegpt.server.port}`;
 
     for (const path of [
       "/session/ses_foreign",
       "/session/ses_foreign/message?limit=50",
       "/session/ses_foreign/todo",
     ]) {
-      const response = await fetch(`${base}/workspace/ws_1/opencode${path}`, { headers: auth(openwork.token) });
+      const response = await fetch(`${base}/workspace/ws_1/opencode${path}`, { headers: auth(offlinegpt.token) });
       expect({ path, status: response.status }).toEqual({ path, status: 404 });
       await expect(response.json()).resolves.toMatchObject({ code: "session_not_found" });
     }
 
     const ownerResponse = await fetch(`${base}/workspace/ws_2/opencode/session/ses_foreign/message`, {
-      headers: auth(openwork.token),
+      headers: auth(offlinegpt.token),
     });
     expect(ownerResponse.status).toBe(200);
     await expect(ownerResponse.json()).resolves.toEqual([
@@ -415,7 +415,7 @@ describe("workspace OpenCode proxy", () => {
   test("scopes spoofed directories on POST proxy requests without touching the body", async () => {
     const workspaceRoot = await createWorkspaceRoot();
     const mock = startMockOpencode();
-    const openwork = await startOpenworkServer({
+    const offlinegpt = await startOfflineGptServer({
       workspaceRoot,
       opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`,
       readOnly: false,
@@ -423,11 +423,11 @@ describe("workspace OpenCode proxy", () => {
 
     const body = { title: "Spoofed create", directory: "/tmp/foreign-body" };
     const response = await fetch(
-      `http://127.0.0.1:${openwork.server.port}/workspace/ws_1/opencode/session?directory=${encodeURIComponent("/tmp/foreign-query")}`,
+      `http://127.0.0.1:${offlinegpt.server.port}/workspace/ws_1/opencode/session?directory=${encodeURIComponent("/tmp/foreign-query")}`,
       {
         method: "POST",
         headers: {
-          ...auth(openwork.token),
+          ...auth(offlinegpt.token),
           "Content-Type": "application/json",
           "x-opencode-directory": "/tmp/foreign-header",
         },
@@ -447,7 +447,7 @@ describe("workspace OpenCode proxy", () => {
   test("keeps opencode proxy requests off the workspace bootstrap path", async () => {
     const workspaceRoot = await createWorkspaceRoot();
     const mock = startMockOpencode();
-    const openwork = await startOpenworkServer({
+    const offlinegpt = await startOfflineGptServer({
       workspaceRoot,
       opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`,
       readOnly: false,
@@ -458,8 +458,8 @@ describe("workspace OpenCode proxy", () => {
     await mkdir(commandsDir, { recursive: true });
     await writeFile(commandPath, legacyCommand, "utf8");
 
-    const response = await fetch(`http://127.0.0.1:${openwork.server.port}/workspace/ws_1/opencode/session`, {
-      headers: auth(openwork.token),
+    const response = await fetch(`http://127.0.0.1:${offlinegpt.server.port}/workspace/ws_1/opencode/session`, {
+      headers: auth(offlinegpt.token),
     });
 
     expect(response.status).toBe(200);
@@ -511,7 +511,7 @@ describe("workspace OpenCode proxy", () => {
       body: string,
     ) => {
       const proxyPath = `/session/${sessionId}/command`;
-      const url = new URL(`http://openwork.invalid/opencode${proxyPath}`);
+      const url = new URL(`http://offlinegpt.invalid/opencode${proxyPath}`);
       return proxyOpencodeRequest({
         config,
         workspace: targetWorkspace,
@@ -569,13 +569,13 @@ describe("workspace OpenCode proxy", () => {
   test("keeps legacy /w workspace opencode proxy alias", async () => {
     const workspaceRoot = await createWorkspaceRoot();
     const mock = startMockOpencode();
-    const openwork = await startOpenworkServer({
+    const offlinegpt = await startOfflineGptServer({
       workspaceRoot,
       opencodeBaseUrl: `http://127.0.0.1:${mock.server.port}`,
     });
 
-    const response = await fetch(`http://127.0.0.1:${openwork.server.port}/w/ws_1/opencode/session`, {
-      headers: auth(openwork.token),
+    const response = await fetch(`http://127.0.0.1:${offlinegpt.server.port}/w/ws_1/opencode/session`, {
+      headers: auth(offlinegpt.token),
     });
 
     expect(response.status).toBe(200);
@@ -586,10 +586,10 @@ describe("workspace OpenCode proxy", () => {
 
   test("returns a configured error instead of constructing an SDK request with a relative URL", async () => {
     const workspaceRoot = await createWorkspaceRoot();
-    const openwork = await startOpenworkServer({ workspaceRoot });
+    const offlinegpt = await startOfflineGptServer({ workspaceRoot });
 
-    const response = await fetch(`http://127.0.0.1:${openwork.server.port}/workspace/ws_1/opencode/session?limit=200`, {
-      headers: auth(openwork.token),
+    const response = await fetch(`http://127.0.0.1:${offlinegpt.server.port}/workspace/ws_1/opencode/session?limit=200`, {
+      headers: auth(offlinegpt.token),
     });
 
     expect(response.status).toBe(400);

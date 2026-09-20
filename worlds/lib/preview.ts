@@ -68,16 +68,16 @@ export async function bootPreview(stack: AsyncDisposableStack, place: Place, sur
   if (place.kind !== "daytona") throw new Error("Interactive previews require --place daytona.");
   const base = place.denBase();
   if (base.kind !== "daytona" || !/^[0-9a-f]{40}$/.test(base.ref)) {
-    throw new Error("Set OPENWORK_EVAL_REF to the reviewed, pushed full 40-character commit SHA before booting a preview.");
+    throw new Error("Set OFFLINEGPT_EVAL_REF to the reviewed, pushed full 40-character commit SHA before booting a preview.");
   }
-  if (["OPENWORK_EVAL_DEN_API_URL", "OPENWORK_EVAL_DAYTONA_DEN_SANDBOX", "OPENWORK_EVAL_DAYTONA_DESKTOP_SANDBOX", "OPENWORK_EVAL_DAYTONA_SANDBOX"].some((key) => process.env[key]?.trim())) {
+  if (["OFFLINEGPT_EVAL_DEN_API_URL", "OFFLINEGPT_EVAL_DAYTONA_DEN_SANDBOX", "OFFLINEGPT_EVAL_DAYTONA_DESKTOP_SANDBOX", "OFFLINEGPT_EVAL_DAYTONA_SANDBOX"].some((key) => process.env[key]?.trim())) {
     throw new Error("Preview worlds require isolated infrastructure. Remove existing sandbox/reuse overrides before starting.");
   }
   const fresh = scenario === "fresh";
   const den = stack.use(await server({
     place, provision: !fresh, web: true,
     ...(!fresh ? { org: { name: "Preview team", admin: { name: "Preview owner", email: `preview-${randomBytes(6).toString("hex")}@example.test` } } } : {}),
-    env: { OPENWORK_DEV_MODE: "1", DEN_REQUIRE_EMAIL_VERIFICATION: "false", RESEND_API_KEY: "", SMTP_HOST: "" },
+    env: { OFFLINEGPT_DEV_MODE: "1", DEN_REQUIRE_EMAIL_VERIFICATION: "false", RESEND_API_KEY: "", SMTP_HOST: "" },
   }));
   if (scenario === "team" || scenario === "restricted") await setupTeam(den, scenario === "restricted");
   const outputs: Record<string, WorldOutput> = {

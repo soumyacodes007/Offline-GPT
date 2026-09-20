@@ -1,1 +1,1 @@
-export * from "./openwork-runtime"
+export * from "./offlinegpt-runtime"

@@ -1,9 +1,9 @@
 import { mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join } from "node:path";
-import type { Seed } from "@openwork/env";
-import { startMockMcp } from "@openwork/labs";
-import { bootManagedOpenworkServer, close, isRecord, listen, readBody, sendJson, sendStream } from "./openwork-server-cli.ts";
+import type { Seed } from "@offlinegpt/env";
+import { startMockMcp } from "@offlinegpt/labs";
+import { bootManagedOfflineGptServer, close, isRecord, listen, readBody, sendJson, sendStream } from "./offlinegpt-server-cli.ts";
 
 function gate() {
   let release: () => void = () => {};
@@ -86,7 +86,7 @@ export async function mcpRegistration(seed: Seed) {
   }));
   const token = "mcp-registration-fixture";
   let output = "";
-  let managed: Awaited<ReturnType<typeof bootManagedOpenworkServer>> | undefined;
+  let managed: Awaited<ReturnType<typeof bootManagedOfflineGptServer>> | undefined;
   const dispose = async () => {
     release.release();
     if (managed) await managed.stop();
@@ -96,7 +96,7 @@ export async function mcpRegistration(seed: Seed) {
     await rm(scratch, { recursive: true, force: true });
   };
   try {
-    managed = await bootManagedOpenworkServer({ scratch, workspace, token, sink: (chunk) => { output += chunk; } });
+    managed = await bootManagedOfflineGptServer({ scratch, workspace, token, sink: (chunk) => { output += chunk; } });
     const running = managed;
     return {
       engine: running.engine,

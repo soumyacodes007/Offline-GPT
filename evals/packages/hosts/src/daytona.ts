@@ -78,7 +78,7 @@ const STANDARD_NOVNC_PORT = 6080;
 const STANDARD_ARTIFACTS_PORT = 8090;
 const HTTPS_URL = /https:\/\/[^\s"'<>)]+/;
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const ENTERPRISE_TLS_RUNTIME_ROOT = "/tmp/openwork-enterprise-tls-runtime";
+const ENTERPRISE_TLS_RUNTIME_ROOT = "/tmp/offlinegpt-enterprise-tls-runtime";
 const MAX_ENTERPRISE_TLS_RUNTIME_SOURCE_BYTES = 64 * 1024;
 const ENTERPRISE_TLS_BASE64_CHUNK_LENGTH = 8 * 1024;
 /** Conservative ceiling for each complete Daytona argv command string. */
@@ -330,7 +330,7 @@ export function enterpriseTlsEdgeDaytonaCommands(options: EnterpriseTlsEdgeDayto
   if (new Set([candidatePort, negativePort, adminPort]).size !== 3) {
     throw new Error("Enterprise TLS edge candidate, negative, and admin ports must be distinct.");
   }
-  const manifestPath = options.manifestPath ?? "/tmp/openwork-enterprise-tls-edge.json";
+  const manifestPath = options.manifestPath ?? "/tmp/offlinegpt-enterprise-tls-edge.json";
   if (!manifestPath.startsWith("/")) throw new Error("Enterprise TLS edge manifestPath must be absolute.");
   const sources = ENTERPRISE_TLS_RUNTIME_SOURCES.map(({ local, remote }) => ({
     content: readFileSync(fileURLToPath(local)),
@@ -341,7 +341,7 @@ export function enterpriseTlsEdgeDaytonaCommands(options: EnterpriseTlsEdgeDayto
     throw new Error(`Enterprise TLS runtime source is ${sourceBytes} bytes; maximum is ${MAX_ENTERPRISE_TLS_RUNTIME_SOURCE_BYTES}.`);
   }
   const script = ENTERPRISE_TLS_RUNTIME_SOURCES[0].remote;
-  const log = "/tmp/openwork-enterprise-tls-edge.log";
+  const log = "/tmp/offlinegpt-enterprise-tls-edge.log";
   const adminToken = randomBytes(32).toString("hex");
   if (!/^[a-f0-9]{32,}$/.test(adminToken)) throw new Error("Enterprise TLS admin token must be at least 32 hex characters.");
   const remote = (command: string) => {
@@ -492,7 +492,7 @@ function parseUrlAfterLabels(output: string, labels: string[]): string | null {
 }
 
 function serverRefArg(): string | null {
-  const explicit = process.env.OPENWORK_EVAL_DAYTONA_REF?.trim() || process.env.OPENWORK_EVAL_REF?.trim() || "";
+  const explicit = process.env.OFFLINEGPT_EVAL_DAYTONA_REF?.trim() || process.env.OFFLINEGPT_EVAL_REF?.trim() || "";
   return explicit || null;
 }
 
@@ -555,7 +555,7 @@ export function createDaytonaHost(options: DaytonaHostOptions): DaytonaHost {
   const spawnedSurfaces = new Set<SurfaceHandle>();
 
   function requireSandbox(): string {
-    const sandbox = options.sandboxId?.trim() || process.env.OPENWORK_EVAL_DAYTONA_SANDBOX?.trim() || "";
+    const sandbox = options.sandboxId?.trim() || process.env.OFFLINEGPT_EVAL_DAYTONA_SANDBOX?.trim() || "";
     if (!sandbox) {
       throw new Error("Daytona sandbox required: create one with bash .devcontainer/test-on-daytona.sh <ref> or pass sandboxId.");
     }
@@ -583,7 +583,7 @@ export function createDaytonaHost(options: DaytonaHostOptions): DaytonaHost {
       throw new Error("Electron profileDir must not be empty.");
     }
     const callerOwnedProfile = opts.profileDir !== undefined;
-    const profileRoot = opts.profileDir ?? `/workspace/.openwork-daytona/profiles/${safeName}-${spawnStamp}`;
+    const profileRoot = opts.profileDir ?? `/workspace/.offlinegpt-daytona/profiles/${safeName}-${spawnStamp}`;
     const userDataDir = `${profileRoot}/electron-userdata`;
     const bootstrapPath = `${profileRoot}/bootstrap.json`;
     const port = await allocateSandboxPort(electronPorts, exec, sandbox);
@@ -605,16 +605,16 @@ export function createDaytonaHost(options: DaytonaHostOptions): DaytonaHost {
       }
 
       const env = new Map<string, string>();
-      if (resolveEvalEngineValue(process.env.OPENWORK_EVAL_ENGINE) === "v2") env.set("OPENWORK_ENGINE_V2_PREVIEW", "1");
+      if (resolveEvalEngineValue(process.env.OFFLINEGPT_EVAL_ENGINE) === "v2") env.set("OFFLINEGPT_ENGINE_V2_PREVIEW", "1");
       appendExtraEnv(env, opts.env);
       env.set("DAYTONA_ELECTRON_LOG", logPath);
-      env.set("OPENWORK_ELECTRON_REMOTE_DEBUG_PORT", String(port));
-      env.set("OPENWORK_ELECTRON_USERDATA", userDataDir);
-      env.set("OPENWORK_WORKSPACE_DIR", "/workspace");
-      env.set("OPENWORK_GOOGLE_WORKSPACE_ALLOW_PLAINTEXT_VAULT", "1");
-      const packagedBinary = process.env.OPENWORK_EVAL_ELECTRON_BINARY?.trim();
-      if (packagedBinary) env.set("OPENWORK_EVAL_ELECTRON_BINARY", packagedBinary);
-      if (opts.bootstrap) env.set("OPENWORK_DESKTOP_BOOTSTRAP_PATH", bootstrapPath);
+      env.set("OFFLINEGPT_ELECTRON_REMOTE_DEBUG_PORT", String(port));
+      env.set("OFFLINEGPT_ELECTRON_USERDATA", userDataDir);
+      env.set("OFFLINEGPT_WORKSPACE_DIR", "/workspace");
+      env.set("OFFLINEGPT_GOOGLE_WORKSPACE_ALLOW_PLAINTEXT_VAULT", "1");
+      const packagedBinary = process.env.OFFLINEGPT_EVAL_ELECTRON_BINARY?.trim();
+      if (packagedBinary) env.set("OFFLINEGPT_EVAL_ELECTRON_BINARY", packagedBinary);
+      if (opts.bootstrap) env.set("OFFLINEGPT_DESKTOP_BOOTSTRAP_PATH", bootstrapPath);
 
       const startCommand = `set -euo pipefail; cd /workspace; ${shellExport(env)} bash /workspace/.devcontainer/start-daytona-electron.sh --detach`;
       await checkedExec(
@@ -708,8 +708,8 @@ export function createDaytonaHost(options: DaytonaHostOptions): DaytonaHost {
   }
 
   async function startDen(opts: DenServiceOptions = {}): Promise<DenServiceHandle> {
-    const apiUrl = process.env.OPENWORK_EVAL_DEN_API_URL?.trim();
-    const webUrl = process.env.OPENWORK_EVAL_DEN_WEB_URL?.trim();
+    const apiUrl = process.env.OFFLINEGPT_EVAL_DEN_API_URL?.trim();
+    const webUrl = process.env.OFFLINEGPT_EVAL_DEN_WEB_URL?.trim();
     if (apiUrl && webUrl) {
       return {
         webUrl,
@@ -720,7 +720,7 @@ export function createDaytonaHost(options: DaytonaHostOptions): DaytonaHost {
     }
 
     if (!options.serverScript) {
-      throw new Error("No Den URLs in OPENWORK_EVAL_DEN_API_URL/OPENWORK_EVAL_DEN_WEB_URL. Set them, or create the server with bash .devcontainer/test-server-on-daytona.sh <ref> and rerun with serverScript enabled.");
+      throw new Error("No Den URLs in OFFLINEGPT_EVAL_DEN_API_URL/OFFLINEGPT_EVAL_DEN_WEB_URL. Set them, or create the server with bash .devcontainer/test-server-on-daytona.sh <ref> and rerun with serverScript enabled.");
     }
 
     const args = [".devcontainer/test-server-on-daytona.sh"];

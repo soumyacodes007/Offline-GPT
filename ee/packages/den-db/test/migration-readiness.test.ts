@@ -51,7 +51,7 @@ describe("Den DB migration readiness wiring", () => {
   })
 
   test("Helm migration defaults execute the precompiled dist runner", () => {
-    const values = readRepoFile("packaging/helm/openwork-ee/values.yaml")
+    const values = readRepoFile("packaging/helm/offlinegpt-ee/values.yaml")
     const migrationsBlock = requireSlice(values, "migrations:\n", "\ningress:")
 
     assert.match(migrationsBlock, /command:\n\s+- node/)
@@ -72,7 +72,7 @@ describe("Den DB migration readiness wiring", () => {
     const denApiBuild = readRepoFile("ee/apps/den-api/scripts/build.mjs")
     const startLine = denApiPackage.split("\n").find((line) => line.includes('"start"')) ?? ""
 
-    assert.match(denApiPackage, /"build:workspace-dependencies": "pnpm --filter '@openwork-ee\/den-api\^\.\.\.' --if-present run build"/)
+    assert.match(denApiPackage, /"build:workspace-dependencies": "pnpm --filter '@offlinegpt-ee\/den-api\^\.\.\.' --if-present run build"/)
     assert.match(denApiBuild, /run\(pnpmCommand, \["run", "build:workspace-dependencies"\]\)/)
     assert.match(denApiBuild, /verifyProductionWorkspaceExports\(\)/)
     assert.match(startLine, /"start": "node dist\/main\.js"/)
@@ -88,7 +88,7 @@ describe("Den DB migration readiness wiring", () => {
     assert.match(workflow, /branches:\n\s+- dev/)
     assert.match(workflow, /paths:\n\s+- "ee\/packages\/den-db\/drizzle\/\*\*"/)
     assert.match(workflow, /pscale branch safe-migrations disable/)
-    assert.match(workflow, /run_with_ddl_retry pnpm --filter @openwork-ee\/den-db db:migrate/)
+    assert.match(workflow, /run_with_ddl_retry pnpm --filter @offlinegpt-ee\/den-db db:migrate/)
     assert.match(workflow, /pscale branch safe-migrations enable/)
   })
 
@@ -96,11 +96,11 @@ describe("Den DB migration readiness wiring", () => {
     const checkWorkflow = readRepoFile(".github/workflows/den-db-check.yml")
     const publishWorkflow = readRepoFile(".github/workflows/publish-ee-images.yml")
 
-    assert.match(checkWorkflow, /pnpm --filter @openwork-ee\/den-db test/)
+    assert.match(checkWorkflow, /pnpm --filter @offlinegpt-ee\/den-db test/)
     assert.match(checkWorkflow, /"ee\/apps\/den-api\/package\.json"/)
     assert.match(checkWorkflow, /"ee\/apps\/den-api\/scripts\/build\.mjs"/)
     assert.match(checkWorkflow, /"packaging\/docker\/Dockerfile\.den"/)
-    assert.match(checkWorkflow, /"packaging\/helm\/openwork-ee\/templates\/migration-job\.yaml"/)
+    assert.match(checkWorkflow, /"packaging\/helm\/offlinegpt-ee\/templates\/migration-job\.yaml"/)
     assert.match(checkWorkflow, /"\.github\/workflows\/publish-ee-images\.yml"/)
     assert.match(publishWorkflow, /Assert Den DB migration assets/)
     assert.match(publishWorkflow, /test -s \/app\/ee\/packages\/den-db\/dist\/scripts\/bootstrap\.js/)

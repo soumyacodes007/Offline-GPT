@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, mock, test } from "bun:test"
-import { eq, inArray } from "@openwork-ee/den-db/drizzle"
+import { eq, inArray } from "@offlinegpt-ee/den-db/drizzle"
 import {
   AuthUserTable,
   DashboardAccessGrantTable,
@@ -8,14 +8,14 @@ import {
   OrganizationTable,
   TeamMemberTable,
   TeamTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { Hono, type MiddlewareHandler } from "hono"
 import type { OrgRouteVariables } from "../src/routes/org/shared.js"
 
 const API_ORIGIN = "http://127.0.0.1:8790"
 
-process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test_dashboards"
+process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test_dashboards"
 process.env.DB_MODE ??= "mysql"
 process.env.DEN_DB_ENCRYPTION_KEY ??= "dashboards-test-encryption-key-1234567890"
 process.env.BETTER_AUTH_SECRET ??= "dashboards-test-secret-123456789012"
@@ -38,19 +38,19 @@ const foreignUserId = createDenTypeId("user")
 const foreignMemberId = createDenTypeId("member")
 
 const readOnlyElement = {
-  serverName: "openwork-app-host-connect-0123456789ab",
+  serverName: "offlinegpt-app-host-connect-0123456789ab",
   connectionId: "emc_01dashboardfixture0000000000",
   toolName: "render_report",
-  projectedToolName: "openwork-app-host-connect-0123456789ab_render_report",
+  projectedToolName: "offlinegpt-app-host-connect-0123456789ab_render_report",
   resourceUri: "ui://fixture/report/view.html",
   title: "Weekly report",
 }
 
 const writeElement = {
-  serverName: "openwork-app-host-connect-0123456789ab",
+  serverName: "offlinegpt-app-host-connect-0123456789ab",
   connectionId: "emc_01dashboardfixture0000000000",
   toolName: "create_ticket",
-  projectedToolName: "openwork-app-host-connect-0123456789ab_create_ticket",
+  projectedToolName: "offlinegpt-app-host-connect-0123456789ab_create_ticket",
   resourceUri: "ui://fixture/ticket/view.html",
   title: "Create ticket",
   launchArguments: { queue: "support" },
@@ -123,7 +123,7 @@ function request(path: string, init: RequestInit & { actor?: Actor } = {}) {
 
 beforeAll(async () => {
   mock.restore()
-  const realDb = (await import("@openwork-ee/den-db")).createDenDb({
+  const realDb = (await import("@offlinegpt-ee/den-db")).createDenDb({
     databaseUrl: process.env.DATABASE_URL,
     mode: "mysql",
   }).db

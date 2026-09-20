@@ -27,9 +27,9 @@ describe("composer connection inventory", () => {
       ],
       mcpServers: [
         {
-          id: "openwork-connect:plugin:gmail",
+          id: "offlinegpt-connect:plugin:gmail",
           name: "Gmail plugin MCP",
-          origin: "openwork-connect",
+          origin: "offlinegpt-connect",
           orgMcpConnectionId: "emc_gmail",
           config: { type: "remote", url: "https://mcp.example.test" },
         },
@@ -41,7 +41,7 @@ describe("composer connection inventory", () => {
         },
       ],
       mcpStatuses: {
-        "openwork-connect:plugin:gmail": { status: "needs_auth" },
+        "offlinegpt-connect:plugin:gmail": { status: "needs_auth" },
       },
     });
 
@@ -54,7 +54,7 @@ describe("composer connection inventory", () => {
     const server = {
       id: "org-mcp:emc_gmail",
       name: "Gmail",
-      origin: "openwork-connect" as const,
+      origin: "offlinegpt-connect" as const,
       orgMcpConnectionId: "emc_gmail",
       config: { type: "remote" as const, url: connection.url },
     };

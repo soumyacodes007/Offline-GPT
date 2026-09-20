@@ -18,8 +18,8 @@ import {
 import { DenInput } from "../../_components/ui/input";
 import { DashboardPageTemplate } from "../../_components/ui/dashboard-page-template";
 import {
-  buildOpenworkAppConnectUrl,
-  buildOpenworkDeepLink,
+  buildOfflineGptAppConnectUrl,
+  buildOfflineGptDeepLink,
   getErrorMessage,
   getWorkerStatusMeta,
   getWorkerTokens,
@@ -29,11 +29,11 @@ import {
 import { useDenFlow } from "../../_providers/den-flow-provider";
 
 type ConnectionDetails = {
-  openworkUrl: string | null;
+  offlinegptUrl: string | null;
   ownerToken: string | null;
   clientToken: string | null;
-  openworkAppConnectUrl: string | null;
-  openworkDeepLink: string | null;
+  offlinegptAppConnectUrl: string | null;
+  offlinegptDeepLink: string | null;
 };
 
 function getStatusBadgeClass(bucket: ReturnType<typeof getWorkerStatusMeta>["bucket"]) {
@@ -108,11 +108,11 @@ function SandboxCard({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const meta = getWorkerStatusMeta(sandbox.status);
   const canConnect = meta.bucket === "ready";
-  const connectionUrl = details?.openworkUrl ?? sandbox.instanceUrl ?? null;
+  const connectionUrl = details?.offlinegptUrl ?? sandbox.instanceUrl ?? null;
   const ownerToken = details?.ownerToken ?? null;
   const clientToken = details?.clientToken ?? null;
-  const openWebUrl = details?.openworkAppConnectUrl ?? null;
-  const openDesktopUrl = details?.openworkDeepLink ?? null;
+  const openWebUrl = details?.offlinegptAppConnectUrl ?? null;
+  const openDesktopUrl = details?.offlinegptDeepLink ?? null;
 
   async function handleCopy(field: string, text: string) {
     await navigator.clipboard.writeText(text);
@@ -312,7 +312,7 @@ export function BackgroundAgentsScreen() {
         `/v1/workers/${encodeURIComponent(workerId)}/tokens`,
         {
           method: "POST",
-          body: JSON.stringify({ includeExpiringOpenworkUrl: true }),
+          body: JSON.stringify({ includeExpiringOfflineGptUrl: true }),
         },
         12000,
       );
@@ -329,19 +329,19 @@ export function BackgroundAgentsScreen() {
       }
 
       const nextDetails: ConnectionDetails = {
-        openworkUrl: tokens.openworkUrl,
+        offlinegptUrl: tokens.offlinegptUrl,
         ownerToken: tokens.ownerToken,
         clientToken: tokens.clientToken,
-        openworkAppConnectUrl: buildOpenworkAppConnectUrl(
-          runtimeConfig.openworkAppConnectUrl,
-          tokens.previewOpenworkUrl,
+        offlinegptAppConnectUrl: buildOfflineGptAppConnectUrl(
+          runtimeConfig.offlinegptAppConnectUrl,
+          tokens.previewOfflineGptUrl,
           tokens.clientToken,
           workerId,
           workerName,
           { autoConnect: true },
         ),
-        openworkDeepLink: buildOpenworkDeepLink(
-          tokens.openworkUrl,
+        offlinegptDeepLink: buildOfflineGptDeepLink(
+          tokens.offlinegptUrl,
           tokens.hostToken ?? tokens.ownerToken,
           workerId,
           workerName,

@@ -110,13 +110,13 @@ mock.module("../src/db.js", () => ({
 mock.module("../src/env.js", () => ({
   env: {
     orgMode: "multi_org",
-    openworkWebEnabled: true,
+    offlinegptWebEnabled: true,
     stripe: {
       secretKey: "sk_test_fake",
       webhookSecret: "whsec_test_fake",
       inferencePriceId: "price_inference_fake",
       seatPriceId: "price_seat_fake",
-      openworkWebPriceId: "price_web_fake",
+      offlinegptWebPriceId: "price_web_fake",
       billingSuccessUrl: undefined,
       billingCancelUrl: undefined,
     },
@@ -141,17 +141,17 @@ const loggerStub = {
 mock.module("../src/observability/logger.js", () => ({ appLogger: loggerStub }))
 
 const {
-  OPENWORK_WEB_QUANTITY_DEFINITION,
-  OPENWORK_WEB_UNIT_AMOUNT,
-  calculateOpenWorkWebBilling,
-  createOpenWorkWebCheckout,
+  OFFLINEGPT_WEB_QUANTITY_DEFINITION,
+  OFFLINEGPT_WEB_UNIT_AMOUNT,
+  calculateOfflineGPTWebBilling,
+  createOfflineGPTWebCheckout,
   findOrCreateStripeCustomer,
-  getOpenWorkWebBillingSummary,
+  getOfflineGPTWebBillingSummary,
   handleStripeWebhook,
-  isEligibleOpenWorkWebSubscriptionStatus,
-  isOngoingOpenWorkWebSubscriptionStatus,
-  isOpenWorkWebBillableMember,
-  openWorkWebCheckoutIdempotencyKey,
+  isEligibleOfflineGPTWebSubscriptionStatus,
+  isOngoingOfflineGPTWebSubscriptionStatus,
+  isOfflineGPTWebBillableMember,
+  offlineGptWebCheckoutIdempotencyKey,
   syncInferenceSubscriptionQuantityAfterMemberChange,
   syncSeatSubscriptionQuantityAfterMemberChange,
   syncStripeCheckoutSession,
@@ -159,7 +159,7 @@ const {
   upsertOrgSubscriptionFromStripe,
 } = await import("../src/stripe-billing.js")
 const { env } = await import("../src/env.js")
-const { openWorkWebAvailableForOrganization, openWorkWebDeploymentAvailable } = await import("../src/openwork-web-availability.js")
+const { offlineGptWebAvailableForOrganization, offlineGptWebDeploymentAvailable } = await import("../src/offlinegpt-web-availability.js")
 
 function webSubscription(input?: { status?: string; quantity?: number; organizationId?: string }) {
   const organizationId = input?.organizationId ?? "org_test"
@@ -237,9 +237,9 @@ function webSubscriptionRow(input?: { status?: string; paymentFailed?: boolean; 
 
 beforeEach(() => {
   env.orgMode = "multi_org"
-  env.openworkWebEnabled = true
+  env.offlinegptWebEnabled = true
   env.stripe.secretKey = "sk_test_fake"
-  env.stripe.openworkWebPriceId = "price_web_fake"
+  env.stripe.offlinegptWebPriceId = "price_web_fake"
   selectResults.length = 0
   insertedSubscriptions.length = 0
   customerCreates.length = 0
@@ -269,13 +269,13 @@ beforeEach(() => {
   }
 })
 
-test("OpenWork Web bills joined non-removed members at $50 each", () => {
-  expect(OPENWORK_WEB_QUANTITY_DEFINITION).toBe("joined_non_removed_members")
-  expect(OPENWORK_WEB_UNIT_AMOUNT).toBe(5000)
-  expect(isOpenWorkWebBillableMember({ joinedAt: new Date(), removedAt: null })).toBe(true)
-  expect(isOpenWorkWebBillableMember({ joinedAt: null, removedAt: null })).toBe(false)
-  expect(isOpenWorkWebBillableMember({ joinedAt: new Date(), removedAt: new Date() })).toBe(false)
-  expect(calculateOpenWorkWebBilling({ joinedMemberCount: 3 })).toEqual({
+test("OfflineGPT Web bills joined non-removed members at $50 each", () => {
+  expect(OFFLINEGPT_WEB_QUANTITY_DEFINITION).toBe("joined_non_removed_members")
+  expect(OFFLINEGPT_WEB_UNIT_AMOUNT).toBe(5000)
+  expect(isOfflineGPTWebBillableMember({ joinedAt: new Date(), removedAt: null })).toBe(true)
+  expect(isOfflineGPTWebBillableMember({ joinedAt: null, removedAt: null })).toBe(false)
+  expect(isOfflineGPTWebBillableMember({ joinedAt: new Date(), removedAt: new Date() })).toBe(false)
+  expect(calculateOfflineGPTWebBilling({ joinedMemberCount: 3 })).toEqual({
     quantity: 3,
     unitAmount: 5000,
     expectedMonthlyTotal: 15000,
@@ -284,31 +284,31 @@ test("OpenWork Web bills joined non-removed members at $50 each", () => {
 
 test("only active and trialing Web subscriptions are eligible", () => {
   for (const status of ["active", "trialing"]) {
-    expect(isEligibleOpenWorkWebSubscriptionStatus(status)).toBe(true)
+    expect(isEligibleOfflineGPTWebSubscriptionStatus(status)).toBe(true)
   }
   for (const status of ["incomplete", "incomplete_expired", "past_due", "canceled", "unpaid", "paused", "expired"]) {
-    expect(isEligibleOpenWorkWebSubscriptionStatus(status)).toBe(false)
+    expect(isEligibleOfflineGPTWebSubscriptionStatus(status)).toBe(false)
   }
 })
 
 test("the deployment flag is global while the complimentary override is organization-scoped", () => {
-  expect(openWorkWebDeploymentAvailable(true)).toBe(true)
-  expect(openWorkWebDeploymentAvailable(false)).toBe(false)
-  expect(openWorkWebAvailableForOrganization(false, {})).toBe(false)
-  expect(openWorkWebAvailableForOrganization(false, { capabilities: { openworkWeb: true } })).toBe(false)
-  expect(openWorkWebAvailableForOrganization(false, { complimentaryAccess: { openworkWeb: true } })).toBe(true)
-  expect(openWorkWebAvailableForOrganization(true, {})).toBe(true)
+  expect(offlineGptWebDeploymentAvailable(true)).toBe(true)
+  expect(offlineGptWebDeploymentAvailable(false)).toBe(false)
+  expect(offlineGptWebAvailableForOrganization(false, {})).toBe(false)
+  expect(offlineGptWebAvailableForOrganization(false, { capabilities: { offlinegptWeb: true } })).toBe(false)
+  expect(offlineGptWebAvailableForOrganization(false, { complimentaryAccess: { offlinegptWeb: true } })).toBe(true)
+  expect(offlineGptWebAvailableForOrganization(true, {})).toBe(true)
 
   env.orgMode = "single_org"
-  expect(openWorkWebDeploymentAvailable(env.openworkWebEnabled)).toBe(true)
+  expect(offlineGptWebDeploymentAvailable(env.offlinegptWebEnabled)).toBe(true)
 })
 
 test("ongoing Web statuses suppress duplicate checkout until the subscription is terminal", () => {
   for (const status of ["active", "trialing", "incomplete", "past_due", "unpaid", "paused"]) {
-    expect(isOngoingOpenWorkWebSubscriptionStatus(status)).toBe(true)
+    expect(isOngoingOfflineGPTWebSubscriptionStatus(status)).toBe(true)
   }
   for (const status of ["canceled", "incomplete_expired", "expired"]) {
-    expect(isOngoingOpenWorkWebSubscriptionStatus(status)).toBe(false)
+    expect(isOngoingOfflineGPTWebSubscriptionStatus(status)).toBe(false)
   }
 })
 
@@ -326,7 +326,7 @@ test("member-readable Web billing summary omits Stripe identifiers and portal ac
     ended_at: null,
   }], [{ count: 2 }], [{ metadata: {} }])
 
-  const summary = await getOpenWorkWebBillingSummary("org_test")
+  const summary = await getOfflineGPTWebBillingSummary("org_test")
 
   expect(summary).toMatchObject({
     configured: true,
@@ -354,18 +354,18 @@ test("the Web flag controls availability while Stripe readiness controls purchas
   env.stripe.secretKey = ""
   selectResults.push([], [{ count: 2 }], [{ metadata: {} }])
 
-  const summary = await getOpenWorkWebBillingSummary("org_test")
+  const summary = await getOfflineGPTWebBillingSummary("org_test")
 
-  expect(openWorkWebDeploymentAvailable(env.openworkWebEnabled)).toBe(true)
+  expect(offlineGptWebDeploymentAvailable(env.offlinegptWebEnabled)).toBe(true)
   expect(summary.configured).toBe(false)
   expect(summary.hasAccess).toBe(false)
 })
 
 test("complimentary Web access works without Stripe configuration and overrides the deployment flag for that organization", async () => {
   env.stripe.secretKey = ""
-  selectResults.push([], [{ count: 2 }], [{ metadata: { complimentaryAccess: { openworkWeb: true } } }])
+  selectResults.push([], [{ count: 2 }], [{ metadata: { complimentaryAccess: { offlinegptWeb: true } } }])
 
-  const enabledSummary = await getOpenWorkWebBillingSummary("org_test")
+  const enabledSummary = await getOfflineGPTWebBillingSummary("org_test")
 
   expect(enabledSummary).toMatchObject({
     configured: false,
@@ -375,9 +375,9 @@ test("complimentary Web access works without Stripe configuration and overrides 
     complimentaryAccess: true,
   })
 
-  env.openworkWebEnabled = false
-  selectResults.push([], [{ count: 2 }], [{ metadata: { complimentaryAccess: { openworkWeb: true } } }])
-  const disabledSummary = await getOpenWorkWebBillingSummary("org_test")
+  env.offlinegptWebEnabled = false
+  selectResults.push([], [{ count: 2 }], [{ metadata: { complimentaryAccess: { offlinegptWeb: true } } }])
+  const disabledSummary = await getOfflineGPTWebBillingSummary("org_test")
   expect(disabledSummary).toMatchObject({
     configured: false,
     hasAccess: true,
@@ -386,7 +386,7 @@ test("complimentary Web access works without Stripe configuration and overrides 
   })
 
   selectResults.push([], [{ count: 2 }], [{ metadata: {} }])
-  const ungrantedSummary = await getOpenWorkWebBillingSummary("org_other")
+  const ungrantedSummary = await getOfflineGPTWebBillingSummary("org_other")
   expect(ungrantedSummary).toMatchObject({
     configured: false,
     hasAccess: false,
@@ -409,7 +409,7 @@ test("an active Web subscription with a failed payment remains locked", async ()
     ended_at: null,
   }], [{ count: 2 }], [{ metadata: {} }])
 
-  const summary = await getOpenWorkWebBillingSummary("org_test")
+  const summary = await getOfflineGPTWebBillingSummary("org_test")
 
   expect(summary.hasEligibleSubscription).toBe(false)
   expect(summary.hasAccess).toBe(false)
@@ -420,7 +420,7 @@ test("an active Web subscription with a failed payment remains locked", async ()
 test("Web checkout uses the configured monthly price and authoritative joined-member quantity", async () => {
   selectResults.push([{ count: 2 }], [], [])
 
-  const session = await createOpenWorkWebCheckout(checkoutInput())
+  const session = await createOfflineGPTWebCheckout(checkoutInput())
 
   expect(session.url).toBe("https://checkout.test/new")
   expect(checkoutCreates).toHaveLength(1)
@@ -429,18 +429,18 @@ test("Web checkout uses the configured monthly price and authoritative joined-me
     customer: "cus_created_1",
     line_items: [{ price: "price_web_fake", quantity: 2 }],
     client_reference_id: "org_test",
-    metadata: { org_id: "org_test", subscription_type: "web", openwork_product: "openwork_web" },
+    metadata: { org_id: "org_test", subscription_type: "web", offlinegpt_product: "offlinegpt_web" },
     subscription_data: { metadata: { org_id: "org_test", subscription_type: "web" } },
   })
   expect(checkoutCreates[0]?.options).toEqual({
-    idempotencyKey: openWorkWebCheckoutIdempotencyKey({ organizationId: "org_test", quantity: 2 }),
+    idempotencyKey: offlineGptWebCheckoutIdempotencyKey({ organizationId: "org_test", quantity: 2 }),
   })
 })
 
 test("deployments without the Web flag cannot create a checkout even when Stripe billing is configured", async () => {
-  env.openworkWebEnabled = false
+  env.offlinegptWebEnabled = false
 
-  await expect(createOpenWorkWebCheckout(checkoutInput())).rejects.toThrow("stripe_openwork_web_not_available")
+  await expect(createOfflineGPTWebCheckout(checkoutInput())).rejects.toThrow("stripe_offlinegpt_web_not_available")
   expect(checkoutCreates).toHaveLength(0)
 })
 
@@ -450,7 +450,7 @@ test("Web checkout rejects a configured price that is not exactly $50 per licens
     recurring: { interval: "month", interval_count: 2, usage_type: "licensed" },
   }
 
-  await expect(createOpenWorkWebCheckout(checkoutInput())).rejects.toThrow("stripe_openwork_web_price_contract_invalid")
+  await expect(createOfflineGPTWebCheckout(checkoutInput())).rejects.toThrow("stripe_offlinegpt_web_price_contract_invalid")
   expect(checkoutCreates).toHaveLength(0)
 })
 
@@ -466,7 +466,7 @@ test("matching open Web checkout is reused instead of creating a duplicate", asy
   }]
   checkoutLineItemResults = [{ quantity: 2, price: { id: "price_web_fake" } }]
 
-  const session = await createOpenWorkWebCheckout(checkoutInput())
+  const session = await createOfflineGPTWebCheckout(checkoutInput())
 
   expect(session.url).toBe("https://checkout.test/existing")
   expect(checkoutCreates).toHaveLength(0)
@@ -476,7 +476,7 @@ test("an eligible Stripe Web subscription blocks a second checkout", async () =>
   selectResults.push([{ count: 2 }], [], [], [])
   subscriptionResults = [webSubscription()]
 
-  await expect(createOpenWorkWebCheckout(checkoutInput())).rejects.toThrow("stripe_openwork_web_subscription_exists")
+  await expect(createOfflineGPTWebCheckout(checkoutInput())).rejects.toThrow("stripe_offlinegpt_web_subscription_exists")
   expect(insertedSubscriptions).toHaveLength(1)
   expect(checkoutCreates).toHaveLength(0)
 })
@@ -505,7 +505,7 @@ test("the organization subscription guard blocks a past-due subscription before 
   }
   selectResults.push([{ count: 2 }], [storedRow], [storedRow], [storedRow])
 
-  await expect(createOpenWorkWebCheckout(checkoutInput())).rejects.toThrow("stripe_openwork_web_subscription_exists")
+  await expect(createOfflineGPTWebCheckout(checkoutInput())).rejects.toThrow("stripe_offlinegpt_web_subscription_exists")
   expect(customerCreates).toHaveLength(0)
   expect(checkoutCreates).toHaveLength(0)
 })
@@ -514,7 +514,7 @@ test("an incomplete Stripe Web subscription suppresses a second checkout", async
   selectResults.push([{ count: 2 }], [], [], [], [])
   subscriptionResults = [webSubscription({ status: "incomplete" })]
 
-  await expect(createOpenWorkWebCheckout(checkoutInput())).rejects.toThrow("stripe_openwork_web_subscription_exists")
+  await expect(createOfflineGPTWebCheckout(checkoutInput())).rejects.toThrow("stripe_offlinegpt_web_subscription_exists")
   expect(checkoutCreates).toHaveLength(0)
 })
 
@@ -541,7 +541,7 @@ test("an expired Web subscription allows a replacement checkout", async () => {
   }
   selectResults.push([{ count: 2 }], [storedRow], [storedRow], [storedRow], [])
 
-  const session = await createOpenWorkWebCheckout(checkoutInput())
+  const session = await createOfflineGPTWebCheckout(checkoutInput())
 
   expect(session.url).toBe("https://checkout.test/new")
   expect(checkoutCreates).toHaveLength(1)
@@ -565,8 +565,8 @@ test("organization-scoped customers never reuse another organization by email", 
   expect(first).not.toBe(second)
   expect(customerListResults).toEqual([])
   expect(customerCreates.map((call) => call.options)).toEqual([
-    { idempotencyKey: "openwork-org-customer:org_alpha" },
-    { idempotencyKey: "openwork-org-customer:org_beta" },
+    { idempotencyKey: "offlinegpt-org-customer:org_alpha" },
+    { idempotencyKey: "offlinegpt-org-customer:org_beta" },
   ])
 })
 
@@ -593,7 +593,7 @@ test("checkout sync rejects cross-organization sessions and stores ineligible pa
     status: "past_due",
   })
   const insertedStatus = insertedSubscriptions.at(-1)?.status
-  expect(isEligibleOpenWorkWebSubscriptionStatus(typeof insertedStatus === "string" ? insertedStatus : null)).toBe(false)
+  expect(isEligibleOfflineGPTWebSubscriptionStatus(typeof insertedStatus === "string" ? insertedStatus : null)).toBe(false)
 })
 
 test("checkout sync keeps an active Web subscription locked until Checkout confirms payment", async () => {

@@ -288,8 +288,8 @@ describe("tool aggregate long details", () => {
     });
     const command = [
       "pnpm world up dev-headless --detach -- --replace",
-      "pnpm --filter @openwork/app test",
-      "pnpm --filter @openwork/app typecheck",
+      "pnpm --filter @offlinegpt/app test",
+      "pnpm --filter @offlinegpt/app typecheck",
       "pnpm world down dev-headless",
     ].join("\n");
     const clipboardWrites: string[] = [];

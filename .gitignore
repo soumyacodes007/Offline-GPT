@@ -60,10 +60,10 @@ vendor/opencode/
 .opencode/node_modules/
 .opencode/bun.lock
 
-# OpenWork workspace-local artifacts
-.opencode/openwork/
-.opencode/agents/openwork.md
-.opencode/openwork.json
+# OfflineGPT workspace-local artifacts
+.opencode/offlinegpt/
+.opencode/agents/offlinegpt.md
+.opencode/offlinegpt.json
 opencode.jsonc
 .vercel
 .env*.local

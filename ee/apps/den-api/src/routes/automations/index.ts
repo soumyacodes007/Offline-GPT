@@ -26,7 +26,7 @@ import {
   remoteSessionCommandCompleteRequestSchema,
   remoteSessionCommandCompleteResponseSchema,
   updateAutomationSchema,
-} from "@openwork/types/automations"
+} from "@offlinegpt/types/automations"
 import {
   jsonValidator,
   orgMemberRoute,
@@ -38,7 +38,7 @@ import { invalidRequestSchema, jsonResponse, notFoundSchema, unauthorizedSchema 
 import { automationService, type AutomationService } from "../../automations/service.js"
 import { automationRunnerAudienceFromRequest, automationRunnerAuth } from "../../automations/runner-auth.js"
 import { env } from "../../env.js"
-import { OpenWorkWebAccessRequiredError } from "../../openwork-web-runtime-access.js"
+import { OfflineGPTWebAccessRequiredError } from "../../offlinegpt-web-runtime-access.js"
 import { databaseRemoteSessionCommandStore } from "../../remote-sessions/commands.js"
 import {
   RUNNER_KEEPALIVE_INTERVAL_MS,
@@ -56,10 +56,10 @@ const paginationSchema = z.object({
 const runListSchema = z.object({ items: z.array(automationRunSchema), nextCursor: z.string().nullable() })
 const runResponseSchema = z.object({ run: automationRunSchema })
 const runnerClaimResponseSchema = z.object({ assignment: automationDesktopRunnerAssignmentSchema.nullable() })
-const openWorkWebAccessRequiredSchema = z.object({
-  error: z.literal("openwork_web_access_required"),
+const offlineGptWebAccessRequiredSchema = z.object({
+  error: z.literal("offlinegpt_web_access_required"),
   message: z.string(),
-}).meta({ ref: "AutomationOpenWorkWebAccessRequiredError" })
+}).meta({ ref: "AutomationOfflineGPTWebAccessRequiredError" })
 type McpDescribeRouteOptions = DescribeRouteOptions & { "x-mcp": true }
 const describeMcpRoute = (options: McpDescribeRouteOptions) => describeRoute(options)
 // Runner-credential routes must never surface as MCP tools; an MCP caller with
@@ -83,7 +83,7 @@ function scope(c: {
 }
 
 function failure(error: unknown): { status: 400 | 403 | 404 | 409; body: { error: string; message?: string } } | null {
-  if (error instanceof OpenWorkWebAccessRequiredError) {
+  if (error instanceof OfflineGPTWebAccessRequiredError) {
     return { status: 403, body: { error: error.code, message: error.message } }
   }
   if (!(error instanceof Error)) return null
@@ -92,7 +92,7 @@ function failure(error: unknown): { status: 400 | 403 | 404 | 409; body: { error
   }
   if (error.message === "automation_not_found") return { status: 404, body: { error: "automation_not_found" } }
   if (error.message === "automation_action_target_mismatch") {
-    return { status: 400, body: { error: "automation_action_target_mismatch", message: "Desktop creates local Automations; Web creates OpenWork Cloud Automations." } }
+    return { status: 400, body: { error: "automation_action_target_mismatch", message: "Desktop creates local Automations; Web creates OfflineGPT Cloud Automations." } }
   }
   if (error.message === "automation_saved_script_input_invalid") {
     return { status: 400, body: { error: "automation_saved_script_input_invalid", message: "The existing Automation input does not match the selected Workflow version. Correct the input before creating the revision." } }
@@ -107,7 +107,7 @@ function failure(error: unknown): { status: 400 | 403 | 404 | 409; body: { error
     return { status: 409, body: { error: error.message, message: "The Automation owner is no longer an active organization member." } }
   }
   if (error.message === "automation_cloud_worker_required") {
-    return { status: 409, body: { error: error.message, message: "Set up OpenWork Cloud before creating a Cloud Automation." } }
+    return { status: 409, body: { error: error.message, message: "Set up OfflineGPT Cloud before creating a Cloud Automation." } }
   }
   if (["owner_membership_lost", "model_access_lost", "provider_unavailable"].includes(error.name)) {
     return { status: 409, body: { error: error.name, message: error.message } }
@@ -117,9 +117,9 @@ function failure(error: unknown): { status: 400 | 403 | 404 | 409; body: { error
 
 const routeDescription = [
   "Den schedules Automations and keeps durable run history.",
-  "Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud.",
+  "Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud.",
   "If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed.",
-  "Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations.",
+  "Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations.",
   "Deactivation stops future runs but does not cancel a run already in progress.",
 ].join(" ")
 
@@ -402,7 +402,7 @@ export function registerAutomationRoutes<T extends { Variables: RouteVariables }
         201: jsonResponse("Active Automation created.", automationDetailSchema),
         400: jsonResponse("Invalid request.", invalidRequestSchema),
         401: jsonResponse("Sign-in required.", unauthorizedSchema),
-        403: jsonResponse("OpenWork Web access is required.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is required.", offlineGptWebAccessRequiredSchema),
         409: jsonResponse("Cloud runtime or model access is unavailable.", invalidRequestSchema),
       },
     }),
@@ -422,13 +422,13 @@ export function registerAutomationRoutes<T extends { Variables: RouteVariables }
     "/v1/cloud-automations",
     describeMcpRoute({
       tags: ["Automations"], operationId: "createCloudAutomation", "x-mcp": true,
-      summary: "Create an active OpenWork Cloud Automation",
-      description: `${routeDescription} This is the Web and Cloud Chat creation surface. Placement is fixed to OpenWork Cloud and the Automation can wake a stopped Cloud container without a desktop. Create only when the person explicitly asks to create or schedule it; there is no draft step.`,
+      summary: "Create an active OfflineGPT Cloud Automation",
+      description: `${routeDescription} This is the Web and Cloud Chat creation surface. Placement is fixed to OfflineGPT Cloud and the Automation can wake a stopped Cloud container without a desktop. Create only when the person explicitly asks to create or schedule it; there is no draft step.`,
       responses: {
         201: jsonResponse("Active Cloud Automation created.", automationDetailSchema),
         400: jsonResponse("Invalid request.", invalidRequestSchema),
         401: jsonResponse("Sign-in required.", unauthorizedSchema),
-        403: jsonResponse("OpenWork Web access is required.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is required.", offlineGptWebAccessRequiredSchema),
         409: jsonResponse("Cloud runtime or model access is unavailable.", invalidRequestSchema),
       },
     }),
@@ -467,7 +467,7 @@ export function registerAutomationRoutes<T extends { Variables: RouteVariables }
       responses: {
         200: jsonResponse("Automation updated.", automationDetailSchema),
         400: jsonResponse("Invalid request.", invalidRequestSchema),
-        403: jsonResponse("OpenWork Web access is required for Cloud Automations.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is required for Cloud Automations.", offlineGptWebAccessRequiredSchema),
       },
     }),
     orgMemberRoute(), paramValidator(idParamsSchema), jsonValidator(updateAutomationSchema),
@@ -496,7 +496,7 @@ export function registerAutomationRoutes<T extends { Variables: RouteVariables }
       responses: {
         200: jsonResponse("Automation state returned.", automationDetailSchema),
         ...(action === "activate" ? {
-          403: jsonResponse("OpenWork Web access is required to activate a Cloud Automation.", openWorkWebAccessRequiredSchema),
+          403: jsonResponse("OfflineGPT Web access is required to activate a Cloud Automation.", offlineGptWebAccessRequiredSchema),
         } : {}),
         404: jsonResponse("Not found.", notFoundSchema),
       },
@@ -524,7 +524,7 @@ export function registerAutomationRoutes<T extends { Variables: RouteVariables }
       summary: "Run an Automation now", description: routeDescription,
       responses: {
         202: jsonResponse("Run queued.", runResponseSchema),
-        403: jsonResponse("OpenWork Web access is required to run a Cloud Automation.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is required to run a Cloud Automation.", offlineGptWebAccessRequiredSchema),
         404: jsonResponse("Not found.", notFoundSchema),
       },
     }),

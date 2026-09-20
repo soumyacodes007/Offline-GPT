@@ -39,6 +39,6 @@ describe("OrgDashboardShell layout", () => {
   test("links Docs to the public documentation site", () => {
     const source = readFileSync(shellPath, "utf8");
 
-    expect(source).toContain('const OPENWORK_DOCS_URL = "https://openworklabs.com/docs";');
+    expect(source).toContain('const OFFLINEGPT_DOCS_URL = "https://offlinegptlabs.com/docs";');
   });
 });

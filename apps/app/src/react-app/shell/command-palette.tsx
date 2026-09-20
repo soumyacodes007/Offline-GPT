@@ -346,7 +346,7 @@ export function CommandPalette(props: CommandPaletteProps) {
       group: ACTIONS_GROUP,
       action: () => {
         props.onClose();
-        openUrl("https://openwork.dev/docs");
+        openUrl("https://offlinegpt.dev/docs");
       },
     },
     {
@@ -357,7 +357,7 @@ export function CommandPalette(props: CommandPaletteProps) {
       group: ACTIONS_GROUP,
       action: () => {
         props.onClose();
-        openUrl("https://openwork.dev/feedback");
+        openUrl("https://offlinegpt.dev/feedback");
       },
     },
   ], [accessibleTargetCount, canMoveCurrentSessionToGroup, hasNestedModelPicker, props, sessionGroupCount, sessionNumberHelp]);
@@ -457,7 +457,7 @@ export function CommandPalette(props: CommandPaletteProps) {
       : []),
     ...(shellConfig.cloudSignin ? [{
       id: "cloud.sign_in",
-      title: "Sign in to OpenWork Cloud",
+      title: "Sign in to OfflineGPT Cloud",
       keywords: ["login", "account", "organization", "org", "den", "cloud"],
       group: ACTIONS_GROUP,
       action: () => {

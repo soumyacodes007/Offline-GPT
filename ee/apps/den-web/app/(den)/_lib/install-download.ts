@@ -9,19 +9,19 @@ export type DetectedInstallerPlatform = {
 export function installerFileName(platform: InstallPlatform | null, version: string) {
   if (!platform || !version.trim()) return null;
   if (platform === "mac-arm64" || platform === "mac-x64") {
-    return `openwork-enterprise-${platform}-${version}.dmg`;
+    return `offlinegpt-enterprise-${platform}-${version}.dmg`;
   }
   if (platform === "win-x64") {
-    return `openwork-enterprise-${platform}-${version}.exe`;
+    return `offlinegpt-enterprise-${platform}-${version}.exe`;
   }
   if (platform === "linux-x64") {
-    return `openwork-enterprise-linux-x86_64-${version}.AppImage`;
+    return `offlinegpt-enterprise-linux-x86_64-${version}.AppImage`;
   }
-  return `openwork-enterprise-linux-arm64-${version}.AppImage`;
+  return `offlinegpt-enterprise-linux-arm64-${version}.AppImage`;
 }
 
 export function cloudInstallerFileName(platform: InstallPlatform | null, version: string) {
-  return installerFileName(platform, version)?.replace(/^openwork-enterprise-/, "openwork-cloud-") ?? null;
+  return installerFileName(platform, version)?.replace(/^offlinegpt-enterprise-/, "offlinegpt-cloud-") ?? null;
 }
 
 export function buildInstallDownloadHref(apiUrl: string, platform: InstallPlatform, token: string) {

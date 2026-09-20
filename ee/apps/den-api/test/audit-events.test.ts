@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import {
   buildOrganizationAuditAlertLogLine,
   buildOrganizationAuditEvent,
@@ -141,14 +141,14 @@ test("organization audit events support SCIM management actions", () => {
     action: ORGANIZATION_AUDIT_ACTIONS.scimTokenRotated,
     payload: {
       scimProviderId,
-      providerId: "openwork-scim-org_id",
+      providerId: "offlinegpt-scim-org_id",
     },
   })
 
   expect(event.action).toBe("organization.scim.token_rotated")
   expect(event.payload).toEqual({
     scimProviderId,
-    providerId: "openwork-scim-org_id",
+    providerId: "offlinegpt-scim-org_id",
   })
 
   const reconciliationEvent = buildOrganizationAuditEvent({
@@ -179,7 +179,7 @@ test("organization audit events support SSO management actions", () => {
     action: ORGANIZATION_AUDIT_ACTIONS.ssoConnectionRegistered,
     payload: {
       ssoConnectionId,
-      providerId: "openwork-sso-org_id",
+      providerId: "offlinegpt-sso-org_id",
       kind: "saml",
       issuer: "https://idp.example.com",
       domain: "example.com",
@@ -189,7 +189,7 @@ test("organization audit events support SSO management actions", () => {
   expect(event.action).toBe("organization.sso.connection_registered")
   expect(event.payload).toEqual({
     ssoConnectionId,
-    providerId: "openwork-sso-org_id",
+    providerId: "offlinegpt-sso-org_id",
     kind: "saml",
     issuer: "https://idp.example.com",
     domain: "example.com",
@@ -203,8 +203,8 @@ test("organization audit alerting covers sensitive access changes", () => {
   expect(isOrganizationAuditAlertAction(ORGANIZATION_AUDIT_ACTIONS.roleUpdated)).toBe(true)
   expect(isOrganizationAuditAlertAction(ORGANIZATION_AUDIT_ACTIONS.scimTokenRotated)).toBe(true)
   expect(isOrganizationAuditAlertAction(ORGANIZATION_AUDIT_ACTIONS.ssoConnectionRegistered)).toBe(true)
-  expect(isOrganizationAuditAlertAction(ORGANIZATION_AUDIT_ACTIONS.openWorkWebComplimentaryAccessGranted)).toBe(true)
-  expect(isOrganizationAuditAlertAction(ORGANIZATION_AUDIT_ACTIONS.openWorkWebComplimentaryAccessRevoked)).toBe(true)
+  expect(isOrganizationAuditAlertAction(ORGANIZATION_AUDIT_ACTIONS.offlineGptWebComplimentaryAccessGranted)).toBe(true)
+  expect(isOrganizationAuditAlertAction(ORGANIZATION_AUDIT_ACTIONS.offlineGptWebComplimentaryAccessRevoked)).toBe(true)
   expect(isOrganizationAuditAlertAction(ORGANIZATION_AUDIT_ACTIONS.scimReconciliationRun)).toBe(false)
 })
 
@@ -212,14 +212,14 @@ test("organization audit events record complimentary Web access changes without 
   const event = buildOrganizationAuditEvent({
     organizationId: createDenTypeId("organization"),
     actorUserId: createDenTypeId("user"),
-    action: ORGANIZATION_AUDIT_ACTIONS.openWorkWebComplimentaryAccessGranted,
+    action: ORGANIZATION_AUDIT_ACTIONS.offlineGptWebComplimentaryAccessGranted,
     payload: {
       reason: "Internal administration organization",
       complimentaryAccess: true,
     },
   })
 
-  expect(event.action).toBe("organization.openwork_web.complimentary_access_granted")
+  expect(event.action).toBe("organization.offlinegpt_web.complimentary_access_granted")
   expect(event.payload).toEqual({
     reason: "Internal administration organization",
     complimentaryAccess: true,
@@ -233,7 +233,7 @@ test("organization audit alert log line is structured and secret-free", () => {
     action: ORGANIZATION_AUDIT_ACTIONS.ssoConnectionDeleted,
     payload: {
       ssoConnectionId: createDenTypeId("ssoConnection"),
-      providerId: "openwork-sso-org_id",
+      providerId: "offlinegpt-sso-org_id",
       domain: "example.com",
     },
   })

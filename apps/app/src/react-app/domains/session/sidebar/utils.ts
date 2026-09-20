@@ -152,11 +152,11 @@ const EMPTY_ARRAY: string[] = [];
 
 export const workspaceLabel = (workspace: WorkspaceInfo) => {
   const label = workspace.displayName?.trim() ||
-    workspace.openworkWorkspaceName?.trim() ||
+    workspace.offlinegptWorkspaceName?.trim() ||
     workspace.name?.trim() ||
     workspace.path?.trim() ||
     t("workspace_list.workspace_fallback");
-  return label === "OpenWork Chat" ? "OfflineGPT Chat" : label;
+  return label === "OfflineGPT Chat" ? "OfflineGPT Chat" : label;
 };
 
 export const workspaceKindLabel = (workspace: WorkspaceInfo) =>

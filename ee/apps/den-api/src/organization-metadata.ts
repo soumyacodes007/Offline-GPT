@@ -1,6 +1,6 @@
-import { eq } from "@openwork-ee/den-db/drizzle"
-import { OrganizationTable } from "@openwork-ee/den-db/schema"
-import { assertManagedModelsAllowed, ManagedModelsPolicyError, readOrganizationMetadata } from "@openwork/types/den/managed-models-policy"
+import { eq } from "@offlinegpt-ee/den-db/drizzle"
+import { OrganizationTable } from "@offlinegpt-ee/den-db/schema"
+import { assertManagedModelsAllowed, ManagedModelsPolicyError, readOrganizationMetadata } from "@offlinegpt/types/den/managed-models-policy"
 import { db } from "./db.js"
 
 type OrganizationId = typeof OrganizationTable.$inferSelect.id

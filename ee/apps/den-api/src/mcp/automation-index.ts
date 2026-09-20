@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/server"
-import type { AutomationList } from "@openwork/types/automations"
+import type { AutomationList } from "@offlinegpt/types/automations"
 
 export const AGENT_AUTOMATION_INDEX_URI = "automation://index.json"
-export const AGENT_AUTOMATION_INDEX_SCHEMA = "https://schemas.openworklabs.com/automations/discovery/0.2.0/schema.json"
+export const AGENT_AUTOMATION_INDEX_SCHEMA = "https://schemas.offlinegptlabs.com/automations/discovery/0.2.0/schema.json"
 
 /**
  * How many Automations the discovery index carries. The index rides in every
@@ -67,7 +67,7 @@ export function registerAgentAutomationResources(input: {
 }) {
   input.server.registerResource("agent-automations-index", AGENT_AUTOMATION_INDEX_URI, {
     title: "Your Automations",
-    description: "Discovery index of the Automations this OpenWork member owns, with live schedule and run state.",
+    description: "Discovery index of the Automations this OfflineGPT member owns, with live schedule and run state.",
     mimeType: "application/json",
   }, async () => ({
     contents: [{

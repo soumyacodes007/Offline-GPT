@@ -18,7 +18,7 @@ import {
   type LedgerEntry,
   type Progress,
   type WorldOutput,
-} from "@openwork/world";
+} from "@offlinegpt/world";
 import { resolvePlace, type Place } from "./place.ts";
 
 export interface RecipeTools {

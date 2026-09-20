@@ -1,4 +1,4 @@
-import { desktopExecutionPolicySchema, desktopPolicyDefaults, desktopPolicyDefinitions, resolveTeamAccessCapabilities, type DesktopExecutionPolicy, type TeamAccess } from "@openwork/types/den/desktop-policies";
+import { desktopExecutionPolicySchema, desktopPolicyDefaults, desktopPolicyDefinitions, resolveTeamAccessCapabilities, type DesktopExecutionPolicy, type TeamAccess } from "@offlinegpt/types/den/desktop-policies";
 
 export const teamCapabilities = desktopPolicyDefinitions.filter((entry) => entry.restrictedValue !== null);
 

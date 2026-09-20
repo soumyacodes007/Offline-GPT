@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto"
-import { and, asc, eq, inArray, isNull } from "@openwork-ee/den-db/drizzle"
-import { WorkerTable, WorkerTokenTable } from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { and, asc, eq, inArray, isNull } from "@offlinegpt-ee/den-db/drizzle"
+import { WorkerTable, WorkerTokenTable } from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { Hono, MiddlewareHandler } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
@@ -12,10 +12,10 @@ import { orgMemberRoute } from "../../middleware/index.js"
 import { jsonResponse, notFoundSchema, unauthorizedSchema } from "../../openapi.js"
 import { materializeCloudWorkerProviders } from "../../llm/cloud-provider-materialization.js"
 import {
-  getOpenWorkWebRuntimeAccess,
-  openWorkWebAccessRequiredPayload,
-  type OpenWorkWebRuntimeAccessResolver,
-} from "../../openwork-web-runtime-access.js"
+  getOfflineGPTWebRuntimeAccess,
+  offlineGptWebAccessRequiredPayload,
+  type OfflineGPTWebRuntimeAccessResolver,
+} from "../../offlinegpt-web-runtime-access.js"
 import { currentDaytonaSandboxName, flushWorkerCheckpointOnDaytona, getDaytonaSandboxRecord, inspectDaytonaSandbox, refreshDaytonaSignedPreview, stopWorkerOnDaytona } from "../../workers/daytona.js"
 import { CLOUD_INSTANCE_BACKEND, CLOUD_INSTANCE_NAME } from "../../workers/cloud-constants.js"
 import { recoverClaimedCloudWorker as defaultRecoverCloudWorker, wakeCloudWorker as defaultWakeCloudWorker } from "../../workers/cloud-lifecycle.js"
@@ -57,7 +57,7 @@ type CloudRouteOptions = {
   flushWorkerCheckpoint?: FlushWorkerCheckpoint
   stopCloudWorker?: StopCloudWorker
   materializeProviders?: typeof materializeCloudWorkerProviders
-  getOpenWorkWebAccess?: OpenWorkWebRuntimeAccessResolver
+  getOfflineGPTWebAccess?: OfflineGPTWebRuntimeAccessResolver
   now?: () => number
 }
 
@@ -166,10 +166,10 @@ const cloudGatewayInstanceResponseSchema = z.object({
   }).optional(),
 }).meta({ ref: "CloudGatewayInstanceResponse" })
 
-const openWorkWebAccessRequiredSchema = z.object({
-  error: z.literal("openwork_web_access_required"),
+const offlineGptWebAccessRequiredSchema = z.object({
+  error: z.literal("offlinegpt_web_access_required"),
   message: z.string(),
-}).meta({ ref: "OpenWorkWebAccessRequiredError" })
+}).meta({ ref: "OfflineGPTWebAccessRequiredError" })
 
 function cloudNotFound() {
   return { error: "cloud_not_found" }
@@ -177,7 +177,7 @@ function cloudNotFound() {
 
 const logger = appLogger.child({ component: "cloud_routes" })
 const cloudWorkerNameMaxLength = 255
-const gatewayKeyHeader = "X-OpenWork-Gateway-Key"
+const gatewayKeyHeader = "X-OfflineGPT-Gateway-Key"
 const ensureCloudWorkerInFlight = new Map<string, Promise<CloudWorker>>()
 
 function isUpdateResultRecord(value: unknown): value is UpdateResultRecord {
@@ -279,7 +279,7 @@ const databaseCloudWorkerStore: CloudWorkerStore = {
         org_id: input.orgId,
         created_by_user_id: input.userId,
         name: input.name,
-        description: "OpenWork Cloud browser instance",
+        description: "OfflineGPT Cloud browser instance",
         destination: "cloud",
         status: "provisioning",
         sandbox_backend: CLOUD_INSTANCE_BACKEND,
@@ -713,7 +713,7 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
 ) {
   const orgMemberRouteMiddleware = options.memberRoute ?? orgMemberRoute()
   const materializeProviders = options.materializeProviders ?? materializeCloudWorkerProviders
-  const getOpenWorkWebAccess = options.getOpenWorkWebAccess ?? getOpenWorkWebRuntimeAccess
+  const getOfflineGPTWebAccess = options.getOfflineGPTWebAccess ?? getOfflineGPTWebRuntimeAccess
   const continueProvisioning: typeof continueCloudProvisioning = options.continueProvisioning
     ?? ((input, continueOptions = {}) => continueCloudProvisioning(input, { ...continueOptions, materializeProviders }))
   const refreshSignedPreview = options.refreshSignedPreview ?? refreshDaytonaSignedPreview
@@ -757,11 +757,11 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
     describeRoute({
       tags: ["Cloud"],
       summary: "Get the active organization's Cloud instance",
-      description: "Starts the active organization's OpenWork Cloud browser instance when needed and returns its browser URL once ready.",
+      description: "Starts the active organization's OfflineGPT Cloud browser instance when needed and returns its browser URL once ready.",
       responses: {
         200: jsonResponse("Cloud instance status returned successfully.", cloudInstanceResponseSchema),
         401: jsonResponse("The caller must be signed in to open Cloud.", unauthorizedSchema),
-        403: jsonResponse("OpenWork Web access is not active for the organization.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is not active for the organization.", offlineGptWebAccessRequiredSchema),
         404: jsonResponse("Cloud is not available for this organization.", notFoundSchema),
       },
     }),
@@ -774,11 +774,11 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
       }
 
       // Published desktops reach this route only from inside the gateway
-      // runtime, after OpenWorkWebAccessGate (v0.18.42+) has already resolved
-      // Web access for the organization; see openwork-web-runtime-access.ts.
-      const webAccess = await getOpenWorkWebAccess(payload.organization.id)
+      // runtime, after OfflineGPTWebAccessGate (v0.18.42+) has already resolved
+      // Web access for the organization; see offlinegpt-web-runtime-access.ts.
+      const webAccess = await getOfflineGPTWebAccess(payload.organization.id)
       if (!webAccess.hasAccess) {
-        return c.json(openWorkWebAccessRequiredPayload(), 403)
+        return c.json(offlineGptWebAccessRequiredPayload(), 403)
       }
 
       if (!cloudAvailable(payload, options)) {
@@ -814,7 +814,7 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
       responses: {
         200: jsonResponse("Cloud instance recovery was requested.", cloudInstanceResponseSchema),
         401: jsonResponse("The caller must be signed in to retry Cloud.", unauthorizedSchema),
-        403: jsonResponse("OpenWork Web access is not active for the organization.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is not active for the organization.", offlineGptWebAccessRequiredSchema),
         404: jsonResponse("Cloud is not available for this organization.", notFoundSchema),
       },
     }),
@@ -826,9 +826,9 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
         return c.json({ error: "unauthorized" }, 401)
       }
 
-      const webAccess = await getOpenWorkWebAccess(payload.organization.id)
+      const webAccess = await getOfflineGPTWebAccess(payload.organization.id)
       if (!webAccess.hasAccess) {
-        return c.json(openWorkWebAccessRequiredPayload(), 403)
+        return c.json(offlineGptWebAccessRequiredPayload(), 403)
       }
 
       if (!cloudAvailable(payload, options)) {
@@ -865,7 +865,7 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
       responses: {
         200: jsonResponse("Cloud instance update request handled.", cloudInstanceUpdateResponseSchema),
         401: jsonResponse("The caller must be signed in to update Cloud.", unauthorizedSchema),
-        403: jsonResponse("OpenWork Web access is not active for the organization.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is not active for the organization.", offlineGptWebAccessRequiredSchema),
         404: jsonResponse("Cloud is not available for this organization.", notFoundSchema),
       },
     }),
@@ -877,9 +877,9 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
         return c.json({ error: "unauthorized" }, 401)
       }
 
-      const webAccess = await getOpenWorkWebAccess(payload.organization.id)
+      const webAccess = await getOfflineGPTWebAccess(payload.organization.id)
       if (!webAccess.hasAccess) {
-        return c.json(openWorkWebAccessRequiredPayload(), 403)
+        return c.json(offlineGptWebAccessRequiredPayload(), 403)
       }
 
       if (!cloudAvailable(payload, options)) {
@@ -904,11 +904,11 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
     describeRoute({
       tags: ["Cloud"],
       summary: "Resolve the caller's Cloud instance for the browser gateway",
-      description: "Starts or wakes the caller's own OpenWork Cloud browser instance when needed and returns the collaborator token only to the trusted gateway.",
+      description: "Starts or wakes the caller's own OfflineGPT Cloud browser instance when needed and returns the collaborator token only to the trusted gateway.",
       responses: {
         200: jsonResponse("Cloud instance status returned successfully for the gateway.", cloudGatewayInstanceResponseSchema),
         401: jsonResponse("The caller must be signed in to open Cloud.", unauthorizedSchema),
-        403: jsonResponse("OpenWork Web access is not active for the organization.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is not active for the organization.", offlineGptWebAccessRequiredSchema),
         404: jsonResponse("Cloud is not available for this organization or gateway.", notFoundSchema),
       },
     }),
@@ -931,9 +931,9 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
         return c.json({ error: "unauthorized" }, 401)
       }
 
-      const webAccess = await getOpenWorkWebAccess(payload.organization.id)
+      const webAccess = await getOfflineGPTWebAccess(payload.organization.id)
       if (!webAccess.hasAccess) {
-        return c.json(openWorkWebAccessRequiredPayload(), 403)
+        return c.json(offlineGptWebAccessRequiredPayload(), 403)
       }
 
       const instance = await resolveCloudInstanceForGateway({

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { createOpenworkServerClient } from "../src/app/lib/openwork-server";
+import { createOfflineGptServerClient } from "../src/app/lib/offlinegpt-server";
 import { createClient } from "../src/app/lib/opencode";
 import type { ProviderListItem, WorkspaceDisplay } from "../src/app/types";
 import { createProviderAuthStore } from "../src/react-app/domains/connections/provider-auth/store";
@@ -8,7 +8,7 @@ import { createProviderAuthStore } from "../src/react-app/domains/connections/pr
 const originalWindow = globalThis.window;
 const originalFetch = globalThis.fetch;
 const originalConsoleInfo = console.info;
-const originalDeployment = process.env.VITE_OPENWORK_DEPLOYMENT;
+const originalDeployment = process.env.VITE_OFFLINEGPT_DEPLOYMENT;
 
 type RecordedRequest = {
   url: string;
@@ -50,7 +50,7 @@ function installWindow(options: { origin: string; gateway?: boolean }) {
       dispatchEvent: () => true,
       localStorage,
       location: { origin: options.origin },
-      __OPENWORK_GATEWAY__: options.gateway ? { version: 1 } : undefined,
+      __OFFLINEGPT_GATEWAY__: options.gateway ? { version: 1 } : undefined,
     },
   });
   return localStorage;
@@ -82,10 +82,10 @@ function jsonResponse(payload: unknown, status = 200) {
 function cloudProviderPayload(options: { conflict?: boolean } = {}) {
   return {
     id: "lpr_test",
-    source: options.conflict ? "openwork" : "custom",
-    providerId: options.conflict ? "openwork" : "openai",
-    name: options.conflict ? "OpenWork Models" : "Team OpenAI",
-    providerConfig: { env: [options.conflict ? "OPENWORK_API_KEY" : "OPENAI_API_KEY"] },
+    source: options.conflict ? "offlinegpt" : "custom",
+    providerId: options.conflict ? "offlinegpt" : "openai",
+    name: options.conflict ? "OfflineGPT Models" : "Team OpenAI",
+    providerConfig: { env: [options.conflict ? "OFFLINEGPT_API_KEY" : "OPENAI_API_KEY"] },
     hasApiKey: true,
     apiKey: "sk-test",
     models: [
@@ -102,9 +102,9 @@ function cloudProviderPayload(options: { conflict?: boolean } = {}) {
 }
 
 function installCloudSession(storage: Storage) {
-  storage.setItem("openwork.den.baseUrl", "https://den.example");
-  storage.setItem("openwork.den.authToken", "den-token");
-  storage.setItem("openwork.den.activeOrgId", "org_test");
+  storage.setItem("offlinegpt.den.baseUrl", "https://den.example");
+  storage.setItem("offlinegpt.den.authToken", "den-token");
+  storage.setItem("offlinegpt.den.activeOrgId", "org_test");
 }
 
 function createProviderAuthTestStore(
@@ -112,9 +112,9 @@ function createProviderAuthTestStore(
 ) {
   const opencodeClient = createClient("https://engine.example", "/tmp/workspace_test", {
     token: "engine-token",
-    mode: "openwork",
+    mode: "offlinegpt",
   });
-  const openworkClient = createOpenworkServerClient({
+  const offlinegptClient = createOfflineGptServerClient({
     baseUrl: "https://server.example",
     token: "server-token",
     hostToken: "host-token",
@@ -143,12 +143,12 @@ function createProviderAuthTestStore(
     providerBaseUrl: () => "https://engine.example",
     selectedWorkspaceRoot: () => "/tmp/workspace_test",
     runtimeWorkspaceId: () => "ws_1",
-    openworkServer: {
+    offlinegptServer: {
       getSnapshot: () => ({
-        openworkServerStatus: "connected",
-        openworkServerClient: openworkClient,
-        openworkServerAuth: { token: "server-token", hostToken: "host-token" },
-        openworkServerCapabilities: {
+        offlinegptServerStatus: "connected",
+        offlinegptServerClient: offlinegptClient,
+        offlinegptServerAuth: { token: "server-token", hostToken: "host-token" },
+        offlinegptServerCapabilities: {
           config: configCapabilities,
           providerSync: configCapabilities.providerSync,
         },
@@ -207,7 +207,7 @@ function installProviderSyncFetch(
         return jsonResponse({ llmProvider: cloudProviderPayload(options) });
       }
       if (url.origin === "https://server.example" && url.pathname === "/workspace/ws_1/config" && method === "GET") {
-        return jsonResponse({ opencode: {}, openwork: {} });
+        return jsonResponse({ opencode: {}, offlinegpt: {} });
       }
       if (url.origin === "https://server.example" && url.pathname === "/den-session" && method === "PUT") {
         return new Response(null, { status: 204 });
@@ -236,7 +236,7 @@ function installProviderSyncFetch(
       }
       if (url.origin === "https://server.example" && url.pathname === "/workspace/ws_1/opencode-config") {
         return jsonResponse(options.conflict
-          ? { content: '{"provider":{"openwork":{"name":"Local OpenWork"}}}' }
+          ? { content: '{"provider":{"offlinegpt":{"name":"Local OfflineGPT"}}}' }
           : null);
       }
       if (url.origin === "https://server.example" && url.pathname === "/workspace/ws_1/engine/reload") {
@@ -271,7 +271,7 @@ function installProviderSyncFetch(
 
 describe("cloud provider sync in gateway mode", () => {
   beforeEach(() => {
-    process.env.VITE_OPENWORK_DEPLOYMENT = "web";
+    process.env.VITE_OFFLINEGPT_DEPLOYMENT = "web";
     console.info = () => undefined;
   });
 
@@ -286,14 +286,14 @@ describe("cloud provider sync in gateway mode", () => {
     });
     console.info = originalConsoleInfo;
     if (originalDeployment === undefined) {
-      delete process.env.VITE_OPENWORK_DEPLOYMENT;
+      delete process.env.VITE_OFFLINEGPT_DEPLOYMENT;
     } else {
-      process.env.VITE_OPENWORK_DEPLOYMENT = originalDeployment;
+      process.env.VITE_OFFLINEGPT_DEPLOYMENT = originalDeployment;
     }
   });
 
   test("returns a server-handled outcome without network calls or error state behind the gateway", async () => {
-    const storage = installWindow({ origin: "https://web.openworklabs.com", gateway: true });
+    const storage = installWindow({ origin: "https://web.offlinegptlabs.com", gateway: true });
     installCloudSession(storage);
     const requests: RecordedRequest[] = [];
     installProviderSyncFetch(requests);
@@ -340,7 +340,7 @@ describe("cloud provider sync in gateway mode", () => {
     expect(store.getSnapshot().lastSyncError).toEqual({});
   });
 
-  test("records a hand-authored OpenWork collision once and skips later automatic retries", async () => {
+  test("records a hand-authored OfflineGPT collision once and skips later automatic retries", async () => {
     const storage = installWindow({ origin: "https://self-hosted.example" });
     installCloudSession(storage);
     const requests: RecordedRequest[] = [];
@@ -351,7 +351,7 @@ describe("cloud provider sync in gateway mode", () => {
 
     expect(store.getSnapshot().lastSyncError.lpr_test).toMatchObject({
       kind: "conflict",
-      message: expect.stringContaining("openwork already has a provider block"),
+      message: expect.stringContaining("offlinegpt already has a provider block"),
     });
     expect(store.getSnapshot().importedCloudProviders.lpr_test).toBeUndefined();
     const firstConnectCount = requests.filter(
@@ -370,7 +370,7 @@ describe("cloud provider sync in gateway mode", () => {
 
 describe("cloud provider sync in server-capability mode", () => {
   beforeEach(() => {
-    process.env.VITE_OPENWORK_DEPLOYMENT = "web";
+    process.env.VITE_OFFLINEGPT_DEPLOYMENT = "web";
     console.info = () => undefined;
   });
 
@@ -378,8 +378,8 @@ describe("cloud provider sync in server-capability mode", () => {
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
     Object.defineProperty(globalThis, "fetch", { configurable: true, value: originalFetch });
     console.info = originalConsoleInfo;
-    if (originalDeployment === undefined) delete process.env.VITE_OPENWORK_DEPLOYMENT;
-    else process.env.VITE_OPENWORK_DEPLOYMENT = originalDeployment;
+    if (originalDeployment === undefined) delete process.env.VITE_OFFLINEGPT_DEPLOYMENT;
+    else process.env.VITE_OFFLINEGPT_DEPLOYMENT = originalDeployment;
   });
 
   test("posts run-now without fetching Den providers in the renderer", async () => {
@@ -425,7 +425,7 @@ describe("cloud provider sync in server-capability mode", () => {
     await Bun.sleep(10);
     expect(requests.filter((request) => new URL(request.url).pathname === "/cloud-provider-sync/run")).toHaveLength(1);
 
-    storage.setItem("openwork.den.activeOrgId", "org_changed");
+    storage.setItem("offlinegpt.den.activeOrgId", "org_changed");
     const changedContext = [
       store.runCloudProviderSync("sign_in"),
       strictModeRemountStore.runCloudProviderSync("app_resume"),

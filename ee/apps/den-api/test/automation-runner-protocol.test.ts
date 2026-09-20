@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { eq, inArray } from "@openwork-ee/den-db/drizzle"
+import { eq, inArray } from "@offlinegpt-ee/den-db/drizzle"
 import {
   AuthUserTable,
   AutomationRevisionTable,
@@ -11,9 +11,9 @@ import {
   AutomationTable,
   MemberTable,
   OrganizationTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
-import { AUTOMATION_MIN_CLAIM_WINDOW_MS } from "@openwork/automations"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
+import { AUTOMATION_MIN_CLAIM_WINDOW_MS } from "@offlinegpt/automations"
 import {
   AUTOMATION_MODEL_ATTENTION_CAPABILITY,
   automationDesktopRunnerAssignmentSchema,
@@ -22,7 +22,7 @@ import {
   automationRunnerHeartbeatResponseSchema,
   automationRunnerNotificationSchema,
   automationRunnerUnavailableOutcomeSchema,
-} from "@openwork/types/automations"
+} from "@offlinegpt/types/automations"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import {
@@ -147,7 +147,7 @@ test("desktop occurrences stay claimable through the recovery window with named 
     repositorySource.indexOf("async expireUnclaimedDesktop"),
     repositorySource.indexOf("async getRunReceipt"),
   )
-  // The recovery window is one policy in @openwork/automations: the claim path
+  // The recovery window is one policy in @offlinegpt/automations: the claim path
   // clamps it against the occurrence's own next due time, and the expiry path
   // records the cause an operator can act on instead of one generic wording.
   assert.match(claim, /desktopClaimDeadline\(\{[\s\S]*nextDueAt,[\s\S]*\}\)/)
@@ -156,7 +156,7 @@ test("desktop occurrences stay claimable through the recovery window with named 
 })
 
 test("desktop recovery deadlines hold, expire with exact causes, and never invoke a provider", async () => {
-  process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DB_MODE ??= "mysql"
   process.env.DEN_DB_ENCRYPTION_KEY ??= "runner-recovery-test-encryption-key-123456789"
   process.env.BETTER_AUTH_SECRET ??= "runner-recovery-test-secret-1234567890123"
@@ -644,7 +644,7 @@ test("every dispatch path revalidates the owner's model access", () => {
   const executorSource = readFileSync(join(import.meta.dir, "../src/automations/cloud-agent-executor.ts"), "utf8")
   const execution = executorSource.slice(executorSource.indexOf("export async function executeCloudAgent"))
   assert.match(executorSource, /currentAgentAuthority[\s\S]*resolveAutomationModelAccess\(/)
-  assert.match(executorSource, /currentAgentAuthority[\s\S]*getOpenWorkWebRuntimeAccess\(input\.organizationId\)/)
+  assert.match(executorSource, /currentAgentAuthority[\s\S]*getOfflineGPTWebRuntimeAccess\(input\.organizationId\)/)
   assert.match(execution, /currentAgentAuthority\(input\)[\s\S]*resolveCloudAgentReadyWorker/)
   assert.match(execution, /currentAgentAuthority\(input\)[\s\S]*createThread/)
   assert.match(execution, /currentAgentAuthority\(input\)[\s\S]*abortAndObserve\(client, nativeThreadId\)[\s\S]*sendTurn/)

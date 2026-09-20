@@ -1,5 +1,5 @@
 import { DaytonaConflictError } from "@daytonaio/sdk"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { beforeAll, describe, expect, test } from "bun:test"
 import type { DaytonaProvisioningRuntime, DaytonaSandboxRuntime } from "../src/workers/daytona.js"
 
@@ -13,7 +13,7 @@ type StatusUpdate = Parameters<Store["updateWorkerStatus"]>[0]
 type ListIdleInput = Parameters<Store["listIdleWorkers"]>[0]
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DEN_DB_ENCRYPTION_KEY = process.env.DEN_DB_ENCRYPTION_KEY ?? "x".repeat(32)
   process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "y".repeat(32)
   process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://127.0.0.1:8790"
@@ -334,7 +334,7 @@ describe("cloud lifecycle wake", () => {
         provider: "daytona",
         url: "https://cloud.example",
         status: "healthy",
-        imageVersion: "openwork-0.18.8",
+        imageVersion: "offlinegpt-0.18.8",
       }),
       deadlineMs: 5000,
     })
@@ -342,7 +342,7 @@ describe("cloud lifecycle wake", () => {
     expect(updates).toContainEqual({
       workerId: worker.id,
       status: "healthy",
-      imageVersion: "openwork-0.18.8",
+      imageVersion: "offlinegpt-0.18.8",
       failure: null,
       onlyWhenStatus: "provisioning",
     })
@@ -494,7 +494,7 @@ describe("cloud lifecycle wake", () => {
         wakeInput,
         wakeRuntime.runtime,
         wakeRuntime.record,
-        "openwork-0.18.8",
+        "offlinegpt-0.18.8",
       ),
     })
 
@@ -521,13 +521,13 @@ describe("cloud lifecycle wake", () => {
         provider: "daytona",
         url: "https://cloud.example",
         status: "healthy",
-        imageVersion: "openwork-0.18.8",
+        imageVersion: "offlinegpt-0.18.8",
       }),
     })
 
     expect(worker.status).toBe("healthy")
     expect(updates[1]?.status).toBe("healthy")
-    expect(updates[1]?.imageVersion).toBe("openwork-0.18.8")
+    expect(updates[1]?.imageVersion).toBe("offlinegpt-0.18.8")
   })
 
   test("marks the worker failed when an existing sandbox cannot be started", async () => {
@@ -580,7 +580,7 @@ describe("cloud lifecycle wake", () => {
         wakeInput,
         wakeRuntime.runtime,
         wakeRuntime.record,
-        "openwork-0.18.8",
+        "offlinegpt-0.18.8",
       ),
     })
 

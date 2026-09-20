@@ -25,7 +25,7 @@ import {
 } from "../surface/queued-drain-machine";
 import { getSessionModelSelection, useSessionModelStore } from "../surface/session-model-store";
 import { draftToParts } from "./draft-parts";
-import { buildOpenworkSessionSystemContext } from "./env-context";
+import { buildOfflineGptSessionSystemContext } from "./env-context";
 import {
   clearQueuedSendContext,
   getQueuedSendContext,
@@ -58,7 +58,7 @@ function sameContext(left: QueuedSendContext, right: QueuedSendContext) {
   return left.workspaceId === right.workspaceId
     && left.workspaceRoot === right.workspaceRoot
     && left.opencodeBaseUrl === right.opencodeBaseUrl
-    && left.openworkToken === right.openworkToken
+    && left.offlinegptToken === right.offlinegptToken
     && left.client === right.client
     && left.agent === right.agent
     && left.variant === right.variant
@@ -107,7 +107,7 @@ async function performQueuedDraftSend(
   const opencodeClient = createEngineClient(
     context.opencodeBaseUrl,
     context.workspaceRoot || undefined,
-    { token: context.openworkToken, mode: "openwork" },
+    { token: context.offlinegptToken, mode: "offlinegpt" },
   );
 
   if (draft.mode === "shell") {
@@ -131,7 +131,7 @@ async function performQueuedDraftSend(
     workspaceId: context.workspaceId,
   });
   assertQueuedSendCurrent(sessionId, generation);
-  const system = await buildOpenworkSessionSystemContext(context.client, {
+  const system = await buildOfflineGptSessionSystemContext(context.client, {
     workspaceId: context.workspaceId,
     cacheKey: sessionId,
     runtimeKey: context.environmentRuntimeKey,
@@ -195,7 +195,7 @@ function armObservationProbe(watched: WatchedSession) {
       const phase = getQueuedDrainState(watched.sessionId).phase;
       if (phase.kind === "admission_unknown") {
         const client = createClient(watched.context.opencodeBaseUrl, watched.context.workspaceRoot || undefined, {
-          token: watched.context.openworkToken, mode: "openwork",
+          token: watched.context.offlinegptToken, mode: "offlinegpt",
         });
         if (await hasAcceptedPromptMessage(client, watched.sessionId, phase.messageID)) {
           if (watchedSessions.get(watched.sessionId) !== watched) return;
@@ -208,7 +208,7 @@ function armObservationProbe(watched: WatchedSession) {
       const snapshot = await composeNativeSessionSnapshot(
         {
           opencodeBaseUrl: watched.context.opencodeBaseUrl,
-          token: watched.context.openworkToken,
+          token: watched.context.offlinegptToken,
         },
         watched.sessionId,
         { limit: 140, signal: controller.signal },
@@ -282,7 +282,7 @@ function watchSession(sessionId: string, context: QueuedSendContext) {
   const input = {
     workspaceId: context.workspaceId,
     baseUrl: context.opencodeBaseUrl,
-    openworkToken: context.openworkToken,
+    offlinegptToken: context.offlinegptToken,
     onSessionStatus: (update: { sessionId: string; status: SessionStatus }) => {
       if (update.sessionId === sessionId) handleObservedStatus(watched, update.status);
     },
@@ -297,7 +297,7 @@ function watchSession(sessionId: string, context: QueuedSendContext) {
   armObservationProbe(watched);
 
   void composeNativeSessionSnapshot(
-    { opencodeBaseUrl: context.opencodeBaseUrl, token: context.openworkToken },
+    { opencodeBaseUrl: context.opencodeBaseUrl, token: context.offlinegptToken },
     sessionId,
     { limit: 140, signal: initialStatusController.signal },
   ).then((snapshot) => {

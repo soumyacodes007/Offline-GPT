@@ -1,6 +1,6 @@
-import { and, eq, isNull, sql } from "@openwork-ee/den-db/drizzle"
-import { MemberTable, OrganizationTable, WorkerTable } from "@openwork-ee/den-db/schema"
-import { ManagedModelsPolicyError, readOrganizationMetadata } from "@openwork/types/den/managed-models-policy"
+import { and, eq, isNull, sql } from "@offlinegpt-ee/den-db/drizzle"
+import { MemberTable, OrganizationTable, WorkerTable } from "@offlinegpt-ee/den-db/schema"
+import { ManagedModelsPolicyError, readOrganizationMetadata } from "@offlinegpt/types/den/managed-models-policy"
 import { db } from "./db.js"
 import { updateOrganizationMetadata } from "./organization-metadata.js"
 

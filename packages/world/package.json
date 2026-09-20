@@ -1,5 +1,5 @@
 {
-  "name": "@openwork/world",
+  "name": "@offlinegpt/world",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,13 +11,13 @@
     }
   },
   "bin": {
-    "openwork-world": "./bin/world.mjs"
+    "offlinegpt-world": "./bin/world.mjs"
   },
   "engines": {
     "node": ">=24"
   },
   "dependencies": {
-    "@openwork/paths": "workspace:*"
+    "@offlinegpt/paths": "workspace:*"
   },
   "scripts": {
     "test": "node --test test/*.test.ts",

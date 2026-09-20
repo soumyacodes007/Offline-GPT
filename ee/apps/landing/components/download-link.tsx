@@ -1,6 +1,6 @@
 "use client";
 
-import { detectPlatform, type DownloadCardInstallers } from "@openwork/ui/react";
+import { detectPlatform, type DownloadCardInstallers } from "@offlinegpt/ui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
@@ -46,7 +46,7 @@ export function DownloadProvider({ installers, children }: {
     <DownloadContext.Provider value={startDownload}>
       {children}
       {/* Keep the transfer alive across client navigation to the fallback page. */}
-      {download ? <iframe key={download.attempt} src={download.href} title="OpenWork installer download" hidden /> : null}
+      {download ? <iframe key={download.attempt} src={download.href} title="OfflineGPT installer download" hidden /> : null}
     </DownloadContext.Provider>
   );
 }

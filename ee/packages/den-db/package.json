@@ -1,5 +1,5 @@
 {
-  "name": "@openwork-ee/den-db",
+  "name": "@offlinegpt-ee/den-db",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -85,8 +85,8 @@
     "benchmark:admin-scale:mysql": "node --import tsx scripts/admin-scale-benchmark.ts"
   },
   "dependencies": {
-    "@openwork/types": "workspace:*",
-    "@openwork-ee/utils": "workspace:*",
+    "@offlinegpt/types": "workspace:*",
+    "@offlinegpt-ee/utils": "workspace:*",
     "@planetscale/database": "^1.19.0",
     "drizzle-orm": "^0.45.2",
     "mysql2": "^3.23.1"

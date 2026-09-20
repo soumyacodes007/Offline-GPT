@@ -196,18 +196,18 @@ describe("Den upstream proxy", () => {
     expect(observed.cookie).toBe("better-auth.session_token=sess_test");
   });
 
-  test("forwards only OpenWork Den and legacy Better Auth cookies through the auth proxy", async () => {
+  test("forwards only OfflineGPT Den and legacy Better Auth cookies through the auth proxy", async () => {
     const { proxyUpstream } = await import("./upstream-proxy.ts");
     const request = new NextRequest("https://app.example.com/api/auth/sign-in/social", {
       method: "POST",
       headers: {
-        cookie: "ph_posthog=analytics; __Secure-openwork-den.state=oauth-state; openwork-den.session_token=session; better-auth.state=legacy-oauth-state; __Secure-better-auth.session_token=legacy-session; other=value",
+        cookie: "ph_posthog=analytics; __Secure-offlinegpt-den.state=oauth-state; offlinegpt-den.session_token=session; better-auth.state=legacy-oauth-state; __Secure-better-auth.session_token=legacy-session; other=value",
       },
     });
 
     await proxyUpstream(request, [], { routePrefix: "/api/auth", upstreamPathPrefix: "api/auth" });
 
-    expect(observed.cookie).toBe("__Secure-openwork-den.state=oauth-state; openwork-den.session_token=session; better-auth.state=legacy-oauth-state; __Secure-better-auth.session_token=legacy-session");
+    expect(observed.cookie).toBe("__Secure-offlinegpt-den.state=oauth-state; offlinegpt-den.session_token=session; better-auth.state=legacy-oauth-state; __Secure-better-auth.session_token=legacy-session");
   });
 
   test("rewrites auth Set-Cookie domains to the browser origin", async () => {
@@ -247,16 +247,16 @@ describe("Den upstream proxy", () => {
   test("preserves auth Set-Cookie parent domains shared by sibling web and API hosts", async () => {
     const { proxyUpstream } = await import("./upstream-proxy.ts");
     const originalFetch = globalThis.fetch;
-    process.env.DEN_API_BASE = "https://api.openworklabs.com";
+    process.env.DEN_API_BASE = "https://api.offlinegptlabs.com";
     globalThis.fetch = async () => {
       const headers = new Headers({ "content-type": "text/plain" });
       headers.append(
         "set-cookie",
-        "__Secure-better-auth.session_token=abc; Path=/; Domain=openworklabs.com; Secure; HttpOnly; SameSite=Lax",
+        "__Secure-better-auth.session_token=abc; Path=/; Domain=offlinegptlabs.com; Secure; HttpOnly; SameSite=Lax",
       );
       return new Response("signed in", { headers });
     };
-    const request = new NextRequest("https://app.openworklabs.com/api/auth/callback/google", {
+    const request = new NextRequest("https://app.offlinegptlabs.com/api/auth/callback/google", {
       method: "GET",
     });
 
@@ -269,7 +269,7 @@ describe("Den upstream proxy", () => {
     }
 
     expect(response.headers.getSetCookie()).toEqual([
-      "__Secure-better-auth.session_token=abc; Path=/; Domain=openworklabs.com; Secure; HttpOnly; SameSite=Lax",
+      "__Secure-better-auth.session_token=abc; Path=/; Domain=offlinegptlabs.com; Secure; HttpOnly; SameSite=Lax",
     ]);
   });
 

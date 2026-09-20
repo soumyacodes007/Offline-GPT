@@ -1,5 +1,5 @@
-import { isOpenworkGatewayRuntime } from "./gateway-runtime";
+import { isOfflineGptGatewayRuntime } from "./gateway-runtime";
 
 export function canCreateWorkspaces() {
-  return !isOpenworkGatewayRuntime();
+  return !isOfflineGptGatewayRuntime();
 }

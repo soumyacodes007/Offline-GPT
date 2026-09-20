@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { joinBaseUrl, readBaseUrlEnv } from "@openwork/types/url";
+import { joinBaseUrl, readBaseUrlEnv } from "@offlinegpt/types/url";
 
 import { denWebLogger } from "../../../observability/runtime-logger";
 import { readPublicWebOrigin } from "../../_lib/public-web-origin";
@@ -39,23 +39,23 @@ const INTERNAL_RESPONSE_HEADERS = new Set([
 ]);
 const SAFE_X_RESPONSE_HEADERS = new Set(["x-content-type-options"]);
 const AUTH_COOKIE_PREFIXES = [
-  "openwork-den.",
-  "__Secure-openwork-den.",
-  "openwork-den-",
+  "offlinegpt-den.",
+  "__Secure-offlinegpt-den.",
+  "offlinegpt-den-",
   "better-auth.",
   "__Secure-better-auth.",
   "better-auth-",
 ];
 
 /**
- * OpenWork Cloud instances are served from Daytona preview origins that are
+ * OfflineGPT Cloud instances are served from Daytona preview origins that are
  * re-signed (and therefore renamed) on every wake, so they can never appear in
  * a static CORS allowlist. The signed-in SPA running there has to reach Den for
  * /v1/me, /v1/me/orgs, MCP tokens and org connections.
  *
  * We reflect those origins, and make that safe by stripping the cookie header
  * from the forwarded request: an instance-origin call is authenticated by its
- * bearer token alone and can never ride the viewer's app.openworklabs.com
+ * bearer token alone and can never ride the viewer's app.offlinegptlabs.com
  * session. A hostile page on some other origin therefore gains nothing from the
  * reflection - it has no bearer token and its cookies are discarded.
  *
@@ -64,7 +64,7 @@ const AUTH_COOKIE_PREFIXES = [
  */
 const DEN_API_ROUTE_PREFIX = "/api/den";
 const DEFAULT_CLOUD_INSTANCE_ORIGIN_SUFFIXES = [".daytonaproxy01.net"];
-const CORS_ALLOW_HEADERS = "authorization,content-type,x-openwork-org-id,x-openwork-legacy-org-id,x-request-id,accept";
+const CORS_ALLOW_HEADERS = "authorization,content-type,x-offlinegpt-org-id,x-offlinegpt-legacy-org-id,x-request-id,accept";
 const CORS_ALLOW_METHODS = "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS";
 const UPSTREAM_DEADLINE_MS = 55_000;
 

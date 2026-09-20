@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import type { OpenworkServerClient, OpenworkSessionSnapshot, OpenworkAuditEntry } from "@/app/lib/openwork-server";
+import type { OfflineGptServerClient, OfflineGptSessionSnapshot, OfflineGptAuditEntry } from "@/app/lib/offlinegpt-server";
 import { getReactQueryClient } from "@/react-app/infra/query-client";
 import { snapshotKey } from "@/react-app/domains/session/sync/session-sync";
 import { normalizeWorkspaceAuditEntries } from "./normalize-workspace-audit";
@@ -12,11 +12,11 @@ export type AuditTrailControllerOptions = {
   workspaceId: string;
   sessionId: string | null;
   workspacePath?: string;
-  client?: OpenworkServerClient | null;
+  client?: OfflineGptServerClient | null;
   open: boolean;
 };
 
-const EMPTY_SNAPSHOT: OpenworkSessionSnapshot | null = null;
+const EMPTY_SNAPSHOT: OfflineGptSessionSnapshot | null = null;
 
 /** Connects the sidebar trail to existing session and workspace caches. */
 export function useAuditTrailController(options: AuditTrailControllerOptions) {
@@ -32,10 +32,10 @@ export function useAuditTrailController(options: AuditTrailControllerOptions) {
     });
   }, [queryClient, workspaceId, sessionId]);
   const currentSnapshot = sessionId
-    ? queryClient.getQueryData<OpenworkSessionSnapshot>(snapshotKey(workspaceId, sessionId)) ?? EMPTY_SNAPSHOT
+    ? queryClient.getQueryData<OfflineGptSessionSnapshot>(snapshotKey(workspaceId, sessionId)) ?? EMPTY_SNAPSHOT
     : EMPTY_SNAPSHOT;
 
-  const auditQuery = useQuery<{ items: OpenworkAuditEntry[] }>({
+  const auditQuery = useQuery<{ items: OfflineGptAuditEntry[] }>({
     queryKey: ["audit-trail-workspace", workspaceId],
     queryFn: () => client?.listAudit(workspaceId, 50) ?? Promise.resolve({ items: [] }),
     enabled: open && Boolean(client && workspaceId),

@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { spec } from "@openwork/testkit";
+import { spec } from "@offlinegpt/testkit";
 import { localWorkflows } from "../worlds/local-workflows.ts";
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -1,8 +1,8 @@
-import type { OpenworkServerClient } from "@/app/lib/openwork-server";
+import type { OfflineGptServerClient } from "@/app/lib/offlinegpt-server";
 
 import { isCollectibleArtifactTarget, type OpenTarget } from "./open-target";
 
-type ArtifactTargetResolver = Pick<OpenworkServerClient, "resolveArtifacts">;
+type ArtifactTargetResolver = Pick<OfflineGptServerClient, "resolveArtifacts">;
 
 export function isWorkspaceContainedArtifactTarget(target: OpenTarget) {
   if (!isCollectibleArtifactTarget(target)) return false;

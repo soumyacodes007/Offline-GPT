@@ -1,8 +1,8 @@
 {
-  "name": "@openwork/browser-logins",
+  "name": "@offlinegpt/browser-logins",
   "private": true,
   "type": "module",
-  "description": "Sync selected logins from a browser profile into OpenWork's built-in browser: source discovery, readers, decryption, site grouping, and sensitivity defaults.",
+  "description": "Sync selected logins from a browser profile into OfflineGPT's built-in browser: source discovery, readers, decryption, site grouping, and sensitivity defaults.",
   "exports": {
     ".": {
       "types": "./index.d.ts",

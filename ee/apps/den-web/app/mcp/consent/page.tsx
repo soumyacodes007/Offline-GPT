@@ -55,9 +55,9 @@ export default function McpConsentPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
       <section className="mx-auto max-w-xl rounded-3xl border border-white/10 bg-white/10 p-8 shadow-2xl">
-        <p className="text-sm uppercase tracking-[0.3em] text-cyan-200">OpenWork MCP</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-cyan-200">OfflineGPT MCP</p>
         <h1 className="mt-3 text-3xl font-semibold">Authorize MCP access</h1>
-        <p className="mt-3 text-sm text-slate-300">`{clientId}` wants to access OpenWork through MCP.</p>
+        <p className="mt-3 text-sm text-slate-300">`{clientId}` wants to access OfflineGPT through MCP.</p>
         <div className="mt-6">
           <TemporaryAuthNotice />
         </div>

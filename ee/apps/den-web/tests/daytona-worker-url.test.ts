@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import {
-  buildOpenworkAppConnectUrl,
-  buildOpenworkDeepLink,
+  buildOfflineGptAppConnectUrl,
+  buildOfflineGptDeepLink,
   getWorker,
   getWorkerConnectionTargets,
   getWorkerConnectionTokens,
@@ -25,7 +25,7 @@ test("Den Web never treats Daytona list or detail URLs as durable connections", 
   const worker = { id: "worker-1", name: "Cloud", status: "healthy" };
 
   expect(getWorker({ worker, instance: daytonaInstance, tokens: {} })?.instanceUrl).toBeNull();
-  expect(getWorker({ worker, instance: daytonaInstance, tokens: {} })?.openworkUrl).toBeNull();
+  expect(getWorker({ worker, instance: daytonaInstance, tokens: {} })?.offlinegptUrl).toBeNull();
   expect(getWorkerSummary({ worker, instance: daytonaInstance })?.instanceUrl).toBeNull();
   expect(getWorkersList({ workers: [{ ...worker, instance: daytonaInstance }] })[0]?.instanceUrl).toBeNull();
 })
@@ -37,23 +37,23 @@ test("Den Web keeps durable URLs and separates stable connections from direct pr
   expect(getWorkerSummary({ worker, instance: renderInstance })?.instanceUrl).toBe("https://durable.render.example.test");
   const tokens = getWorkerTokens({
     tokens: { client: "client-token", host: "host-token" },
-    connect: { openworkUrl: "https://den.example.test/v1/cloud/workers/worker-1/w/workspace", workspaceId: "workspace" },
+    connect: { offlinegptUrl: "https://den.example.test/v1/cloud/workers/worker-1/w/workspace", workspaceId: "workspace" },
     directPreview: {
       version: 1,
-      openworkUrl: "https://fresh.preview.example.test/w/workspace",
+      offlinegptUrl: "https://fresh.preview.example.test/w/workspace",
       workspaceId: "workspace",
       expiresAt: "2026-08-27T12:00:00.000Z",
     },
   });
-  expect(tokens?.openworkUrl).toBe("https://den.example.test/v1/cloud/workers/worker-1/w/workspace");
-  expect(tokens?.previewOpenworkUrl).toBe("https://fresh.preview.example.test/w/workspace");
+  expect(tokens?.offlinegptUrl).toBe("https://den.example.test/v1/cloud/workers/worker-1/w/workspace");
+  expect(tokens?.previewOfflineGptUrl).toBe("https://fresh.preview.example.test/w/workspace");
   expect(tokens?.previewExpiresAt).toBe("2026-08-27T12:00:00.000Z");
   const daytonaWorker = getWorker({ worker, instance: daytonaInstance, tokens: {} });
   if (!daytonaWorker || !tokens) throw new Error("worker connection payload did not parse");
   expect(getWorkerConnectionTargets({
     ...daytonaWorker,
-    openworkUrl: tokens.openworkUrl,
-    previewOpenworkUrl: tokens.previewOpenworkUrl,
+    offlinegptUrl: tokens.offlinegptUrl,
+    previewOfflineGptUrl: tokens.previewOfflineGptUrl,
   })).toEqual({
     desktopUrl: "https://den.example.test/v1/cloud/workers/worker-1/w/workspace",
     webUrl: "https://fresh.preview.example.test/w/workspace",
@@ -61,21 +61,21 @@ test("Den Web keeps durable URLs and separates stable connections from direct pr
   const connectedWorker = withWorkerConnection(daytonaWorker, tokens);
   const connectionTokens = getWorkerConnectionTokens(connectedWorker);
   expect(connectionTokens).toEqual({ desktopToken: "host-token", webToken: "client-token" });
-  const desktopLink = buildOpenworkDeepLink(
-    connectedWorker.openworkUrl,
+  const desktopLink = buildOfflineGptDeepLink(
+    connectedWorker.offlinegptUrl,
     connectionTokens.desktopToken,
     connectedWorker.workerId,
     connectedWorker.workerName,
   );
-  const webLink = buildOpenworkAppConnectUrl(
+  const webLink = buildOfflineGptAppConnectUrl(
     "https://app.example.test/connect-remote",
-    connectedWorker.previewOpenworkUrl ?? null,
+    connectedWorker.previewOfflineGptUrl ?? null,
     connectionTokens.webToken,
     connectedWorker.workerId,
     connectedWorker.workerName,
   );
-  expect(new URL(desktopLink ?? "").searchParams.get("openworkToken")).toBe("host-token");
-  expect(new URL(webLink ?? "").searchParams.get("openworkToken")).toBe("client-token");
+  expect(new URL(desktopLink ?? "").searchParams.get("offlinegptToken")).toBe("host-token");
+  expect(new URL(webLink ?? "").searchParams.get("offlinegptToken")).toBe("client-token");
 })
 
 test("create tokens without a URL keep polling until the late resolver URL is adopted", () => {
@@ -86,7 +86,7 @@ test("create tokens without a URL keep polling until the late resolver URL is ad
   });
   if (!created) throw new Error("create worker payload did not parse");
 
-  expect(created.openworkUrl).toBeNull();
+  expect(created.offlinegptUrl).toBeNull();
   expect(workerNeedsConnectionResolution(created)).toBe(true);
 
   const early = getWorkerTokens({
@@ -100,12 +100,12 @@ test("create tokens without a URL keep polling until the late resolver URL is ad
   const late = getWorkerTokens({
     tokens: { client: "client-token", owner: "host-token", host: "host-token" },
     connect: {
-      openworkUrl: "https://den.example.test/v1/cloud/workers/worker-late-url/w/workspace",
+      offlinegptUrl: "https://den.example.test/v1/cloud/workers/worker-late-url/w/workspace",
       workspaceId: "workspace",
     },
     directPreview: {
       version: 1,
-      openworkUrl: "https://late.preview.example.test/w/workspace",
+      offlinegptUrl: "https://late.preview.example.test/w/workspace",
       workspaceId: "workspace",
       expiresAt: "2026-08-27T12:00:00.000Z",
     },
@@ -113,8 +113,8 @@ test("create tokens without a URL keep polling until the late resolver URL is ad
   if (!late) throw new Error("late token payload did not parse");
   const ready = withWorkerConnection(waiting, late);
 
-  expect(ready.openworkUrl).toBe("https://den.example.test/v1/cloud/workers/worker-late-url/w/workspace");
-  expect(ready.previewOpenworkUrl).toBe("https://late.preview.example.test/w/workspace");
+  expect(ready.offlinegptUrl).toBe("https://den.example.test/v1/cloud/workers/worker-late-url/w/workspace");
+  expect(ready.previewOfflineGptUrl).toBe("https://late.preview.example.test/w/workspace");
   expect(ready.clientToken).toBe("client-token");
   expect(ready.hostToken).toBe("host-token");
   const now = new Date("2026-08-27T10:00:00.000Z").getTime();

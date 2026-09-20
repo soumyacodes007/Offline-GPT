@@ -4,13 +4,13 @@ import { AlertTriangle, ArrowUpRight } from "lucide-react";
 import { AnimatePresence, LazyMotion, domMax, m, useReducedMotion } from "motion/react";
 
 import { clearDenSession, createDenClient, DenApiError, readDenSettings } from "@/app/lib/den";
-import { isOpenworkGatewayRuntime } from "@/app/lib/gateway-runtime";
+import { isOfflineGptGatewayRuntime } from "@/app/lib/gateway-runtime";
 import { denSettingsChangedEvent } from "@/app/lib/den-session-events";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useDenAuth } from "@/react-app/domains/cloud/den-auth-provider";
-import { denWebBillingUrl } from "@/react-app/domains/cloud/openwork-web-access-gate";
+import { denWebBillingUrl } from "@/react-app/domains/cloud/offlinegpt-web-access-gate";
 import { useSessionActivityStore } from "@/react-app/domains/session/status/session-activity-store";
 import { usePlatform } from "@/react-app/kernel/platform";
 import { softCardClass } from "@/react-app/domains/workspace/modal-styles";
@@ -115,7 +115,7 @@ export function CloudWorkspaceStatusProvider(props: { children: ReactNode }) {
   const lastLoggedFailureReference = useRef<string | null>(null);
   const lastLoggedRequestFailure = useRef<string | null>(null);
   const retryInFlight = useRef<Promise<void> | null>(null);
-  const gatewayMode = isOpenworkGatewayRuntime();
+  const gatewayMode = isOfflineGptGatewayRuntime();
   const settingsSnapshot = useSyncExternalStore(
     subscribeToDenSettings,
     readDenSettingsSnapshot,
@@ -148,7 +148,7 @@ export function CloudWorkspaceStatusProvider(props: { children: ReactNode }) {
         console.error("[cloud-workspace] sandbox startup failed", cloudWorkspaceFailureLogFields(next.failure));
       }
     } catch (error) {
-      if (error instanceof DenApiError && error.code === "openwork_web_access_required") {
+      if (error instanceof DenApiError && error.code === "offlinegpt_web_access_required") {
         setAccessRequired(true);
         setRequestFailed(false);
         return;
@@ -452,7 +452,7 @@ export function CloudWorkspaceBootTakeover(props: { decision: CloudWorkspaceMain
                     size="sm"
                     onClick={() => platform.openLink(denWebBillingUrl(readDenSettings().baseUrl))}
                   >
-                    Get OpenWork Web
+                    Get OfflineGPT Web
                     <ArrowUpRight className="size-4" aria-hidden="true" />
                   </Button>
                   <Button type="button" size="sm" variant="outline" onClick={() => void cloudWorkspace.refresh()}>

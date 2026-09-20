@@ -1,5 +1,5 @@
-import type { DenTypeId } from "@openwork-ee/utils/typeid"
-import { normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+import type { DenTypeId } from "@offlinegpt-ee/utils/typeid"
+import { normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import {
   listUsableExternalMcpConnections,
   type ExternalMcpConnectionRow,

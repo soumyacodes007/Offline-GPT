@@ -24,8 +24,8 @@ afterEach(async () => {
   }
 });
 
-async function startOpenworkServer() {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "openwork-removed-session-routes-"));
+async function startOfflineGptServer() {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "offlinegpt-removed-session-routes-"));
   await mkdir(join(workspaceRoot, ".opencode"), { recursive: true });
   roots.push(workspaceRoot);
   const workspaces: WorkspaceInfo[] = [{
@@ -74,13 +74,13 @@ describe("removed session wrapper routes", () => {
   ];
 
   test("every removed wrapper route answers 404 for an authorized client", async () => {
-    const openwork = await startOpenworkServer();
+    const offlinegpt = await startOfflineGptServer();
 
     for (const route of removedRoutes) {
-      const response = await fetch(`http://127.0.0.1:${openwork.server.port}${route.path}`, {
+      const response = await fetch(`http://127.0.0.1:${offlinegpt.server.port}${route.path}`, {
         method: route.method,
         headers: {
-          Authorization: `Bearer ${openwork.token}`,
+          Authorization: `Bearer ${offlinegpt.token}`,
           ...(route.body === undefined ? {} : { "Content-Type": "application/json" }),
         },
         ...(route.body === undefined ? {} : { body: route.body }),
@@ -91,10 +91,10 @@ describe("removed session wrapper routes", () => {
   });
 
   test("session-group routes stay mounted after the sessions.ts removal", async () => {
-    const openwork = await startOpenworkServer();
+    const offlinegpt = await startOfflineGptServer();
 
-    const response = await fetch(`http://127.0.0.1:${openwork.server.port}/workspace/ws_1/session-groups`, {
-      headers: { Authorization: `Bearer ${openwork.token}` },
+    const response = await fetch(`http://127.0.0.1:${offlinegpt.server.port}/workspace/ws_1/session-groups`, {
+      headers: { Authorization: `Bearer ${offlinegpt.token}` },
     });
 
     expect(response.status).toBe(200);

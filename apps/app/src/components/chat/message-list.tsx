@@ -43,9 +43,9 @@ import { GrepTool } from "@/components/tools/grep"
 import { LspTool } from "@/components/tools/lsp"
 import {
   isAutomationProposalToolPart,
-  OpenWorkAutomationProposalTool,
-} from "@/components/tools/openwork-automation-proposal"
-import { OpenWorkSessionCreateTool } from "@/components/tools/openwork-session-create"
+  OfflineGPTAutomationProposalTool,
+} from "@/components/tools/offlinegpt-automation-proposal"
+import { OfflineGPTSessionCreateTool } from "@/components/tools/offlinegpt-session-create"
 import { QuestionTool } from "@/components/tools/question"
 import { SkillTool } from "@/components/tools/skill"
 import { TodoWriteTool } from "@/components/tools/todowrite"
@@ -233,7 +233,7 @@ const ToolMessageInner = ({ part }: ToolMessageProps) => {
     )
   }
 
-  if (part.type === "dynamic-tool" && part.toolName === "openwork_visualization") {
+  if (part.type === "dynamic-tool" && part.toolName === "offlinegpt_visualization") {
     return <VisualizationTool part={part} />
   }
 
@@ -293,12 +293,12 @@ const ToolMessageInner = ({ part }: ToolMessageProps) => {
     return <EnvVarRequestTool part={part} />
   }
 
-  if (part.type === "dynamic-tool" && part.toolName === "openwork_session_create") {
-    return <OpenWorkSessionCreateTool part={part} />
+  if (part.type === "dynamic-tool" && part.toolName === "offlinegpt_session_create") {
+    return <OfflineGPTSessionCreateTool part={part} />
   }
 
   if (part.type === "dynamic-tool" && isAutomationProposalToolPart(part)) {
-    return <OpenWorkAutomationProposalTool part={part} />
+    return <OfflineGPTAutomationProposalTool part={part} />
   }
 
   // Failed calls use the same sentence line with the "failures are
@@ -1121,7 +1121,7 @@ const RetryMessage = React.memo(({ status }: RetryMessageProps) => {
               </p>
               <p className="text-xs text-amber-900">
                 {freeModelLimit
-                  ? "OpenWork will keep retrying. To keep working now, connect your own model provider."
+                  ? "OfflineGPT will keep retrying. To keep working now, connect your own model provider."
                   : action.message}
               </p>
               {freeModelLimit ? (

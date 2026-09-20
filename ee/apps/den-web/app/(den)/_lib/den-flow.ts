@@ -1,4 +1,4 @@
-import { workflowRunPreviewSchema, type WorkflowRunPreview } from "@openwork/types/workflows";
+import { workflowRunPreviewSchema, type WorkflowRunPreview } from "@offlinegpt/types/workflows";
 import { DEN_WORKER_POLL_INTERVAL_MS } from "./CONSTS";
 import { denApiCredentials, denApiEndpoint } from "./den-api-origin";
 import { ORG_SCOPE_HEADER, getRequestOrgScope, shouldPinOrgScopePath } from "./org-scope";
@@ -7,7 +7,7 @@ import { getRuntimeConfig } from "./runtime-config";
 export type AuthMode = "sign-in" | "sign-up";
 export type SocialAuthProvider = "github" | "google";
 export type WorkerStatusBucket = "ready" | "starting" | "attention" | "other";
-export type RuntimeServiceName = "openwork-server" | "opencode";
+export type RuntimeServiceName = "offlinegpt-server" | "opencode";
 export type EventLevel = "info" | "success" | "warning" | "error";
 export type AuthMethod = "email" | SocialAuthProvider;
 
@@ -101,7 +101,7 @@ export class DenRequestTimeoutError extends Error {
 
   constructor(timeoutMs: number, cause?: unknown) {
     super(
-      `OpenWork stopped waiting after ${formatDeadlineDuration(timeoutMs)}. The operation’s outcome is unknown.`,
+      `OfflineGPT stopped waiting after ${formatDeadlineDuration(timeoutMs)}. The operation’s outcome is unknown.`,
       cause === undefined ? undefined : { cause },
     );
     this.name = "DenRequestTimeoutError";
@@ -114,7 +114,7 @@ export class DenRequestCanceledError extends Error {
 
   constructor(cause?: unknown) {
     super(
-      "The OpenWork request was canceled before the dashboard received a result. The operation’s outcome is unknown.",
+      "The OfflineGPT request was canceled before the dashboard received a result. The operation’s outcome is unknown.",
       cause === undefined ? undefined : { cause },
     );
     this.name = "DenRequestCanceledError";
@@ -127,8 +127,8 @@ export type WorkerLaunch = {
   status: string;
   provider: string | null;
   instanceUrl: string | null;
-  openworkUrl: string | null;
-  previewOpenworkUrl?: string | null;
+  offlinegptUrl: string | null;
+  previewOfflineGptUrl?: string | null;
   previewExpiresAt?: string | null;
   workspaceId: string | null;
   clientToken: string | null;
@@ -149,8 +149,8 @@ export type WorkerTokens = {
   clientToken: string | null;
   ownerToken: string | null;
   hostToken: string | null;
-  openworkUrl: string | null;
-  previewOpenworkUrl: string | null;
+  offlinegptUrl: string | null;
+  previewOfflineGptUrl: string | null;
   previewExpiresAt: string | null;
   workspaceId: string | null;
 };
@@ -228,17 +228,17 @@ declare global {
   }
 }
 
-export const LAST_WORKER_STORAGE_KEY = "openwork:web:last-worker";
-export const PENDING_SOCIAL_SIGNUP_STORAGE_KEY = "openwork:web:pending-social-signup";
-export const AUTH_TOKEN_STORAGE_KEY = "openwork:web:auth-token";
-export const ONBOARDING_INTENT_STORAGE_KEY = "openwork:web:onboarding-intent";
-export const PENDING_AUTH_INTENT_STORAGE_KEY = "openwork:web:pending-auth-intent";
+export const LAST_WORKER_STORAGE_KEY = "offlinegpt:web:last-worker";
+export const PENDING_SOCIAL_SIGNUP_STORAGE_KEY = "offlinegpt:web:pending-social-signup";
+export const AUTH_TOKEN_STORAGE_KEY = "offlinegpt:web:auth-token";
+export const ONBOARDING_INTENT_STORAGE_KEY = "offlinegpt:web:onboarding-intent";
+export const PENDING_AUTH_INTENT_STORAGE_KEY = "offlinegpt:web:pending-auth-intent";
 export const WORKER_STATUS_POLL_MS = DEN_WORKER_POLL_INTERVAL_MS;
 
 export function getWorkerConnectionPollDelay(attempt: number): number {
   return Math.min(WORKER_STATUS_POLL_MS * 2 ** Math.min(Math.max(0, attempt - 1), 2), 5_000);
 }
-export const DEFAULT_AUTH_NAME = "OpenWork User";
+export const DEFAULT_AUTH_NAME = "OfflineGPT User";
 export const DEFAULT_WORKER_NAME = "My Worker";
 export const WORKSPACE_REAUTH_SECURITY_MESSAGE = "For security, confirm it's you before changing workspace settings.";
 
@@ -586,8 +586,8 @@ export function getWorker(payload: unknown): WorkerLaunch | null {
     status: getEffectiveWorkerStatus(worker.status, instance),
     provider: instance && typeof instance.provider === "string" ? instance.provider : null,
     instanceUrl: getDurableWorkerInstanceUrl(instance),
-    openworkUrl: getDurableWorkerInstanceUrl(instance),
-    previewOpenworkUrl: null,
+    offlinegptUrl: getDurableWorkerInstanceUrl(instance),
+    previewOfflineGptUrl: null,
     previewExpiresAt: null,
     workspaceId: null,
     clientToken: tokens && typeof tokens.client === "string" ? tokens.client : null,
@@ -639,8 +639,8 @@ export function getWorkerTokens(payload: unknown): WorkerTokens | null {
       ? tokens.host
       : null;
   const hostToken = typeof tokens.host === "string" ? tokens.host : null;
-  const openworkUrl = connect && typeof connect.openworkUrl === "string" ? connect.openworkUrl : null;
-  const previewOpenworkUrl = directPreview && typeof directPreview.openworkUrl === "string" ? directPreview.openworkUrl : null;
+  const offlinegptUrl = connect && typeof connect.offlinegptUrl === "string" ? connect.offlinegptUrl : null;
+  const previewOfflineGptUrl = directPreview && typeof directPreview.offlinegptUrl === "string" ? directPreview.offlinegptUrl : null;
   const previewExpiresAt = directPreview && typeof directPreview.expiresAt === "string" ? directPreview.expiresAt : null;
   const workspaceId = connect && typeof connect.workspaceId === "string" ? connect.workspaceId : null;
 
@@ -648,14 +648,14 @@ export function getWorkerTokens(payload: unknown): WorkerTokens | null {
     return null;
   }
 
-  return { clientToken, ownerToken, hostToken, openworkUrl, previewOpenworkUrl, previewExpiresAt, workspaceId };
+  return { clientToken, ownerToken, hostToken, offlinegptUrl, previewOfflineGptUrl, previewExpiresAt, workspaceId };
 }
 
 export function withWorkerConnection(worker: WorkerLaunch, tokens: WorkerTokens): WorkerLaunch {
   return {
     ...worker,
-    openworkUrl: tokens.openworkUrl,
-    previewOpenworkUrl: tokens.previewOpenworkUrl,
+    offlinegptUrl: tokens.offlinegptUrl,
+    previewOfflineGptUrl: tokens.previewOfflineGptUrl,
     previewExpiresAt: tokens.previewExpiresAt,
     workspaceId: tokens.workspaceId,
     clientToken: tokens.clientToken,
@@ -665,8 +665,8 @@ export function withWorkerConnection(worker: WorkerLaunch, tokens: WorkerTokens)
 }
 
 export function getWorkerConnectionTargets(worker: WorkerLaunch | null) {
-  const desktopUrl = worker?.openworkUrl ?? worker?.instanceUrl ?? null;
-  const webUrl = worker?.previewOpenworkUrl
+  const desktopUrl = worker?.offlinegptUrl ?? worker?.instanceUrl ?? null;
+  const webUrl = worker?.previewOfflineGptUrl
     ?? (worker?.provider === "daytona" || worker?.instanceUrl === null ? null : desktopUrl);
   return { desktopUrl, webUrl };
 }
@@ -679,8 +679,8 @@ export function getWorkerConnectionTokens(worker: WorkerLaunch | null) {
 }
 
 export function workerConnectionEquals(current: WorkerLaunch, next: WorkerLaunch) {
-  return current.openworkUrl === next.openworkUrl
-    && current.previewOpenworkUrl === next.previewOpenworkUrl
+  return current.offlinegptUrl === next.offlinegptUrl
+    && current.previewOfflineGptUrl === next.previewOfflineGptUrl
     && current.previewExpiresAt === next.previewExpiresAt
     && current.workspaceId === next.workspaceId
     && current.clientToken === next.clientToken
@@ -693,11 +693,11 @@ const WORKER_PREVIEW_REFRESH_LEAD_MS = 30_000;
 export function workerNeedsConnectionResolution(worker: WorkerLaunch, now = Date.now()): boolean {
   if (worker.status.trim().toLowerCase() === "failed") return false;
   const hasRequiredTokens = Boolean(worker.clientToken?.trim() && (worker.hostToken?.trim() || worker.ownerToken?.trim()));
-  if (!hasRequiredTokens || !worker.openworkUrl?.trim()) return true;
+  if (!hasRequiredTokens || !worker.offlinegptUrl?.trim()) return true;
 
-  const usesExpiringPreview = worker.provider === "daytona" || worker.instanceUrl === null || Boolean(worker.previewOpenworkUrl);
+  const usesExpiringPreview = worker.provider === "daytona" || worker.instanceUrl === null || Boolean(worker.previewOfflineGptUrl);
   if (!usesExpiringPreview) return false;
-  if (!worker.workspaceId?.trim() || !worker.previewOpenworkUrl?.trim() || !worker.previewExpiresAt) return true;
+  if (!worker.workspaceId?.trim() || !worker.previewOfflineGptUrl?.trim() || !worker.previewExpiresAt) return true;
 
   const expiresAt = Date.parse(worker.previewExpiresAt);
   return !Number.isFinite(expiresAt) || expiresAt <= now + WORKER_PREVIEW_REFRESH_LEAD_MS;
@@ -750,8 +750,8 @@ export function getWorkerRuntimeSnapshot(payload: unknown): WorkerRuntimeSnapsho
 
 export function getRuntimeServiceLabel(name: RuntimeServiceName): string {
   switch (name) {
-    case "openwork-server":
-      return "OpenWork server";
+    case "offlinegpt-server":
+      return "OfflineGPT server";
     case "opencode":
       return "OpenCode";
   }
@@ -995,8 +995,8 @@ export function isWorkerLaunch(value: unknown): value is WorkerLaunch {
     typeof value.status === "string" &&
     (typeof value.provider === "string" || value.provider === null) &&
     (typeof value.instanceUrl === "string" || value.instanceUrl === null) &&
-    (typeof value.openworkUrl === "string" || value.openworkUrl === null || typeof value.openworkUrl === "undefined") &&
-    (typeof value.previewOpenworkUrl === "string" || value.previewOpenworkUrl === null || typeof value.previewOpenworkUrl === "undefined") &&
+    (typeof value.offlinegptUrl === "string" || value.offlinegptUrl === null || typeof value.offlinegptUrl === "undefined") &&
+    (typeof value.previewOfflineGptUrl === "string" || value.previewOfflineGptUrl === null || typeof value.previewOfflineGptUrl === "undefined") &&
     (typeof value.previewExpiresAt === "string" || value.previewExpiresAt === null || typeof value.previewExpiresAt === "undefined") &&
     (typeof value.workspaceId === "string" || value.workspaceId === null || typeof value.workspaceId === "undefined") &&
     (typeof value.clientToken === "string" || value.clientToken === null) &&
@@ -1012,8 +1012,8 @@ export function listItemToWorker(item: WorkerListItem, current: WorkerLaunch | n
     status: item.status,
     provider: item.provider,
     instanceUrl: item.instanceUrl,
-    openworkUrl: current?.workerId === item.workerId ? current.openworkUrl ?? item.instanceUrl : item.instanceUrl,
-    previewOpenworkUrl: current?.workerId === item.workerId ? current.previewOpenworkUrl ?? null : null,
+    offlinegptUrl: current?.workerId === item.workerId ? current.offlinegptUrl ?? item.instanceUrl : item.instanceUrl,
+    previewOfflineGptUrl: current?.workerId === item.workerId ? current.previewOfflineGptUrl ?? null : null,
     previewExpiresAt: current?.workerId === item.workerId ? current.previewExpiresAt ?? null : null,
     workspaceId: current?.workerId === item.workerId ? current.workspaceId : null,
     clientToken: current?.workerId === item.workerId ? current.clientToken : null,
@@ -1058,20 +1058,20 @@ function buildWorkspaceUrl(instanceUrl: string, workspaceId: string): string {
   return `${normalizeUrl(instanceUrl)}/w/${encodeURIComponent(workspaceId)}`;
 }
 
-export function buildOpenworkDeepLink(
-  openworkUrl: string | null,
+export function buildOfflineGptDeepLink(
+  offlinegptUrl: string | null,
   accessToken: string | null,
   workerId: string | null,
   workerName: string | null
 ): string | null {
-  if (!openworkUrl || !accessToken) {
+  if (!offlinegptUrl || !accessToken) {
     return null;
   }
 
   const params = new URLSearchParams({
-    openworkHostUrl: openworkUrl,
-    openworkToken: accessToken,
-    source: "openwork-web"
+    offlinegptHostUrl: offlinegptUrl,
+    offlinegptToken: accessToken,
+    source: "offlinegpt-web"
   });
 
   if (workerId) {
@@ -1082,18 +1082,18 @@ export function buildOpenworkDeepLink(
     params.set("workerName", workerName);
   }
 
-  return `openwork://connect-remote?${params.toString()}`;
+  return `offlinegpt://connect-remote?${params.toString()}`;
 }
 
-export function buildOpenworkAppConnectUrl(
+export function buildOfflineGptAppConnectUrl(
   appConnectBaseUrl: string,
-  openworkUrl: string | null,
+  offlinegptUrl: string | null,
   accessToken: string | null,
   workerId: string | null,
   workerName: string | null,
   options?: { autoConnect?: boolean }
 ): string | null {
-  if (!appConnectBaseUrl || !openworkUrl || !accessToken) {
+  if (!appConnectBaseUrl || !offlinegptUrl || !accessToken) {
     return null;
   }
 
@@ -1113,12 +1113,12 @@ export function buildOpenworkAppConnectUrl(
     connectUrl.pathname = lastSegment === "connect-remote" ? normalizedPath : `${normalizedPath}/connect-remote`;
   }
 
-  connectUrl.searchParams.set("openworkHostUrl", openworkUrl);
-  connectUrl.searchParams.set("openworkToken", accessToken);
+  connectUrl.searchParams.set("offlinegptHostUrl", offlinegptUrl);
+  connectUrl.searchParams.set("offlinegptToken", accessToken);
   if (options?.autoConnect) {
     connectUrl.searchParams.set("autoConnect", "1");
   }
-  connectUrl.searchParams.set("source", "openwork-web");
+  connectUrl.searchParams.set("source", "offlinegpt-web");
 
   if (workerId) {
     connectUrl.searchParams.set("workerId", workerId);
@@ -1189,7 +1189,7 @@ async function requestAbsoluteJson(url: string, init: RequestInit = {}, timeoutM
   return { response, payload };
 }
 
-export async function resolveOpenworkWorkspaceUrl(instanceUrl: string, accessToken: string): Promise<{ workspaceId: string; openworkUrl: string } | null> {
+export async function resolveOfflineGptWorkspaceUrl(instanceUrl: string, accessToken: string): Promise<{ workspaceId: string; offlinegptUrl: string } | null> {
   const baseUrl = normalizeUrl(instanceUrl);
   const token = accessToken.trim();
   if (!baseUrl || !token) {
@@ -1200,7 +1200,7 @@ export async function resolveOpenworkWorkspaceUrl(instanceUrl: string, accessTok
   if (mountedWorkspaceId) {
     return {
       workspaceId: mountedWorkspaceId,
-      openworkUrl: baseUrl
+      offlinegptUrl: baseUrl
     };
   }
 
@@ -1222,7 +1222,7 @@ export async function resolveOpenworkWorkspaceUrl(instanceUrl: string, accessTok
 
   return {
     workspaceId,
-    openworkUrl: buildWorkspaceUrl(baseUrl, workspaceId)
+    offlinegptUrl: buildWorkspaceUrl(baseUrl, workspaceId)
   };
 }
 

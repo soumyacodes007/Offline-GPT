@@ -8,10 +8,10 @@ type FixedWindowEntry = {
 const minimumSubmissionAgeMs = 1500;
 const maximumSubmissionAgeMs = 1000 * 60 * 60;
 const defaultAllowedOrigins = [
-  "https://openworklabs.com",
-  "https://www.openworklabs.com",
-  "https://openwork.software",
-  "https://www.openwork.software",
+  "https://offlinegptlabs.com",
+  "https://www.offlinegptlabs.com",
+  "https://offlinegpt.software",
+  "https://www.offlinegpt.software",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "http://localhost:3005",
@@ -19,11 +19,11 @@ const defaultAllowedOrigins = [
 ];
 
 const store = globalThis as typeof globalThis & {
-  __openworkLandingRateLimitStore?: Map<string, FixedWindowEntry>;
+  __offlinegptLandingRateLimitStore?: Map<string, FixedWindowEntry>;
 };
 
-const rateLimitStore = store.__openworkLandingRateLimitStore ?? new Map<string, FixedWindowEntry>();
-store.__openworkLandingRateLimitStore = rateLimitStore;
+const rateLimitStore = store.__offlinegptLandingRateLimitStore ?? new Map<string, FixedWindowEntry>();
+store.__offlinegptLandingRateLimitStore = rateLimitStore;
 
 function currentTime() {
   return Date.now();

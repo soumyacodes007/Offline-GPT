@@ -21,7 +21,7 @@ describe("den-api Sentry source-map build gating", () => {
     const env = {
       [sentrySourcemapUploadFlag]: "1",
       SENTRY_AUTH_TOKEN: "token",
-      SENTRY_ORG: "openwork",
+      SENTRY_ORG: "offlinegpt",
       SENTRY_PROJECT: "den-api",
       SENTRY_RELEASE: "den-api@1.0.0",
     }
@@ -35,7 +35,7 @@ describe("den-api Sentry source-map build gating", () => {
     const env = {
       [sentrySourcemapUploadFlag]: "1",
       SENTRY_AUTH_TOKEN: "token",
-      SENTRY_ORG: "openwork",
+      SENTRY_ORG: "offlinegpt",
       SENTRY_PROJECT: "den-api",
     }
 

@@ -11,7 +11,7 @@ import type { DenOrgSummary } from "./den-org";
  * The storage key string is a runtime contract with previously deployed
  * bundles in the same browser session — do not change it casually.
  */
-const PENDING_SELECTION_KEY = "openwork:web:pending-org-selection";
+const PENDING_SELECTION_KEY = "offlinegpt:web:pending-org-selection";
 
 export type OrgSelectionMode =
   /** More than one org and none is active yet: the member must pick. */

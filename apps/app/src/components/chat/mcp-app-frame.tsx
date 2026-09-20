@@ -6,18 +6,18 @@ import { AppBridge, PostMessageTransport } from "@modelcontextprotocol/ext-apps/
 import type { McpUiStyles, McpUiStyleVariableKey } from "@modelcontextprotocol/ext-apps"
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js"
 
-import { legacyConnectionActionAppResourceUri, connectorCatalogSchema } from "@openwork/types/connection-action-app"
+import { legacyConnectionActionAppResourceUri, connectorCatalogSchema } from "@offlinegpt/types/connection-action-app"
 import { ConnectorCatalogCard } from "./connector-catalog"
 import { ConnectionCard } from "./connection-card"
 import { connectionCardPayloadFromChatToolResult, reconnectActionFromChatToolResult } from "@/components/tools/error-attribution"
 import { AppChatArtifact } from "@/react-app/domains/apps/app-chat-artifact"
 import { openDesktopUrl } from "@/app/lib/desktop"
 import {
-  OpenworkServerError,
-  type OpenworkMcpAppLaunchReference,
-  type OpenworkMcpAppResource,
-  type OpenworkMcpAppToolResult,
-} from "@/app/lib/openwork-server"
+  OfflineGptServerError,
+  type OfflineGptMcpAppLaunchReference,
+  type OfflineGptMcpAppResource,
+  type OfflineGptMcpAppToolResult,
+} from "@/app/lib/offlinegpt-server"
 import { useWorkspace } from "@/react-app/shell/workspace-provider"
 import { cn } from "@/lib/utils"
 import {
@@ -64,12 +64,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function preservedResult(part: DynamicToolUIPart): PreservedMcpAppResult | null {
-  if (part.toolName === "openwork-cloud_search_capabilities" && (!isRecord(part.input) || (part.input.intent !== "connect" && part.input.type !== "connectors"))) return null
-  const openwork = isRecord(part.callProviderMetadata?.openwork) ? part.callProviderMetadata.openwork : null
-  const result = openwork && isRecord(openwork.mcpResult)
-    ? openwork.mcpResult
-    : openwork && isRecord(openwork.mcpApp)
-      ? openwork.mcpApp
+  if (part.toolName === "offlinegpt-cloud_search_capabilities" && (!isRecord(part.input) || (part.input.intent !== "connect" && part.input.type !== "connectors"))) return null
+  const offlinegpt = isRecord(part.callProviderMetadata?.offlinegpt) ? part.callProviderMetadata.offlinegpt : null
+  const result = offlinegpt && isRecord(offlinegpt.mcpResult)
+    ? offlinegpt.mcpResult
+    : offlinegpt && isRecord(offlinegpt.mcpApp)
+      ? offlinegpt.mcpApp
       : null
   if (!result || !Array.isArray(result.content)) return null
   const content = result.content.filter(isRecord) as Array<Record<string, unknown>>
@@ -87,7 +87,7 @@ export function hasPreservedMcpAppResult(part: DynamicToolUIPart): boolean {
 }
 
 export function connectorCatalogFromPart(part: DynamicToolUIPart) {
-  if (part.toolName !== "openwork-cloud_search_capabilities" || part.state !== "output-available") return null
+  if (part.toolName !== "offlinegpt-cloud_search_capabilities" || part.state !== "output-available") return null
   if (!isRecord(part.input) || (part.input.intent !== "connect" && part.input.type !== "connectors")) return null
   let value: unknown = preservedResult(part)?.structuredContent ?? part.output
   if (typeof value === "string") {
@@ -99,9 +99,9 @@ export function connectorCatalogFromPart(part: DynamicToolUIPart) {
   return parsed.success ? parsed.data : null
 }
 
-export function gatewayMcpAppLaunch(meta: unknown): OpenworkMcpAppLaunchReference | null {
-  if (!isRecord(meta) || !isRecord(meta["openwork/mcpApp"])) return null
-  const launch = meta["openwork/mcpApp"]
+export function gatewayMcpAppLaunch(meta: unknown): OfflineGptMcpAppLaunchReference | null {
+  if (!isRecord(meta) || !isRecord(meta["offlinegpt/mcpApp"])) return null
+  const launch = meta["offlinegpt/mcpApp"]
   if ((launch.connectionId !== undefined && typeof launch.connectionId !== "string")
     || typeof launch.toolName !== "string"
     || typeof launch.resourceUri !== "string"
@@ -114,7 +114,7 @@ export function gatewayMcpAppLaunch(meta: unknown): OpenworkMcpAppLaunchReferenc
   }
 }
 
-export function buildMcpAppCsp(app: OpenworkMcpAppResource): string {
+export function buildMcpAppCsp(app: OfflineGptMcpAppResource): string {
   const resources = app.csp.resourceDomains.join(" ")
   const withResources = (source: string) => resources ? `${source} ${resources}` : source
   const sourceList = (values: string[]) => values.length ? values.join(" ") : "'none'"
@@ -137,7 +137,7 @@ function escapeAttribute(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;")
 }
 
-export function secureMcpAppHtml(app: OpenworkMcpAppResource): string {
+export function secureMcpAppHtml(app: OfflineGptMcpAppResource): string {
   const meta = `<meta http-equiv="Content-Security-Policy" content="${escapeAttribute(buildMcpAppCsp(app))}">`
   const html = /<html(?:\s[^>]*)?>/i.exec(app.html)
   if (html?.index !== undefined) {
@@ -163,7 +163,7 @@ export function secureMcpAppHtml(app: OpenworkMcpAppResource): string {
   return `<!doctype html><html><head>${meta}</head><body>${app.html}</body></html>`
 }
 
-function mcpToolResult(result: OpenworkMcpAppToolResult): CallToolResult {
+function mcpToolResult(result: OfflineGptMcpAppToolResult): CallToolResult {
   return result as CallToolResult
 }
 
@@ -213,7 +213,7 @@ function hostStyleVariables(): McpUiStyles {
 }
 
 export function isActionableMcpAppResolutionError(cause: unknown): boolean {
-  return cause instanceof OpenworkServerError && ACTIONABLE_MCP_APP_RESOLUTION_CODES.has(cause.code)
+  return cause instanceof OfflineGptServerError && ACTIONABLE_MCP_APP_RESOLUTION_CODES.has(cause.code)
 }
 
 const CHAT_MCP_APP_UNAVAILABLE_NOTICE = "Interactive view unavailable. The normal tool result is still available."
@@ -246,7 +246,7 @@ export function McpAppDiagnosticNotice({ error, notice }: { error: McpAppDiagnos
 }
 
 export type McpAppSandboxViewProps = {
-  app: OpenworkMcpAppResource
+  app: OfflineGptMcpAppResource
   /** Tool name used for host diagnostics and the iframe title. */
   toolName: string
   /** Arguments the host reports to the app as its launch input. */
@@ -270,7 +270,7 @@ export type McpAppSandboxViewProps = {
  * share this exact pipeline so rendering and diagnostics stay identical.
  */
 export function McpAppSandboxView({ app, toolName, inputArguments, result, unavailableNotice, onRequestTeardown, initialHeight, onHeightChange, readOnly = false }: McpAppSandboxViewProps) {
-  const { openworkServerClient, workspaceId } = useWorkspace()
+  const { offlinegptServerClient, workspaceId } = useWorkspace()
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [height, setHeightState] = useState(initialHeight ?? DEFAULT_HEIGHT)
   const [error, setError] = useState<McpAppDiagnostic | null>(null)
@@ -285,7 +285,7 @@ export function McpAppSandboxView({ app, toolName, inputArguments, result, unava
 
   useEffect(() => {
     const iframe = iframeRef.current
-    if (!iframe || !iframe.contentWindow || !openworkServerClient || !workspaceId) return
+    if (!iframe || !iframe.contentWindow || !offlinegptServerClient || !workspaceId) return
     let disposed = false
     let lastSizeEventAt = 0
     const startedAt = performance.now()
@@ -313,24 +313,24 @@ export function McpAppSandboxView({ app, toolName, inputArguments, result, unava
         checkpoints: [...checkpoints],
         ...(sandboxDocument ? { sandboxDocument } : {}),
       }
-      console.error(`[OpenWork MCP App] ${code}`, diagnostic)
+      console.error(`[OfflineGPT MCP App] ${code}`, diagnostic)
       setError(diagnostic)
     }
     checkpoint("resource-resolved")
-    const sandbox = openworkServerClient.mcpAppSandbox(app, window.location.origin)
+    const sandbox = offlinegptServerClient.mcpAppSandbox(app, window.location.origin)
     if (sandbox.expectedOrigin === window.location.origin) {
       fail(
         "MCP_APP_SANDBOX_ORIGIN_INVALID",
         "sandbox-proxy",
         null,
-        "The sandbox resolved to the same origin as the OpenWork host.",
+        "The sandbox resolved to the same origin as the OfflineGPT host.",
         sandbox.expectedOrigin,
       )
       return
     }
     const bridge = new AppBridge(
       null,
-      { name: "OpenWork", version: "1.0.0" },
+      { name: "OfflineGPT", version: "1.0.0" },
       readOnly ? {} : { serverTools: {} },
       {
         hostContext: {
@@ -346,7 +346,7 @@ export function McpAppSandboxView({ app, toolName, inputArguments, result, unava
         await openDesktopUrl(url)
         return {}
       } catch (cause) {
-        console.error("[OpenWork MCP App] MCP_APP_OPEN_LINK_BLOCKED", {
+        console.error("[OfflineGPT MCP App] MCP_APP_OPEN_LINK_BLOCKED", {
           toolName,
           message: safeMcpAppDiagnosticMessage(cause, "The link could not be opened."),
         })
@@ -396,12 +396,12 @@ export function McpAppSandboxView({ app, toolName, inputArguments, result, unava
       if (readOnly) throw new Error("This app displays results and cannot call tools.")
       const request = { serverName: app.serverName, name, resourceUri: app.resourceUri, arguments: args }
       try {
-        return mcpToolResult(await openworkServerClient.callMcpAppTool(workspaceId, request))
+        return mcpToolResult(await offlinegptServerClient.callMcpAppTool(workspaceId, request))
       } catch (cause) {
-        if (!(cause instanceof OpenworkServerError) || cause.code !== "tool_requires_approval") throw cause
+        if (!(cause instanceof OfflineGptServerError) || cause.code !== "tool_requires_approval") throw cause
         const approved = window.confirm(`Allow this MCP App to call ${name} on ${app.serverName}?`)
         if (!approved) throw new Error("The user declined the MCP App tool call.")
-        return mcpToolResult(await openworkServerClient.callMcpAppTool(workspaceId, { ...request, approved: true }))
+        return mcpToolResult(await offlinegptServerClient.callMcpAppTool(workspaceId, { ...request, approved: true }))
       }
     }
     bridge.oninitialized = () => {
@@ -554,7 +554,7 @@ export function McpAppSandboxView({ app, toolName, inputArguments, result, unava
         new Promise<void>((resolve) => window.setTimeout(resolve, 500)),
       ]).catch(() => undefined).finally(() => bridge.close().catch(() => undefined))
     }
-  }, [app, inputArguments, openworkServerClient, result, toolName, workspaceId, readOnly])
+  }, [app, inputArguments, offlinegptServerClient, result, toolName, workspaceId, readOnly])
 
   if (error) return <McpAppDiagnosticNotice error={error} notice={unavailableNotice} />
   return (
@@ -587,13 +587,13 @@ export function McpAppFrame({ part }: { part: DynamicToolUIPart }) {
   // First-party connection UI is native, including historical app launches.
   // Never route an unsupported connection response back into the old iframe.
   const launch = gatewayMcpAppLaunch(result?._meta)
-  if (part.toolName === "openwork-cloud_connection_action"
-    || (part.toolName.startsWith("openwork-cloud_") && !launch?.connectionId && launch?.resourceUri === legacyConnectionActionAppResourceUri)) return null
+  if (part.toolName === "offlinegpt-cloud_connection_action"
+    || (part.toolName.startsWith("offlinegpt-cloud_") && !launch?.connectionId && launch?.resourceUri === legacyConnectionActionAppResourceUri)) return null
   return <EmbeddedMcpAppFrame part={part} />
 }
 
 function EmbeddedMcpAppFrame({ part }: { part: DynamicToolUIPart }) {
-  const { openworkServerClient, workspaceId } = useWorkspace()
+  const { offlinegptServerClient, workspaceId } = useWorkspace()
   const nextResult = preservedResult(part)
   const nextResultSignature = JSON.stringify(nextResult)
   const resultCache = useRef<{ signature: string; value: PreservedMcpAppResult | null }>({
@@ -606,13 +606,13 @@ function EmbeddedMcpAppFrame({ part }: { part: DynamicToolUIPart }) {
   const result = resultCache.current.value
   const draft = useMemo(() => {
     if (part.toolName !== "save_artifact_view" && !part.toolName.endsWith("_save_artifact_view")) return null
-    const reference = result?._meta?.["openwork/appDraft"]
+    const reference = result?._meta?.["offlinegpt/appDraft"]
     if (!isRecord(reference) || typeof reference.appId !== "string" || typeof reference.revisionId !== "string"
       || typeof reference.title !== "string" || (reference.receiptId !== undefined && typeof reference.receiptId !== "string")) return null
     return { appId: reference.appId, revisionId: reference.revisionId, title: reference.title, receiptId: reference.receiptId }
   }, [part.toolName, result])
   const launch = useMemo(() => gatewayMcpAppLaunch(result?._meta), [result])
-  const [app, setApp] = useState<OpenworkMcpAppResource | null>(null)
+  const [app, setApp] = useState<OfflineGptMcpAppResource | null>(null)
   const [error, setError] = useState<McpAppDiagnostic | null>(null)
   // The sandbox view unmounts on every preserved-result change; keep the last
   // measured height here so the rebuilt iframe does not snap back to default.
@@ -626,9 +626,9 @@ function EmbeddedMcpAppFrame({ part }: { part: DynamicToolUIPart }) {
     let cancelled = false
     setApp(null)
     setError(null)
-    if (draft || !result || !openworkServerClient || !workspaceId) return () => { cancelled = true }
+    if (draft || !result || !offlinegptServerClient || !workspaceId) return () => { cancelled = true }
     const startedAt = performance.now()
-    void openworkServerClient.resolveMcpApp(workspaceId, part.toolName, launch ?? undefined)
+    void offlinegptServerClient.resolveMcpApp(workspaceId, part.toolName, launch ?? undefined)
       .then(({ app: resolved }) => {
         if (cancelled) return
         // A preserved MCP result is neutral transport data. A null resolution
@@ -641,26 +641,26 @@ function EmbeddedMcpAppFrame({ part }: { part: DynamicToolUIPart }) {
         if (!cancelled && isActionableMcpAppResolutionError(cause)) {
           const diagnostic: McpAppDiagnostic = {
             code: "MCP_APP_RESOURCE_RESOLUTION_FAILED",
-            ...(cause instanceof OpenworkServerError ? { causeCode: cause.code } : {}),
+            ...(cause instanceof OfflineGptServerError ? { causeCode: cause.code } : {}),
             stage: "resource-resolution",
             message: safeMcpAppDiagnosticMessage(cause, "The interactive view resource could not be resolved."),
             toolName: part.toolName,
             elapsedMs: Math.round(performance.now() - startedAt),
             checkpoints: ["resolve-started"],
           }
-          console.error(`[OpenWork MCP App] ${diagnostic.code}`, diagnostic)
+          console.error(`[OfflineGPT MCP App] ${diagnostic.code}`, diagnostic)
           setError(diagnostic)
         }
       })
     return () => { cancelled = true }
-  }, [draft, launch, openworkServerClient, part.toolName, result, workspaceId])
+  }, [draft, launch, offlinegptServerClient, part.toolName, result, workspaceId])
 
   // A completed build opens a native artifact tab. Rendering still goes
   // through the authorized Apps API and the shared sandbox inside that tab.
   if (draft) return <AppChatArtifact key={`${draft.appId}:${draft.revisionId}:${draft.receiptId}`} {...draft} />
   const viewId = result?._meta?.artifactViewId
   const revisionId = result?._meta?.viewRevisionId
-  if (app && typeof viewId === "string" && typeof revisionId === "string" && app.resourceUri === `ui://openwork/artifacts/${viewId}/views/${revisionId}/index.html`) {
+  if (app && typeof viewId === "string" && typeof revisionId === "string" && app.resourceUri === `ui://offlinegpt/artifacts/${viewId}/views/${revisionId}/index.html`) {
     const artifact = result?.structuredContent?.artifact
     const title = typeof result?._meta?.appTitle === "string" ? result._meta.appTitle : isRecord(artifact) && typeof artifact.title === "string" ? artifact.title : "App preview"
     const receiptId = isRecord(artifact) && typeof artifact.receiptId === "string" ? artifact.receiptId : undefined

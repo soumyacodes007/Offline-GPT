@@ -41,18 +41,18 @@ function WorkPreview({ step }: { step: SetupStep }) {
   const gateway = step === "tools" || step === "ready";
   return (
     <figure className={styles.preview} aria-label={`Product example: ${copy.caption}`}>
-      <div className={styles.previewLabel}><span>OPENWORK, IN PRACTICE</span><span>Example</span></div>
+      <div className={styles.previewLabel}><span>OFFLINEGPT, IN PRACTICE</span><span>Example</span></div>
       <div className={styles.appWindow} aria-hidden="true">
         <div className={styles.appTitlebar}>
-          <img src="/openwork-mark.svg" alt="" width={13} height={13} />
-          <span>OpenWork</span><span className={styles.appWindowLabel}>New conversation</span>
+          <img src="/offlinegpt-mark.svg" alt="" width={13} height={13} />
+          <span>OfflineGPT</span><span className={styles.appWindowLabel}>New conversation</span>
         </div>
         <div className={styles.appBody}>
           <div className={styles.appSidebar}><MessageSquare size={14} /><LayoutDashboard size={14} /><Workflow size={14} /><Users size={14} /><span /></div>
           <div className={styles.appContent}>
             <div className={styles.appBreadcrumb}><Folder size={10} /> Team workspace <ChevronRight size={10} /> Chat</div>
             <div className={styles.previewPrompt}><span>You</span><p>{copy.request}</p></div>
-            <div className={styles.previewResponse}><img src="/openwork-mark.svg" alt="" width={13} height={13} /><p>{copy.reply}</p></div>
+            <div className={styles.previewResponse}><img src="/offlinegpt-mark.svg" alt="" width={13} height={13} /><p>{copy.reply}</p></div>
             {step === "space" ? (
               <div className={styles.inlineResult}>
                 <div className={styles.previewSectionTitle}><Workflow size={12} /> Weekly team brief <span>Workflow</span></div>
@@ -88,7 +88,7 @@ function WorkPreview({ step }: { step: SetupStep }) {
                 <div className={styles.dashboardRow}><span><i /> Launch checklist</span><small>In progress</small></div>
               </div>
             )}
-            {gateway ? <div className={styles.gatewayContext}><Network size={12} /><div><strong>OpenWork gateway</strong><small>Team tools in Desktop, Codex, and Claude Code</small></div></div> : null}
+            {gateway ? <div className={styles.gatewayContext}><Network size={12} /><div><strong>OfflineGPT gateway</strong><small>Team tools in Desktop, Codex, and Claude Code</small></div></div> : null}
             <PreviewComposer />
           </div>
         </div>
@@ -112,7 +112,7 @@ export function SetupFrame({ step, title, description, children, aside, panelVis
   return (
     <section className={`${styles.frame} ${embedded ? styles.embedded : ""}`} data-testid="setup-frame" data-step={step}>
       <header className={styles.top}>
-        <div className={styles.brand}><img src="/openwork-mark.svg" alt="" width={25} height={25} /><span>OpenWork<span className={styles.cloud}> / Cloud</span></span></div>
+        <div className={styles.brand}><img src="/offlinegpt-mark.svg" alt="" width={25} height={25} /><span>OfflineGPT<span className={styles.cloud}> / Cloud</span></span></div>
         <nav className={styles.progress} aria-label="Setup progress">
           <div className={styles.progressSummary}>
             <span>{steps[current]?.label}</span>

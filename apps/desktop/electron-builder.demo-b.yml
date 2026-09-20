@@ -1,6 +1,6 @@
 extends: electron-builder.yml
-appId: com.differentai.openwork.demo.consumer
-productName: OpenWork Demo B
+appId: com.differentai.offlinegpt.demo.consumer
+productName: OfflineGPT Demo B
 protocols: []
 directories:
   output: dist-electron-demo-b

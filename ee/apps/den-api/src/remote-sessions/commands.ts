@@ -1,7 +1,7 @@
-import { and, asc, eq, gt, inArray, lte } from "@openwork-ee/den-db/drizzle"
-import { RemoteSessionCommandTable } from "@openwork-ee/den-db/schema/remote-session-commands"
-import { createDenTypeId, normalizeDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
-import type { RemoteSessionCommandCompleteRequest } from "@openwork/types/automations"
+import { and, asc, eq, gt, inArray, lte } from "@offlinegpt-ee/den-db/drizzle"
+import { RemoteSessionCommandTable } from "@offlinegpt-ee/den-db/schema/remote-session-commands"
+import { createDenTypeId, normalizeDenTypeId, type DenTypeId } from "@offlinegpt-ee/utils/typeid"
+import type { RemoteSessionCommandCompleteRequest } from "@offlinegpt/types/automations"
 import { db } from "../db.js"
 import { automationUpdateChangedRows } from "../automations/update-result.js"
 

@@ -5,7 +5,7 @@ process.env.DEN_DB_ENCRYPTION_KEY = "test-den-db-encryption-key-please-change-12
 process.env.BETTER_AUTH_SECRET = "test-better-auth-secret-please-change-1234567890"
 process.env.BETTER_AUTH_URL = "http://localhost:3005"
 process.env.CORS_ORIGINS = "http://localhost:3005"
-process.env.DATABASE_URL = "mysql://root:password@127.0.0.1:3306/openwork_test"
+process.env.DATABASE_URL = "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
 
 // The functions under test are pure parsers, but importing the store module
 // pulls the app graph, and constructing the real auth module seeds the OAuth
@@ -24,15 +24,15 @@ mock.module("../src/auth.js", () => ({
     handler: () => Promise.resolve(new Response(JSON.stringify({ keys: [] }), { status: 200 })),
   },
   DEN_MCP_OPAQUE_ACCESS_TOKEN_PREFIX: "ow_mcp_at_",
-  DEN_MCP_FIRST_PARTY_CLIENT_ID: "openwork-desktop",
+  DEN_MCP_FIRST_PARTY_CLIENT_ID: "offlinegpt-desktop",
   DEN_MCP_FIRST_PARTY_RESOURCES: ["http://127.0.0.1:8790/mcp"],
-  DEN_MCP_GRANT_ID_CLAIM: "https://openworklabs.com/grant_id",
-  DEN_MCP_ORG_ID_CLAIM: "https://openworklabs.com/org_id",
+  DEN_MCP_GRANT_ID_CLAIM: "https://offlinegptlabs.com/grant_id",
+  DEN_MCP_ORG_ID_CLAIM: "https://offlinegptlabs.com/org_id",
   DEN_MCP_OAUTH_RESOURCE: "http://127.0.0.1:8790/mcp",
   DEN_MCP_RESOURCE: "http://127.0.0.1:8790/mcp",
-  DEN_MCP_RESOURCE_CLAIM: "https://openworklabs.com/resource",
+  DEN_MCP_RESOURCE_CLAIM: "https://offlinegptlabs.com/resource",
   DEN_MCP_RESOURCES: ["http://127.0.0.1:8790/mcp"],
-  DEN_MCP_TOKEN_USE_CLAIM: "https://openworklabs.com/token_use",
+  DEN_MCP_TOKEN_USE_CLAIM: "https://offlinegptlabs.com/token_use",
 }))
 
 const { mcpServerEntriesFromPayload, skillEntryFromSource } = await import("../src/routes/org/plugin-system/store.js")

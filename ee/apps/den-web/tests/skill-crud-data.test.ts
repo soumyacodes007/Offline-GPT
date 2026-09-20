@@ -15,7 +15,7 @@ describe("Den skill data", () => {
       "- List owners and next steps",
       "",
       "```sh",
-      "openwork verify-handoff",
+      "offlinegpt verify-handoff",
       "```",
     ].join("\n");
     const payload = createSkillPayload("plugin-1", {

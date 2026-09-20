@@ -1,6 +1,6 @@
 "use client";
 
-import type { TelemetryDimensionListItem } from "@openwork-ee/telemetry-contracts";
+import type { TelemetryDimensionListItem } from "@offlinegpt-ee/telemetry-contracts";
 import { DenSelect } from "../../../_components/ui/select";
 
 const FILTER_INPUT_ID = "analytics-project-filter";

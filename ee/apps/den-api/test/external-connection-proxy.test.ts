@@ -5,8 +5,8 @@ import { expect, mock, test } from "bun:test"
 process.env.DEN_DB_ENCRYPTION_KEY ??= "x".repeat(32)
 process.env.BETTER_AUTH_SECRET ??= "y".repeat(32)
 process.env.BETTER_AUTH_URL ??= "http://127.0.0.1:3005"
-process.env.OPENWORK_DEV_MODE ??= "1"
-process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/openwork_den"
+process.env.OFFLINEGPT_DEV_MODE ??= "1"
+process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/offlinegpt_den"
 
 // The proxy module reaches ./auth.js -> ../auth.js, whose better-auth instance
 // seeds the oauthResource registry against the database at import time. This
@@ -17,19 +17,19 @@ mock.module("../src/auth.js", () => ({
     handler: () => Promise.resolve(new Response(JSON.stringify({ keys: [] }), { status: 200 })),
   },
   DEN_MCP_OPAQUE_ACCESS_TOKEN_PREFIX: "ow_mcp_at_",
-  DEN_MCP_FIRST_PARTY_CLIENT_ID: "openwork-desktop",
+  DEN_MCP_FIRST_PARTY_CLIENT_ID: "offlinegpt-desktop",
   DEN_MCP_FIRST_PARTY_RESOURCES: [
     "http://127.0.0.1:8790/mcp",
     "http://127.0.0.1:8790/mcp/agent",
     "http://127.0.0.1:8790/mcp/admin",
   ],
-  DEN_MCP_GRANT_ID_CLAIM: "https://openworklabs.com/grant_id",
-  DEN_MCP_ORG_ID_CLAIM: "https://openworklabs.com/org_id",
+  DEN_MCP_GRANT_ID_CLAIM: "https://offlinegptlabs.com/grant_id",
+  DEN_MCP_ORG_ID_CLAIM: "https://offlinegptlabs.com/org_id",
   DEN_MCP_OAUTH_RESOURCE: "http://127.0.0.1:8790/mcp/agent",
   DEN_MCP_RESOURCE: "http://127.0.0.1:8790/mcp",
-  DEN_MCP_RESOURCE_CLAIM: "https://openworklabs.com/resource",
+  DEN_MCP_RESOURCE_CLAIM: "https://offlinegptlabs.com/resource",
   DEN_MCP_RESOURCES: ["http://127.0.0.1:8790/mcp"],
-  DEN_MCP_TOKEN_USE_CLAIM: "https://openworklabs.com/token_use",
+  DEN_MCP_TOKEN_USE_CLAIM: "https://offlinegptlabs.com/token_use",
 }))
 
 const {
@@ -59,7 +59,7 @@ const connection = {
 const directConnection = { ...(connection as Record<string, unknown>), exposeDirectly: true } as never
 const operation = {
   connection,
-  redirectUri: "https://openwork.example/v1/mcp-connections/fixture/connect/callback",
+  redirectUri: "https://offlinegpt.example/v1/mcp-connections/fixture/connect/callback",
   member: { orgMembershipId: "mem_01k28e8q8pf8r9sff9mhyqxved" },
   diagnosticReferenceId: "req_proxy_fixture",
 } as never
@@ -138,7 +138,7 @@ test("ordinary MCP clients receive only bounded search and execute without the p
     await expect(client.callTool({ name: "open_fixture", arguments: {} }))
       .rejects.toThrow("Use search_capabilities and execute_capability")
     await expect(client.readResource({ uri: resourceUri }))
-      .rejects.toThrow("only through the OpenWork App host")
+      .rejects.toThrow("only through the OfflineGPT App host")
   }, {}, false)
 })
 
@@ -161,7 +161,7 @@ test("legacy clients retain ordinary operations through bounded search and execu
     await expect(client.callTool({ name: "search_fixture", arguments: { query: "ordinary" } }))
       .rejects.toThrow("Use search_capabilities and execute_capability")
     await expect(client.readResource({ uri: resourceUri }))
-      .rejects.toThrow("only through the OpenWork App host")
+      .rejects.toThrow("only through the OfflineGPT App host")
   }, {
     listTools: async () => [{
       name: "search_fixture",
@@ -187,7 +187,7 @@ test("a directly exposed connection serves its provider catalog to ordinary clie
     await expect(client.callTool({ name: "app_only_fixture", arguments: {} })).rejects.toThrow("is not available on Fixture MCP")
     await expect(client.callTool({ name: "blocked_fixture", arguments: {} })).rejects.toThrow("is not available on Fixture MCP")
     await expect(client.callTool({ name: "search_capabilities", arguments: { query: "direct" } })).rejects.toThrow("is not available on Fixture MCP")
-    await expect(client.readResource({ uri: resourceUri })).rejects.toThrow("only through the OpenWork App host")
+    await expect(client.readResource({ uri: resourceUri })).rejects.toThrow("only through the OfflineGPT App host")
     expect(downstreamCalls).toBe(1)
   }, {
     listTools: async () => [
@@ -235,7 +235,7 @@ test("direct exposure stays closed while the organization has member-facing MCP 
 
 test("the request handler never enables direct exposure unless the route confirms the organization flag", async () => {
   let toolNames: string[] = []
-  const request = new Request("https://openwork.example/mcp/agent/connections/fixture", { method: "POST" })
+  const request = new Request("https://offlinegpt.example/mcp/agent/connections/fixture", { method: "POST" })
   await handleExternalConnectionProxyRequest({
     context: requestContext(request),
     operation: { ...(operation as Record<string, unknown>), connection: directConnection } as never,
@@ -276,9 +276,9 @@ test("direct exposure does not change the App host surface", async () => {
 
 test("a forged App-host audience header cannot unlock the provider surface", async () => {
   let toolNames: string[] = []
-  const request = new Request("https://openwork.example/mcp/agent/connections/fixture", {
+  const request = new Request("https://offlinegpt.example/mcp/agent/connections/fixture", {
     method: "POST",
-    headers: { "x-openwork-mcp-client-audience": "app-host" },
+    headers: { "x-offlinegpt-mcp-client-audience": "app-host" },
   })
   await handleExternalConnectionProxyRequest({
     context: requestContext(request),
@@ -451,7 +451,7 @@ test("OAuth registration and network failures become sanitized protocol errors",
     message: "The provider rejected OAuth client registration.",
     operatorAction: "Configure a provider-approved OAuth client, then reconnect the MCP connection.",
   })
-  const oauthRequest = new Request("https://openwork.example/mcp", {
+  const oauthRequest = new Request("https://offlinegpt.example/mcp", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 41, method: "initialize", params: {} }),
@@ -479,7 +479,7 @@ test("OAuth registration and network failures become sanitized protocol errors",
   expect(serializedOauth).not.toContain("stack")
   expect(serializedOauth).not.toContain("providerResponse")
 
-  const networkRequest = new Request("https://openwork.example/mcp", {
+  const networkRequest = new Request("https://offlinegpt.example/mcp", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: "network", method: "initialize", params: {} }),
@@ -501,7 +501,7 @@ test("OAuth registration and network failures become sanitized protocol errors",
 
 test("unsupported GET requests never trigger downstream discovery", async () => {
   let discoveryCalls = 0
-  const request = new Request("https://openwork.example/mcp", { method: "GET" })
+  const request = new Request("https://offlinegpt.example/mcp", { method: "GET" })
   const response = await handleExternalConnectionProxyRequest({
     context: requestContext(request),
     operation,
@@ -521,7 +521,7 @@ test("a client that does not advertise the App host capability receives an empty
   expect(buildConnectMcpServerIndex({
     enabled: false,
     connections: [connection],
-    publicOrigin: "https://openwork.example",
+    publicOrigin: "https://offlinegpt.example",
   }).servers).toEqual([])
 })
 
@@ -535,7 +535,7 @@ test("ordinary clients only see directly exposed connections in the index while 
   expect(buildConnectMcpServerIndex({
     enabled: true,
     connections: select(true, true),
-    publicOrigin: "https://openwork.example",
+    publicOrigin: "https://offlinegpt.example",
   }).servers.map((server) => server.exposeDirectly)).toEqual([false, true])
 })
 
@@ -579,6 +579,6 @@ test("disconnected and issuer-blocked OAuth connections are not ready for the na
   expect(buildConnectMcpServerIndex({
     enabled: true,
     connections: ready,
-    publicOrigin: "https://openwork.example",
+    publicOrigin: "https://offlinegpt.example",
   }).servers).toEqual([])
 })

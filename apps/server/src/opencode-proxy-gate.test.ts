@@ -16,7 +16,7 @@ const PERMISSION_REPLY_PATH = "/opencode/permission/req_123/reply";
 describe("assertOpencodeProxyAllowed", () => {
   test("collaborators can reply to permission requests (#1918)", () => {
     // The SPA's only credential is the collaborator-scoped client token
-    // (OPENWORK_TOKEN); an owner-only gate made every permission dialog
+    // (OFFLINEGPT_TOKEN); an owner-only gate made every permission dialog
     // un-answerable.
     expect(() =>
       assertOpencodeProxyAllowed(actor("collaborator"), "POST", PERMISSION_REPLY_PATH),
@@ -106,7 +106,7 @@ describe("proxyOpencodeRequest read-only guard", () => {
   const workspace: WorkspaceInfo = {
     id: "ws_ro",
     name: "Read-only workspace",
-    path: "/tmp/openwork-proxy-gate-ro",
+    path: "/tmp/offlinegpt-proxy-gate-ro",
     preset: "starter",
     workspaceType: "local",
   };
@@ -130,7 +130,7 @@ describe("proxyOpencodeRequest read-only guard", () => {
 
   const proxy = (method: string) => {
     const proxyPath = "/session";
-    const url = new URL(`http://openwork.invalid/opencode${proxyPath}`);
+    const url = new URL(`http://offlinegpt.invalid/opencode${proxyPath}`);
     return proxyOpencodeRequest({
       config: readOnlyConfig,
       workspace,

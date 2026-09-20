@@ -1,5 +1,5 @@
 import { configureProvider } from "./chat.ts";
-import type { Seed } from "@openwork/env";
+import type { Seed } from "@offlinegpt/env";
 
 /**
  * A hermetic local-first workflow workspace. The provider is the deterministic

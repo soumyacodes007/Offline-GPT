@@ -1,4 +1,4 @@
-import { readModelsAnalyticsSettings, appendModelsAnalyticsEvents, type ModelsAnalyticsEvent } from "@openwork-ee/telemetry"
+import { readModelsAnalyticsSettings, appendModelsAnalyticsEvents, type ModelsAnalyticsEvent } from "@offlinegpt-ee/telemetry"
 import type { findActiveInferenceKey } from "./keys.js"
 
 type Key = NonNullable<Awaited<ReturnType<typeof findActiveInferenceKey>>>
@@ -82,8 +82,8 @@ export async function beginModelAnalytics(input: { key: Key; request: Request; r
   if (!settings.enabled) return null
   return (streaming: boolean) => observeModelResponse({
     id: input.requestId,
-    sessionId: identifier(input.request.headers.get("x-openwork-session-id"), input.requestId),
-    taskId: identifier(input.request.headers.get("x-openwork-task-id"), input.requestId),
+    sessionId: identifier(input.request.headers.get("x-offlinegpt-session-id"), input.requestId),
+    taskId: identifier(input.request.headers.get("x-offlinegpt-task-id"), input.requestId),
     startedAt: input.startedAt, model: input.model, streaming,
   }, (event) => appendModelsAnalyticsEvents(db, {
     orgId: input.key.organization_id, memberId: input.key.org_membership_id, source: "inference", events: [event],

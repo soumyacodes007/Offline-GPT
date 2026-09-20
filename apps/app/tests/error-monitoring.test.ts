@@ -22,7 +22,7 @@ describe("parseSentryDsn", () => {
     expect(parseSentryDsn("")).toBeNull();
     expect(parseSentryDsn("   ")).toBeNull();
     expect(parseSentryDsn("not-a-dsn")).toBeNull();
-    expect(parseSentryDsn("%VITE_OPENWORK_SENTRY_DSN%")).toBeNull();
+    expect(parseSentryDsn("%VITE_OFFLINEGPT_SENTRY_DSN%")).toBeNull();
     expect(parseSentryDsn("http://key@host/1")).toBeNull();
   });
 });
@@ -43,7 +43,7 @@ describe("shouldMonitorWebErrors", () => {
   test("stays off without a usable DSN", () => {
     expect(shouldMonitorWebErrors({ dsn: "", deployment: "web", electronRuntime: false })).toBe(false);
     expect(
-      shouldMonitorWebErrors({ dsn: "%VITE_OPENWORK_SENTRY_DSN%", deployment: "web", electronRuntime: false }),
+      shouldMonitorWebErrors({ dsn: "%VITE_OFFLINEGPT_SENTRY_DSN%", deployment: "web", electronRuntime: false }),
     ).toBe(false);
   });
 });
@@ -51,10 +51,10 @@ describe("shouldMonitorWebErrors", () => {
 describe("sanitizePageUrl", () => {
   test("strips credential-bearing query strings and fragments", () => {
     expect(
-      sanitizePageUrl("https://app.openworklabs.com/signin?grant=secret-grant&openworkToken=tok#accessToken=at"),
-    ).toBe("https://app.openworklabs.com/signin");
-    expect(sanitizePageUrl("https://app.openworklabs.com/chat/abc?accessToken=x")).toBe(
-      "https://app.openworklabs.com/chat/abc",
+      sanitizePageUrl("https://app.offlinegptlabs.com/signin?grant=secret-grant&offlinegptToken=tok#accessToken=at"),
+    ).toBe("https://app.offlinegptlabs.com/signin");
+    expect(sanitizePageUrl("https://app.offlinegptlabs.com/chat/abc?accessToken=x")).toBe(
+      "https://app.offlinegptlabs.com/chat/abc",
     );
   });
 
@@ -70,7 +70,7 @@ describe("buildWebErrorEvent", () => {
       type: "TypeError",
       message: "x is not a function",
       stack: "TypeError: x is not a function\n  at boot",
-      url: "https://app.openworklabs.com/",
+      url: "https://app.offlinegptlabs.com/",
       release: "abc123",
       phase: "boot",
     });
@@ -80,7 +80,7 @@ describe("buildWebErrorEvent", () => {
     expect(event.environment).toBe("web");
     expect(event.release).toBe("abc123");
     expect(event.tags).toEqual({ boot_phase: "boot" });
-    expect(event.request).toEqual({ url: "https://app.openworklabs.com/" });
+    expect(event.request).toEqual({ url: "https://app.offlinegptlabs.com/" });
     expect(event.exception.values).toEqual([{ type: "TypeError", value: "x is not a function" }]);
     expect(event.extra).toEqual({ stack: "TypeError: x is not a function\n  at boot" });
     // Never any user/session/content fields.
@@ -102,7 +102,7 @@ describe("buildWebErrorEvent", () => {
     const event = buildWebErrorEvent({
       type: "Error",
       message: "m".repeat(5000),
-      url: "https://app.openworklabs.com/",
+      url: "https://app.offlinegptlabs.com/",
       phase: "runtime",
     });
     expect(event.exception.values[0].value).toHaveLength(1000);
@@ -116,7 +116,7 @@ describe("buildSentryEnvelope", () => {
     const event = buildWebErrorEvent({
       type: "Error",
       message: "boom",
-      url: "https://app.openworklabs.com/",
+      url: "https://app.offlinegptlabs.com/",
       phase: "runtime",
     });
     const lines = buildSentryEnvelope(event).split("\n");

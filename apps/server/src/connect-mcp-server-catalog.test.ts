@@ -9,36 +9,36 @@ import {
   CONNECT_MCP_SERVER_INDEX_URI,
   connectDirectMcpRuntimeName,
   connectMcpAppHostName,
-  type OpenWorkConnectMcpServerIndex,
-  readOpenWorkConnectMcpAppHostCatalog,
-  readOpenWorkConnectMcpServerIndex,
-  reconcileOpenWorkConnectMcpServers,
-  refreshOpenWorkConnectMcpAppHostCatalog,
-  writeOpenWorkConnectMcpAppHostAuthorization,
-  writeOpenWorkConnectMcpAppHostCatalog,
+  type OfflineGPTConnectMcpServerIndex,
+  readOfflineGPTConnectMcpAppHostCatalog,
+  readOfflineGPTConnectMcpServerIndex,
+  reconcileOfflineGPTConnectMcpServers,
+  refreshOfflineGPTConnectMcpAppHostCatalog,
+  writeOfflineGPTConnectMcpAppHostAuthorization,
+  writeOfflineGPTConnectMcpAppHostCatalog,
 } from "./connect-mcp-server-catalog.js";
 import { readRuntimeOpencodeConfig, writeRuntimeOpencodeConfig } from "./runtime-opencode-config-store.js";
 import type { ServerConfig } from "./types.js";
 
 const roots: string[] = [];
-const previousRuntimeDb = process.env.OPENWORK_RUNTIME_DB;
+const previousRuntimeDb = process.env.OFFLINEGPT_RUNTIME_DB;
 
 afterEach(async () => {
   while (roots.length) await rm(roots.pop() ?? "", { recursive: true, force: true });
-  if (previousRuntimeDb === undefined) delete process.env.OPENWORK_RUNTIME_DB;
-  else process.env.OPENWORK_RUNTIME_DB = previousRuntimeDb;
+  if (previousRuntimeDb === undefined) delete process.env.OFFLINEGPT_RUNTIME_DB;
+  else process.env.OFFLINEGPT_RUNTIME_DB = previousRuntimeDb;
 });
 
 async function fixtureConfig(): Promise<ServerConfig> {
-  const root = await mkdtemp(join(tmpdir(), "openwork-connect-mcp-servers-"));
+  const root = await mkdtemp(join(tmpdir(), "offlinegpt-connect-mcp-servers-"));
   roots.push(root);
-  process.env.OPENWORK_RUNTIME_DB = join(root, "runtime.sqlite");
+  process.env.OFFLINEGPT_RUNTIME_DB = join(root, "runtime.sqlite");
   return {
     host: "127.0.0.1",
     port: 0,
     token: "test",
     hostToken: "host",
-    configPath: join(root, "openwork.json"),
+    configPath: join(root, "offlinegpt.json"),
     approval: { mode: "auto", timeoutMs: 1_000 },
     corsOrigins: ["*"],
     workspaces: [{ id: "ws_1", name: "One", path: root, preset: "starter", workspaceType: "local" }],
@@ -54,11 +54,11 @@ async function fixtureConfig(): Promise<ServerConfig> {
 
 function indexFetcher(
   requests: Array<{ url: string; headers: Headers; body: Record<string, unknown> }>,
-  servers: Array<Partial<OpenWorkConnectMcpServerIndex["servers"][number]>> = [{
+  servers: Array<Partial<OfflineGPTConnectMcpServerIndex["servers"][number]>> = [{
     connectionId: "emc_01k28e8q8pf8r9sff9mhyqxved",
     name: "Project Atlas",
     description: null,
-    url: "https://api.openworklabs.com/mcp/agent/connections/emc_01k28e8q8pf8r9sff9mhyqxved",
+    url: "https://api.offlinegptlabs.com/mcp/agent/connections/emc_01k28e8q8pf8r9sff9mhyqxved",
   }],
 ) {
   return async (url: string, init?: RequestInit) => {
@@ -76,7 +76,7 @@ function indexFetcher(
           uri: CONNECT_MCP_SERVER_INDEX_URI,
           mimeType: "application/json",
           text: JSON.stringify({
-            schemaVersion: "openwork.connect/mcp-servers/1",
+            schemaVersion: "offlinegpt.connect/mcp-servers/1",
             servers,
           }),
         }],
@@ -85,12 +85,12 @@ function indexFetcher(
   };
 }
 
-describe("OpenWork Connect MCP server catalog", () => {
+describe("OfflineGPT Connect MCP server catalog", () => {
   test("reads the member catalog through an authenticated MCP resource", async () => {
     const requests: Array<{ url: string; headers: Headers; body: Record<string, unknown> }> = [];
-    const index = await readOpenWorkConnectMcpServerIndex({
+    const index = await readOfflineGPTConnectMcpServerIndex({
       type: "remote",
-      url: "https://api.openworklabs.com/mcp/agent",
+      url: "https://api.offlinegptlabs.com/mcp/agent",
       headers: { Authorization: "Bearer member-token" },
     }, "Bearer private-app-host-token", indexFetcher(requests));
 
@@ -106,32 +106,32 @@ describe("OpenWork Connect MCP server catalog", () => {
   });
 
   test("keeps hosted api-origin provider proxies on the credential-bound app gateway origin", async () => {
-    const index = await readOpenWorkConnectMcpServerIndex({
+    const index = await readOfflineGPTConnectMcpServerIndex({
       type: "remote",
-      url: "https://app.openworklabs.com/api/den/mcp/agent",
+      url: "https://app.offlinegptlabs.com/api/den/mcp/agent",
     }, "Bearer private-app-host-token", indexFetcher([]));
 
     expect(index?.servers[0]?.url).toBe(
-      "https://app.openworklabs.com/api/den/mcp/agent/connections/emc_01k28e8q8pf8r9sff9mhyqxved",
+      "https://app.offlinegptlabs.com/api/den/mcp/agent/connections/emc_01k28e8q8pf8r9sff9mhyqxved",
     );
   });
 
-  test("reconciles only OpenWork-owned proxy entries and preserves user MCPs", async () => {
+  test("reconciles only OfflineGPT-owned proxy entries and preserves user MCPs", async () => {
     const config = await fixtureConfig();
     await writeRuntimeOpencodeConfig(config, "ws_1", () => ({
       mcp: {
-        "openwork-cloud": { type: "remote", url: "https://api.openworklabs.com/mcp/agent" },
+        "offlinegpt-cloud": { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent" },
         "user-server": { type: "remote", url: "https://user.example/mcp" },
-        "openwork-connect-stale": { type: "remote", url: "https://cloud.example/stale" },
+        "offlinegpt-connect-stale": { type: "remote", url: "https://cloud.example/stale" },
       },
     }));
     const connectionId = "emc_01k28e8q8pf8r9sff9mhyqxved";
-    const result = await reconcileOpenWorkConnectMcpServers({
+    const result = await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
       cloudMcp: {
         type: "remote",
-        url: "https://api.openworklabs.com/mcp/agent",
+        url: "https://api.offlinegptlabs.com/mcp/agent",
         headers: { Authorization: "Bearer member-token" },
       },
       appHostAuthorization: "Bearer private-app-host-token",
@@ -143,20 +143,20 @@ describe("OpenWork Connect MCP server catalog", () => {
       status: "synced",
       appHostNames: [connectMcpAppHostName(connectionId)],
       directNames: [],
-      removedNames: ["openwork-connect-stale"],
+      removedNames: ["offlinegpt-connect-stale"],
     });
-    expect(runtime.mcp?.["openwork-cloud"]).toEqual({ type: "remote", url: "https://api.openworklabs.com/mcp/agent" });
+    expect(runtime.mcp?.["offlinegpt-cloud"]).toEqual({ type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent" });
     expect(runtime.mcp?.["user-server"]).toEqual({ type: "remote", url: "https://user.example/mcp" });
-    expect(runtime.mcp?.["openwork-connect-stale"]).toBeUndefined();
-    expect(Object.keys(runtime.mcp ?? {}).some((name) => name.startsWith("openwork-connect-"))).toBe(false);
-    expect(Object.keys(runtime.mcp ?? {}).some((name) => name.startsWith("openwork-direct-"))).toBe(false);
-    expect(await readOpenWorkConnectMcpAppHostCatalog(config, "ws_1")).toEqual({
-      schemaVersion: "openwork.connect/mcp-servers/1",
+    expect(runtime.mcp?.["offlinegpt-connect-stale"]).toBeUndefined();
+    expect(Object.keys(runtime.mcp ?? {}).some((name) => name.startsWith("offlinegpt-connect-"))).toBe(false);
+    expect(Object.keys(runtime.mcp ?? {}).some((name) => name.startsWith("offlinegpt-direct-"))).toBe(false);
+    expect(await readOfflineGPTConnectMcpAppHostCatalog(config, "ws_1")).toEqual({
+      schemaVersion: "offlinegpt.connect/mcp-servers/1",
       servers: [{
         connectionId,
         name: "Project Atlas",
         description: null,
-        url: `https://api.openworklabs.com/mcp/agent/connections/${connectionId}`,
+        url: `https://api.offlinegptlabs.com/mcp/agent/connections/${connectionId}`,
         exposeDirectly: false,
       }],
     });
@@ -168,27 +168,27 @@ describe("OpenWork Connect MCP server catalog", () => {
     const boundedId = "emc_01bounded";
     const direct = { connectionId: directId, name: "Linear (Engineering)" };
     const directName = connectDirectMcpRuntimeName(direct);
-    expect(directName).toMatch(/^openwork-direct-linear-engineering-[0-9a-f]{6}$/);
+    expect(directName).toMatch(/^offlinegpt-direct-linear-engineering-[0-9a-f]{6}$/);
     await writeRuntimeOpencodeConfig(config, "ws_1", () => ({
       mcp: {
         "user-server": { type: "remote", url: "https://user.example/mcp" },
-        "openwork-direct-revoked-abc123": { type: "remote", url: "https://api.openworklabs.com/mcp/agent/connections/emc_01revoked" },
+        "offlinegpt-direct-revoked-abc123": { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent/connections/emc_01revoked" },
       },
     }));
     const cloudMcp = {
       type: "remote",
-      url: "https://api.openworklabs.com/mcp/agent",
+      url: "https://api.offlinegptlabs.com/mcp/agent",
       enabled: true,
       headers: { Authorization: "Bearer member-token" },
     };
-    const result = await reconcileOpenWorkConnectMcpServers({
+    const result = await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
       cloudMcp,
       appHostAuthorization: "Bearer private-app-host-token",
       fetcher: indexFetcher([], [
-        { ...direct, description: null, url: `https://api.openworklabs.com/mcp/agent/connections/${directId}`, exposeDirectly: true },
-        { connectionId: boundedId, name: "Bounded", description: null, url: `https://api.openworklabs.com/mcp/agent/connections/${boundedId}` },
+        { ...direct, description: null, url: `https://api.offlinegptlabs.com/mcp/agent/connections/${directId}`, exposeDirectly: true },
+        { connectionId: boundedId, name: "Bounded", description: null, url: `https://api.offlinegptlabs.com/mcp/agent/connections/${boundedId}` },
       ]),
     });
 
@@ -196,29 +196,29 @@ describe("OpenWork Connect MCP server catalog", () => {
       status: "synced",
       appHostNames: [connectMcpAppHostName(boundedId), connectMcpAppHostName(directId)].sort(),
       directNames: [directName],
-      removedNames: ["openwork-direct-revoked-abc123"],
+      removedNames: ["offlinegpt-direct-revoked-abc123"],
     });
     const runtime = await readRuntimeOpencodeConfig(config, "ws_1");
     expect(runtime.mcp?.[directName]).toEqual({
       type: "remote",
-      url: `https://api.openworklabs.com/mcp/agent/connections/${directId}`,
+      url: `https://api.offlinegptlabs.com/mcp/agent/connections/${directId}`,
       enabled: true,
       headers: { Authorization: "Bearer member-token" },
       oauth: false,
     });
-    expect(runtime.mcp?.["openwork-direct-revoked-abc123"]).toBeUndefined();
+    expect(runtime.mcp?.["offlinegpt-direct-revoked-abc123"]).toBeUndefined();
     expect(runtime.mcp?.["user-server"]).toEqual({ type: "remote", url: "https://user.example/mcp" });
-    expect(Object.keys(runtime.mcp ?? {}).filter((name) => name.startsWith("openwork-direct-"))).toEqual([directName]);
+    expect(Object.keys(runtime.mcp ?? {}).filter((name) => name.startsWith("offlinegpt-direct-"))).toEqual([directName]);
     expect(JSON.stringify(runtime.mcp)).not.toContain("private-app-host-token");
 
     // Turning the flag off removes the entry on the next reconcile.
-    const revoked = await reconcileOpenWorkConnectMcpServers({
+    const revoked = await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
       cloudMcp,
       appHostAuthorization: "Bearer private-app-host-token",
       fetcher: indexFetcher([], [
-        { ...direct, description: null, url: `https://api.openworklabs.com/mcp/agent/connections/${directId}`, exposeDirectly: false },
+        { ...direct, description: null, url: `https://api.offlinegptlabs.com/mcp/agent/connections/${directId}`, exposeDirectly: false },
       ]),
     });
     expect(revoked.directNames).toEqual([]);
@@ -229,13 +229,13 @@ describe("OpenWork Connect MCP server catalog", () => {
   test("a flagged connection is not projected when the Cloud entry carries no member credential", async () => {
     const config = await fixtureConfig();
     const directId = "emc_01direct";
-    const result = await reconcileOpenWorkConnectMcpServers({
+    const result = await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
-      cloudMcp: { type: "remote", url: "https://api.openworklabs.com/mcp/agent" },
+      cloudMcp: { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent" },
       appHostAuthorization: "Bearer private-app-host-token",
       fetcher: indexFetcher([], [
-        { connectionId: directId, name: "Linear", description: null, url: `https://api.openworklabs.com/mcp/agent/connections/${directId}`, exposeDirectly: true },
+        { connectionId: directId, name: "Linear", description: null, url: `https://api.offlinegptlabs.com/mcp/agent/connections/${directId}`, exposeDirectly: true },
       ]),
     });
     expect(result.status).toBe("synced");
@@ -246,21 +246,21 @@ describe("OpenWork Connect MCP server catalog", () => {
   test("an unavailable index purges directly exposed entries instead of trusting a stale catalog", async () => {
     const config = await fixtureConfig();
     await writeRuntimeOpencodeConfig(config, "ws_1", () => ({
-      mcp: { "openwork-direct-linear-abc123": { type: "remote", url: "https://api.openworklabs.com/mcp/agent/connections/emc_01x" } },
+      mcp: { "offlinegpt-direct-linear-abc123": { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent/connections/emc_01x" } },
     }));
-    const result = await reconcileOpenWorkConnectMcpServers({
+    const result = await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
-      cloudMcp: { type: "remote", url: "https://api.openworklabs.com/mcp/agent" },
+      cloudMcp: { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent" },
       fetcher: async () => new Response(null, { status: 404 }),
     });
     expect(result).toEqual({
       status: "unavailable",
       appHostNames: [],
       directNames: [],
-      removedNames: ["openwork-direct-linear-abc123"],
+      removedNames: ["offlinegpt-direct-linear-abc123"],
     });
-    expect((await readRuntimeOpencodeConfig(config, "ws_1")).mcp?.["openwork-direct-linear-abc123"]).toBeUndefined();
+    expect((await readRuntimeOpencodeConfig(config, "ws_1")).mcp?.["offlinegpt-direct-linear-abc123"]).toBeUndefined();
   });
 
   test("opportunistically refreshes a stale private catalog from the runtime Cloud endpoint", async () => {
@@ -269,20 +269,20 @@ describe("OpenWork Connect MCP server catalog", () => {
     const requests: Array<{ url: string; headers: Headers; body: Record<string, unknown> }> = [];
     await writeRuntimeOpencodeConfig(config, "ws_1", () => ({
       mcp: {
-        "openwork-cloud": { type: "remote", url: "https://api.openworklabs.com/mcp/agent" },
+        "offlinegpt-cloud": { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent" },
       },
     }));
-    await writeOpenWorkConnectMcpAppHostAuthorization(
+    await writeOfflineGPTConnectMcpAppHostAuthorization(
       config,
       "ws_1",
       "Bearer private-app-host-token",
-      "https://api.openworklabs.com/mcp/agent",
+      "https://api.offlinegptlabs.com/mcp/agent",
     );
 
-    const result = await refreshOpenWorkConnectMcpAppHostCatalog(config, "ws_1", indexFetcher(requests));
+    const result = await refreshOfflineGPTConnectMcpAppHostCatalog(config, "ws_1", indexFetcher(requests));
 
     expect(result).toEqual({ status: "synced", appHostNames: [connectMcpAppHostName(connectionId)] });
-    expect((await readOpenWorkConnectMcpAppHostCatalog(config, "ws_1")).servers[0]?.connectionId).toBe(connectionId);
+    expect((await readOfflineGPTConnectMcpAppHostCatalog(config, "ws_1")).servers[0]?.connectionId).toBe(connectionId);
     expect(requests.every((request) => request.headers.get("authorization") === "Bearer private-app-host-token")).toBe(true);
   });
 
@@ -291,69 +291,69 @@ describe("OpenWork Connect MCP server catalog", () => {
     const connectionId = "emc_01lastknowngood";
     await writeRuntimeOpencodeConfig(config, "ws_1", () => ({
       mcp: {
-        "openwork-cloud": { type: "remote", url: "https://api.openworklabs.com/mcp/agent" },
+        "offlinegpt-cloud": { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent" },
       },
     }));
-    await writeOpenWorkConnectMcpAppHostAuthorization(
+    await writeOfflineGPTConnectMcpAppHostAuthorization(
       config,
       "ws_1",
       "Bearer private-app-host-token",
-      "https://api.openworklabs.com/mcp/agent",
+      "https://api.offlinegptlabs.com/mcp/agent",
     );
-    await writeOpenWorkConnectMcpAppHostCatalog(config, "ws_1", {
-      schemaVersion: "openwork.connect/mcp-servers/1",
+    await writeOfflineGPTConnectMcpAppHostCatalog(config, "ws_1", {
+      schemaVersion: "offlinegpt.connect/mcp-servers/1",
       servers: [{
         connectionId,
         name: "Last known good",
         description: null,
-        url: `https://api.openworklabs.com/mcp/agent/connections/${connectionId}`,
+        url: `https://api.offlinegptlabs.com/mcp/agent/connections/${connectionId}`,
         exposeDirectly: false,
       }],
     });
 
-    const result = await refreshOpenWorkConnectMcpAppHostCatalog(
+    const result = await refreshOfflineGPTConnectMcpAppHostCatalog(
       config,
       "ws_1",
       async () => new Response(null, { status: 503 }),
     );
 
     expect(result).toEqual({ status: "unavailable", appHostNames: [] });
-    expect((await readOpenWorkConnectMcpAppHostCatalog(config, "ws_1")).servers[0]?.connectionId).toBe(connectionId);
+    expect((await readOfflineGPTConnectMcpAppHostCatalog(config, "ws_1")).servers[0]?.connectionId).toBe(connectionId);
   });
 
   test("fails closed and purges prior runtime entries when Cloud has no index", async () => {
     const config = await fixtureConfig();
     await writeRuntimeOpencodeConfig(config, "ws_1", () => ({
-      mcp: { "openwork-connect-existing": { type: "remote", url: "https://cloud.example/existing" } },
+      mcp: { "offlinegpt-connect-existing": { type: "remote", url: "https://cloud.example/existing" } },
     }));
-    const result = await reconcileOpenWorkConnectMcpServers({
+    const result = await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
-      cloudMcp: { type: "remote", url: "https://api.openworklabs.com/mcp/agent" },
+      cloudMcp: { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent" },
       fetcher: async () => new Response(null, { status: 404 }),
     });
     expect(result).toEqual({
       status: "unavailable",
       appHostNames: [],
       directNames: [],
-      removedNames: ["openwork-connect-existing"],
+      removedNames: ["offlinegpt-connect-existing"],
     });
-    expect((await readRuntimeOpencodeConfig(config, "ws_1")).mcp?.["openwork-connect-existing"]).toBeUndefined();
-    expect((await readOpenWorkConnectMcpAppHostCatalog(config, "ws_1")).servers).toEqual([]);
+    expect((await readRuntimeOpencodeConfig(config, "ws_1")).mcp?.["offlinegpt-connect-existing"]).toBeUndefined();
+    expect((await readOfflineGPTConnectMcpAppHostCatalog(config, "ws_1")).servers).toEqual([]);
   });
 
-  test("an empty index removes prior OpenWork-owned provider servers", async () => {
+  test("an empty index removes prior OfflineGPT-owned provider servers", async () => {
     const config = await fixtureConfig();
     await writeRuntimeOpencodeConfig(config, "ws_1", () => ({
       mcp: {
         "user-server": { type: "remote", url: "https://user.example/mcp" },
-        "openwork-connect-existing": { type: "remote", url: "https://cloud.example/existing" },
+        "offlinegpt-connect-existing": { type: "remote", url: "https://cloud.example/existing" },
       },
     }));
-    const result = await reconcileOpenWorkConnectMcpServers({
+    const result = await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
-      cloudMcp: { type: "remote", url: "https://api.openworklabs.com/mcp/agent" },
+      cloudMcp: { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent" },
       appHostAuthorization: "Bearer private-app-host-token",
       fetcher: indexFetcher([], []),
     });
@@ -362,27 +362,27 @@ describe("OpenWork Connect MCP server catalog", () => {
       status: "synced",
       appHostNames: [],
       directNames: [],
-      removedNames: ["openwork-connect-existing"],
+      removedNames: ["offlinegpt-connect-existing"],
     });
     const runtime = await readRuntimeOpencodeConfig(config, "ws_1");
-    expect(runtime.mcp?.["openwork-connect-existing"]).toBeUndefined();
+    expect(runtime.mcp?.["offlinegpt-connect-existing"]).toBeUndefined();
     expect(runtime.mcp?.["user-server"]).toEqual({ type: "remote", url: "https://user.example/mcp" });
   });
 
   test("never sends the persisted App-host credential to an untrusted reconcile endpoint", async () => {
     const config = await fixtureConfig();
     const trustedRequests: Array<{ url: string; headers: Headers; body: Record<string, unknown> }> = [];
-    await reconcileOpenWorkConnectMcpServers({
+    await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
-      cloudMcp: { type: "remote", url: "https://api.openworklabs.com/mcp/agent" },
+      cloudMcp: { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent" },
       appHostAuthorization: "Bearer private-app-host-token",
       fetcher: indexFetcher(trustedRequests),
     });
     expect(trustedRequests.length).toBeGreaterThan(0);
 
     let untrustedRequests = 0;
-    const result = await reconcileOpenWorkConnectMcpServers({
+    const result = await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
       cloudMcp: { type: "remote", url: "https://attacker.example/mcp/agent" },
@@ -394,15 +394,15 @@ describe("OpenWork Connect MCP server catalog", () => {
 
     expect(untrustedRequests).toBe(0);
     expect(result.status).toBe("unavailable");
-    expect((await readOpenWorkConnectMcpAppHostCatalog(config, "ws_1")).servers).toEqual([]);
+    expect((await readOfflineGPTConnectMcpAppHostCatalog(config, "ws_1")).servers).toEqual([]);
   });
 
   test("rejects a catalog that points the private App-host credential at another origin", async () => {
     const config = await fixtureConfig();
-    const result = await reconcileOpenWorkConnectMcpServers({
+    const result = await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
-      cloudMcp: { type: "remote", url: "https://api.openworklabs.com/mcp/agent" },
+      cloudMcp: { type: "remote", url: "https://api.offlinegptlabs.com/mcp/agent" },
       appHostAuthorization: "Bearer private-app-host-token",
       fetcher: indexFetcher([], [{
         connectionId: "emc_01crossorigin",
@@ -413,25 +413,25 @@ describe("OpenWork Connect MCP server catalog", () => {
     });
 
     expect(result).toEqual({ status: "unavailable", appHostNames: [], directNames: [], removedNames: [] });
-    expect((await readOpenWorkConnectMcpAppHostCatalog(config, "ws_1")).servers).toEqual([]);
+    expect((await readOfflineGPTConnectMcpAppHostCatalog(config, "ws_1")).servers).toEqual([]);
   });
 
   test("rejects a hosted api-origin descriptor that is not the exact connection proxy", async () => {
     const config = await fixtureConfig();
-    const result = await reconcileOpenWorkConnectMcpServers({
+    const result = await reconcileOfflineGPTConnectMcpServers({
       config,
       workspace: config.workspaces[0]!,
-      cloudMcp: { type: "remote", url: "https://app.openworklabs.com/api/den/mcp/agent" },
+      cloudMcp: { type: "remote", url: "https://app.offlinegptlabs.com/api/den/mcp/agent" },
       appHostAuthorization: "Bearer private-app-host-token",
       fetcher: indexFetcher([], [{
         connectionId: "emc_01crossorigin",
         name: "Wrong proxy path",
         description: null,
-        url: "https://api.openworklabs.com/mcp/agent/connections/another-connection",
+        url: "https://api.offlinegptlabs.com/mcp/agent/connections/another-connection",
       }]),
     });
 
     expect(result).toEqual({ status: "unavailable", appHostNames: [], directNames: [], removedNames: [] });
-    expect((await readOpenWorkConnectMcpAppHostCatalog(config, "ws_1")).servers).toEqual([]);
+    expect((await readOfflineGPTConnectMcpAppHostCatalog(config, "ws_1")).servers).toEqual([]);
   });
 });

@@ -26,7 +26,7 @@ if (current.stdout.trim() !== sha) {
     "Source run is no longer current; existing evidence is unchanged.",
   );
 } else {
-  const directory = await mkdtemp(join(tmpdir(), "openwork-review-"));
+  const directory = await mkdtemp(join(tmpdir(), "offlinegpt-review-"));
   try {
     const download = spawnSync(
       "gh",

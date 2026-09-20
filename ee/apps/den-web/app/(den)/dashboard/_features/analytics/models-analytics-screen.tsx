@@ -31,10 +31,10 @@ export function ModelsAnalyticsScreen() {
 
   return <div className={analyticsPageClass}>
     <AnalyticsPageHeader orgSlug={activeOrg?.slug} active="models" title="Models & usage"
-      description="Understand your team’s OpenWork Models activity, consumption, and shared limits."
-      caption="Included with OpenWork Models · Task analytics requires your team’s opt-in" />
+      description="Understand your team’s OfflineGPT Models activity, consumption, and shared limits."
+      caption="Included with OfflineGPT Models · Task analytics requires your team’s opt-in" />
     {!runtimeConfigLoaded ? <p role="status">Loading model usage…</p> : !hosted ? (
-      <div className={analyticsSurfaceClass}><AnalyticsEmptyState title="OpenWork Models is available on OpenWork Cloud">
+      <div className={analyticsSurfaceClass}><AnalyticsEmptyState title="OfflineGPT Models is available on OfflineGPT Cloud">
         Usage &amp; adoption covers activity across your connected providers.
       </AnalyticsEmptyState></div>
     ) : <>
@@ -44,9 +44,9 @@ export function ModelsAnalyticsScreen() {
         <UsageLimitsCard buckets={status.data.buckets} />
         <ModelsAnalyticsPanel key={orgContext?.organization.id} />
       </> : status.data ? <div className={analyticsSurfaceClass}>
-        <AnalyticsEmptyState title="Model insights are included with OpenWork Models"
-          action={<DenButton href={getInferenceRoute(activeOrg?.slug)}>Set up OpenWork Models</DenButton>}>
-          Enable OpenWork Models for your workspace to see shared limits and choose whether to collect task analytics.
+        <AnalyticsEmptyState title="Model insights are included with OfflineGPT Models"
+          action={<DenButton href={getInferenceRoute(activeOrg?.slug)}>Set up OfflineGPT Models</DenButton>}>
+          Enable OfflineGPT Models for your workspace to see shared limits and choose whether to collect task analytics.
         </AnalyticsEmptyState>
       </div> : null}
     </>}

@@ -1,5 +1,5 @@
 {
-  "name": "@openwork/email",
+  "name": "@offlinegpt/email",
   "private": true,
   "type": "module",
   "exports": {

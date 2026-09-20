@@ -1,4 +1,4 @@
-import type { Seed } from "@openwork/env";
+import type { Seed } from "@offlinegpt/env";
 
 export async function emptySession(seed: Seed) {
   const workspacePath = seed.tmpPath("empty-session");

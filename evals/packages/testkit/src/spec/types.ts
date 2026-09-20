@@ -1,12 +1,12 @@
-import type { DenSession, DenFetchResult, FieldTypingOptions } from "@openwork/behaviors";
-import type { BrowserEvaluation, Surface, Target } from "@openwork/cdp";
+import type { DenSession, DenFetchResult, FieldTypingOptions } from "@offlinegpt/behaviors";
+import type { BrowserEvaluation, Surface, Target } from "@offlinegpt/cdp";
 import type {
   MockHandle,
   Place,
   Seed,
   TestNeeds,
-} from "@openwork/env";
-import type { ScreenshotArtifact, StepRecord, TestEvidenceRecorder, TestOutcome, TraceEntry } from "@openwork/test-evidence";
+} from "@offlinegpt/env";
+import type { ScreenshotArtifact, StepRecord, TestEvidenceRecorder, TestOutcome, TraceEntry } from "@offlinegpt/test-evidence";
 import type { TestAPI } from "vitest";
 import type { EventuallyOptions } from "../eventually.ts";
 
@@ -51,7 +51,7 @@ export interface User {
 }
 
 export interface Agent {
-  browserTask(input: import("@openwork/behaviors").BrowserTaskInput): Promise<import("@openwork/behaviors").BrowserTaskReply>;
+  browserTask(input: import("@offlinegpt/behaviors").BrowserTaskInput): Promise<import("@offlinegpt/behaviors").BrowserTaskReply>;
   browserRequest(input: { url: string; method?: string; body?: string }): Promise<{ reached: boolean; error?: string }>;
   desktopApi(path: string, input: { method: string; body?: unknown }): Promise<{ status: number; body: unknown }>;
   run(action: string, args?: unknown): Promise<unknown>;
@@ -63,14 +63,14 @@ export interface Agent {
 }
 
 export interface Probe {
-  browserState(): Promise<import("@openwork/behaviors").BrowserState>;
-  browserTabMetrics(targetId: string): ReturnType<typeof import("@openwork/behaviors").readBrowserTabMetrics>;
-  browserFixtureState(origin: string): Promise<import("@openwork/env").BrowserFixtureState>;
+  browserState(): Promise<import("@offlinegpt/behaviors").BrowserState>;
+  browserTabMetrics(targetId: string): ReturnType<typeof import("@offlinegpt/behaviors").readBrowserTabMetrics>;
+  browserFixtureState(origin: string): Promise<import("@offlinegpt/env").BrowserFixtureState>;
   text(): Promise<string>;
   /** Fixed, read-only DOM projection for layout, focus and element presence assertions. */
-  dom(selector: string): ReturnType<typeof import("@openwork/cdp").readDom>;
+  dom(selector: string): ReturnType<typeof import("@offlinegpt/cdp").readDom>;
   has(text: string): Promise<boolean>;
-  composer(): ReturnType<typeof import("@openwork/behaviors").readComposerState>;
+  composer(): ReturnType<typeof import("@offlinegpt/behaviors").readComposerState>;
   storage(key: string): Promise<unknown>;
   storage<T>(key: string, pick: (value: unknown) => T): Promise<T>;
   hash(): Promise<string>;
@@ -127,4 +127,4 @@ export interface SpecWorldOptions {
   adapters?: SpecAdapters;
 }
 
-export type { OrgConnectionInput, Seed, SeedDesktopOptions, SeedWebOptions } from "@openwork/env";
+export type { OrgConnectionInput, Seed, SeedDesktopOptions, SeedWebOptions } from "@offlinegpt/env";

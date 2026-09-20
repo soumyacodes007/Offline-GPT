@@ -1,6 +1,6 @@
-import { and, desc, eq, isNull } from "@openwork-ee/den-db/drizzle"
-import { AuthUserTable, InvitationTable, MemberTable, OrganizationTable } from "@openwork-ee/den-db/schema"
-import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+import { and, desc, eq, isNull } from "@offlinegpt-ee/den-db/drizzle"
+import { AuthUserTable, InvitationTable, MemberTable, OrganizationTable } from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
@@ -336,7 +336,7 @@ export function registerOrgInvitationRoutes<T extends { Variables: OrgRouteVaria
         template: "organizationInvite",
         props: {
           inviteLink: buildInvitationLink(inviteToken),
-          invitedByName: user.name ?? user.email ?? "OpenWork",
+          invitedByName: user.name ?? user.email ?? "OfflineGPT",
           invitedByEmail: user.email ?? "",
           organizationName: payload.organization.name,
           role: assignedRole,

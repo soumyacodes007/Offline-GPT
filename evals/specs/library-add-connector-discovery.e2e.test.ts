@@ -1,13 +1,13 @@
-import { browserScript } from "@openwork/testkit";
+import { browserScript } from "@offlinegpt/testkit";
 import { expect } from "vitest";
-import { denFetch, evalIn, go, waitFor } from "@openwork/behaviors";
-import type { DenSession } from "@openwork/behaviors";
-import { screenshot, validate } from "@openwork/test-evidence";
-import { app, needs, server, test, unmetNeeds } from "@openwork/testkit";
-import type { TestNeeds } from "@openwork/testkit";
+import { denFetch, evalIn, go, waitFor } from "@offlinegpt/behaviors";
+import type { DenSession } from "@offlinegpt/behaviors";
+import { screenshot, validate } from "@offlinegpt/test-evidence";
+import { app, needs, server, test, unmetNeeds } from "@offlinegpt/testkit";
+import type { TestNeeds } from "@offlinegpt/testkit";
 
 const requirements: TestNeeds = {
-  optIn: ["OPENWORK_EVAL_E2E_TESTS"],
+  optIn: ["OFFLINEGPT_EVAL_E2E_TESTS"],
 };
 const missingRequirements = unmetNeeds(requirements, process.env);
 const title = missingRequirements.length > 0
@@ -89,10 +89,10 @@ test(title, async ({ evidence, place }) => {
 
   const bootstrap = await evalIn(
     desktop,
-    () => (window.__OPENWORK_ELECTRON__.invokeDesktop("getDesktopBootstrapConfig")
+    () => (window.__OFFLINEGPT_ELECTRON__.invokeDesktop("getDesktopBootstrapConfig")
       .then((config) => ({
         baseUrl: config.baseUrl,
-        activeOrgId: localStorage.getItem("openwork.den.activeOrgId"),
+        activeOrgId: localStorage.getItem("offlinegpt.den.activeOrgId"),
       }))),
     { awaitPromise: true },
   );
@@ -144,7 +144,7 @@ test(title, async ({ evidence, place }) => {
       radioGroups: dialog?.querySelectorAll<HTMLElement>('[role="radiogroup"]').length ?? 0,
       oldMakeSection: dialog?.textContent?.includes('WHAT ARE YOU MAKING') ?? false,
       oldConnectSection: dialog?.textContent?.includes('OR CONNECT SOMETHING') ?? false,
-      opensDenCopy: dialog?.textContent?.includes('manage setup for this organization in OpenWork Den') ?? false,
+      opensDenCopy: dialog?.textContent?.includes('manage setup for this organization in OfflineGPT Den') ?? false,
       cues: cueTiles.map((item) => item.getAttribute('title')),
       logoLabels: dialog
         ? [...dialog.querySelectorAll<HTMLElement>('[data-connector-cue] img, [data-connector-cue] [aria-label]')]
@@ -259,7 +259,7 @@ test(title, async ({ evidence, place }) => {
     const shot = await screenshot(desktop);
     const seen = await validate(shot, [
       "The Add to your Library dialog is visibly rendered in a dark theme",
-      "Connection is the selected choice and remains in the same continuous list as the OpenWork creation and MCP choices",
+      "Connection is the selected choice and remains in the same continuous list as the OfflineGPT creation and MCP choices",
       "The Connection choice visibly includes recognizable marks for Notion, Slack, Google Workspace, Microsoft 365, and Linear",
       "The dark-theme dialog, all five choices, descriptions, connector marks, Cancel button, and Continue button fit within the desktop viewport without clipping",
     ]);

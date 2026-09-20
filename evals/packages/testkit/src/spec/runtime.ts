@@ -1,6 +1,6 @@
-import type { BrowserEvaluation, EvaluateOptions } from "@openwork/cdp";
-import { browserScript } from "@openwork/cdp";
-import { typeWithCadence, typingPlan } from "@openwork/behaviors";
+import type { BrowserEvaluation, EvaluateOptions } from "@offlinegpt/cdp";
+import { browserScript } from "@offlinegpt/cdp";
+import { typeWithCadence, typingPlan } from "@offlinegpt/behaviors";
 import {
   control,
   createNativeConnector,
@@ -14,7 +14,7 @@ import {
   renameSessionAndWait,
   signInDesktopAs,
   waitUntilInteractive,
-} from "@openwork/behaviors";
+} from "@offlinegpt/behaviors";
 import {
   callFunctionOnSurface,
   addInitScript,
@@ -32,8 +32,8 @@ import {
   setViewport,
   typeText,
   waitForLocated,
-} from "@openwork/cdp";
-import type { Located, Surface, Target } from "@openwork/cdp";
+} from "@offlinegpt/cdp";
+import type { Located, Surface, Target } from "@offlinegpt/cdp";
 import {
   app as startApp,
   faultProxy as startFaultProxy,
@@ -42,11 +42,11 @@ import {
   requestBrowserTask,
   readBrowserFixtureState,
   setBrowserFixtureDiscovery,
-} from "@openwork/env";
-import type { Den, Place } from "@openwork/env";
-import { chrome, desktop } from "@openwork/hosts";
-import { expectVisualEvidence } from "@openwork/test-evidence/vitest";
-import { screenshot, validate } from "@openwork/test-evidence";
+} from "@offlinegpt/env";
+import type { Den, Place } from "@offlinegpt/env";
+import { chrome, desktop } from "@offlinegpt/hosts";
+import { expectVisualEvidence } from "@offlinegpt/test-evidence/vitest";
+import { screenshot, validate } from "@offlinegpt/test-evidence";
 import type {
   StepRecord,
   StepRecordInput,
@@ -55,7 +55,7 @@ import type {
   TraceChannel,
   TraceEntry,
   TraceEntryInput,
-} from "@openwork/test-evidence";
+} from "@offlinegpt/test-evidence";
 import { eventually } from "../eventually.ts";
 import { denLink as startDenLink } from "../link.ts";
 import { readConnectState } from "../state.ts";
@@ -224,7 +224,7 @@ async function waitForControlAction(surface: Surface, action: string, timeoutMs 
   await waitForControlRail(surface, action, Math.max(1, deadline - Date.now()));
   while (Date.now() < deadline) {
     try {
-      const actions = await evalIn(surface, () => (window.__openworkControl?.listActions?.() ?? null), {
+      const actions = await evalIn(surface, () => (window.__offlinegptControl?.listActions?.() ?? null), {
         timeoutMs: Math.min(2_000, Math.max(1, deadline - Date.now())),
       });
       if (Array.isArray(actions) && actions.some((entry) => isRecord(entry) && entry.id === action && entry.disabled !== true)) return;
@@ -423,7 +423,7 @@ export class SeedChannel implements Seed {
     this.#runtime = runtime;
   }
 
-  den(options: Omit<import("@openwork/env").ServerOptions, "place"> = {}): Promise<Den> {
+  den(options: Omit<import("@offlinegpt/env").ServerOptions, "place"> = {}): Promise<Den> {
     return this.#runtime.call("seed", "den", `den(${this.#runtime.place.kind})`, null, async () => {
       const den = await server({ ...options, place: this.#runtime.place });
       return this.#runtime.stack.use(den);
@@ -462,7 +462,7 @@ export class SeedChannel implements Seed {
         host: this.#runtime.place.host(),
         profileDir: options.profileDir,
         env: options.model
-          ? { ...options.env, OPENWORK_EVAL_MODEL: options.model }
+          ? { ...options.env, OFFLINEGPT_EVAL_MODEL: options.model }
           : options.env,
       }));
       if (options.workspacePath) await this.workspace(app, options.workspacePath);
@@ -487,7 +487,7 @@ export class SeedChannel implements Seed {
         const denOrigin = new URL(options.den.ref.webUrl).origin;
         // Seed before hydration: a running anonymous page can otherwise clear the token.
         await using initialSession = await addInitScript(web.client, browserScript((origin, token) => {
-          if (location.origin === origin) localStorage.setItem("openwork:web:auth-token", token);
+          if (location.origin === origin) localStorage.setItem("offlinegpt:web:auth-token", token);
         }, [denOrigin, session.token]));
         await navigate(web.client, new URL(options.startPath ?? "/", options.den.ref.webUrl).toString());
         await eventually(() => evaluateOnSurface(web, browserScript((origin) =>
@@ -501,11 +501,11 @@ export class SeedChannel implements Seed {
     });
   }
 
-  workspace(app: Surface, path = `/tmp/openwork-spec-${Date.now()}`, options: { create?: boolean } = {}) {
+  workspace(app: Surface, path = `/tmp/offlinegpt-spec-${Date.now()}`, options: { create?: boolean } = {}) {
     return this.#runtime.call("seed", "workspace", `workspace(${path})`, app, async () => {
-      const result = await import("@openwork/behaviors").then(({ createAndSelectWorkspace }) => createAndSelectWorkspace(app, { path, ...options }));
+      const result = await import("@offlinegpt/behaviors").then(({ createAndSelectWorkspace }) => createAndSelectWorkspace(app, { path, ...options }));
       await eventually(() => callFunctionOnSurface(app, (workspaceId) => {
-        const workspace = window.__openwork?.slice?.("route")?.workspaces?.find(item => item.id === workspaceId);
+        const workspace = window.__offlinegpt?.slice?.("route")?.workspaces?.find(item => item.id === workspaceId);
         return workspace ? { exists: true, loading: workspace.loading } : { exists: false };
       }, [result.workspaceId]), {
         within: 60000, intervalMs: 250, label: `workspace ${result.workspaceId} initial session load`,
@@ -541,11 +541,11 @@ export class SeedChannel implements Seed {
     });
   }
 
-  signIn(app: Surface, member: import("@openwork/behaviors").DenSession, identity: string) {
+  signIn(app: Surface, member: import("@offlinegpt/behaviors").DenSession, identity: string) {
     return this.#runtime.call("seed", "signIn", `signIn(${identity})`, app, () => signInDesktopAs(app, member, member));
   }
 
-  api(session: import("@openwork/behaviors").DenSession, path: string, init: RequestInit = {}) {
+  api(session: import("@offlinegpt/behaviors").DenSession, path: string, init: RequestInit = {}) {
     const method = init.method?.toUpperCase() ?? "GET";
     return this.#runtime.call("seed", "api", `[seed] api ${method} ${path}`, null, () => {
       const headers = new Headers(init.headers);
@@ -554,11 +554,11 @@ export class SeedChannel implements Seed {
     });
   }
 
-  orgConnection(admin: import("@openwork/behaviors").DenSession, input: import("./types.ts").OrgConnectionInput) {
+  orgConnection(admin: import("@offlinegpt/behaviors").DenSession, input: import("./types.ts").OrgConnectionInput) {
     return this.#runtime.call("seed", "orgConnection", `orgConnection(${JSON.stringify(input.name)})`, null, () => createOrgConnection(admin, input));
   }
 
-  nativeConnector(admin: import("@openwork/behaviors").DenSession, input: import("@openwork/behaviors").NativeConnectorInput) {
+  nativeConnector(admin: import("@offlinegpt/behaviors").DenSession, input: import("@offlinegpt/behaviors").NativeConnectorInput) {
     return this.#runtime.call("seed", "nativeConnector", `nativeConnector(${JSON.stringify(input.name)})`, null, () => createNativeConnector(admin, input));
   }
 
@@ -576,7 +576,7 @@ export class SeedChannel implements Seed {
     });
   }
 
-  denLink(den: Den, options: import("@openwork/env").SeedDenLinkOptions = {}) {
+  denLink(den: Den, options: import("@offlinegpt/env").SeedDenLinkOptions = {}) {
     return this.#runtime.call("seed", "denLink", `denLink(${options.client ?? "public-preview"})`, null, async () => {
       const link = await startDenLink(den.ref, options);
       return this.#runtime.stack.use(link);
@@ -586,7 +586,7 @@ export class SeedChannel implements Seed {
   tmpPath(label: string): string {
     this.#runtime.checkOrder("seed", "tmpPath");
     return this.#runtime.adapters.seed?.tmpPath?.(label)
-      ?? `/tmp/openwork-${label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
+      ?? `/tmp/offlinegpt-${label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
   }
 
   composerText(app: Surface, text: string) {
@@ -770,7 +770,7 @@ export class AgentChannel implements Agent {
     return new AgentChannel(this.#runtime, surface);
   }
 
-  browserTask(input: import("@openwork/behaviors").BrowserTaskInput) {
+  browserTask(input: import("@offlinegpt/behaviors").BrowserTaskInput) {
     const surface = requireSurface(this.#surface);
     return this.#runtime.call("agent", "browserTask", `browserTask(${input.operation}, session=${input.sessionId}, tab=${input.args?.tabId ?? "owned"})`, surface,
       () => requestBrowserTask(surface, input));
@@ -789,7 +789,7 @@ export class AgentChannel implements Agent {
     const surface = requireSurface(this.#surface);
     return this.#runtime.call("agent", "browserRequest", `browserRequest(${input.method ?? "GET"} ${input.url})`, surface, async () => {
       const handle = await callFunctionOnSurface(surface, async () => {
-        const browser = window.__OPENWORK_ELECTRON__.browser;
+        const browser = window.__OFFLINEGPT_ELECTRON__.browser;
         const state = await browser.getState();
         const tab = state.tabs.find(tab => tab.id === state.activeTabId);
         if (!tab?.ownerSessionId || !tab.url?.startsWith('http')) throw new Error('Select an owned website tab first');
@@ -819,7 +819,7 @@ export class AgentChannel implements Agent {
       if (!path.startsWith("/") || path.startsWith("//") || /[\\\s]/.test(path)) throw new Error("A root-relative server path is required.");
       const value = await callFunctionOnSurface(surface, async (path, encodedInput) => {
         const input = JSON.parse(encodedInput);
-        const info = await window.__OPENWORK_ELECTRON__?.invokeDesktop?.("openworkServerInfo");
+        const info = await window.__OFFLINEGPT_ELECTRON__?.invokeDesktop?.("offlinegptServerInfo");
         if (!info?.running || !info.baseUrl) return { status: 0, body: { error: "local_server_unavailable" } };
         const response = await fetch(String(info.baseUrl).replace(/\/+$/, "") + path, {
           method: input.method,
@@ -865,7 +865,7 @@ export class AgentChannel implements Agent {
     const surface = requireSurface(this.#surface);
     return this.#runtime.call("agent", "actions", "listActions", surface, async () => {
       await waitForControlRail(surface, "listActions");
-      return evaluateOnSurface(surface, () => (window.__openworkControl.listActions()));
+      return evaluateOnSurface(surface, () => (window.__offlinegptControl.listActions()));
     });
   }
 }
@@ -971,7 +971,7 @@ export class ProbeChannel implements Probe {
     return this.#runtime.call("probe", "connectState", "connectState", app, () => readConnectState(app));
   }
 
-  api(session: import("@openwork/behaviors").DenSession, path: string, init: RequestInit = {}) {
+  api(session: import("@offlinegpt/behaviors").DenSession, path: string, init: RequestInit = {}) {
     const method = init.method?.toUpperCase() ?? "GET";
     return this.#runtime.call("probe", "api", `api(GET ${path})`, null, () => {
       if (method !== "GET") throw new Error(`probe.api is read-only; ${method} is not allowed.`);
@@ -988,7 +988,7 @@ export class ProbeChannel implements Probe {
         throw new Error("probe.desktopApi requires a root-relative server path.");
       }
       const value = await callFunctionOnSurface(surface, async (path) => {
-        const info = await window.__OPENWORK_ELECTRON__?.invokeDesktop?.("openworkServerInfo");
+        const info = await window.__OFFLINEGPT_ELECTRON__?.invokeDesktop?.("offlinegptServerInfo");
         if (!info?.running || !info.baseUrl) return { status: 0, body: { error: "local_server_unavailable" } };
         const response = await fetch(String(info.baseUrl).replace(/\/+$/, "") + path, {
           method: "GET",
@@ -1008,7 +1008,7 @@ export class ProbeChannel implements Probe {
     });
   }
 
-  toolCalls(mock: import("@openwork/env").MockHandle, options: Parameters<import("@openwork/env").MockHandle["toolCalls"]>[0] = {}) {
+  toolCalls(mock: import("@offlinegpt/env").MockHandle, options: Parameters<import("@offlinegpt/env").MockHandle["toolCalls"]>[0] = {}) {
     return this.#runtime.call("probe", "toolCalls", `toolCalls(${options.name ?? "any"})`, null, () => mock.toolCalls(options));
   }
 

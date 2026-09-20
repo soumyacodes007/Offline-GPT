@@ -4,9 +4,9 @@ export type DenOrgMode = "single_org" | "multi_org";
 
 export type DenWebRuntimeConfig = {
   denApiUrl: string;
-  openworkAppConnectUrl: string;
-  openworkWebUrl: string;
-  openworkAuthCallbackUrl: string;
+  offlinegptAppConnectUrl: string;
+  offlinegptWebUrl: string;
+  offlinegptAuthCallbackUrl: string;
   orgMode: DenOrgMode;
   singleOrgName: string;
   singleOrgSlug: string;
@@ -14,15 +14,15 @@ export type DenWebRuntimeConfig = {
   singleOrgSsoConfigured: boolean;
 };
 
-export const DEFAULT_OPENWORK_WEB_URL = "https://web.openworklabs.com";
+export const DEFAULT_OFFLINEGPT_WEB_URL = "https://web.offlinegptlabs.com";
 
 export const EMPTY_RUNTIME_CONFIG: DenWebRuntimeConfig = {
   denApiUrl: "",
-  openworkAppConnectUrl: "",
-  openworkWebUrl: DEFAULT_OPENWORK_WEB_URL,
-  openworkAuthCallbackUrl: "",
+  offlinegptAppConnectUrl: "",
+  offlinegptWebUrl: DEFAULT_OFFLINEGPT_WEB_URL,
+  offlinegptAuthCallbackUrl: "",
   orgMode: "single_org",
-  singleOrgName: "OpenWork",
+  singleOrgName: "OfflineGPT",
   singleOrgSlug: "default",
   singleOrgAllowPublicSignup: false,
   singleOrgSsoConfigured: false
@@ -52,11 +52,11 @@ function normalizeRuntimeConfig(value: unknown): DenWebRuntimeConfig {
   const singleOrgSlug = readStringProperty(value, "singleOrgSlug");
   return {
     denApiUrl: readStringProperty(value, "denApiUrl"),
-    openworkAppConnectUrl: readStringProperty(value, "openworkAppConnectUrl"),
-    openworkWebUrl: readStringProperty(value, "openworkWebUrl") || DEFAULT_OPENWORK_WEB_URL,
-    openworkAuthCallbackUrl: readStringProperty(value, "openworkAuthCallbackUrl"),
+    offlinegptAppConnectUrl: readStringProperty(value, "offlinegptAppConnectUrl"),
+    offlinegptWebUrl: readStringProperty(value, "offlinegptWebUrl") || DEFAULT_OFFLINEGPT_WEB_URL,
+    offlinegptAuthCallbackUrl: readStringProperty(value, "offlinegptAuthCallbackUrl"),
     orgMode: normalizeOrgMode(readStringProperty(value, "orgMode")),
-    singleOrgName: singleOrgName || "OpenWork",
+    singleOrgName: singleOrgName || "OfflineGPT",
     singleOrgSlug: singleOrgSlug || "default",
     singleOrgAllowPublicSignup: readBooleanProperty(value, "singleOrgAllowPublicSignup"),
     singleOrgSsoConfigured: readBooleanProperty(value, "singleOrgSsoConfigured")

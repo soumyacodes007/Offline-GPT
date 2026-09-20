@@ -8,11 +8,11 @@ import { SiteFooter } from "../../components/site-footer";
 import { SiteNav } from "../../components/site-nav";
 import { getGithubData } from "../../lib/github";
 
-const CLOUD_SIGNUP_URL = "https://app.openworklabs.com";
+const CLOUD_SIGNUP_URL = "https://app.offlinegptlabs.com";
 const MCP_APPS_URL = "https://github.com/modelcontextprotocol/ext-apps/tree/main";
 
 export const metadata: Metadata = {
-  title: "OpenWork Dashboard — build dashboards out of MCP Apps",
+  title: "OfflineGPT Dashboard — build dashboards out of MCP Apps",
   description:
     "Every MCP App is a widget. Compose a dashboard from the apps your team relies on and share it with the whole organization.",
   alternates: { canonical: "/dashboard" }
@@ -25,7 +25,7 @@ const dashboardFeatures = [
   },
   {
     title: "Open standard",
-    body: "Build to the spec once and it runs in OpenWork and in every other host that implements MCP Apps. Apps built elsewhere work here too."
+    body: "Build to the spec once and it runs in OfflineGPT and in every other host that implements MCP Apps. Apps built elsewhere work here too."
   },
   {
     title: "Private interactions",
@@ -33,7 +33,7 @@ const dashboardFeatures = [
   },
   {
     title: "Build your own",
-    body: "Follow the MCP Apps spec or point your agent at the reference repo. Next up: creating MCP Apps directly inside OpenWork."
+    body: "Follow the MCP Apps spec or point your agent at the reference repo. Next up: creating MCP Apps directly inside OfflineGPT."
   }
 ];
 
@@ -41,7 +41,7 @@ const steps = [
   {
     number: "01",
     title: "Connect an MCP server",
-    body: "Add any MCP server that ships an app under Connectors. OpenWork detects the app automatically."
+    body: "Add any MCP server that ships an app under Connectors. OfflineGPT detects the app automatically."
   },
   {
     number: "02",
@@ -51,7 +51,7 @@ const steps = [
   {
     number: "03",
     title: "Share it",
-    body: "Toggle it on for the organization or specific teams. Members see it the next time they open OpenWork."
+    body: "Toggle it on for the organization or specific teams. Members see it the next time they open OfflineGPT."
   }
 ];
 
@@ -66,7 +66,7 @@ export default async function DashboardPage() {
           stars={github.stars}
           callUrl={callHref}
           mobilePrimaryHref={CLOUD_SIGNUP_URL}
-          mobilePrimaryLabel="Open OpenWork Cloud"
+          mobilePrimaryLabel="Open OfflineGPT Cloud"
           active="dashboard"
         />
 
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
           <section className="pt-16 md:pt-[88px]">
             <div className="flex flex-col justify-between gap-10 lg:flex-row lg:items-end">
               <div className="max-w-[650px]">
-                <div className="mb-5 text-[15px] text-[var(--lp-muted)]">OpenWork Dashboard · Powered by MCP Apps</div>
+                <div className="mb-5 text-[15px] text-[var(--lp-muted)]">OfflineGPT Dashboard · Powered by MCP Apps</div>
                 <h1 className="text-[46px] font-light leading-[51px] tracking-[-0.02em] md:text-[58px] md:leading-[62px]">
                   <span className="block">Build dashboards</span>
                   <span className="font-pixel block font-normal">out of MCP Apps</span>
@@ -86,14 +86,14 @@ export default async function DashboardPage() {
             </div>
             <div className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
               <div className="flex flex-col gap-3 sm:flex-row">
-                <a href={CLOUD_SIGNUP_URL} className="lp-pill-primary">Open OpenWork Cloud</a>
+                <a href={CLOUD_SIGNUP_URL} className="lp-pill-primary">Open OfflineGPT Cloud</a>
                 <a href={MCP_APPS_URL} target="_blank" rel="noreferrer" className="lp-pill-secondary">Read the MCP Apps spec</a>
               </div>
-              <span className="text-[13.5px] text-[var(--lp-body)] sm:ml-2">Any MCP App works as a widget. Nothing to rebuild for OpenWork.</span>
+              <span className="text-[13.5px] text-[var(--lp-body)] sm:ml-2">Any MCP App works as a widget. Nothing to rebuild for OfflineGPT.</span>
             </div>
           </section>
 
-          <section className="mt-[88px]" aria-label="OpenWork Dashboard preview">
+          <section className="mt-[88px]" aria-label="OfflineGPT Dashboard preview">
             <LpDashboardPreview />
             <p className="mt-3 text-[13.5px] text-[var(--lp-muted)]">
               Toggle apps on the left to add or remove widgets — that&apos;s the whole flow.
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
             <LpTonalCard className="flex flex-col p-7">
               <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white"><Users className="h-5 w-5 text-[var(--lp-ink)]" strokeWidth={1.75} /></span>
               <h2 className="mt-8 text-[16.5px] font-semibold">One dashboard, the whole org</h2>
-              <p className="mt-3 text-[14px] leading-[22px] text-[var(--lp-body)]">Compose it once in the admin panel and toggle it on for everyone. It appears in each member&apos;s OpenWork.</p>
+              <p className="mt-3 text-[14px] leading-[22px] text-[var(--lp-body)]">Compose it once in the admin panel and toggle it on for everyone. It appears in each member&apos;s OfflineGPT.</p>
             </LpTonalCard>
           </section>
 
@@ -150,8 +150,8 @@ export default async function DashboardPage() {
           <div className="mt-[120px]">
             <LpCta
               heading="Put your team's widgets on one screen"
-              sub="Compose your first dashboard in OpenWork Cloud, or build an MCP App and use it anywhere."
-              primary={{ label: "Open OpenWork Cloud", href: CLOUD_SIGNUP_URL }}
+              sub="Compose your first dashboard in OfflineGPT Cloud, or build an MCP App and use it anywhere."
+              primary={{ label: "Open OfflineGPT Cloud", href: CLOUD_SIGNUP_URL }}
               secondary={{ label: "MCP Apps on GitHub", href: MCP_APPS_URL }}
               trust="Free to start. Standard MCP Apps, no lock-in."
             />

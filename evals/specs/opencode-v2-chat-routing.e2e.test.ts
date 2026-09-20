@@ -1,19 +1,19 @@
-import { browserScript } from "@openwork/testkit";
+import { browserScript } from "@offlinegpt/testkit";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { clickButton, control, createAndSelectWorkspace, evalIn, go, renameSessionAndWait, waitFor } from "@openwork/behaviors";
-import type { Surface } from "@openwork/cdp";
-import { desktop } from "@openwork/hosts";
-import { needs, resolveEvalEngine, test } from "@openwork/testkit";
+import { clickButton, control, createAndSelectWorkspace, evalIn, go, renameSessionAndWait, waitFor } from "@offlinegpt/behaviors";
+import type { Surface } from "@offlinegpt/cdp";
+import { desktop } from "@offlinegpt/hosts";
+import { needs, resolveEvalEngine, test } from "@offlinegpt/testkit";
 import { expect } from "vitest";
 
-const enabled = process.env.OPENWORK_EVAL_E2E_TESTS === "1";
+const enabled = process.env.OFFLINEGPT_EVAL_E2E_TESTS === "1";
 const title = enabled
   ? "chat routing switches live between OpenCode v1 and the v2 preview sidecar"
-  : "OpenCode v2 chat routing skipped — needs: set OPENWORK_EVAL_E2E_TESTS=1";
+  : "OpenCode v2 chat routing skipped — needs: set OFFLINEGPT_EVAL_E2E_TESTS=1";
 const keyV1 = "key-v1";
 const keyV2 = "key-v2";
 const modelIdV1 = "witness-model-v1";
@@ -96,8 +96,8 @@ async function serverFetchJson(
   const requestBody = init.body === undefined ? undefined : JSON.stringify(init.body);
   if (init.body !== undefined && requestBody === undefined) throw new Error(`Could not serialize request body for ${path}`);
   const value = await evalIn(app, browserScript(async (path, value, inputValue, timeoutMs) => {
-    const port = (localStorage.getItem("openwork.server.port") ?? "").trim();
-    const token = (localStorage.getItem("openwork.server.token") ?? "").trim();
+    const port = (localStorage.getItem("offlinegpt.server.port") ?? "").trim();
+    const token = (localStorage.getItem("offlinegpt.server.token") ?? "").trim();
     if (!port || !token) return { specProbeError: "missing local server credentials" };
     const response = await fetch("http://127.0.0.1:" + port + path, {
       method: value,
@@ -322,7 +322,7 @@ async function waitForChatSurface(app: Surface, sessionId: string, workspaceId: 
   await waitFor(app, browserScript((sessionId, workspaceId) => {
     const surface = document.querySelector<HTMLElement>("[data-session-surface-id]");
     return surface?.getAttribute("data-session-surface-id") === sessionId
-      && (localStorage.getItem("openwork.react.activeWorkspace") ?? "") === workspaceId;
+      && (localStorage.getItem("offlinegpt.react.activeWorkspace") ?? "") === workspaceId;
   }, [sessionId, workspaceId]), { timeoutMs: 10_000, label: "v2 session surface after workspace switch" });
 }
 
@@ -380,10 +380,10 @@ async function sendAndWaitForNonce(
 }
 
 test.skipIf(!enabled)(title, { timeout: 600_000 }, async ({ evidence, place, skip }) => {
-  needs({ optIn: ["OPENWORK_EVAL_E2E_TESTS"] });
+  needs({ optIn: ["OFFLINEGPT_EVAL_E2E_TESTS"] });
 
   const evalEngine = resolveEvalEngine();
-  const binPath = place.kind === "local" ? process.env.OPENWORK_EVAL_OPENCODE2_BIN?.trim() || undefined : undefined;
+  const binPath = place.kind === "local" ? process.env.OFFLINEGPT_EVAL_OPENCODE2_BIN?.trim() || undefined : undefined;
   const witnessRequests: WitnessRequest[] = [];
   const validAuth = new Set([`Bearer ${keyV1}`, `Bearer ${keyV2}`]);
   const witness = createServer((request, response) => {
@@ -424,7 +424,7 @@ test.skipIf(!enabled)(title, { timeout: 600_000 }, async ({ evidence, place, ski
       const stream = isRecord(body) && body.stream === true;
       // Title generation is tool-free in both engines and can also stream.
       const titleRequest = isRecord(body) && (!Array.isArray(body.tools) || body.tools.length === 0);
-      const nonce = titleRequest ? generatedTitle : `OPENWORK-V2-ROUTING-NONCE-${witnessRequests.length + 1}`;
+      const nonce = titleRequest ? generatedTitle : `OFFLINEGPT-V2-ROUTING-NONCE-${witnessRequests.length + 1}`;
       witnessRequests.push({ at: Date.now(), auth, model, stream, nonce, titleRequest });
       const id = `chatcmpl-opencode-v2-routing-${witnessRequests.length}`;
       if (!stream) {
@@ -468,7 +468,7 @@ test.skipIf(!enabled)(title, { timeout: 600_000 }, async ({ evidence, place, ski
     witnessBaseUrl = `http://127.0.0.1:${address.port}/v1`;
   }
   const profileDir = place.kind === "local"
-    ? await mkdtemp(join(tmpdir(), "openwork-v2-chat-routing-eval-"))
+    ? await mkdtemp(join(tmpdir(), "offlinegpt-v2-chat-routing-eval-"))
     : undefined;
 
   let app: Awaited<ReturnType<typeof desktop>> | undefined;
@@ -479,16 +479,16 @@ test.skipIf(!enabled)(title, { timeout: 600_000 }, async ({ evidence, place, ski
       ...(profileDir === undefined ? {} : { profileDir }),
       env: {
         // This benchmark measures engine and UI latency, not plugins. On a fresh isolated HOME, the engine's external-plugin dependency bootstrap
-        // (injected by apps/server/src/openwork-runtime-config.ts) can hold its install lock for minutes and block /config + /provider, so the picker
+        // (injected by apps/server/src/offlinegpt-runtime-config.ts) can hold its install lock for minutes and block /config + /provider, so the picker
         // reports "No models found" and the run times out. OPENCODE_PURE skips plugin loading for both the v1 and v2 lanes alike.
         OPENCODE_PURE: "true",
-        ...(binPath === undefined ? {} : { OPENWORK_OPENCODE2_BIN: binPath }),
+        ...(binPath === undefined ? {} : { OFFLINEGPT_OPENCODE2_BIN: binPath }),
         ANTHROPIC_API_KEY: "",
         OPENAI_API_KEY: "",
         OPENROUTER_API_KEY: "",
         GOOGLE_GENERATIVE_AI_API_KEY: "",
-        OPENWORK_API_KEY: "",
-        OPENWORK_INFERENCE_BASE_URL: "",
+        OFFLINEGPT_API_KEY: "",
+        OFFLINEGPT_INFERENCE_BASE_URL: "",
       },
     });
     let workspacePath: string;
@@ -530,7 +530,7 @@ test.skipIf(!enabled)(title, { timeout: 600_000 }, async ({ evidence, place, ski
     if (harnessLaneStatus !== undefined) {
       evidence.recordAssertionEvidence(
         "harness lane switch routes chat through v2 with no in-spec flag flip",
-        `OPENWORK_EVAL_ENGINE=v2 started the app with preview enabled, chat routing enabled, and sidecar pid ${harnessLaneStatus.pid}; the spec had not changed either preview setting.`,
+        `OFFLINEGPT_EVAL_ENGINE=v2 started the app with preview enabled, chat routing enabled, and sidecar pid ${harnessLaneStatus.pid}; the spec had not changed either preview setting.`,
         true,
       );
     }

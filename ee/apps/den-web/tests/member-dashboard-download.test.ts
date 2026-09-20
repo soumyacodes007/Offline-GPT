@@ -15,7 +15,7 @@ describe("member dashboard install contract", () => {
     const source = readMemberDashboardSource();
 
     expect(source).toContain('router.push("/install")');
-    expect(source).toContain("Get OpenWork");
+    expect(source).toContain("Get OfflineGPT");
     expect(source).not.toContain("/install-links");
     expect(source).not.toContain("token=");
     expect(source).not.toContain("createOrganizationInstallLink");

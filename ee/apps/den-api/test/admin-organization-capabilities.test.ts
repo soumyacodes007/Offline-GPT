@@ -1,4 +1,4 @@
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { afterAll, beforeAll, expect, test } from "bun:test"
 import { Hono } from "hono"
 import type { AuthContextVariables } from "../src/session.js"
@@ -10,7 +10,7 @@ const adminEmail = `admin-capabilities+${adminUserId}@test.local`
 const organizationSlug = `admin-capabilities-${organizationId}`
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DEN_DB_ENCRYPTION_KEY = "x".repeat(32)
   process.env.BETTER_AUTH_SECRET = "y".repeat(32)
   process.env.BETTER_AUTH_URL = "http://127.0.0.1:8790"
@@ -24,8 +24,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 let app: Hono<{ Variables: AuthContextVariables }> | null = null
 let db: typeof import("../src/db.js").db | null = null
-let schema: typeof import("@openwork-ee/den-db/schema") | null = null
-let drizzle: typeof import("@openwork-ee/den-db/drizzle") | null = null
+let schema: typeof import("@offlinegpt-ee/den-db/schema") | null = null
+let drizzle: typeof import("@offlinegpt-ee/den-db/drizzle") | null = null
 let routeTestUnavailable: string | null = null
 
 function errorMessage(error: unknown) {
@@ -100,8 +100,8 @@ async function putCapabilities(capabilities: { installLinks?: boolean | null; mc
   })
 }
 
-async function putOpenWorkWebAccess(enabled: boolean, reason: string) {
-  return routeApp().request(`http://den.local/v1/admin/organizations/${organizationId}/openwork-web-access`, {
+async function putOfflineGPTWebAccess(enabled: boolean, reason: string) {
+  return routeApp().request(`http://den.local/v1/admin/organizations/${organizationId}/offlinegpt-web-access`, {
     method: "PUT",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ enabled, reason }),
@@ -117,13 +117,13 @@ beforeAll(async () => {
   seedRequiredEnv()
   let adminRoutesModule: typeof import("../src/routes/admin/index.js")
   let dbModule: typeof import("../src/db.js")
-  let schemaModule: typeof import("@openwork-ee/den-db/schema")
-  let drizzleModule: typeof import("@openwork-ee/den-db/drizzle")
+  let schemaModule: typeof import("@offlinegpt-ee/den-db/schema")
+  let drizzleModule: typeof import("@offlinegpt-ee/den-db/drizzle")
   try {
     [dbModule, schemaModule, drizzleModule] = await Promise.all([
       import("../src/db.js"),
-      import("@openwork-ee/den-db/schema"),
-      import("@openwork-ee/den-db/drizzle"),
+      import("@offlinegpt-ee/den-db/schema"),
+      import("@offlinegpt-ee/den-db/drizzle"),
     ])
     if (!isRouteDatabase(dbModule.db)) {
       routeTestUnavailable = "aggregate suite run; db module is mocked by another route test"
@@ -222,7 +222,7 @@ test("admin capability routes show effective defaults while preserving raw overr
   expect("mcpConnections" in readCapabilityMetadata(await readOrganizationMetadata())).toBe(false)
 
   // The retired Cloud alpha flag is no longer accepted or reported: Cloud is
-  // entitled by OpenWork Web access instead.
+  // entitled by OfflineGPT Web access instead.
   const rejectCloud = await routeApp().request(`http://den.local/v1/admin/organizations/${organizationId}/capabilities`, {
     method: "PUT",
     headers: { "content-type": "application/json" },
@@ -266,15 +266,15 @@ test("platform admins grant and revoke audited complimentary Web access", async 
     return
   }
 
-  const invalid = await putOpenWorkWebAccess(true, "x")
+  const invalid = await putOfflineGPTWebAccess(true, "x")
   expect(invalid.status).toBe(400)
 
-  const grant = await putOpenWorkWebAccess(true, "Internal administration organization")
+  const grant = await putOfflineGPTWebAccess(true, "Internal administration organization")
   expect(grant.status).toBe(200)
   await expect(grant.json()).resolves.toMatchObject({
     organization: {
       id: organizationId,
-      openworkWebAccess: {
+      offlinegptWebAccess: {
         hasAccess: true,
         accessSource: "complimentary",
         complimentaryAccess: true,
@@ -285,7 +285,7 @@ test("platform admins grant and revoke audited complimentary Web access", async 
   expect(await readOrganizationMetadata()).toMatchObject({
     mcpConnectionsEnabled: false,
     capabilities: { installLinks: true, mcpConnections: true },
-    complimentaryAccess: { openworkWeb: true },
+    complimentaryAccess: { offlinegptWeb: true },
   })
 
   const listed = await routeApp().request(`http://den.local/v1/admin/organizations?search=${organizationId}`)
@@ -293,7 +293,7 @@ test("platform admins grant and revoke audited complimentary Web access", async 
   await expect(listed.json()).resolves.toMatchObject({
     organizations: [{
       id: organizationId,
-      openworkWebAccess: { complimentaryAccess: true, hasOngoingSubscription: false },
+      offlinegptWebAccess: { complimentaryAccess: true, hasOngoingSubscription: false },
     }],
   })
 
@@ -304,21 +304,21 @@ test("platform admins grant and revoke audited complimentary Web access", async 
     .where(drizzle.eq(schema.AuditEventTable.org_id, organizationId))
   expect(auditRows).toHaveLength(1)
   expect(auditRows[0]).toMatchObject({
-    action: "organization.openwork_web.complimentary_access_granted",
+    action: "organization.offlinegpt_web.complimentary_access_granted",
     payload: { reason: "Internal administration organization", complimentaryAccess: true },
   })
 
-  const revoke = await putOpenWorkWebAccess(false, "Return organization to standard billing")
+  const revoke = await putOfflineGPTWebAccess(false, "Return organization to standard billing")
   expect(revoke.status).toBe(200)
-  expect(await readOrganizationMetadata()).not.toHaveProperty("complimentaryAccess.openworkWeb")
+  expect(await readOrganizationMetadata()).not.toHaveProperty("complimentaryAccess.offlinegptWeb")
 
   const revokedAuditRows = await db
     .select({ action: schema.AuditEventTable.action })
     .from(schema.AuditEventTable)
     .where(drizzle.eq(schema.AuditEventTable.org_id, organizationId))
   expect(revokedAuditRows.map((row) => row.action).sort()).toEqual([
-    "organization.openwork_web.complimentary_access_granted",
-    "organization.openwork_web.complimentary_access_revoked",
+    "organization.offlinegpt_web.complimentary_access_granted",
+    "organization.offlinegpt_web.complimentary_access_revoked",
   ])
 
   await db.insert(schema.OrgSubscriptionTable).values({
@@ -333,8 +333,8 @@ test("platform admins grant and revoke audited complimentary Web access", async 
     stripe_subscription_item_id: "si_admin_web_access_test",
     quantity: 1,
   })
-  const paidConflict = await putOpenWorkWebAccess(true, "Would overlap paid billing")
+  const paidConflict = await putOfflineGPTWebAccess(true, "Would overlap paid billing")
   expect(paidConflict.status).toBe(409)
-  await expect(paidConflict.json()).resolves.toMatchObject({ error: "openwork_web_subscription_exists" })
-  expect(await readOrganizationMetadata()).not.toHaveProperty("complimentaryAccess.openworkWeb")
+  await expect(paidConflict.json()).resolves.toMatchObject({ error: "offlinegpt_web_subscription_exists" })
+  expect(await readOrganizationMetadata()).not.toHaveProperty("complimentaryAccess.offlinegptWeb")
 })

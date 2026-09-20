@@ -36,7 +36,7 @@ async function createBrandAssetDraft(file: File, kind: BrandAssetKind): Promise<
   try {
     image = await createImageBitmap(file);
   } catch {
-    throw new Error("OpenWork could not decode that image.");
+    throw new Error("OfflineGPT could not decode that image.");
   }
 
   const { width, height } = image;
@@ -100,7 +100,7 @@ function BrandAssetUploadField({
             data-testid={`brand-${kind}-preview`}
           />
         ) : (
-          <span className="text-center text-[12px] text-gray-400">Default OpenWork {kind}</span>
+          <span className="text-center text-[12px] text-gray-400">Default OfflineGPT {kind}</span>
         )}
       </div>
       <div className="min-h-9 min-w-0 break-words text-[11px] leading-5 text-gray-500" data-testid={`brand-${kind}-status`}>
@@ -285,14 +285,14 @@ export function BrandAppearanceScreen() {
               <div className="grid gap-5" data-testid="brand-identity-fields">
                 <label className="grid gap-3">
                   <span className="text-[14px] font-medium text-gray-700">Application name</span>
-                  <DenInput type="text" value={appNameDraft} onChange={(event) => setAppNameDraft(event.target.value)} placeholder="OpenWork" maxLength={64} disabled={!canManageBrandAppearance} />
-                  <span className="text-[11px] text-gray-400">The signed application identity stays OpenWork.</span>
+                  <DenInput type="text" value={appNameDraft} onChange={(event) => setAppNameDraft(event.target.value)} placeholder="OfflineGPT" maxLength={64} disabled={!canManageBrandAppearance} />
+                  <span className="text-[11px] text-gray-400">The signed application identity stays OfflineGPT.</span>
                 </label>
 
                 <label className="grid gap-3">
                   <span className="text-[14px] font-medium text-gray-700">Accent color</span>
                   <select value={accentColorDraft} onChange={(event) => setAccentColorDraft(event.target.value)} disabled={!canManageBrandAppearance} className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-[14px] text-gray-900 outline-hidden">
-                    <option value="">Default (OpenWork)</option>
+                    <option value="">Default (OfflineGPT)</option>
                     {["blue", "violet", "purple", "indigo", "iris", "crimson", "red", "ruby", "pink", "plum", "orange", "tomato", "gold", "green", "grass", "jade", "teal", "cyan", "sky"].map((color) => (
                       <option key={color} value={color}>{color[0].toUpperCase() + color.slice(1)}</option>
                     ))}

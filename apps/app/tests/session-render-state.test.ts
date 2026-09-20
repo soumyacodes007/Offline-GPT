@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import type { UIMessage } from "ai";
 
-import type { OpenworkSessionSnapshot } from "../src/app/lib/openwork-server";
+import type { OfflineGptSessionSnapshot } from "../src/app/lib/offlinegpt-server";
 import { deriveRenderedSessionMessages } from "../src/react-app/domains/session/surface/session-render-state";
 import {
   mergeSnapshotAndLiveMessages,
   mergeSnapshotIntoCachedMessages,
 } from "../src/react-app/domains/session/sync/message-merge";
 
-function snapshotWithHistory(): OpenworkSessionSnapshot {
+function snapshotWithHistory(): OfflineGptSessionSnapshot {
   const sessionId = "session-render-cycle";
   return {
     session: {
@@ -37,7 +37,7 @@ function snapshotWithHistory(): OpenworkSessionSnapshot {
     })),
     todos: [],
     status: { type: "idle" },
-  } as unknown as OpenworkSessionSnapshot;
+  } as unknown as OfflineGptSessionSnapshot;
 }
 
 function message(id: string, role: "user" | "assistant", text: string, created: number): UIMessage {

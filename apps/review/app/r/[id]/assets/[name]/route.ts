@@ -1,4 +1,4 @@
-import { readReview, readReviewAsset } from "@openwork/review/storage";
+import { readReview, readReviewAsset } from "@offlinegpt/review/storage";
 
 export async function GET(
   _request: Request,

@@ -23,8 +23,8 @@ import {
 } from "./server.js";
 import { ensureLocalWorkspaceFiles } from "./workspace-init.js";
 import { findManagedEngineWorkspace } from "./workspaces.js";
-import { keepOpenworkRuntimeConfigFileFresh, writeOpenworkRuntimeConfigFile } from "./openwork-runtime-config.js";
-import { migrateOpenworkCloudMcpRuntimeConfig } from "./cloud-mcp-health.js";
+import { keepOfflineGptRuntimeConfigFileFresh, writeOfflineGptRuntimeConfigFile } from "./offlinegpt-runtime-config.js";
+import { migrateOfflineGptCloudMcpRuntimeConfig } from "./cloud-mcp-health.js";
 import { migrateWorkspaceRuntimeConfigToEngineGlobal } from "./runtime-opencode-config-store.js";
 import { resolveOpencodeModelsUrl } from "./opencode-models-url.js";
 import { startWorkerActivityHeartbeat } from "./worker-activity-heartbeat.js";
@@ -51,44 +51,44 @@ let enginePool: EnginePool | null = null;
 
 if (!config.readOnly) {
   await ensureLocalWorkspaceFiles(config.workspaces);
-  await migrateOpenworkCloudMcpRuntimeConfig(config);
+  await migrateOfflineGptCloudMcpRuntimeConfig(config);
   await migrateWorkspaceRuntimeConfigToEngineGlobal(config);
 }
 
 // Bind the HTTP server before spawning the engine: serve-node may fall back
 // to an OS-assigned port on EADDRINUSE, and the engine's spawn-time env
-// (OPENWORK_SERVER_URL) must point at the port that actually bound, not the
+// (OFFLINEGPT_SERVER_URL) must point at the port that actually bound, not the
 // requested one.
 const server = await startServer(config);
 config.port = server.port;
 const serverUrl = `http://${config.host === "0.0.0.0" ? "127.0.0.1" : config.host}:${server.port}`;
 const workerActivityHeartbeat = startWorkerActivityHeartbeat(config, logger);
 
-if (!config.opencodeBaseUrl && process.env.OPENWORK_MANAGE_OPENCODE === "1") {
+if (!config.opencodeBaseUrl && process.env.OFFLINEGPT_MANAGE_OPENCODE === "1") {
   const workspace = findManagedEngineWorkspace(config.workspaces);
   if (workspace) {
     // Reap engines recorded by servers that died without cleanup. Best
     // effort: a failed reap must never block startup.
     await reapOrphanEngineInstances(config, { logger }).catch(() => undefined);
     // Server-managed config file: the engine re-reads it from disk on every
-    // instance rebuild, and keepOpenworkRuntimeConfigFileFresh synchronizes it
+    // instance rebuild, and keepOfflineGptRuntimeConfigFileFresh synchronizes it
     // on every runtime-DB write — so disposes always pick up current state.
-    const { path: runtimeConfigPath } = await writeOpenworkRuntimeConfigFile(config);
-    keepOpenworkRuntimeConfigFileFresh(config);
-    const managedOpencodeCwd = process.env.OPENWORK_MANAGED_OPENCODE_CWD?.trim() || workspace.path;
+    const { path: runtimeConfigPath } = await writeOfflineGptRuntimeConfigFile(config);
+    keepOfflineGptRuntimeConfigFileFresh(config);
+    const managedOpencodeCwd = process.env.OFFLINEGPT_MANAGED_OPENCODE_CWD?.trim() || workspace.path;
     await mkdir(managedOpencodeCwd, { recursive: true });
     const opencodeModelsUrl = await resolveOpencodeModelsUrl();
     const engineEnv: Record<string, string | undefined> = {
-      ...(process.env.OPENWORK_DEV_MODE ? { OPENWORK_DEV_MODE: process.env.OPENWORK_DEV_MODE } : {}),
-      ...(process.env.OPENWORK_UI_CONTROL_DISCOVERY ? { OPENWORK_UI_CONTROL_DISCOVERY: process.env.OPENWORK_UI_CONTROL_DISCOVERY } : {}),
-      OPENWORK_SERVER_URL: serverUrl,
-      OPENWORK_SERVER_TOKEN: config.token,
-      OPENWORK_POLICY_TOKEN: managedDesktopPolicy(config).evaluationToken,
+      ...(process.env.OFFLINEGPT_DEV_MODE ? { OFFLINEGPT_DEV_MODE: process.env.OFFLINEGPT_DEV_MODE } : {}),
+      ...(process.env.OFFLINEGPT_UI_CONTROL_DISCOVERY ? { OFFLINEGPT_UI_CONTROL_DISCOVERY: process.env.OFFLINEGPT_UI_CONTROL_DISCOVERY } : {}),
+      OFFLINEGPT_SERVER_URL: serverUrl,
+      OFFLINEGPT_SERVER_TOKEN: config.token,
+      OFFLINEGPT_POLICY_TOKEN: managedDesktopPolicy(config).evaluationToken,
       OPENCODE_CONFIG: runtimeConfigPath,
       OPENCODE_MODELS_URL: opencodeModelsUrl,
     };
     const engineSpawnTemplate: EngineSpawnTemplate = {
-      bin: process.env.OPENWORK_OPENCODE_BIN,
+      bin: process.env.OFFLINEGPT_OPENCODE_BIN,
       cwd: managedOpencodeCwd,
       runtimeConfigPath,
       env: engineEnv,
@@ -98,7 +98,7 @@ if (!config.opencodeBaseUrl && process.env.OPENWORK_MANAGE_OPENCODE === "1") {
       },
     };
     managedOpencode = await createManagedOpencodeServer({
-      bin: process.env.OPENWORK_OPENCODE_BIN,
+      bin: process.env.OFFLINEGPT_OPENCODE_BIN,
       cwd: managedOpencodeCwd,
       excludedPorts: [config.port],
       env: engineEnv,
@@ -136,7 +136,7 @@ if (!config.opencodeBaseUrl && process.env.OPENWORK_MANAGE_OPENCODE === "1") {
         serverRunId: managedOpencodeIdentity,
         ownerPid: process.pid,
         authProbe: buildEngineAuthProbeHeader(managedOpencode.username, managedOpencode.password),
-        bin: process.env.OPENWORK_OPENCODE_BIN?.trim() || "opencode",
+        bin: process.env.OFFLINEGPT_OPENCODE_BIN?.trim() || "opencode",
       }).catch(() => undefined);
     }
     enginePool = createEnginePoolForConfig({
@@ -164,7 +164,7 @@ if (managedOpencode) {
 }
 
 const url = `http://${config.host}:${server.port}`;
-logger.log("info", `OpenWork server listening on ${url}`);
+logger.log("info", `OfflineGPT server listening on ${url}`);
 
 if (config.tokenSource === "generated") {
   logger.log("info", `Client token: ${config.token}`);

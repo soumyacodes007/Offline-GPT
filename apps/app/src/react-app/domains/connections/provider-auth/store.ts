@@ -14,16 +14,16 @@ import {
   type DenOrgLlmProvider,
   type DenOrgLlmProviderConnection,
 } from "../../../../app/lib/den";
-import { getOpenworkGatewayOrigin } from "../../../../app/lib/gateway-runtime";
+import { getOfflineGptGatewayOrigin } from "../../../../app/lib/gateway-runtime";
 import { unwrap, waitForHealthy } from "../../../../app/lib/opencode";
 import {
   readOpencodeConfig,
   writeOpencodeConfig,
   engineRestart,
-  workspaceOpenworkRead,
-  workspaceOpenworkWrite,
+  workspaceOfflineGptRead,
+  workspaceOfflineGptWrite,
 } from "../../../../app/lib/desktop";
-import { OpenworkServerError } from "../../../../app/lib/openwork-server";
+import { OfflineGptServerError } from "../../../../app/lib/offlinegpt-server";
 import type {
   Client,
   ProviderListItem,
@@ -41,23 +41,23 @@ import {
   getConnectedProviderItems,
 } from "../../../infra/provider-list-query";
 import type {
-  OpenworkCloudProviderSyncRun,
-  OpenworkCloudProviderSyncSkippedProvider,
-} from "../../../../app/lib/openwork-server";
-import type { OpenworkServerStoreSnapshot } from "../openwork-server-store";
+  OfflineGptCloudProviderSyncRun,
+  OfflineGptCloudProviderSyncSkippedProvider,
+} from "../../../../app/lib/offlinegpt-server";
+import type { OfflineGptServerStoreSnapshot } from "../offlinegpt-server-store";
 
 /**
- * The slice of the openwork-server store this store actually consumes.
+ * The slice of the offlinegpt-server store this store actually consumes.
  * The settings route passes the full store; the session route passes a
  * lightweight endpoint-backed adapter (previously forced through `as never`).
  */
-export type ProviderAuthOpenworkServer = {
+export type ProviderAuthOfflineGptServer = {
   getSnapshot: () => Pick<
-    OpenworkServerStoreSnapshot,
-    "openworkServerStatus" | "openworkServerClient"
+    OfflineGptServerStoreSnapshot,
+    "offlinegptServerStatus" | "offlinegptServerClient"
   > & {
-    openworkServerAuth?: { token?: string; hostToken?: string };
-    openworkServerCapabilities: { config?: { read?: boolean; write?: boolean }; providerSync?: boolean } | null;
+    offlinegptServerAuth?: { token?: string; hostToken?: string };
+    offlinegptServerCapabilities: { config?: { read?: boolean; write?: boolean }; providerSync?: boolean } | null;
   };
 };
 import {
@@ -109,7 +109,7 @@ type CloudProviderSyncReason =
   | "settings_cloud_opened"
   | "manual";
 
-type CloudProviderSyncWorkResult = void | OpenworkCloudProviderSyncRun;
+type CloudProviderSyncWorkResult = void | OfflineGptCloudProviderSyncRun;
 
 type GlobalCloudProviderSyncBatch = {
   contextKey: string;
@@ -250,7 +250,7 @@ export type ProviderOAuthStartResult = {
  */
 export type CloudProviderServerSyncState = {
   reloadPending: boolean;
-  skippedProviders: Record<string, OpenworkCloudProviderSyncSkippedProvider>;
+  skippedProviders: Record<string, OfflineGptCloudProviderSyncSkippedProvider>;
 };
 
 export type ProviderAuthStoreSnapshot = {
@@ -279,7 +279,7 @@ type CreateProviderAuthStoreOptions = {
   selectedWorkspaceRoot: () => string;
   runtimeWorkspaceId: () => string | null;
   ensureRuntimeWorkspaceId?: () => Promise<string | null | undefined>;
-  openworkServer: ProviderAuthOpenworkServer;
+  offlinegptServer: ProviderAuthOfflineGptServer;
   setProviders: (value: ProviderListItem[]) => void;
   setProviderDefaults: (value: Record<string, string>) => void;
   setProviderConnectedIds: (value: string[]) => void;
@@ -401,50 +401,50 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     return Array.from(merged.values()).toSorted(compareProviders);
   };
 
-  const resolveOpenworkConfigTarget = async (mode: "read" | "write") => {
-    const openworkSnapshot = options.openworkServer.getSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    let openworkWorkspaceId = options.runtimeWorkspaceId()?.trim() || null;
-    if (!openworkWorkspaceId && openworkSnapshot.openworkServerStatus === "connected" && openworkClient) {
-      openworkWorkspaceId = (await options.ensureRuntimeWorkspaceId?.())?.trim() || null;
+  const resolveOfflineGptConfigTarget = async (mode: "read" | "write") => {
+    const offlinegptSnapshot = options.offlinegptServer.getSnapshot();
+    const offlinegptClient = offlinegptSnapshot.offlinegptServerClient;
+    let offlinegptWorkspaceId = options.runtimeWorkspaceId()?.trim() || null;
+    if (!offlinegptWorkspaceId && offlinegptSnapshot.offlinegptServerStatus === "connected" && offlinegptClient) {
+      offlinegptWorkspaceId = (await options.ensureRuntimeWorkspaceId?.())?.trim() || null;
     }
-    const hasOpenworkTarget =
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      Boolean(openworkClient && openworkWorkspaceId);
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.config?.[mode] !== false;
+    const hasOfflineGptTarget =
+      offlinegptSnapshot.offlinegptServerStatus === "connected" &&
+      Boolean(offlinegptClient && offlinegptWorkspaceId);
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.config?.[mode] !== false;
     return {
-      openworkClient,
-      openworkWorkspaceId,
-      hasOpenworkTarget,
-      canUseOpenworkServer,
+      offlinegptClient,
+      offlinegptWorkspaceId,
+      hasOfflineGptTarget,
+      canUseOfflineGptServer,
     };
   };
 
   const serverHandlesProviderSync = () => {
-    const openworkSnapshot = options.openworkServer.getSnapshot();
+    const offlinegptSnapshot = options.offlinegptServer.getSnapshot();
     return Boolean(
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      openworkSnapshot.openworkServerCapabilities?.providerSync === true &&
-      openworkSnapshot.openworkServerAuth?.hostToken?.trim() &&
-      openworkSnapshot.openworkServerClient,
+      offlinegptSnapshot.offlinegptServerStatus === "connected" &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.providerSync === true &&
+      offlinegptSnapshot.offlinegptServerAuth?.hostToken?.trim() &&
+      offlinegptSnapshot.offlinegptServerClient,
     );
   };
 
   const pushDenSession = (force = false): Promise<void> => {
-    const openworkSnapshot = options.openworkServer.getSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
+    const offlinegptSnapshot = options.offlinegptServer.getSnapshot();
+    const offlinegptClient = offlinegptSnapshot.offlinegptServerClient;
     const settings = readDenSettings();
     const apiBaseUrl = settings.apiBaseUrl ?? resolveDenBaseUrls(settings).apiBaseUrl;
     const token = settings.authToken?.trim() ?? "";
     const orgId = settings.activeOrgId?.trim() ?? "";
-    if (!serverHandlesProviderSync() || !openworkClient || !token || !orgId) return Promise.resolve();
+    if (!serverHandlesProviderSync() || !offlinegptClient || !token || !orgId) return Promise.resolve();
     const key = `${apiBaseUrl}::${orgId}::${token}`;
     if (!force && key === lastDenSessionPushKey) return Promise.resolve();
     if (key === denSessionPushKey && denSessionPushInFlight) return denSessionPushInFlight;
     denSessionPushKey = key;
-    const request = openworkClient.putDenSession({ baseUrl: apiBaseUrl, token, orgId });
+    const request = offlinegptClient.putDenSession({ baseUrl: apiBaseUrl, token, orgId });
     denSessionPushInFlight = request;
     request.then(
       () => { lastDenSessionPushKey = key; },
@@ -506,8 +506,8 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
   ) => {
     const trimmedKey = apiKey.trim();
     if (!trimmedKey) return;
-    const openworkClient = options.openworkServer.getSnapshot().openworkServerClient;
-    if (!openworkClient) return;
+    const offlinegptClient = options.offlinegptServer.getSnapshot().offlinegptServerClient;
+    if (!offlinegptClient) return;
     const entries = [...resolvedEnvEntries];
     if (entries.length === 0) {
       entries.push(
@@ -516,37 +516,37 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
           .map((key) => ({ key, value: trimmedKey })),
       );
     }
-    if (provider.source === "openwork") {
-      if (!entries.some((entry) => entry.key === "OPENWORK_API_KEY")) {
-        entries.unshift({ key: "OPENWORK_API_KEY", value: trimmedKey });
+    if (provider.source === "offlinegpt") {
+      if (!entries.some((entry) => entry.key === "OFFLINEGPT_API_KEY")) {
+        entries.unshift({ key: "OFFLINEGPT_API_KEY", value: trimmedKey });
       }
       const baseUrl = readCloudProviderBaseUrl(provider);
-      if (baseUrl) entries.push({ key: "OPENWORK_INFERENCE_BASE_URL", value: baseUrl });
+      if (baseUrl) entries.push({ key: "OFFLINEGPT_INFERENCE_BASE_URL", value: baseUrl });
     }
     if (entries.length === 0) return;
-    await openworkClient.upsertUserEnv(entries);
+    await offlinegptClient.upsertUserEnv(entries);
   };
 
-  const readWorkspaceOpenworkConfigRecord = async (): Promise<
+  const readWorkspaceOfflineGptConfigRecord = async (): Promise<
     Record<string, unknown>
   > => {
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
       options.selectedWorkspaceDisplay().workspaceType === "local";
-    const { openworkClient, openworkWorkspaceId, hasOpenworkTarget, canUseOpenworkServer } =
-      await resolveOpenworkConfigTarget("read");
+    const { offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget, canUseOfflineGptServer } =
+      await resolveOfflineGptConfigTarget("read");
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-      const config = await openworkClient.getConfig(openworkWorkspaceId);
-      return config.openwork ?? {};
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+      const config = await offlinegptClient.getConfig(offlinegptWorkspaceId);
+      return config.offlinegpt ?? {};
     }
 
-    if (hasOpenworkTarget) {
+    if (hasOfflineGptTarget) {
       return {};
     }
 
     if (isLocalWorkspace && isDesktopRuntime() && root) {
-      return (await workspaceOpenworkRead({
+      return (await workspaceOfflineGptRead({
         workspacePath: root,
       })) as unknown as Record<string, unknown>;
     }
@@ -554,33 +554,33 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     return {};
   };
 
-  const writeWorkspaceOpenworkConfigRecord = async (
+  const writeWorkspaceOfflineGptConfigRecord = async (
     config: Record<string, unknown>,
   ) => {
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
       options.selectedWorkspaceDisplay().workspaceType === "local";
-    const { openworkClient, openworkWorkspaceId, hasOpenworkTarget, canUseOpenworkServer } =
-      await resolveOpenworkConfigTarget("write");
+    const { offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget, canUseOfflineGptServer } =
+      await resolveOfflineGptConfigTarget("write");
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-      await openworkClient.patchConfig(openworkWorkspaceId, { openwork: config });
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+      await offlinegptClient.patchConfig(offlinegptWorkspaceId, { offlinegpt: config });
       return true;
     }
 
-    if (hasOpenworkTarget) {
+    if (hasOfflineGptTarget) {
       return false;
     }
 
     if (isLocalWorkspace && isDesktopRuntime() && root) {
-      const result = await workspaceOpenworkWrite({
+      const result = await workspaceOfflineGptWrite({
         workspacePath: root,
         config: config as never,
       });
       const typed = result as { ok: boolean; stderr?: string; stdout?: string };
       if (!typed.ok) {
         throw new Error(
-          typed.stderr || typed.stdout || "Failed to write .opencode/openwork.json",
+          typed.stderr || typed.stdout || "Failed to write .opencode/offlinegpt.json",
         );
       }
       return true;
@@ -592,9 +592,9 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
   const refreshImportedCloudProviders = async (refreshOptions?: { strict?: boolean }) => {
     try {
       if (serverHandlesProviderSync()) {
-        const openworkClient = options.openworkServer.getSnapshot().openworkServerClient;
-        if (!openworkClient) throw new Error("OpenWork server unavailable.");
-        const status = await openworkClient.getCloudProviderSyncStatus();
+        const offlinegptClient = options.offlinegptServer.getSnapshot().offlinegptServerClient;
+        if (!offlinegptClient) throw new Error("OfflineGPT server unavailable.");
+        const status = await offlinegptClient.getCloudProviderSyncStatus();
         const next = Object.fromEntries(status.providers.map((provider) => [provider.cloudProviderId, provider]));
         setStateField("importedCloudProviders", next);
         // Carry the server's truth alongside the records: rows must not show
@@ -613,7 +613,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       if (state.cloudProviderServerSync !== null) {
         setStateField("cloudProviderServerSync", null);
       }
-      const config = await readWorkspaceOpenworkConfigRecord();
+      const config = await readWorkspaceOfflineGptConfigRecord();
       const cloudImports = readWorkspaceCloudImports(config);
       const next = cloudImports.providers;
       // Guard: don't overwrite non-empty import state with an empty read.
@@ -637,7 +637,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
   const persistImportedCloudProviders = async (
     nextProviders: Record<string, CloudImportedProvider>,
   ) => {
-    const config = await readWorkspaceOpenworkConfigRecord();
+    const config = await readWorkspaceOfflineGptConfigRecord();
     const cloudImports = readWorkspaceCloudImports(config);
     const nextCloudImports = {
       ...cloudImports,
@@ -646,10 +646,10 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const nextConfig = withWorkspaceCloudImports(config, {
       ...nextCloudImports,
     });
-    const persisted = await writeWorkspaceOpenworkConfigRecord(nextConfig);
+    const persisted = await writeWorkspaceOfflineGptConfigRecord(nextConfig);
     if (!persisted) {
       throw new Error(
-        "OpenWork server unavailable. Connect to manage imported cloud providers.",
+        "OfflineGPT server unavailable. Connect to manage imported cloud providers.",
       );
     }
     setStateField("importedCloudProviders", nextProviders);
@@ -659,15 +659,15 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
       options.selectedWorkspaceDisplay().workspaceType === "local";
-    const { openworkClient, openworkWorkspaceId, hasOpenworkTarget, canUseOpenworkServer } =
-      await resolveOpenworkConfigTarget("read");
+    const { offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget, canUseOfflineGptServer } =
+      await resolveOfflineGptConfigTarget("read");
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-      return await openworkClient.readOpencodeConfigFile(openworkWorkspaceId, "project");
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+      return await offlinegptClient.readOpencodeConfigFile(offlinegptWorkspaceId, "project");
     }
 
-    if (hasOpenworkTarget) {
-      throw new Error("OpenWork server config API is unavailable for this workspace.");
+    if (hasOfflineGptTarget) {
+      throw new Error("OfflineGPT server config API is unavailable for this workspace.");
     }
 
     if (isLocalWorkspace && isDesktopRuntime() && root) {
@@ -681,12 +681,12 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
       options.selectedWorkspaceDisplay().workspaceType === "local";
-    const { openworkClient, openworkWorkspaceId, hasOpenworkTarget, canUseOpenworkServer } =
-      await resolveOpenworkConfigTarget("write");
+    const { offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget, canUseOfflineGptServer } =
+      await resolveOfflineGptConfigTarget("write");
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-      const result = await openworkClient.writeOpencodeConfigFile(
-        openworkWorkspaceId,
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+      const result = await offlinegptClient.writeOpencodeConfigFile(
+        offlinegptWorkspaceId,
         "project",
         content,
       ) as { ok: boolean; stderr?: string; stdout?: string };
@@ -696,8 +696,8 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       return true;
     }
 
-    if (hasOpenworkTarget) {
-      throw new Error("OpenWork server config API is unavailable for this workspace.");
+    if (hasOfflineGptTarget) {
+      throw new Error("OfflineGPT server config API is unavailable for this workspace.");
     }
 
     if (isLocalWorkspace && isDesktopRuntime() && root) {
@@ -718,12 +718,12 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
    * is no read-modify-write race and no edit of the user's opencode.jsonc.
    */
   const patchRuntimeProviders = async (update: Record<string, unknown>) => {
-    const { openworkClient, openworkWorkspaceId, canUseOpenworkServer } =
-      await resolveOpenworkConfigTarget("write");
-    if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-      throw new Error("OpenWork server unavailable. Connect to manage cloud providers.");
+    const { offlinegptClient, offlinegptWorkspaceId, canUseOfflineGptServer } =
+      await resolveOfflineGptConfigTarget("write");
+    if (!canUseOfflineGptServer || !offlinegptClient || !offlinegptWorkspaceId) {
+      throw new Error("OfflineGPT server unavailable. Connect to manage cloud providers.");
     }
-    await openworkClient.patchConfig(openworkWorkspaceId, {
+    await offlinegptClient.patchConfig(offlinegptWorkspaceId, {
       opencode: { provider: update },
     });
   };
@@ -732,20 +732,20 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     providerUpdate: Record<string, unknown>,
     nextProviders: Record<string, CloudImportedProvider>,
   ) => {
-    const { openworkClient, openworkWorkspaceId, canUseOpenworkServer } =
-      await resolveOpenworkConfigTarget("write");
-    if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-      throw new Error("OpenWork server unavailable. Connect to manage cloud providers.");
+    const { offlinegptClient, offlinegptWorkspaceId, canUseOfflineGptServer } =
+      await resolveOfflineGptConfigTarget("write");
+    if (!canUseOfflineGptServer || !offlinegptClient || !offlinegptWorkspaceId) {
+      throw new Error("OfflineGPT server unavailable. Connect to manage cloud providers.");
     }
-    const config = await readWorkspaceOpenworkConfigRecord();
+    const config = await readWorkspaceOfflineGptConfigRecord();
     const cloudImports = readWorkspaceCloudImports(config);
     const nextConfig = withWorkspaceCloudImports(config, {
       ...cloudImports,
       providers: nextProviders,
     });
-    await openworkClient.patchConfig(openworkWorkspaceId, {
+    await offlinegptClient.patchConfig(offlinegptWorkspaceId, {
       opencode: { provider: providerUpdate },
-      openwork: nextConfig,
+      offlinegpt: nextConfig,
     });
     setStateField("importedCloudProviders", nextProviders);
   };
@@ -793,10 +793,10 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     }
 
     const c = options.client();
-    const openworkSnapshot = options.openworkServer.getSnapshot();
+    const offlinegptSnapshot = options.offlinegptServer.getSnapshot();
     const workspaceId = options.runtimeWorkspaceId();
     const workspaceType = options.selectedWorkspaceDisplay().workspaceType;
-    const canUseManagedRuntime = Boolean(openworkSnapshot.openworkServerClient && workspaceId?.trim() && workspaceType === "local");
+    const canUseManagedRuntime = Boolean(offlinegptSnapshot.offlinegptServerClient && workspaceId?.trim() && workspaceType === "local");
     if (!c && !canUseManagedRuntime) {
       throw new Error(t("providers.not_connected"));
     }
@@ -804,7 +804,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const next = fallbackUpdate(config);
     await updateManagedDisabledProviders({
       opencodeClient: c,
-      openworkClient: openworkSnapshot.openworkServerClient,
+      offlinegptClient: offlinegptSnapshot.offlinegptServerClient,
       workspaceId,
       workspaceType,
       disabledProviders: next.disabled_providers,
@@ -877,17 +877,17 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     // the user's opencode.jsonc. Fall back to project config only when the
     // managed runtime endpoint is unavailable.
     const c = options.client();
-    const openworkSnapshot = options.openworkServer.getSnapshot();
+    const offlinegptSnapshot = options.offlinegptServer.getSnapshot();
     const workspaceId = options.runtimeWorkspaceId();
     const workspaceType = options.selectedWorkspaceDisplay().workspaceType;
     const canUseManagedRuntime = Boolean(
-      openworkSnapshot.openworkServerClient && workspaceId?.trim() && workspaceType === "local",
+      offlinegptSnapshot.offlinegptServerClient && workspaceId?.trim() && workspaceType === "local",
     );
 
     if (canUseManagedRuntime || c) {
       const result = await updateManagedDisabledProviders({
         opencodeClient: c,
-        openworkClient: openworkSnapshot.openworkServerClient,
+        offlinegptClient: offlinegptSnapshot.offlinegptServerClient,
         workspaceId,
         workspaceType,
         disabledProviders: nextDisabled,
@@ -955,10 +955,10 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
 
     // Runtime-managed orphans (`lpr_*` keys in the workspace runtime config).
     try {
-      const { openworkClient, openworkWorkspaceId, canUseOpenworkServer } =
-        await resolveOpenworkConfigTarget("write");
-      if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-        const merged = await openworkClient.getConfig(openworkWorkspaceId);
+      const { offlinegptClient, offlinegptWorkspaceId, canUseOfflineGptServer } =
+        await resolveOfflineGptConfigTarget("write");
+      if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+        const merged = await offlinegptClient.getConfig(offlinegptWorkspaceId);
         const runtimeProvider = isRecord(merged.opencode) ? merged.opencode.provider : null;
         const runtimeOrphans = isRecord(runtimeProvider)
           ? Object.keys(runtimeProvider).filter((key) => /^lpr_/i.test(key))
@@ -1006,7 +1006,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
   ) => {
     const localProviderId = getCloudManagedProviderId(provider);
     const existingImported = state.importedCloudProviders[provider.id] ?? null;
-    // `lpr_*` / `openwork` keys are owned by the cloud-import system. When the
+    // `lpr_*` / `offlinegpt` keys are owned by the cloud-import system. When the
     // import baseline was lost or diverged (e.g. it lives in a different file
     // than the provider block, or a prior reconcile failed mid-flight), an
     // existing cloud-managed block must be treated as a re-import to reconcile,
@@ -1038,7 +1038,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     if (
       !configFile?.content?.trim() ||
       existingImported ||
-      (cloudManagedKey && localProviderId !== "openwork")
+      (cloudManagedKey && localProviderId !== "offlinegpt")
     ) {
       return;
     }
@@ -1456,7 +1456,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       const shouldUseServerReload = !(
         isDesktopRuntime() && options.selectedWorkspaceDisplay().workspaceType === "local"
       );
-      // Prefer the OpenWork server engine reload: it disposes the engine AND
+      // Prefer the OfflineGPT server engine reload: it disposes the engine AND
       // re-registers runtime-DB MCPs, so non-primary workspaces and pending
       // changes are picked up instead of silently dropping (toggles "turn
       // off").
@@ -1465,19 +1465,19 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
         lastGlobalProviderDisposeRefreshAt = now;
         if (shouldUseServerReload) {
           try {
-            const openworkSnapshot = options.openworkServer.getSnapshot();
-            const openworkClient = openworkSnapshot.openworkServerClient;
-            if (openworkSnapshot.openworkServerStatus === "connected" && openworkClient) {
+            const offlinegptSnapshot = options.offlinegptServer.getSnapshot();
+            const offlinegptClient = offlinegptSnapshot.offlinegptServerClient;
+            if (offlinegptSnapshot.offlinegptServerStatus === "connected" && offlinegptClient) {
               const workspaceId =
                 options.runtimeWorkspaceId()?.trim() ||
                 (await options.ensureRuntimeWorkspaceId?.())?.trim() ||
                 "";
               if (workspaceId) {
                 try {
-                  await openworkClient.reloadEngine(workspaceId);
+                  await offlinegptClient.reloadEngine(workspaceId);
                 } catch (error) {
                   const unreachable =
-                    error instanceof OpenworkServerError && error.code === "opencode_engine_unreachable";
+                    error instanceof OfflineGptServerError && error.code === "opencode_engine_unreachable";
                   if (!unreachable || !isDesktopRuntime()) {
                     throw error;
                   }
@@ -1666,7 +1666,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const token = settings.authToken?.trim() ?? "";
     const orgId = settings.activeOrgId?.trim() ?? "";
     if (!token || !orgId) {
-      throw new Error("Sign in to OpenWork Cloud and choose an organization first.");
+      throw new Error("Sign in to OfflineGPT Cloud and choose an organization first.");
     }
 
     try {
@@ -1689,15 +1689,15 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       await assertCloudProviderImportSafe(provider);
 
       if (envEntries.length > 0) {
-        const openworkClient = options.openworkServer.getSnapshot().openworkServerClient;
-        if (!openworkClient) {
+        const offlinegptClient = options.offlinegptServer.getSnapshot().offlinegptServerClient;
+        if (!offlinegptClient) {
           throw new CloudProviderNeedsServerError(
             `${provider.name} needs environment variables (${envEntries
               .map((entry) => entry.key)
-              .join(", ")}) but the OpenWork server is not available.`,
+              .join(", ")}) but the OfflineGPT server is not available.`,
           );
         }
-        await openworkClient.upsertUserEnv(envEntries);
+        await offlinegptClient.upsertUserEnv(envEntries);
       }
       if (primaryApiKey) {
         await c.auth.set({
@@ -1933,19 +1933,19 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       return;
     }
 
-    // Imports, baseline reads, and persistence all go through the OpenWork
+    // Imports, baseline reads, and persistence all go through the OfflineGPT
     // server target (patchRuntimeProviders throws without it). Running before
     // the target resolves made the baseline read fall back to an empty source
     // and re-import every org provider — engine dispose churn on settings open.
     const [readTarget, target] = await Promise.all([
-      resolveOpenworkConfigTarget("read"),
-      resolveOpenworkConfigTarget("write"),
+      resolveOfflineGptConfigTarget("read"),
+      resolveOfflineGptConfigTarget("write"),
     ]);
     if (
-      !readTarget.canUseOpenworkServer ||
-      !target.canUseOpenworkServer ||
-      !target.openworkClient ||
-      !target.openworkWorkspaceId
+      !readTarget.canUseOfflineGptServer ||
+      !target.canUseOfflineGptServer ||
+      !target.offlinegptClient ||
+      !target.offlinegptWorkspaceId
     ) {
       return;
     }
@@ -2083,7 +2083,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       }
       return;
     }
-    if (getOpenworkGatewayOrigin()) {
+    if (getOfflineGptGatewayOrigin()) {
       if (!loggedGatewayCloudProviderSyncSkip) {
         loggedGatewayCloudProviderSyncSkip = true;
         console.info(
@@ -2098,12 +2098,12 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
         const result = await enqueueGlobalCloudProviderSync(
           `server:${getCloudProviderSyncContextKey()}`,
           async () => {
-            const openworkClient = options.openworkServer.getSnapshot().openworkServerClient;
-            if (!openworkClient) throw new Error("OpenWork server unavailable.");
-            let result = await openworkClient.runCloudProviderSyncNow(reason);
+            const offlinegptClient = options.offlinegptServer.getSnapshot().offlinegptServerClient;
+            if (!offlinegptClient) throw new Error("OfflineGPT server unavailable.");
+            let result = await offlinegptClient.runCloudProviderSyncNow(reason);
             if (result.status === "no_session") {
               await pushDenSession(true);
-              result = await openworkClient.runCloudProviderSyncNow(reason);
+              result = await offlinegptClient.runCloudProviderSyncNow(reason);
             }
             return result;
           },
@@ -2373,7 +2373,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
           if (serverHandlesProviderSync()) {
             lastDenSessionPushKey = "";
             void (async () => {
-              await options.openworkServer.getSnapshot().openworkServerClient?.deleteDenSession().catch(() => undefined);
+              await options.offlinegptServer.getSnapshot().offlinegptServerClient?.deleteDenSession().catch(() => undefined);
               // The server removes cloud-owned environment entries from disk,
               // but a running OpenCode child retains its spawn environment.
               // Explicit desktop sign-out must replace that process so an

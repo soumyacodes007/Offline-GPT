@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { expect, mock, test } from "bun:test"
-import { and, eq } from "@openwork-ee/den-db/drizzle"
+import { and, eq } from "@offlinegpt-ee/den-db/drizzle"
 import {
   AuthUserTable,
   ConfigObjectAccessGrantTable,
@@ -15,8 +15,8 @@ import {
   PluginAccessGrantTable,
   PluginConfigObjectTable,
   PluginTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { Hono, type MiddlewareHandler } from "hono"
 import type { PluginArchActorContext } from "../src/routes/org/plugin-system/access.js"
 import type { OrgRouteVariables } from "../src/routes/org/shared.js"
@@ -78,7 +78,7 @@ function responseItem(value: unknown): Record<string, unknown> {
 }
 
 test("stale-session authoring follows the private versus exposed route matrix", async () => {
-  process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DB_MODE ??= "mysql"
   process.env.DEN_DB_ENCRYPTION_KEY ??= "freshness-route-test-encryption-key-123456789"
   process.env.BETTER_AUTH_SECRET ??= "freshness-route-test-secret-1234567890123"
@@ -86,7 +86,7 @@ test("stale-session authoring follows the private versus exposed route matrix", 
   process.env.CORS_ORIGINS ??= "http://127.0.0.1:8790"
 
   mock.restore()
-  const database = (await import("@openwork-ee/den-db")).createDenDb({
+  const database = (await import("@offlinegpt-ee/den-db")).createDenDb({
     databaseUrl: process.env.DATABASE_URL,
     mode: "mysql",
   }).db

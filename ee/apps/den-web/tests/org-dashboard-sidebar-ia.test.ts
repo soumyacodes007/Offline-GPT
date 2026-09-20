@@ -25,7 +25,7 @@ describe("Den org sidebar information architecture", () => {
   test("members get Work labels and never see Collections or Workflow Runs as member destinations", () => {
     expect(navigation).toContain('label: "My Library"');
     expect(navigation).toContain('label: "My Automations"');
-    expect(navigation).toContain('label: "OpenWork Web"');
+    expect(navigation).toContain('label: "OfflineGPT Web"');
     expect(navigation).toContain('label: "Work"');
     expect(navigation).not.toContain('label: "Your Connections"');
     expect(navigation).not.toContain('label: "Extensions"');
@@ -33,10 +33,10 @@ describe("Den org sidebar information architecture", () => {
     expect(navigation).toContain("access.isAdmin && orgSlug");
     expect(navigation).toContain("manageItems.length > 0");
     expect(navigation).toContain("observabilityItems.length > 0");
-    expect(navigation).toContain("const showWeb = runtimeConfigLoaded && capabilities.openworkWeb;");
+    expect(navigation).toContain("const showWeb = runtimeConfigLoaded && capabilities.offlinegptWeb;");
     expect(navigation).not.toMatch(/const showWeb =[\s\S]{0,160}orgMode/);
     expect(navigation).not.toContain("capabilities.cloud");
-    expect(navigation).not.toMatch(/label: "OpenWork Web"[\s\S]{0,120}badge:/);
+    expect(navigation).not.toMatch(/label: "OfflineGPT Web"[\s\S]{0,120}badge:/);
   });
 
   test("admins see the streamlined Manage section before Observability and Team", () => {

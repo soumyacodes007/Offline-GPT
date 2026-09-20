@@ -20,8 +20,8 @@ const remoteWorkspace: WorkspaceServerClientWorkspace = {
   id: "rem_local-id",
   workspaceType: "remote",
   baseUrl: "https://worker.example.test",
-  openworkToken: "remote-token",
-  openworkWorkspaceId: "server-workspace-id",
+  offlinegptToken: "remote-token",
+  offlinegptWorkspaceId: "server-workspace-id",
 };
 
 describe("workspace server client primitive", () => {

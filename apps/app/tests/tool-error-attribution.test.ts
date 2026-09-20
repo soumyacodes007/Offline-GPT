@@ -11,7 +11,7 @@ function reconnectStatus(connectionId = "emc_knowledge", connectionName = "Knowl
   return {
     version: 1,
     kind: "connection_action",
-    source: "openwork-cloud",
+    source: "offlinegpt-cloud",
     connectionId,
     connectionName,
     authType: "oauth",
@@ -20,7 +20,7 @@ function reconnectStatus(connectionId = "emc_knowledge", connectionName = "Knowl
     actor: "member",
     action: {
       type: "reconnect",
-      surface: "openwork_your_connections",
+      surface: "offlinegpt_your_connections",
       retry: "search_capabilities",
       label: "Reconnect in Your Connections",
     },
@@ -34,15 +34,15 @@ const connectionPayload = {
   state: "needs_connection",
   actor: "member",
   message: "Connect your account to continue.",
-  action: { type: "connect", label: "Connect Knowledge Hub", surface: "openwork_your_connections" },
+  action: { type: "connect", label: "Connect Knowledge Hub", surface: "offlinegpt_your_connections" },
 }
 
 describe("chat tool error attribution", () => {
   test("uses the same native action for search attachments and standalone status results", () => {
     for (const { toolName, payload } of [
-      { toolName: "openwork-cloud_search_capabilities", payload: { connectionAction: connectionPayload } },
-      { toolName: "openwork-cloud_execute_capability", payload: connectionPayload },
-      { toolName: "openwork-cloud_connection_action", payload: connectionPayload },
+      { toolName: "offlinegpt-cloud_search_capabilities", payload: { connectionAction: connectionPayload } },
+      { toolName: "offlinegpt-cloud_execute_capability", payload: connectionPayload },
+      { toolName: "offlinegpt-cloud_connection_action", payload: connectionPayload },
     ]) {
       for (const result of [payload, JSON.stringify(payload)]) {
         expect(connectionCardPayloadFromChatToolResult(toolName, result, { intent: "connect" })).toEqual(connectionPayload)
@@ -56,11 +56,11 @@ describe("chat tool error attribution", () => {
   test("keeps connected and admin states native without offering member authorization", () => {
     const connected = { ...connectionPayload, state: "connected", actor: null, action: null }
     const admin = { ...connectionPayload, actor: "organization_admin", action: {
-      type: "update_credentials", label: "Ask an admin", surface: "openwork_organization_connections",
+      type: "update_credentials", label: "Ask an admin", surface: "offlinegpt_organization_connections",
     } }
     for (const payload of [connected, admin]) {
-      expect(connectionCardPayloadFromChatToolResult("openwork-cloud_execute_capability", payload)).toEqual(payload)
-      expect(reconnectActionFromChatToolResult("openwork-cloud_execute_capability", payload)).toBeNull()
+      expect(connectionCardPayloadFromChatToolResult("offlinegpt-cloud_execute_capability", payload)).toEqual(payload)
+      expect(reconnectActionFromChatToolResult("offlinegpt-cloud_execute_capability", payload)).toBeNull()
     }
   })
 
@@ -69,21 +69,21 @@ describe("chat tool error attribution", () => {
       expect(connectionCardPayloadFromChatToolResult(tool, connectionPayload)).toBeNull()
       expect(reconnectActionFromChatToolResult(tool, connectionPayload)).toBeNull()
     }
-    expect(connectionCardPayloadFromChatToolResult("openwork-cloud_execute_capability", { ...connectionPayload, schemaVersion: "2" })).toBeNull()
-    expect(connectionCardPayloadFromChatToolResult("openwork-cloud_search_capabilities", { connectionAction: connectionPayload })).toBeNull()
+    expect(connectionCardPayloadFromChatToolResult("offlinegpt-cloud_execute_capability", { ...connectionPayload, schemaVersion: "2" })).toBeNull()
+    expect(connectionCardPayloadFromChatToolResult("offlinegpt-cloud_search_capabilities", { connectionAction: connectionPayload })).toBeNull()
     const matches = [connectionPayload, { ...connectionPayload, connectionId: "emc_second" }].map(connectionStatus => ({ connectionStatus }))
-    expect(connectionCardPayloadFromChatToolResult("openwork-cloud_search_capabilities", { matches }, { intent: "connect" })).toBeNull()
+    expect(connectionCardPayloadFromChatToolResult("offlinegpt-cloud_search_capabilities", { matches }, { intent: "connect" })).toBeNull()
   })
 
-  test("identifies an OpenWork-created capability deadline", () => {
+  test("identifies an OfflineGPT-created capability deadline", () => {
     expect(attributeChatToolError("The capability call exceeded 180s. Retry once.")).toEqual({
-      label: "OpenWork timeout",
+      label: "OfflineGPT timeout",
       confidence: "Confirmed",
-      description: "OpenWork created this deadline. The external operation may still have completed, so verify its state before retrying.",
+      description: "OfflineGPT created this deadline. The external operation may still have completed, so verify its state before retrying.",
     })
   })
 
-  test("identifies a structured OpenWork lifecycle deadline", () => {
+  test("identifies a structured OfflineGPT lifecycle deadline", () => {
     expect(attributeChatToolError(JSON.stringify({
       error: "connection_failed",
       diagnostic: {
@@ -92,16 +92,16 @@ describe("chat tool error attribution", () => {
         phase: "MCP_TOOL_EXECUTION",
       },
     }))).toMatchObject({
-      label: "OpenWork timeout",
+      label: "OfflineGPT timeout",
       confidence: "Confirmed",
     })
   })
 
-  test("identifies an OpenWork block before send", () => {
+  test("identifies an OfflineGPT block before send", () => {
     expect(attributeChatToolError(JSON.stringify({
       diagnostic: { code: "MCP_URL_BLOCKED", category: "security_blocked" },
     }))).toMatchObject({
-      label: "Blocked by OpenWork",
+      label: "Blocked by OfflineGPT",
       confidence: "Confirmed",
     })
   })
@@ -172,7 +172,7 @@ describe("chat tool error attribution", () => {
       connectionStatus: reconnectStatus(),
     })
 
-    expect(reconnectActionFromChatToolResult("openwork-cloud_execute_capability", errorText)).toEqual({
+    expect(reconnectActionFromChatToolResult("offlinegpt-cloud_execute_capability", errorText)).toEqual({
       connectionId: "emc_knowledge",
       connectionName: "Knowledge Hub",
       label: "Reconnect",
@@ -187,8 +187,8 @@ describe("chat tool error attribution", () => {
       }],
     })
 
-    expect(reconnectActionFromChatToolResult("openwork-cloud_search_capabilities", output)).toBeNull()
-    expect(reconnectActionFromChatToolResult("openwork-cloud_search_capabilities", output, { intent: "connect" })).toEqual({
+    expect(reconnectActionFromChatToolResult("offlinegpt-cloud_search_capabilities", output)).toBeNull()
+    expect(reconnectActionFromChatToolResult("offlinegpt-cloud_search_capabilities", output, { intent: "connect" })).toEqual({
       connectionId: "emc_knowledge",
       connectionName: "Knowledge Hub",
       label: "Reconnect",
@@ -203,7 +203,7 @@ describe("chat tool error attribution", () => {
       },
     })
 
-    expect(reconnectActionFromChatToolResult("openwork-cloud_execute_capability", errorText)).toEqual({
+    expect(reconnectActionFromChatToolResult("offlinegpt-cloud_execute_capability", errorText)).toEqual({
       connectionId: "emc_knowledge",
       connectionName: "Knowledge Hub",
       label: "Reconnect",
@@ -221,19 +221,19 @@ describe("chat tool error attribution", () => {
         actor: "organization_admin",
         action: {
           type: "inspect_connection",
-          surface: "openwork_organization_connections",
+          surface: "offlinegpt_organization_connections",
           retry: "search_capabilities",
         },
       },
     })
 
     expect(reconnectActionFromChatToolResult("malicious_execute_capability", reconnectPayload)).toBeNull()
-    expect(reconnectActionFromChatToolResult("openwork-cloud_execute_capability", providerPayload)).toBeNull()
+    expect(reconnectActionFromChatToolResult("offlinegpt-cloud_execute_capability", providerPayload)).toBeNull()
   })
 
   test("supports first-time member OAuth but rejects mismatched states and credentials", () => {
-    const status = { ...reconnectStatus(), state: "needs_connection", action: { type: "connect", surface: "openwork_your_connections", retry: "search_capabilities" } }
-    const action = (value: unknown) => reconnectActionFromChatToolResult("openwork-cloud_search_capabilities", { matches: [{ connectionStatus: value }] }, { intent: "connect" })
+    const status = { ...reconnectStatus(), state: "needs_connection", action: { type: "connect", surface: "offlinegpt_your_connections", retry: "search_capabilities" } }
+    const action = (value: unknown) => reconnectActionFromChatToolResult("offlinegpt-cloud_search_capabilities", { matches: [{ connectionStatus: value }] }, { intent: "connect" })
     expect(action(status)).toEqual({ connectionId: "emc_knowledge", connectionName: "Knowledge Hub", label: "Connect" })
     expect(action({ ...status, authType: "apikey" })).toBeNull()
     expect(action({ ...status, credentialMode: "shared" })).toBeNull()
@@ -249,7 +249,7 @@ describe("chat tool error attribution", () => {
       })),
     }
 
-    expect(reconnectActionFromChatToolResult("openwork-cloud_search_capabilities", output, { intent: "connect" })).toBeNull()
+    expect(reconnectActionFromChatToolResult("offlinegpt-cloud_search_capabilities", output, { intent: "connect" })).toBeNull()
   })
 
   test("rejects unversioned, shared, and admin-owned action shapes", () => {
@@ -261,12 +261,12 @@ describe("chat tool error attribution", () => {
       actor: "organization_admin",
       action: {
         type: "reconnect",
-        surface: "openwork_organization_connections",
+        surface: "offlinegpt_organization_connections",
         retry: "search_capabilities",
       },
     }
 
-    expect(reconnectActionFromChatToolResult("openwork-cloud_execute_capability", { connectionStatus: unversioned })).toBeNull()
-    expect(reconnectActionFromChatToolResult("openwork-cloud_execute_capability", { connectionStatus: shared })).toBeNull()
+    expect(reconnectActionFromChatToolResult("offlinegpt-cloud_execute_capability", { connectionStatus: unversioned })).toBeNull()
+    expect(reconnectActionFromChatToolResult("offlinegpt-cloud_execute_capability", { connectionStatus: shared })).toBeNull()
   })
 })

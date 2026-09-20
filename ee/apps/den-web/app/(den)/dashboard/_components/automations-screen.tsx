@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CalendarClock, Cloud, ExternalLink, Monitor, Square } from "lucide-react";
-import type { AutomationList, AutomationSchedule } from "@openwork/types/automations";
+import type { AutomationList, AutomationSchedule } from "@offlinegpt/types/automations";
 import { DenButton } from "../../_components/ui/button";
 import { useDenFlow } from "../../_providers/den-flow-provider";
 import { WorkflowArtifactResult } from "./workflow-artifact-result";
@@ -32,7 +32,7 @@ function scheduleLabel(schedule: AutomationSchedule) {
 }
 
 function placementLabel(executionTarget: "desktop" | "cloud" | undefined) {
-  return executionTarget === "cloud" ? "OpenWork Cloud" : "Desktop";
+  return executionTarget === "cloud" ? "OfflineGPT Cloud" : "Desktop";
 }
 
 function PlacementIcon({ executionTarget }: { executionTarget: "desktop" | "cloud" | undefined }) {
@@ -40,12 +40,12 @@ function PlacementIcon({ executionTarget }: { executionTarget: "desktop" | "clou
 }
 
 /** The surface that owns an Automation's lifecycle: Web for Cloud placement, Desktop for Desktop placement. */
-function ManageLink({ item, openworkWebUrl }: { item: { automation: { id: string }; revision: { executionTarget?: "desktop" | "cloud" } }; openworkWebUrl: string }) {
+function ManageLink({ item, offlinegptWebUrl }: { item: { automation: { id: string }; revision: { executionTarget?: "desktop" | "cloud" } }; offlinegptWebUrl: string }) {
   if (item.revision.executionTarget === "cloud") {
-    const href = `${openworkWebUrl.replace(/\/$/, "")}/automations?automation=${encodeURIComponent(item.automation.id)}`;
-    return <DenButton variant="secondary" size="sm" href={href} target="_blank" rel="noopener noreferrer" icon={ExternalLink}>Manage in OpenWork Web</DenButton>;
+    const href = `${offlinegptWebUrl.replace(/\/$/, "")}/automations?automation=${encodeURIComponent(item.automation.id)}`;
+    return <DenButton variant="secondary" size="sm" href={href} target="_blank" rel="noopener noreferrer" icon={ExternalLink}>Manage in OfflineGPT Web</DenButton>;
   }
-  return <span className="inline-flex items-center gap-1.5 text-[12px] text-gray-400"><Monitor className="h-3.5 w-3.5" />Manage in OpenWork Desktop</span>;
+  return <span className="inline-flex items-center gap-1.5 text-[12px] text-gray-400"><Monitor className="h-3.5 w-3.5" />Manage in OfflineGPT Desktop</span>;
 }
 
 /** Groups the monitor list by what needs eyes first: running, needs attention, scheduled, paused. */
@@ -103,12 +103,12 @@ export function AutomationsScreen() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-[20px] font-semibold tracking-[-0.02em] text-gray-950">My Automations</h1>
-            <p className="mt-1 text-[13px] text-gray-400">What Den is running and has scheduled for you. Create and edit Cloud Automations in OpenWork Web; Desktop Automations are managed in the desktop app.</p>
+            <p className="mt-1 text-[13px] text-gray-400">What Den is running and has scheduled for you. Create and edit Cloud Automations in OfflineGPT Web; Desktop Automations are managed in the desktop app.</p>
           </div>
-          <DenButton href={`${runtimeConfig.openworkWebUrl.replace(/\/$/, "")}/automations`} target="_blank" rel="noopener noreferrer" icon={ExternalLink}>Open in OpenWork Web</DenButton>
+          <DenButton href={`${runtimeConfig.offlinegptWebUrl.replace(/\/$/, "")}/automations`} target="_blank" rel="noopener noreferrer" icon={ExternalLink}>Open in OfflineGPT Web</DenButton>
         </div>
         {items.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-gray-100 bg-white p-8 text-center text-[13px] text-gray-400">No Automations yet. Create one in OpenWork Web or in the desktop app; it will show up here once Den is scheduling it.</div>
+          <div className="mt-6 rounded-2xl border border-gray-100 bg-white p-8 text-center text-[13px] text-gray-400">No Automations yet. Create one in OfflineGPT Web or in the desktop app; it will show up here once Den is scheduling it.</div>
         ) : groups.map((group) => (
           <section key={group.title} className="mt-6">
             <h2 className="text-[12px] font-semibold uppercase tracking-[0.06em] text-gray-400">{group.title}</h2>
@@ -153,7 +153,7 @@ export function AutomationsScreen() {
             <p className="mt-1 text-[12px] text-gray-400">Revision {detail.revision.version} · {placementLabel(detail.revision.executionTarget)} · {scheduleLabel(detail.revision.schedule)}</p>
           </div>
         </div>
-        <ManageLink item={detail} openworkWebUrl={runtimeConfig.openworkWebUrl} />
+        <ManageLink item={detail} offlinegptWebUrl={runtimeConfig.offlinegptWebUrl} />
       </div>
 
       {detail.automation.needsAttentionReason ? <div className="mt-5 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-[13px] text-amber-700">{detail.automation.needsAttentionReason.message}</div> : null}
@@ -201,7 +201,7 @@ export function AutomationsScreen() {
               {cancelRun.error ? <div className="rounded-xl bg-red-50 p-3 text-[12px] text-red-600">{cancelRun.error.message}</div> : null}
               {runQuery.data.run.executionThread?.nativeThreadId ? (
                 <div className="rounded-xl bg-gray-50 p-3 text-[11px] text-gray-500">
-                  <p className="font-medium text-gray-700">Native OpenWork Cloud thread</p>
+                  <p className="font-medium text-gray-700">Native OfflineGPT Cloud thread</p>
                   <p className="mt-1 break-all font-mono">{runQuery.data.run.executionThread.nativeThreadId}</p>
                   {runQuery.data.run.executionThread.workspaceId ? <p className="mt-1 break-all font-mono">Workspace {runQuery.data.run.executionThread.workspaceId}</p> : null}
                 </div>

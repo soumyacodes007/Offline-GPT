@@ -10,8 +10,8 @@ files:
   - from: .electron-runtime/node_modules
     to: node_modules
 extraResources:
-  - from: .electron-runtime/openwork-sentry.json
-    to: openwork-sentry.json
+  - from: .electron-runtime/offlinegpt-sentry.json
+    to: offlinegpt-sentry.json
   - from: ../app/dist
     to: app-dist
   - from: server/dist/opencode-plugins
@@ -20,7 +20,7 @@ extraResources:
       - "*.js"
       - "*.wasm"
   - from: ../../packages/docs
-    to: openwork-docs
+    to: offlinegpt-docs
     filter:
       - "**/*.md"
       - "**/*.mdx"
@@ -35,7 +35,7 @@ afterSign: scripts/electron-after-sign.cjs
 publish:
   - provider: github
     owner: different-ai
-    repo: openwork
+    repo: offlinegpt
     releaseType: release
 mac:
   icon: resources/icons/icon.icns
@@ -46,7 +46,7 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
-    NSMicrophoneUsageDescription: OpenWork uses the microphone when you allow a page to access audio input.
+    NSMicrophoneUsageDescription: OfflineGPT uses the microphone when you allow a page to access audio input.
   extraResources:
     - from: resources/sidecars
       to: sidecars
@@ -60,7 +60,7 @@ mac:
     - from: resources/helpers
       to: helpers
       filter:
-        - "OpenWork Computer Use.app/**"
+        - "OfflineGPT Computer Use.app/**"
   target:
     - dmg
     - zip

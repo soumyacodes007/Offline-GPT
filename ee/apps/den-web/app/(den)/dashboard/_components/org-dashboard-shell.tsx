@@ -60,7 +60,7 @@ import {
 } from "./command-palette/den-search-bar";
 import { UserProfileDialog } from "./user-profile-dialog";
 
-const OPENWORK_DOCS_URL = "https://openworklabs.com/docs";
+const OFFLINEGPT_DOCS_URL = "https://offlinegptlabs.com/docs";
 
 function OrgMark({ name }: { name: string }) {
   const initials = useMemo(() => {
@@ -75,14 +75,14 @@ function OrgMark({ name }: { name: string }) {
   );
 }
 
-function OpenWorkMark({ className = "h-9 w-auto" }: { className?: string }) {
+function OfflineGPTMark({ className = "h-9 w-auto" }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 834 649"
       fill="none"
       className={className}
-      aria-label="OpenWork"
+      aria-label="OfflineGPT"
     >
       <path
         fill="#011627"
@@ -136,7 +136,7 @@ export function SidebarBrandMark({
   if (!iconUrl || failedUrl === iconUrl) {
     return (
       <div data-sidebar-brand-icon="fallback">
-        <OpenWorkMark />
+        <OfflineGPTMark />
       </div>
     );
   }
@@ -157,7 +157,7 @@ export function SidebarBrandMark({
   );
 }
 
-const DEFAULT_WORKSPACE_FAVICON_HREF = "/openwork-mark.svg";
+const DEFAULT_WORKSPACE_FAVICON_HREF = "/offlinegpt-mark.svg";
 
 export function WorkspaceFavicon({
   metadata,
@@ -256,10 +256,10 @@ function getDashboardPageTitle(pathname: string, orgSlug: string | null) {
     return "Diagnostics";
   }
   if (pathname.startsWith(getInferenceRoute(orgSlug))) {
-    return "OpenWork Models";
+    return "OfflineGPT Models";
   }
   if (pathname.startsWith(getWebRoute(orgSlug))) {
-    return "OpenWork Web";
+    return "OfflineGPT Web";
   }
   if (pathname.startsWith(getLibraryRoute(orgSlug))) {
     return "My Library";
@@ -432,7 +432,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
       cloud: false,
       installLinks: false,
       mcpConnections: false,
-      openworkWeb: false,
+      offlinegptWeb: false,
       orgManagedDashboards: false,
       workflows: false,
     },
@@ -474,7 +474,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         aria-haspopup="dialog"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <OrgMark name={activeOrg?.name ?? "OpenWork"} />
+          <OrgMark name={activeOrg?.name ?? "OfflineGPT"} />
           <div className="min-w-0">
             <p className="truncate text-[14px] font-medium text-gray-900">
               {activeOrg?.name ?? "Loading..."}
@@ -501,7 +501,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         >
           <div className="min-w-0 px-3 py-1.5">
             <p className="truncate text-[13px] font-medium text-gray-900">
-              {user?.email ?? "OpenWork user"}
+              {user?.email ?? "OfflineGPT user"}
             </p>
           </div>
           
@@ -782,7 +782,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
               </a>
             ) : null}
             <a
-              href={OPENWORK_DOCS_URL}
+              href={OFFLINEGPT_DOCS_URL}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700"

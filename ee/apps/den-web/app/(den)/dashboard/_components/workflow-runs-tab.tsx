@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarClock, Trash2 } from "lucide-react";
-import type { WorkflowArtifactSnapshot, WorkflowDetail } from "@openwork/types/workflows";
+import type { WorkflowArtifactSnapshot, WorkflowDetail } from "@offlinegpt/types/workflows";
 import { DenButton } from "../../_components/ui/button";
 import { DenCard } from "../../_components/ui/card";
 import { DenChip } from "../../_components/ui/chip";

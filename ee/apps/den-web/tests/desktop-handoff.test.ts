@@ -9,22 +9,22 @@ import { DenFlowProvider, useDenFlow } from "../app/(den)/_providers/den-flow-pr
 import {
   getDesktopGrant,
   getDesktopHandoffGrant,
-  getDesktopHandoffOpenworkUrl,
+  getDesktopHandoffOfflineGptUrl,
 } from "../app/(den)/_lib/desktop-handoff";
 import { SETUP_CONTINUATION_KEY, parseSetupContinuation, type SetupContinuation } from "../app/(den)/_lib/setup-continuation";
 
-test("preserves the complete OpenWork desktop handoff URL", () => {
-  const openworkUrl = "openwork://den-auth?grant=one-time-code&denBaseUrl=https%3A%2F%2Fapi.example.test";
-  const payload = { grant: "one-time-code", openworkUrl };
+test("preserves the complete OfflineGPT desktop handoff URL", () => {
+  const offlinegptUrl = "offlinegpt://den-auth?grant=one-time-code&denBaseUrl=https%3A%2F%2Fapi.example.test";
+  const payload = { grant: "one-time-code", offlinegptUrl };
 
-  expect(getDesktopHandoffOpenworkUrl(payload)).toBe(openworkUrl);
-  expect(getDesktopHandoffGrant(payload, openworkUrl)).toBe("one-time-code");
+  expect(getDesktopHandoffOfflineGptUrl(payload)).toBe(offlinegptUrl);
+  expect(getDesktopHandoffGrant(payload, offlinegptUrl)).toBe("one-time-code");
 });
 
-test("extracts a one-time grant from an OpenWork desktop handoff", () => {
+test("extracts a one-time grant from an OfflineGPT desktop handoff", () => {
   expect(
     getDesktopGrant(
-      "openwork://den-auth?grant=one-time-code&baseUrl=https%3A%2F%2Fapi.example.test"
+      "offlinegpt://den-auth?grant=one-time-code&baseUrl=https%3A%2F%2Fapi.example.test"
     )
   ).toBe("one-time-code");
 });
@@ -32,7 +32,7 @@ test("extracts a one-time grant from an OpenWork desktop handoff", () => {
 test("rejects missing and malformed desktop handoffs", () => {
   expect(
     getDesktopGrant(
-      "openwork://den-auth?baseUrl=https%3A%2F%2Fapi.example.test"
+      "offlinegpt://den-auth?baseUrl=https%3A%2F%2Fapi.example.test"
     )
   ).toBeNull();
   expect(getDesktopGrant("not a url")).toBeNull();
@@ -40,7 +40,7 @@ test("rejects missing and malformed desktop handoffs", () => {
 });
 
 test("restores only fresh tab-scoped setup with a user and a known route", () => {
-  const pending = { userId: "user-1", desktopScheme: "openwork", setup: { organizationId: "org-1", route: "/dashboard/onboarding/tools" }, at: Date.now() };
+  const pending = { userId: "user-1", desktopScheme: "offlinegpt", setup: { organizationId: "org-1", route: "/dashboard/onboarding/tools" }, at: Date.now() };
   expect(parseSetupContinuation(JSON.stringify(pending))).toEqual(pending);
   expect(parseSetupContinuation(JSON.stringify({ ...pending, setup: null, userId: null }))).toMatchObject({ userId: null, setup: null });
   for (const invalid of [
@@ -48,14 +48,14 @@ test("restores only fresh tab-scoped setup with a user and a known route", () =>
     { ...pending, at: Date.now() - 25 * 60 * 60 * 1000 },
     { ...pending, at: Date.now() + 60_000 },
     { ...pending, setup: { organizationId: "org-1", route: "https://outside.test" } },
-    { ...pending, desktopScheme: "openwork://" },
+    { ...pending, desktopScheme: "offlinegpt://" },
     { ...pending, desktopScheme: "untrusted-app" },
     { ...pending, setup: { route: "/dashboard/onboarding" } },
   ]) expect(parseSetupContinuation(JSON.stringify(invalid))).toBeNull();
   expect(parseSetupContinuation("not json")).toBeNull();
 });
 
-const account = { id: "user-1", email: "member@openwork.test", name: "Member" };
+const account = { id: "user-1", email: "member@offlinegpt.test", name: "Member" };
 const directory = { orgs: [{ id: "org-1", name: "Team", slug: "team", role: "owner", orgMemberId: "member-1", membershipId: "membership-1" }] };
 function deferred<T>() {
   let resolve: (value: T) => void = () => { throw new Error("Deferred result not initialized"); };
@@ -136,7 +136,7 @@ test("sign-out invalidates an in-flight session response and clears the tab cont
 });
 
 test("a different authenticated user cannot inherit an earlier user's setup or desktop return", async () => {
-  await withFlow({ stored: { userId: "old-user", desktopScheme: "openwork", setup: { organizationId: "old-org", route: "/dashboard/onboarding/tools" }, at: Date.now() } }, async ({ state, paths }) => {
+  await withFlow({ stored: { userId: "old-user", desktopScheme: "offlinegpt", setup: { organizationId: "old-org", route: "/dashboard/onboarding/tools" }, at: Date.now() } }, async ({ state, paths }) => {
     expect(state().user?.id).toBe(account.id);
     expect(state().setupPending).toBe(false);
     expect(state().desktopAuthRequested).toBe(false);
@@ -157,7 +157,7 @@ test("an organization lookup failure neither starts setup nor issues a handoff",
 
 test.each([runtime.EMPTY_RUNTIME_CONFIG, { ...runtime.EMPTY_RUNTIME_CONFIG }])("fallback or single-org config never discards unfinished setup", async (config) => {
   const setup = { organizationId: "org-1", route: "/dashboard/onboarding/people" };
-  await withFlow({ config: Promise.resolve(config), stored: { userId: account.id, desktopScheme: "openwork", setup, at: Date.now() } }, async ({ state, paths }) => {
+  await withFlow({ config: Promise.resolve(config), stored: { userId: account.id, desktopScheme: "offlinegpt", setup, at: Date.now() } }, async ({ state, paths }) => {
     expect(state().setupPending).toBe(true);
     expect(await state().resolveUserLandingRoute()).toBe(setup.route);
     expect(parseSetupContinuation(sessionStorage.getItem(SETUP_CONTINUATION_KEY))?.setup).toEqual(setup);
@@ -182,7 +182,7 @@ test("sign-out discards a late handoff result without opening the app", async ()
     : { payload: path === "/v1/me" ? { user: account } : path === "/v1/me/orgs" ? directory : {} } }, async ({ state, paths, opened }) => {
     expect(paths).toContain("/api/auth/desktop-handoff");
     await act(async () => state().signOut());
-    await act(async () => handoff.resolve({ payload: { grant: "stale-test-grant", openworkUrl: "openwork://den-auth?grant=stale-test-grant" } }));
+    await act(async () => handoff.resolve({ payload: { grant: "stale-test-grant", offlinegptUrl: "offlinegpt://den-auth?grant=stale-test-grant" } }));
     expect(opened).toEqual([]);
     expect(state().desktopRedirectUrl).toBeNull();
     expect(state().user).toBeNull();
@@ -212,7 +212,7 @@ test("a returning user's failed handoff can retry without signing in again", asy
   await withFlow({ reply: async (path) => {
     if (path === "/api/auth/desktop-handoff") {
       attempts += 1;
-      return attempts === 1 ? { status: 503, payload: { message: "Try again" } } : { payload: { grant: "test-grant", openworkUrl: "openwork://den-auth?grant=test-grant" } };
+      return attempts === 1 ? { status: 503, payload: { message: "Try again" } } : { payload: { grant: "test-grant", offlinegptUrl: "offlinegpt://den-auth?grant=test-grant" } };
     }
     return { payload: path === "/v1/me" ? { user: account } : path === "/v1/me/orgs" ? directory : {} };
   } }, async ({ state, opened }) => {
@@ -221,7 +221,7 @@ test("a returning user's failed handoff can retry without signing in again", asy
     await act(async () => state().retryDesktopAuthHandoff());
     expect(state().authError).toBeNull();
     expect(attempts).toBe(2);
-    expect(opened).toEqual(["openwork://den-auth?grant=test-grant"]);
+    expect(opened).toEqual(["offlinegpt://den-auth?grant=test-grant"]);
     expect(sessionStorage.getItem(SETUP_CONTINUATION_KEY)).toBeNull();
   });
 });

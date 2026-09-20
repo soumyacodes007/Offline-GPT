@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { WorkflowArtifactSnapshot, WorkflowDetail, WorkflowTestResult } from "@openwork/types/workflows";
+import type { WorkflowArtifactSnapshot, WorkflowDetail, WorkflowTestResult } from "@offlinegpt/types/workflows";
 import { formFieldsFromSchema } from "./workflow-input-form";
 import {
   useDeleteWorkflowSnapshot,

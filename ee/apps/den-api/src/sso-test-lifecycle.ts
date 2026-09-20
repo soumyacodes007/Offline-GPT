@@ -1,12 +1,12 @@
 import { createHmac, randomUUID } from "node:crypto"
-import { and, eq, gt, isNotNull, isNull } from "@openwork-ee/den-db/drizzle"
+import { and, eq, gt, isNotNull, isNull } from "@offlinegpt-ee/den-db/drizzle"
 import {
   AuthVerificationTable,
   AuthUserTable,
   OrganizationTable,
   SsoConnectionTable,
   SsoProviderTable,
-} from "@openwork-ee/den-db/schema"
+} from "@offlinegpt-ee/den-db/schema"
 import { db } from "./db.js"
 import { env } from "./env.js"
 import { isOrganizationSsoReady } from "./sso-readiness.js"
@@ -16,7 +16,7 @@ type SsoTestUserId = NonNullable<SsoConnection["activeTestUserId"]>
 type SsoTestFailureReason = "authentication" | "cancelled" | "expired" | "identity_mismatch" | "start_failed"
 
 const SSO_TEST_TTL_MS = 5 * 60 * 1000
-const TEST_INTENT_QUERY_KEY = "openworkSsoTest"
+const TEST_INTENT_QUERY_KEY = "offlinegptSsoTest"
 
 const SSO_TEST_FAILURE_MESSAGES: Record<SsoTestFailureReason, string> = {
   authentication: "SSO authentication did not complete successfully. Check the provider configuration and try again.",

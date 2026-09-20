@@ -43,24 +43,24 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase: metadataBaseFromOrigin(metadataOrigin),
-    title: "OpenWork Cloud",
+    title: "OfflineGPT Cloud",
     description:
-      "Share your OpenWork setup with your team, manage billing, and use OpenWork Cloud from app.openworklabs.com.",
+      "Share your OfflineGPT setup with your team, manage billing, and use OfflineGPT Cloud from app.offlinegptlabs.com.",
     openGraph: {
-      title: "OpenWork Cloud",
+      title: "OfflineGPT Cloud",
       description:
-        "Share your OpenWork setup with your team and keep selected workflows available in OpenWork Cloud.",
+        "Share your OfflineGPT setup with your team and keep selected workflows available in OfflineGPT Cloud.",
       images: ["/opengraph-image"]
     },
     twitter: {
       card: "summary_large_image",
-      title: "OpenWork Cloud",
+      title: "OfflineGPT Cloud",
       description:
-        "Share your OpenWork setup with your team and manage OpenWork Cloud from app.openworklabs.com.",
+        "Share your OfflineGPT setup with your team and manage OfflineGPT Cloud from app.offlinegptlabs.com.",
       images: ["/opengraph-image"]
     },
     icons: {
-      icon: "/openwork-mark.svg"
+      icon: "/offlinegpt-mark.svg"
     }
   };
 }

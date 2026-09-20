@@ -3,8 +3,8 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { expect } from "vitest";
-import { eventually, needs, test } from "@openwork/testkit";
-import { stopChild } from "../worlds/openwork-server-cli.ts";
+import { eventually, needs, test } from "@offlinegpt/testkit";
+import { stopChild } from "../worlds/offlinegpt-server-cli.ts";
 
 // Both checks use the real local extension boundary with synthetic provider traffic.
 async function calendarServer() {
@@ -21,12 +21,12 @@ async function calendarServer() {
     token: { accessToken: "calendar-fixture-token", refreshToken: "fixture-refresh", expiresAt: Date.now() + 3_600_000 },
     connectedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   }] }));
-  const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(OPENWORK_|OPENCODE|GOOGLE_|SENTRY_)/.test(key)));
+  const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(OFFLINEGPT_|OPENCODE|GOOGLE_|SENTRY_)/.test(key)));
   const child = spawn("bun", ["--conditions=development", "--preload", join(repo, "evals/packages/labs/src/calendar-read-preload.ts"), "src/cli.ts",
     "--host", "127.0.0.1", "--port", "0", "--token", "calendar-client", "--host-token", "calendar-host", "--config", config,
-  ], { cwd: join(repo, "apps/server"), env: { ...inherited, OPENWORK_SERVER_CONFIG: config, OPENWORK_DATA_DIR: join(root, "data"),
+  ], { cwd: join(repo, "apps/server"), env: { ...inherited, OFFLINEGPT_SERVER_CONFIG: config, OFFLINEGPT_DATA_DIR: join(root, "data"),
     XDG_CONFIG_HOME: join(root, "config"), XDG_DATA_HOME: join(root, "data"), XDG_CACHE_HOME: join(root, "cache"),
-    OPENWORK_DEV_MODE: "1", OPENWORK_GOOGLE_WORKSPACE_ALLOW_PLAINTEXT_VAULT: "1",
+    OFFLINEGPT_DEV_MODE: "1", OFFLINEGPT_GOOGLE_WORKSPACE_ALLOW_PLAINTEXT_VAULT: "1",
   }, stdio: ["ignore", "pipe", "pipe"] });
   let output = "";
   child.stdout.on("data", (chunk) => { output += String(chunk); });
@@ -34,7 +34,7 @@ async function calendarServer() {
   try {
     const base = await eventually(() => {
       if (child.exitCode !== null) throw new Error(output);
-      return output.match(/OpenWork server listening on (http:\/\/127\.0\.0\.1:\d+)/)?.[1];
+      return output.match(/OfflineGPT server listening on (http:\/\/127\.0\.0\.1:\d+)/)?.[1];
     }, { within: 60_000, intervalMs: 100 });
     const witness = output.match(/Calendar witness: (http:\/\/127\.0\.0\.1:\d+)/)?.[1];
     if (!witness) throw new Error("Calendar witness did not start");

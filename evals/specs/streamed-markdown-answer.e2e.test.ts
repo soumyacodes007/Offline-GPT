@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { eventually, observeTranscript, readTranscriptMessages, spec } from "@openwork/testkit";
+import { eventually, observeTranscript, readTranscriptMessages, spec } from "@offlinegpt/testkit";
 import { streamedMarkdown, streamedMarkdownMarker, streamedMarkdownReasoning, streamedToolHistory } from "../worlds/chat.ts";
 
 const test = spec.world(streamedMarkdown, { timeout: 420_000 });

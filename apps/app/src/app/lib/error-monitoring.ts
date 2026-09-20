@@ -1,5 +1,5 @@
 /**
- * Web error monitoring for the OpenWork web deployment (Sentry, zero-dependency).
+ * Web error monitoring for the OfflineGPT web deployment (Sentry, zero-dependency).
  *
  * Principles (mirrors `analytics.ts`):
  * - Detection-first: report that a web instance failed to boot or hit an
@@ -8,22 +8,22 @@
  *   prompts, or tokens.
  * - Fire-and-forget: monitoring must never break or slow the app.
  * - Off by default: active only when the build is the web deployment
- *   (`VITE_OPENWORK_DEPLOYMENT=web`), `VITE_OPENWORK_SENTRY_DSN` is set, and
+ *   (`VITE_OFFLINEGPT_DEPLOYMENT=web`), `VITE_OFFLINEGPT_SENTRY_DSN` is set, and
  *   the page is not running inside Electron (the desktop app keeps its own
  *   consent-gated telemetry in `apps/desktop/electron/sentry.mjs`).
  * - Respects the same `analyticsEnabled` preference as product analytics.
  *
  * The pre-boot half lives as an inline script in `index.html` so a bundle
  * that never loads is still reported; once this module starts it takes over
- * via `window.__openworkWebErrorMonitorActive`.
+ * via `window.__offlinegptWebErrorMonitorActive`.
  */
 import { isAnalyticsEnabled } from "./analytics";
-import { getOpenWorkDeployment } from "./openwork-deployment";
+import { getOfflineGPTDeployment } from "./offlinegpt-deployment";
 import { isElectronRuntime } from "./runtime-env";
 
 declare global {
   interface Window {
-    __openworkWebErrorMonitorActive?: boolean;
+    __offlinegptWebErrorMonitorActive?: boolean;
   }
 }
 
@@ -56,7 +56,7 @@ export function shouldMonitorWebErrors(input: WebErrorMonitoringGate): boolean {
 
 /**
  * Strip query and fragment before reporting: sign-in and deep-link URLs can
- * carry credentials (`grant`, `openworkToken`, `accessToken`) that must never
+ * carry credentials (`grant`, `offlinegptToken`, `accessToken`) that must never
  * leave the page.
  */
 export function sanitizePageUrl(href: string): string {
@@ -155,10 +155,10 @@ function resourceUrl(target: EventTarget | null): string | null {
  */
 export function startWebErrorMonitoring() {
   if (started || typeof window === "undefined") return;
-  const dsn = String(import.meta.env.VITE_OPENWORK_SENTRY_DSN ?? "").trim();
+  const dsn = String(import.meta.env.VITE_OFFLINEGPT_SENTRY_DSN ?? "").trim();
   const gate: WebErrorMonitoringGate = {
     dsn,
-    deployment: getOpenWorkDeployment(),
+    deployment: getOfflineGPTDeployment(),
     electronRuntime: isElectronRuntime(),
   };
   if (!shouldMonitorWebErrors(gate)) return;
@@ -167,9 +167,9 @@ export function startWebErrorMonitoring() {
 
   started = true;
   // Hand off from the pre-boot beacon in index.html.
-  window.__openworkWebErrorMonitorActive = true;
-  const release = String(import.meta.env.VITE_OPENWORK_BUILD_SHA ?? "").trim()
-    || String(import.meta.env.VITE_OPENWORK_APP_VERSION ?? "").trim();
+  window.__offlinegptWebErrorMonitorActive = true;
+  const release = String(import.meta.env.VITE_OFFLINEGPT_BUILD_SHA ?? "").trim()
+    || String(import.meta.env.VITE_OFFLINEGPT_APP_VERSION ?? "").trim();
 
   window.addEventListener(
     "error",

@@ -7,7 +7,7 @@ import {
 // A dashboard tile is an MCP App plus its launch input, so two tiles can share
 // one app (two JQL queries on one board) while identical tiles still collapse.
 const jqlSearch = {
-  serverName: "openwork-app-host-connect-0123456789ab",
+  serverName: "offlinegpt-app-host-connect-0123456789ab",
   toolName: "search_issues_using_jql",
 };
 

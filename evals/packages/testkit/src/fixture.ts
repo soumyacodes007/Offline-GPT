@@ -1,7 +1,7 @@
-import { test as evidenceTest } from "@openwork/test-evidence/vitest";
-import { SkipError, resolvePlace } from "@openwork/env";
+import { test as evidenceTest } from "@offlinegpt/test-evidence/vitest";
+import { SkipError, resolvePlace } from "@offlinegpt/env";
 import { setBriefTestRegistrar } from "./brief-internal.ts";
-import type { TestEvidenceRecorder } from "@openwork/test-evidence";
+import type { TestEvidenceRecorder } from "@offlinegpt/test-evidence";
 
 export const fixtureTest = evidenceTest.extend<{ place: ReturnType<typeof resolvePlace> }>({
   place: [async ({}, use) => {

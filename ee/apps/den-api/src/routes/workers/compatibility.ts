@@ -1,4 +1,4 @@
-import { normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+import { normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { Hono } from "hono"
 import { cors } from "hono/cors"
 import { tokenRoute } from "../../middleware/index.js"
@@ -29,8 +29,8 @@ function cloudWorkerCompatibilityCors() {
       "Content-Type",
       "Last-Event-ID",
       "X-OpenCode-Directory",
-      "X-OpenWork-Client-Id",
-      "X-OpenWork-Host-Token",
+      "X-OfflineGPT-Client-Id",
+      "X-OfflineGPT-Host-Token",
       "X-Opencode-Directory",
     ],
     allowMethods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

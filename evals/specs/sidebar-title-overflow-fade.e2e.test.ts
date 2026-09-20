@@ -1,6 +1,6 @@
-import { browserScript } from "@openwork/testkit";
+import { browserScript } from "@offlinegpt/testkit";
 import { beforeEach, describe, expect } from "vitest";
-import { spec, readSidebarOverflow, type Surface } from "@openwork/testkit";
+import { spec, readSidebarOverflow, type Surface } from "@offlinegpt/testkit";
 import { sidebarExpansion, sidebarOverflow } from "../worlds/session-shell.ts";
 
 type SidebarMode = "overflow" | "workspace" | "group" | "ungrouped";
@@ -114,8 +114,8 @@ test("the sidebar title fade follows only the edges with hidden text", async ({ 
     const platformClasses = await seed.evalIn(world.app, () => (document.documentElement.className));
     if (typeof platformClasses !== "string") throw new Error("Desktop platform classes were not readable.");
     await seed.evalIn(world.app, () => {
-      document.documentElement.classList.remove('openwork-platform-linux', 'openwork-platform-windows');
-      document.documentElement.classList.add('openwork-electron', 'openwork-platform-mac');
+      document.documentElement.classList.remove('offlinegpt-platform-linux', 'offlinegpt-platform-windows');
+      document.documentElement.classList.add('offlinegpt-electron', 'offlinegpt-platform-mac');
     });
     // TODO(primitive): probe.geometry should compare a pane and its visible titlebar trigger.
     const geometry = () => probe.eval(() => {
@@ -129,7 +129,7 @@ test("the sidebar title fade follows only the edges with hidden text", async ({ 
       const headerBox = header.getBoundingClientRect();
       const triggerBox = trigger.getBoundingClientRect();
       return {
-        isMac: document.documentElement.classList.contains('openwork-platform-mac'),
+        isMac: document.documentElement.classList.contains('offlinegpt-platform-mac'),
         state: sidebar.getAttribute('data-state'),
         top: box.top,
         left: box.left,
@@ -352,7 +352,7 @@ for (const mode of expansionModes) {
         });
       }
       expect((await world.observation.read()).current.selected).toEqual(initial.current.selected);
-      const management = await probe.storage("openwork.react.sessionManagement");
+      const management = await probe.storage("offlinegpt.react.sessionManagement");
       if (mode === "group") expect(management).toMatchObject({ state: { groupsByWorkspace: {
         [world.workspace.workspaceId]: { groups: [{ id: "grp_neighbor" }, { id: "grp_expansion" }] },
       } } });

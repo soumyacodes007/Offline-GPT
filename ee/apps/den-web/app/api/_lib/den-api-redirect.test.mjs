@@ -21,10 +21,10 @@ describe("Den API redirect compatibility route", () => {
     delete process.env.DEN_WEB_PUBLIC_ORIGIN;
 
     const { GET } = await import("../den/[...path]/route.ts");
-    const response = await GET(new NextRequest("https://app.openworklabs.com/api/den/v1/me?include=org"));
+    const response = await GET(new NextRequest("https://app.offlinegptlabs.com/api/den/v1/me?include=org"));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://api.app.openworklabs.com/v1/me?include=org");
+    expect(response.headers.get("location")).toBe("https://api.app.offlinegptlabs.com/v1/me?include=org");
   });
 
   test("uses DEN_API_BASE when the API has an explicit local origin", async () => {
@@ -40,7 +40,7 @@ describe("Den API redirect compatibility route", () => {
   });
 
   test("uses DEN_BASE_URL when ingress requests arrive on an internal host", async () => {
-    process.env.DEN_BASE_URL = "https://app.openworklabs.com";
+    process.env.DEN_BASE_URL = "https://app.offlinegptlabs.com";
     delete process.env.DEN_API_BASE;
     delete process.env.DEN_WEB_PUBLIC_ORIGIN;
 
@@ -48,7 +48,7 @@ describe("Den API redirect compatibility route", () => {
     const response = await POST(new NextRequest("http://den-web:3005/api/den/v1/workers"));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://api.app.openworklabs.com/v1/workers");
+    expect(response.headers.get("location")).toBe("https://api.app.offlinegptlabs.com/v1/workers");
   });
 
   test("keeps double-slash suffixes on the Den API host", async () => {
@@ -57,9 +57,9 @@ describe("Den API redirect compatibility route", () => {
     delete process.env.DEN_WEB_PUBLIC_ORIGIN;
 
     const { POST } = await import("../den/[...path]/route.ts");
-    const response = await POST(new NextRequest("https://app.openworklabs.com/api/den//evil.example/path?token=secret"));
+    const response = await POST(new NextRequest("https://app.offlinegptlabs.com/api/den//evil.example/path?token=secret"));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://api.app.openworklabs.com//evil.example/path?token=secret");
+    expect(response.headers.get("location")).toBe("https://api.app.offlinegptlabs.com//evil.example/path?token=secret");
   });
 });

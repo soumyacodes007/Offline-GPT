@@ -1,35 +1,35 @@
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { beforeAll, describe, expect, mock, test } from "bun:test"
 import { Hono, type MiddlewareHandler } from "hono"
 import type { OrganizationContext } from "../src/orgs.js"
 import type { OrgRouteVariables } from "../src/routes/org/shared.js"
 
-mock.module("../src/openwork-web-runtime-access.js", () => {
-  const code = "openwork_web_access_required" as const
-  const message = "An active OpenWork Web subscription or complimentary access is required to use OpenWork Cloud."
-  class OpenWorkWebAccessRequiredError extends Error {
+mock.module("../src/offlinegpt-web-runtime-access.js", () => {
+  const code = "offlinegpt_web_access_required" as const
+  const message = "An active OfflineGPT Web subscription or complimentary access is required to use OfflineGPT Cloud."
+  class OfflineGPTWebAccessRequiredError extends Error {
     readonly code = code
 
     constructor() {
       super(message)
-      this.name = "OpenWorkWebAccessRequiredError"
+      this.name = "OfflineGPTWebAccessRequiredError"
     }
   }
-  const getOpenWorkWebRuntimeAccess = async () => ({ hasAccess: true })
+  const getOfflineGPTWebRuntimeAccess = async () => ({ hasAccess: true })
   return {
-    OPENWORK_WEB_ACCESS_REQUIRED_CODE: code,
-    OPENWORK_WEB_ACCESS_REQUIRED_MESSAGE: message,
-    OpenWorkWebAccessRequiredError,
-    getOpenWorkWebRuntimeAccess,
-    requireOpenWorkWebRuntimeAccess: async (
+    OFFLINEGPT_WEB_ACCESS_REQUIRED_CODE: code,
+    OFFLINEGPT_WEB_ACCESS_REQUIRED_MESSAGE: message,
+    OfflineGPTWebAccessRequiredError,
+    getOfflineGPTWebRuntimeAccess,
+    requireOfflineGPTWebRuntimeAccess: async (
       organizationId: string,
-      resolveAccess = getOpenWorkWebRuntimeAccess,
+      resolveAccess = getOfflineGPTWebRuntimeAccess,
     ) => {
       const access = await resolveAccess(organizationId)
-      if (!access.hasAccess) throw new OpenWorkWebAccessRequiredError()
+      if (!access.hasAccess) throw new OfflineGPTWebAccessRequiredError()
       return access
     },
-    openWorkWebAccessRequiredPayload: () => ({ error: code, message }),
+    offlineGptWebAccessRequiredPayload: () => ({ error: code, message }),
   }
 })
 
@@ -48,13 +48,13 @@ type StoredToken = Awaited<ReturnType<CloudWorkerStore["getActiveTokens"]>>[numb
 }
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DEN_DB_ENCRYPTION_KEY = process.env.DEN_DB_ENCRYPTION_KEY ?? "x".repeat(32)
   process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "y".repeat(32)
   process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://127.0.0.1:8790"
   process.env.CORS_ORIGINS = process.env.CORS_ORIGINS ?? "http://127.0.0.1:8790"
   process.env.PROVISIONER_MODE = "stub"
-  process.env.DAYTONA_SNAPSHOT = "openwork-0.18.8"
+  process.env.DAYTONA_SNAPSHOT = "offlinegpt-0.18.8"
 }
 
 let routes: typeof import("../src/routes/cloud/index.js")
@@ -159,7 +159,7 @@ function expectedCloudInstance(input: {
     status: input.status,
     url: input.url,
     imageVersion: input.imageVersion ?? null,
-    latestVersion: "openwork-0.18.8",
+    latestVersion: "offlinegpt-0.18.8",
   }
 }
 
@@ -348,7 +348,7 @@ describe("Cloud instance route gate", () => {
       orgMode: "multi_org",
       provisionerMode: "daytona",
       daytonaApiKey: "daytona-test-key",
-      getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
       ensureCloudWorker: async () => provisioningWorker,
       getSandboxRecord: async () => null,
     })
@@ -366,7 +366,7 @@ describe("Cloud instance route gate", () => {
       memberRoute: contextMiddleware(organizationContext(JSON.stringify({ capabilities: { cloud: true } }))),
       orgMode: "multi_org",
       provisionerMode: "stub",
-      getOpenWorkWebAccess: async () => ({ hasAccess: false }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: false }),
       ensureCloudWorker: async () => {
         ensureCalls += 1
         return fakeWorker("provisioning")
@@ -376,7 +376,7 @@ describe("Cloud instance route gate", () => {
     const response = await app.request("http://den.local/v1/cloud/instance")
 
     expect(response.status).toBe(403)
-    await expect(response.json()).resolves.toMatchObject({ error: "openwork_web_access_required" })
+    await expect(response.json()).resolves.toMatchObject({ error: "offlinegpt_web_access_required" })
     expect(ensureCalls).toBe(0)
   })
 
@@ -417,7 +417,7 @@ describe("Cloud instance route gate", () => {
       orgMode: "multi_org",
       provisionerMode: "daytona",
       daytonaApiKey: "daytona-test-key",
-      getOpenWorkWebAccess: async () => ({ hasAccess: false }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: false }),
       ensureCloudWorker: async () => {
         ensureCalls += 1
         return fakeWorker("provisioning")
@@ -428,8 +428,8 @@ describe("Cloud instance route gate", () => {
 
     expect(response.status).toBe(403)
     await expect(response.json()).resolves.toEqual({
-      error: "openwork_web_access_required",
-      message: "An active OpenWork Web subscription or complimentary access is required to use OpenWork Cloud.",
+      error: "offlinegpt_web_access_required",
+      message: "An active OfflineGPT Web subscription or complimentary access is required to use OfflineGPT Cloud.",
     })
     expect(ensureCalls).toBe(0)
   })
@@ -445,7 +445,7 @@ describe("Cloud instance route gate", () => {
       memberRoute: contextMiddleware(organizationContext(null)),
       orgMode: "multi_org",
       provisionerMode: "stub",
-      getOpenWorkWebAccess: async () => ({ hasAccess: false }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: false }),
       ensureCloudWorker: async () => {
         ensureCalls += 1
         return fakeWorker("failed")
@@ -459,8 +459,8 @@ describe("Cloud instance route gate", () => {
 
     expect(response.status).toBe(403)
     await expect(response.json()).resolves.toEqual({
-      error: "openwork_web_access_required",
-      message: "An active OpenWork Web subscription or complimentary access is required to use OpenWork Cloud.",
+      error: "offlinegpt_web_access_required",
+      message: "An active OfflineGPT Web subscription or complimentary access is required to use OfflineGPT Cloud.",
     })
     expect(ensureCalls).toBe(0)
     expect(recoveryCalls).toBe(0)
@@ -468,7 +468,7 @@ describe("Cloud instance route gate", () => {
 })
 
 describe("Cloud gateway resolve route", () => {
-  const grantedOpenWorkWebAccess = async () => ({ hasAccess: true })
+  const grantedOfflineGPTWebAccess = async () => ({ hasAccess: true })
 
   test("returns 404 when the gateway key is not configured", async () => {
     const app = new Hono<{ Variables: OrgRouteVariables }>()
@@ -481,7 +481,7 @@ describe("Cloud gateway resolve route", () => {
     })
 
     const response = await app.request("http://den.local/v1/cloud/gateway/resolve", {
-      headers: { "X-OpenWork-Gateway-Key": "gateway-secret" },
+      headers: { "X-OfflineGPT-Gateway-Key": "gateway-secret" },
     })
 
     expect(response.status).toBe(404)
@@ -499,7 +499,7 @@ describe("Cloud gateway resolve route", () => {
     })
 
     const response = await app.request("http://den.local/v1/cloud/gateway/resolve", {
-      headers: { "X-OpenWork-Gateway-Key": "bad-secret" },
+      headers: { "X-OfflineGPT-Gateway-Key": "bad-secret" },
     })
 
     expect(response.status).toBe(404)
@@ -533,13 +533,13 @@ describe("Cloud gateway resolve route", () => {
       provisionerMode: "daytona",
       daytonaApiKey: "daytona-test-key",
       gatewayKey: "gateway-secret",
-      getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
       ensureCloudWorker: async () => provisioningWorker,
       getSandboxRecord: async () => null,
     })
 
     const response = await app.request("http://den.local/v1/cloud/gateway/resolve", {
-      headers: { "X-OpenWork-Gateway-Key": "gateway-secret" },
+      headers: { "X-OfflineGPT-Gateway-Key": "gateway-secret" },
     })
 
     expect(response.status).toBe(200)
@@ -555,7 +555,7 @@ describe("Cloud gateway resolve route", () => {
       provisionerMode: "daytona",
       daytonaApiKey: "daytona-test-key",
       gatewayKey: "gateway-secret",
-      getOpenWorkWebAccess: async () => ({ hasAccess: false }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: false }),
       ensureCloudWorker: async () => {
         ensureCalls += 1
         return fakeWorker("provisioning")
@@ -563,13 +563,13 @@ describe("Cloud gateway resolve route", () => {
     })
 
     const response = await app.request("http://den.local/v1/cloud/gateway/resolve", {
-      headers: { "X-OpenWork-Gateway-Key": "gateway-secret" },
+      headers: { "X-OfflineGPT-Gateway-Key": "gateway-secret" },
     })
 
     expect(response.status).toBe(403)
     await expect(response.json()).resolves.toEqual({
-      error: "openwork_web_access_required",
-      message: "An active OpenWork Web subscription or complimentary access is required to use OpenWork Cloud.",
+      error: "offlinegpt_web_access_required",
+      message: "An active OfflineGPT Web subscription or complimentary access is required to use OfflineGPT Cloud.",
     })
     expect(ensureCalls).toBe(0)
   })
@@ -583,13 +583,13 @@ describe("Cloud gateway resolve route", () => {
       provisionerMode: "daytona",
       daytonaApiKey: "daytona-test-key",
       gatewayKey: "gateway-secret",
-      getOpenWorkWebAccess: grantedOpenWorkWebAccess,
+      getOfflineGPTWebAccess: grantedOfflineGPTWebAccess,
       ensureCloudWorker: async () => provisioningWorker,
       getSandboxRecord: async () => null,
     })
 
     const provisioning = await provisioningApp.request("http://den.local/v1/cloud/gateway/resolve", {
-      headers: { "X-OpenWork-Gateway-Key": "gateway-secret" },
+      headers: { "X-OfflineGPT-Gateway-Key": "gateway-secret" },
     })
 
     expect(provisioning.status).toBe(200)
@@ -604,7 +604,7 @@ describe("Cloud gateway resolve route", () => {
       provisionerMode: "daytona",
       daytonaApiKey: "daytona-test-key",
       gatewayKey: "gateway-secret",
-      getOpenWorkWebAccess: grantedOpenWorkWebAccess,
+      getOfflineGPTWebAccess: grantedOfflineGPTWebAccess,
       ensureCloudWorker: async () => readyWorker,
       cloudWorkerStore: store.store,
       getSandboxRecord: async () => fakeSandbox(),
@@ -613,7 +613,7 @@ describe("Cloud gateway resolve route", () => {
     })
 
     const ready = await readyApp.request("http://den.local/v1/cloud/gateway/resolve", {
-      headers: { "X-OpenWork-Gateway-Key": "gateway-secret" },
+      headers: { "X-OfflineGPT-Gateway-Key": "gateway-secret" },
     })
 
     expect(ready.status).toBe(200)
@@ -662,7 +662,7 @@ describe("Cloud gateway resolve route", () => {
       provisionerMode: "daytona",
       daytonaApiKey: "daytona-test-key",
       gatewayKey: "gateway-secret",
-      getOpenWorkWebAccess: grantedOpenWorkWebAccess,
+      getOfflineGPTWebAccess: grantedOfflineGPTWebAccess,
       ensureCloudWorker: async () => readyWorker,
       cloudWorkerStore: store.store,
       getSandboxRecord: async () => fakeSandboxWithId("den-daytona-worker-cloud-test"),
@@ -671,7 +671,7 @@ describe("Cloud gateway resolve route", () => {
     })
 
     const response = await app.request("http://den.local/v1/cloud/gateway/resolve", {
-      headers: { "X-OpenWork-Gateway-Key": "gateway-secret" },
+      headers: { "X-OfflineGPT-Gateway-Key": "gateway-secret" },
     })
 
     expect(response.status).toBe(200)
@@ -696,7 +696,7 @@ describe("Cloud gateway resolve route", () => {
       provisionerMode: "daytona",
       daytonaApiKey: "daytona-test-key",
       gatewayKey: "gateway-secret",
-      getOpenWorkWebAccess: grantedOpenWorkWebAccess,
+      getOfflineGPTWebAccess: grantedOfflineGPTWebAccess,
       ensureCloudWorker: async () => readyWorker,
       cloudWorkerStore: store.store,
       getSandboxRecord: async () => fakeSandbox(),
@@ -713,7 +713,7 @@ describe("Cloud gateway resolve route", () => {
     })
 
     const response = await app.request("http://den.local/v1/cloud/gateway/resolve", {
-      headers: { "X-OpenWork-Gateway-Key": "gateway-secret" },
+      headers: { "X-OfflineGPT-Gateway-Key": "gateway-secret" },
     })
     const body = await response.text()
 
@@ -740,7 +740,7 @@ describe("Cloud gateway resolve route", () => {
       provisionerMode: "daytona",
       daytonaApiKey: "daytona-test-key",
       gatewayKey: "gateway-secret",
-      getOpenWorkWebAccess: grantedOpenWorkWebAccess,
+      getOfflineGPTWebAccess: grantedOfflineGPTWebAccess,
       ensureCloudWorker: async () => readyWorker,
       cloudWorkerStore: store.store,
       getSandboxRecord: async () => fakeSandbox(),
@@ -757,7 +757,7 @@ describe("Cloud gateway resolve route", () => {
     })
 
     const response = await app.request("http://den.local/v1/cloud/gateway/resolve", {
-      headers: { "X-OpenWork-Gateway-Key": "gateway-secret" },
+      headers: { "X-OfflineGPT-Gateway-Key": "gateway-secret" },
     })
 
     expect(response.status).toBe(200)
@@ -774,7 +774,7 @@ describe("Cloud gateway resolve route", () => {
 
 describe("Cloud instance route lifecycle states", () => {
   test("returns the Daytona sandbox identifier on the member instance response", async () => {
-    const worker = { ...fakeWorker("healthy"), image_version: "openwork-0.18.7" }
+    const worker = { ...fakeWorker("healthy"), image_version: "offlinegpt-0.18.7" }
     const app = new Hono<{ Variables: OrgRouteVariables }>()
 
     routes.registerCloudRoutes(app, {
@@ -794,7 +794,7 @@ describe("Cloud instance route lifecycle states", () => {
       ...expectedCloudInstance({
         status: "ready",
         url: "https://preview.example.test",
-        imageVersion: "openwork-0.18.7",
+        imageVersion: "offlinegpt-0.18.7",
       }),
       instanceName: "den-daytona-worker-cloud-test",
     })
@@ -822,7 +822,7 @@ describe("Cloud instance route lifecycle states", () => {
   })
 
   test("returns worker and latest image versions on the member instance response", async () => {
-    const worker = { ...fakeWorker("healthy"), image_version: "openwork-0.18.7" }
+    const worker = { ...fakeWorker("healthy"), image_version: "offlinegpt-0.18.7" }
     const app = new Hono<{ Variables: OrgRouteVariables }>()
 
     routes.registerCloudRoutes(app, {
@@ -841,7 +841,7 @@ describe("Cloud instance route lifecycle states", () => {
     await expect(response.json()).resolves.toEqual(expectedCloudInstance({
       status: "ready",
       url: "https://preview.example.test",
-      imageVersion: "openwork-0.18.7",
+      imageVersion: "offlinegpt-0.18.7",
     }))
   })
 
@@ -908,7 +908,7 @@ describe("Cloud instance route lifecycle states", () => {
   })
 
   test("claims and wakes a stale stopped sandbox without checkpoint probing on resolve", async () => {
-    const worker = { ...storedWorker({ status: "healthy" }), image_version: "openwork-0.18.7" }
+    const worker = { ...storedWorker({ status: "healthy" }), image_version: "offlinegpt-0.18.7" }
     const store = makeCloudWorkerStore({ initialWorkers: [worker] })
     const app = new Hono<{ Variables: OrgRouteVariables }>()
     let wakeCalls = 0
@@ -935,7 +935,7 @@ describe("Cloud instance route lifecycle states", () => {
     const response = await app.request("http://den.local/v1/cloud/instance")
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual(expectedCloudInstance({ status: "waking", url: null, imageVersion: "openwork-0.18.7" }))
+    await expect(response.json()).resolves.toEqual(expectedCloudInstance({ status: "waking", url: null, imageVersion: "offlinegpt-0.18.7" }))
     expect(store.recycleClaimAttempts).toBe(1)
     expect(worker.status).toBe("provisioning")
     expect(wakeCalls).toBe(1)
@@ -943,7 +943,7 @@ describe("Cloud instance route lifecycle states", () => {
   })
 
   test("does not inspect the sandbox for an up-to-date stopped worker wake", async () => {
-    const worker = { ...fakeWorker("stopped"), image_version: "openwork-0.18.8" }
+    const worker = { ...fakeWorker("stopped"), image_version: "offlinegpt-0.18.8" }
     const app = new Hono<{ Variables: OrgRouteVariables }>()
     let wakeCalls = 0
     let inspectCalls = 0
@@ -967,7 +967,7 @@ describe("Cloud instance route lifecycle states", () => {
     const response = await app.request("http://den.local/v1/cloud/instance")
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual(expectedCloudInstance({ status: "waking", url: null, imageVersion: "openwork-0.18.8" }))
+    await expect(response.json()).resolves.toEqual(expectedCloudInstance({ status: "waking", url: null, imageVersion: "offlinegpt-0.18.8" }))
     expect(inspectCalls).toBe(0)
     expect(wakeCalls).toBe(1)
   })
@@ -1001,7 +1001,7 @@ describe("Cloud instance update route", () => {
   test("denies an update request before touching the sandbox when Web access is not active", async () => {
     const orgId = createDenTypeId("organization")
     const userId = createDenTypeId("user")
-    const worker = { ...storedWorker({ orgId, userId, status: "healthy" }), image_version: "openwork-0.18.7" }
+    const worker = { ...storedWorker({ orgId, userId, status: "healthy" }), image_version: "offlinegpt-0.18.7" }
     const store = makeCloudWorkerStore({ initialWorkers: [worker] })
     const app = new Hono<{ Variables: OrgRouteVariables }>()
     let flushCalls = 0
@@ -1011,7 +1011,7 @@ describe("Cloud instance update route", () => {
       memberRoute: contextMiddleware(organizationContext(null, { orgId, userId })),
       orgMode: "multi_org",
       provisionerMode: "stub",
-      getOpenWorkWebAccess: async () => ({ hasAccess: false }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: false }),
       cloudWorkerStore: store.store,
       getSandboxRecord: async () => fakeSandbox(),
       inspectSandbox: async () => ({ state: "running" }),
@@ -1028,8 +1028,8 @@ describe("Cloud instance update route", () => {
 
     expect(response.status).toBe(403)
     await expect(response.json()).resolves.toEqual({
-      error: "openwork_web_access_required",
-      message: "An active OpenWork Web subscription or complimentary access is required to use OpenWork Cloud.",
+      error: "offlinegpt_web_access_required",
+      message: "An active OfflineGPT Web subscription or complimentary access is required to use OfflineGPT Cloud.",
     })
     expect(flushCalls).toBe(0)
     expect(stopCalls).toBe(0)
@@ -1038,7 +1038,7 @@ describe("Cloud instance update route", () => {
   test("flushes and stops a running stale sandbox", async () => {
     const orgId = createDenTypeId("organization")
     const userId = createDenTypeId("user")
-    const worker = { ...storedWorker({ orgId, userId, status: "healthy" }), image_version: "openwork-0.18.7" }
+    const worker = { ...storedWorker({ orgId, userId, status: "healthy" }), image_version: "offlinegpt-0.18.7" }
     const store = makeCloudWorkerStore({ initialWorkers: [worker] })
     const app = new Hono<{ Variables: OrgRouteVariables }>()
     const flushCalls: StoredCloudWorker["id"][] = []
@@ -1072,7 +1072,7 @@ describe("Cloud instance update route", () => {
   test("no-ops for a stopped stale sandbox", async () => {
     const orgId = createDenTypeId("organization")
     const userId = createDenTypeId("user")
-    const worker = { ...storedWorker({ orgId, userId, status: "healthy" }), image_version: "openwork-0.18.7" }
+    const worker = { ...storedWorker({ orgId, userId, status: "healthy" }), image_version: "offlinegpt-0.18.7" }
     const store = makeCloudWorkerStore({ initialWorkers: [worker] })
     const app = new Hono<{ Variables: OrgRouteVariables }>()
     let flushCalls = 0
@@ -1106,7 +1106,7 @@ describe("Cloud instance update route", () => {
   test("refuses to stop an already-current worker", async () => {
     const orgId = createDenTypeId("organization")
     const userId = createDenTypeId("user")
-    const worker = { ...storedWorker({ orgId, userId, status: "healthy" }), image_version: "openwork-0.18.8" }
+    const worker = { ...storedWorker({ orgId, userId, status: "healthy" }), image_version: "offlinegpt-0.18.8" }
     const store = makeCloudWorkerStore({ initialWorkers: [worker] })
     const app = new Hono<{ Variables: OrgRouteVariables }>()
     let inspectCalls = 0
@@ -1140,7 +1140,7 @@ describe("Cloud instance update route", () => {
   test("leaves a running sandbox up when checkpoint flush fails", async () => {
     const orgId = createDenTypeId("organization")
     const userId = createDenTypeId("user")
-    const worker = { ...storedWorker({ orgId, userId, status: "healthy" }), image_version: "openwork-0.18.7" }
+    const worker = { ...storedWorker({ orgId, userId, status: "healthy" }), image_version: "offlinegpt-0.18.7" }
     const store = makeCloudWorkerStore({ initialWorkers: [worker] })
     const app = new Hono<{ Variables: OrgRouteVariables }>()
     let stopCalls = 0

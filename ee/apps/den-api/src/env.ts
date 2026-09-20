@@ -1,14 +1,14 @@
 import os from "node:os"
 import { readFileSync } from "node:fs"
 import path from "node:path"
-import { denUrls } from "@openwork-ee/utils/den-urls"
+import { denUrls } from "@offlinegpt-ee/utils/den-urls"
 import { DEN_WORKER_POLL_INTERVAL_MS } from "./CONSTS.js"
 import { normalizeConfiguredPublicApiBaseUrl } from "./request-url.js"
 import { resolveDenServiceVersion } from "./service-version.js"
 import { denApiAppVersion } from "./version.js"
 import { z } from "zod"
 
-export const DEFAULT_DEN_DIAGNOSTICS_ORIGIN = "https://diagnostic.openworklabs.com"
+export const DEFAULT_DEN_DIAGNOSTICS_ORIGIN = "https://diagnostic.offlinegptlabs.com"
 
 const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1).optional(),
@@ -63,7 +63,7 @@ const EnvSchema = z.object({
   LINEAR_COMPLIANCE_TEAM_ID: z.string().optional(),
   LINEAR_API_BASE: z.string().optional(),
   LINEAR_COMPLIANCE_COMPLETED_STATE_ID: z.string().optional(),
-  OPENWORK_DEV_MODE: z.string().optional(),
+  OFFLINEGPT_DEV_MODE: z.string().optional(),
   DEN_BOTID_PROTECTION_ENABLED: z.string().optional(),
   DEN_ALLOW_PRIVATE_MCP_URLS: z.string().optional(),
   DEN_DIAGNOSTICS_ORIGIN: z.string().optional(),
@@ -83,10 +83,10 @@ const EnvSchema = z.object({
   DEN_API_PUBLIC_URL: z.string().optional(),
   DEN_API_VERSION: z.string().optional(),
   RENDER_GIT_COMMIT: z.string().optional(),
-  OPENWORK_INSTALLER_ARTIFACTS_DIR: z.string().optional(),
-  OPENWORK_INSTALLER_RELEASE_TAG: z.string().optional(),
-  OPENWORK_INSTALLER_RELEASE_REPO: z.string().optional(),
-  OPENWORK_INSTALLER_CACHE_DIR: z.string().optional(),
+  OFFLINEGPT_INSTALLER_ARTIFACTS_DIR: z.string().optional(),
+  OFFLINEGPT_INSTALLER_RELEASE_TAG: z.string().optional(),
+  OFFLINEGPT_INSTALLER_RELEASE_REPO: z.string().optional(),
+  OFFLINEGPT_INSTALLER_CACHE_DIR: z.string().optional(),
   DEN_DESKTOP_RELEASES_BASE_URL: z.string().optional(),
   DEN_DESKTOP_RELEASES_MODE: z.enum(["github", "static"]).optional(),
   DEN_DESKTOP_DEN_BASE_URL: z.string().optional(),
@@ -108,7 +108,7 @@ const EnvSchema = z.object({
   WORKER_ACTIVITY_BASE_URL: z.string().optional(),
   DEN_AUTOMATIONS_ENABLED: z.string().optional(),
   DEN_DASHBOARDS_ENABLED: z.string().optional(),
-  DEN_OPENWORK_WEB_ENABLED: z.string().optional(),
+  DEN_OFFLINEGPT_WEB_ENABLED: z.string().optional(),
   DEN_AUTOMATIONS_RUNTIME_ENABLED: z.string().optional(),
   DEN_AUTOMATIONS_POLL_INTERVAL_MS: z.string().optional(),
   DEN_AUTOMATIONS_BATCH_SIZE: z.string().optional(),
@@ -116,7 +116,7 @@ const EnvSchema = z.object({
   DEN_AUTOMATIONS_LEASE_MS: z.string().optional(),
   DEN_AUTOMATIONS_RUN_TIMEOUT_MS: z.string().optional(),
   DEN_AUTOMATIONS_RUNNER_CLAIM_DEADLINE_MS: z.string().optional(),
-  OPENWORK_DAYTONA_ENV_PATH: z.string().optional(),
+  OFFLINEGPT_DAYTONA_ENV_PATH: z.string().optional(),
   RENDER_API_BASE: z.string().optional(),
   RENDER_API_KEY: z.string().optional(),
   RENDER_OWNER_ID: z.string().optional(),
@@ -125,7 +125,7 @@ const EnvSchema = z.object({
   RENDER_WORKER_ROOT_DIR: z.string().optional(),
   RENDER_WORKER_PLAN: z.string().optional(),
   RENDER_WORKER_REGION: z.string().optional(),
-  RENDER_WORKER_OPENWORK_VERSION: z.string().optional(),
+  RENDER_WORKER_OFFLINEGPT_VERSION: z.string().optional(),
   RENDER_WORKER_NAME_PREFIX: z.string().optional(),
   RENDER_WORKER_PUBLIC_DOMAIN_SUFFIX: z.string().optional(),
   RENDER_CUSTOM_DOMAIN_READY_TIMEOUT_MS: z.string().optional(),
@@ -173,7 +173,7 @@ const EnvSchema = z.object({
   DAYTONA_RUNTIME_WORKSPACE_PATH: z.string().optional(),
   DAYTONA_RUNTIME_DATA_PATH: z.string().optional(),
   DAYTONA_SIDECAR_DIR: z.string().optional(),
-  DAYTONA_OPENWORK_PORT: z.string().optional(),
+  DAYTONA_OFFLINEGPT_PORT: z.string().optional(),
   DAYTONA_OPENCODE_PORT: z.string().optional(),
   DAYTONA_CREATE_TIMEOUT_SECONDS: z.string().optional(),
   DAYTONA_DELETE_TIMEOUT_SECONDS: z.string().optional(),
@@ -188,7 +188,7 @@ const EnvSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_INFERENCE_PRICE_ID: z.string().optional(),
   STRIPE_SEAT_PRICE_ID: z.string().optional(),
-  STRIPE_OPENWORK_WEB_PRICE_ID: z.string().optional(),
+  STRIPE_OFFLINEGPT_WEB_PRICE_ID: z.string().optional(),
   STRIPE_BILLING_SUCCESS_URL: z.string().optional(),
   STRIPE_BILLING_CANCEL_URL: z.string().optional(),
 }).superRefine((value, ctx) => {
@@ -543,9 +543,9 @@ const dashboardsEnabled = parseBooleanFlag(parsed.DEN_DASHBOARDS_ENABLED ?? "fal
 // of den-api makes den-api's own headers duplicates, which browsers reject.
 // The allowlist still feeds proxy-trust decisions; only header emission stops.
 const corsHandledByEdge = parseBooleanFlag(parsed.DEN_CORS_HANDLED_BY_EDGE ?? "false")
-const openworkWebEnabled = parseBooleanFlag(parsed.DEN_OPENWORK_WEB_ENABLED ?? "false")
+const offlinegptWebEnabled = parseBooleanFlag(parsed.DEN_OFFLINEGPT_WEB_ENABLED ?? "false")
 
-const devMode = (parsed.OPENWORK_DEV_MODE ?? "0").trim() === "1"
+const devMode = (parsed.OFFLINEGPT_DEV_MODE ?? "0").trim() === "1"
 const port = Number(parsed.PORT ?? "8790")
 const botIdProtectionEnabled = (parsed.DEN_BOTID_PROTECTION_ENABLED ?? "0").trim() === "1"
 const diagnosticsOrigin = normalizeDiagnosticsOrigin(parsed.DEN_DIAGNOSTICS_ORIGIN, devMode)
@@ -616,7 +616,7 @@ const orgMode = parseDenOrgMode(parsed.DEN_ORG_MODE)
 // deployments, Den must not fetch private/reserved addresses on behalf of
 // users. Self-hosted deployments whose MCP servers legitimately live on a
 // private network can opt out with DEN_ALLOW_PRIVATE_MCP_URLS=1; local dev
-// (OPENWORK_DEV_MODE=1) is exempt automatically so evals against a local
+// (OFFLINEGPT_DEV_MODE=1) is exempt automatically so evals against a local
 // stand-in server keep working.
 const allowPrivateMcpUrls = devMode || (parsed.DEN_ALLOW_PRIVATE_MCP_URLS ?? "0").trim() === "1"
 const allowInsecureInternalRedis = parseBooleanFlag(parsed.DATABASE_REDIS_ALLOW_INSECURE_INTERNAL)
@@ -736,7 +736,7 @@ export const env = {
   },
   orgMode,
   singleOrg: {
-    name: optionalString(parsed.DEN_SINGLE_ORG_NAME) ?? "OpenWork",
+    name: optionalString(parsed.DEN_SINGLE_ORG_NAME) ?? "OfflineGPT",
     slug: normalizeSingleOrgSlug(parsed.DEN_SINGLE_ORG_SLUG),
     allowPublicSignup: parseSingleOrgAllowPublicSignup(parsed.DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP, orgMode),
     ownerEmails: splitCsv(parsed.DEN_SINGLE_ORG_OWNER_EMAILS)
@@ -751,13 +751,13 @@ export const env = {
   }),
   publicUrlTrustedOrigins,
   publicProxyTrustedOrigins,
-  installerArtifactsDir: optionalString(parsed.OPENWORK_INSTALLER_ARTIFACTS_DIR),
+  installerArtifactsDir: optionalString(parsed.OFFLINEGPT_INSTALLER_ARTIFACTS_DIR),
   // Standard desktop release assets: the release tag to download from,
   // defaulting to the pinned app release this den-api build shipped with.
-  installerReleaseTag: optionalString(parsed.OPENWORK_INSTALLER_RELEASE_TAG) ?? `v${denApiAppVersion.latestAppVersion}`,
-  installerReleaseTagExplicit: optionalString(parsed.OPENWORK_INSTALLER_RELEASE_TAG) !== undefined,
-  installerReleaseRepo: optionalString(parsed.OPENWORK_INSTALLER_RELEASE_REPO) ?? "different-ai/openwork",
-  installerCacheDir: optionalString(parsed.OPENWORK_INSTALLER_CACHE_DIR) ?? path.join(os.tmpdir(), "openwork-desktop-artifacts"),
+  installerReleaseTag: optionalString(parsed.OFFLINEGPT_INSTALLER_RELEASE_TAG) ?? `v${denApiAppVersion.latestAppVersion}`,
+  installerReleaseTagExplicit: optionalString(parsed.OFFLINEGPT_INSTALLER_RELEASE_TAG) !== undefined,
+  installerReleaseRepo: optionalString(parsed.OFFLINEGPT_INSTALLER_RELEASE_REPO) ?? "different-ai/offlinegpt",
+  installerCacheDir: optionalString(parsed.OFFLINEGPT_INSTALLER_CACHE_DIR) ?? path.join(os.tmpdir(), "offlinegpt-desktop-artifacts"),
   // Desktop-release endpoint overrides for evals/self-host testing. Static mode
   // keeps air-gapped deployments on the committed release snapshot.
   desktopReleasesBaseUrl: optionalString(parsed.DEN_DESKTOP_RELEASES_BASE_URL),
@@ -809,7 +809,7 @@ export const env = {
   },
   dashboardsEnabled,
   corsHandledByEdge,
-  openworkWebEnabled,
+  offlinegptWebEnabled,
   inferenceProxyBaseUrl: optionalString(parsed.INFERENCE_PROXY_BASE_URL) ?? "http://127.0.0.1:8791",
   openRouterManagementApiKey: optionalString(parsed.OPENROUTER_MANAGEMENT_API_KEY),
   openRouterWorkspaceId: optionalString(parsed.OPENROUTER_WORKSPACE_ID),
@@ -818,7 +818,7 @@ export const env = {
     webhookSecret: optionalString(parsed.STRIPE_WEBHOOK_SECRET),
     inferencePriceId: optionalString(parsed.STRIPE_INFERENCE_PRICE_ID),
     seatPriceId: optionalString(parsed.STRIPE_SEAT_PRICE_ID),
-    openworkWebPriceId: optionalString(parsed.STRIPE_OPENWORK_WEB_PRICE_ID),
+    offlinegptWebPriceId: optionalString(parsed.STRIPE_OFFLINEGPT_WEB_PRICE_ID),
     billingSuccessUrl: optionalString(parsed.STRIPE_BILLING_SUCCESS_URL),
     billingCancelUrl: optionalString(parsed.STRIPE_BILLING_CANCEL_URL),
   },
@@ -827,14 +827,14 @@ export const env = {
     apiKey: parsed.RENDER_API_KEY,
     ownerId: parsed.RENDER_OWNER_ID,
     workerRepo:
-      // TODO(ent): require RENDER_WORKER_REPO for hosted/customer Render deployments instead of using OpenWork's public repo default.
-      parsed.RENDER_WORKER_REPO ?? "https://github.com/different-ai/openwork",
+      // TODO(ent): require RENDER_WORKER_REPO for hosted/customer Render deployments instead of using OfflineGPT's public repo default.
+      parsed.RENDER_WORKER_REPO ?? "https://github.com/different-ai/offlinegpt",
     workerBranch: parsed.RENDER_WORKER_BRANCH ?? "dev",
     workerRootDir:
       parsed.RENDER_WORKER_ROOT_DIR ?? "ee/apps/den-worker-runtime",
     workerPlan: parsed.RENDER_WORKER_PLAN ?? "standard",
     workerRegion: parsed.RENDER_WORKER_REGION ?? "oregon",
-    workerOpenworkVersion: parsed.RENDER_WORKER_OPENWORK_VERSION,
+    workerOfflineGptVersion: parsed.RENDER_WORKER_OFFLINEGPT_VERSION,
     workerNamePrefix: parsed.RENDER_WORKER_NAME_PREFIX ?? "den-worker",
     workerPublicDomainSuffix: parsed.RENDER_WORKER_PUBLIC_DOMAIN_SUFFIX,
     customDomainReadyTimeoutMs: Number(
@@ -863,7 +863,7 @@ export const env = {
     returnUrl: parsed.POLAR_RETURN_URL,
   },
   daytona: {
-    envPath: optionalString(parsed.OPENWORK_DAYTONA_ENV_PATH),
+    envPath: optionalString(parsed.OFFLINEGPT_DAYTONA_ENV_PATH),
     apiUrl: optionalString(parsed.DAYTONA_API_URL) ?? "https://app.daytona.io/api",
     apiKey: optionalString(parsed.DAYTONA_API_KEY),
     target: optionalString(parsed.DAYTONA_TARGET),
@@ -894,15 +894,15 @@ export const env = {
     workspaceMountPath:
       optionalString(parsed.DAYTONA_WORKSPACE_MOUNT_PATH) ?? "/workspace",
     dataMountPath:
-      optionalString(parsed.DAYTONA_DATA_MOUNT_PATH) ?? "/persist/openwork",
+      optionalString(parsed.DAYTONA_DATA_MOUNT_PATH) ?? "/persist/offlinegpt",
     runtimeWorkspacePath:
       optionalString(parsed.DAYTONA_RUNTIME_WORKSPACE_PATH) ??
-      "/tmp/openwork-workspace",
+      "/tmp/offlinegpt-workspace",
     runtimeDataPath:
-      optionalString(parsed.DAYTONA_RUNTIME_DATA_PATH) ?? "/tmp/openwork-data",
+      optionalString(parsed.DAYTONA_RUNTIME_DATA_PATH) ?? "/tmp/offlinegpt-data",
     sidecarDir:
-      optionalString(parsed.DAYTONA_SIDECAR_DIR) ?? "/tmp/openwork-sidecars",
-    openworkPort: Number(parsed.DAYTONA_OPENWORK_PORT ?? "8787"),
+      optionalString(parsed.DAYTONA_SIDECAR_DIR) ?? "/tmp/offlinegpt-sidecars",
+    offlinegptPort: Number(parsed.DAYTONA_OFFLINEGPT_PORT ?? "8787"),
     opencodePort: Number(parsed.DAYTONA_OPENCODE_PORT ?? "4096"),
     createTimeoutSeconds: Number(parsed.DAYTONA_CREATE_TIMEOUT_SECONDS ?? "300"),
     deleteTimeoutSeconds: Number(parsed.DAYTONA_DELETE_TIMEOUT_SECONDS ?? "120"),

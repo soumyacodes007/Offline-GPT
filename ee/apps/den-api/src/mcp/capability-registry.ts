@@ -1,5 +1,5 @@
-import { Tool, toolError } from "@openwork/codemode"
-import type { DenTypeId } from "@openwork-ee/utils/typeid"
+import { Tool, toolError } from "@offlinegpt/codemode"
+import type { DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { Effect } from "effect"
 import type { Hono } from "hono"
 import { z } from "zod"
@@ -309,7 +309,7 @@ export function externalCapabilitySuccessToolResult(
     : {}
   const meta = {
     ...providerMeta,
-    ...(result.mcpApp ? { "openwork/mcpApp": result.mcpApp } : {}),
+    ...(result.mcpApp ? { "offlinegpt/mcpApp": result.mcpApp } : {}),
   }
   if (!result.schemaGuidance) {
     return {

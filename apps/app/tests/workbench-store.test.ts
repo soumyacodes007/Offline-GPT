@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   closeWorkbenchTab,
   focusWorkbenchPane,
-  openWorkbenchTab,
+  offlineGptbenchTab,
   setWorkbenchSplit,
   setWorkbenchSideChat,
   syncWorkbenchSnapshot,
@@ -28,7 +28,7 @@ describe("workbench store", () => {
       sessionsKnown: true,
       sessions: [{ workspaceId: "workspace-a", sessionId: "session-a", title: "Primary" }],
     });
-    state = openWorkbenchTab(state, {
+    state = offlineGptbenchTab(state, {
       workspaceId: "workspace-b",
       workspaceTitle: "Workspace B",
       sessionId: "session-b",
@@ -52,7 +52,7 @@ describe("workbench store", () => {
       sessionsKnown: true,
       sessions: [{ workspaceId: "workspace-a", sessionId: "session-a" }],
     });
-    state = openWorkbenchTab(state, { workspaceId: "workspace-b", sessionId: "session-b" });
+    state = offlineGptbenchTab(state, { workspaceId: "workspace-b", sessionId: "session-b" });
     state = setWorkbenchSplit(state, { workspaceId: "workspace-b", sessionId: "session-b" });
 
     const synchronized = syncWorkbenchSnapshot(state, {
@@ -74,7 +74,7 @@ describe("workbench store", () => {
       sessionsKnown: true,
       sessions: [{ workspaceId: "workspace-a", sessionId: "session-shared" }],
     });
-    state = openWorkbenchTab(state, { workspaceId: "workspace-b", sessionId: "session-shared" });
+    state = offlineGptbenchTab(state, { workspaceId: "workspace-b", sessionId: "session-shared" });
     state = setWorkbenchSplit(state, { workspaceId: "workspace-b", sessionId: "session-shared" });
 
     expect(state.tabs).toHaveLength(2);
@@ -88,7 +88,7 @@ describe("workbench store", () => {
       sessionsKnown: true,
       sessions: [{ workspaceId: "workspace-a", sessionId: "session-a" }],
     });
-    state = openWorkbenchTab(state, { workspaceId: "workspace-b", sessionId: "session-b" });
+    state = offlineGptbenchTab(state, { workspaceId: "workspace-b", sessionId: "session-b" });
     state = setWorkbenchSplit(state, { workspaceId: "workspace-b", sessionId: "session-b" });
     state = focusWorkbenchPane(state, "primary");
     state = focusWorkbenchPane(state, "secondary");
@@ -106,7 +106,7 @@ describe("workbench store", () => {
       sessionsKnown: true,
       sessions: [{ workspaceId: "workspace-a", sessionId: "session-a" }],
     });
-    state = openWorkbenchTab(state, { workspaceId: "workspace-b", sessionId: "session-b" });
+    state = offlineGptbenchTab(state, { workspaceId: "workspace-b", sessionId: "session-b" });
     state = setWorkbenchSplit(state, { workspaceId: "workspace-b", sessionId: "session-b" });
     state = closeWorkbenchTab(state, { workspaceId: "workspace-a", sessionId: "session-a" });
 
@@ -145,7 +145,7 @@ describe("workbench store", () => {
         { workspaceId: "workspace-a", sessionId: "session-b" },
       ],
     });
-    state = openWorkbenchTab(state, { workspaceId: "workspace-a", sessionId: "session-b" });
+    state = offlineGptbenchTab(state, { workspaceId: "workspace-a", sessionId: "session-b" });
     state = setWorkbenchSplit(state, { workspaceId: "workspace-a", sessionId: "session-b" });
 
     const loading = syncWorkbenchSnapshot(state, {
@@ -166,7 +166,7 @@ describe("workbench store", () => {
       workspaceId: owner.workspaceId, primarySessionId: owner.sessionId,
       sessionsKnown: true, sessions: [owner, side],
     });
-    state = setWorkbenchSplit(openWorkbenchTab(state, side), side);
+    state = setWorkbenchSplit(offlineGptbenchTab(state, side), side);
     // These are the only fields persisted across a renderer reload.
     const restored = { ...emptyWorkbench, tabs: state.tabs, sideChats: state.sideChats };
     const initial = syncWorkbenchSnapshot(restored, {
@@ -191,11 +191,11 @@ test("restores each main session's own side chat and removes closed references",
     workspaceId: "workspace", primarySessionId, sessionsKnown: true, sessions,
   });
   let state = sync(emptyWorkbench, "a");
-  state = openWorkbenchTab(state, sessions[2]!);
+  state = offlineGptbenchTab(state, sessions[2]!);
   state = setWorkbenchSplit(state, sessions[2]!);
   state = sync(state, "b");
   expect(state.secondary).toBeNull();
-  state = openWorkbenchTab(state, sessions[3]!);
+  state = offlineGptbenchTab(state, sessions[3]!);
   state = setWorkbenchSplit(state, sessions[3]!);
   state = sync(state, "a");
   expect(state.secondary?.sessionId).toBe("side-a");
@@ -218,7 +218,7 @@ test("a side chat created after navigating attaches to its original owner", () =
   state = syncWorkbenchSnapshot(state, {
     workspaceId: "workspace", primarySessionId: "b", sessionsKnown: true, sessions: [owner, other, chat],
   });
-  state = openWorkbenchTab(state, chat);
+  state = offlineGptbenchTab(state, chat);
   state = setWorkbenchSideChat(state, owner, chat);
   expect(state.primary?.sessionId).toBe("b");
   expect(state.secondary).toBeNull();

@@ -1,8 +1,8 @@
-import { eq, gte, sql, type SQL } from "@openwork-ee/den-db/drizzle"
-import { TelemetryEventTable, TelemetrySessionDimensionTable } from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { eq, gte, sql, type SQL } from "@offlinegpt-ee/den-db/drizzle"
+import { TelemetryEventTable, TelemetrySessionDimensionTable } from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { deriveDimensionValue } from "./dimension.js"
-import type { TelemetryDimensionInput } from "@openwork-ee/telemetry-contracts"
+import type { TelemetryDimensionInput } from "@offlinegpt-ee/telemetry-contracts"
 
 export const ANALYTICS_TREND_WEEKS = 12
 

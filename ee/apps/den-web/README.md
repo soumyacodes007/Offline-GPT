@@ -1,6 +1,6 @@
-# OpenWork Cloud App (`ee/apps/den-web`)
+# OfflineGPT Cloud App (`ee/apps/den-web`)
 
-Frontend for `app.openworklabs.com`.
+Frontend for `app.offlinegptlabs.com`.
 
 ## What it does
 
@@ -8,8 +8,8 @@ Frontend for `app.openworklabs.com`.
 - Handles invited-org signup flows where the invited email stays locked and the user verifies access before joining.
 - Lists and connects existing cloud workers.
 - Sends users to the organization billing page for subscription management.
-- Offers desktop handoff actions so users can open the generated worker directly in OpenWork or copy the connect credentials manually.
-- Calls the Den API directly at the matching `api.*` origin (for example, `app.openworklabs.com` -> `api.app.openworklabs.com`), including Better Auth traffic.
+- Offers desktop handoff actions so users can open the generated worker directly in OfflineGPT or copy the connect credentials manually.
+- Calls the Den API directly at the matching `api.*` origin (for example, `app.offlinegptlabs.com` -> `api.app.offlinegptlabs.com`), including Better Auth traffic.
 - Keeps a same-origin auth proxy (`/api/auth/*`) only for compatibility with already-registered auth callbacks that still land on the web host.
 
 ## Current hosted user flow
@@ -24,7 +24,7 @@ Frontend for `app.openworklabs.com`.
 1. Install workspace deps from repo root:
    `pnpm install`
 2. Run the app:
-   `pnpm --filter @openwork-ee/den-web dev`
+   `pnpm --filter @offlinegpt-ee/den-web dev`
 3. Open:
    `http://localhost:3005`
 
@@ -58,12 +58,12 @@ Tailwind 4 requires Safari 16.4+, Chrome 111+, or Firefox 128+; see the
 - `DEN_AUTH_ORIGIN` (server-only): Origin header sent to Better Auth endpoints when the browser request does not include one. Required outside local dev wrappers.
 - `DEN_AUTH_FALLBACK_BASE` (server-only): fallback Den origin used if `DEN_API_BASE` serves an HTML/5xx error.
 - `DEN_WEB_PUBLIC_ORIGIN` (server/runtime): public origin used for metadata.
-- `DEN_WEB_OPENWORK_APP_CONNECT_URL` (runtime): Base URL for "Open in App" links.
-  - Example: `https://openworklabs.com/app`
+- `DEN_WEB_OFFLINEGPT_APP_CONNECT_URL` (runtime): Base URL for "Open in App" links.
+  - Example: `https://offlinegptlabs.com/app`
   - The web panel appends `/connect-remote` and injects worker URL/token params automatically.
-- `DEN_WEB_OPENWORK_WEB_URL` (runtime): URL opened by the dashboard Web tab.
-  - default: `https://web.openworklabs.com`
-- `DEN_WEB_OPENWORK_AUTH_CALLBACK_URL` (runtime): Canonical URL where the app returns after auth completes.
+- `DEN_WEB_OFFLINEGPT_WEB_URL` (runtime): URL opened by the dashboard Web tab.
+  - default: `https://web.offlinegptlabs.com`
+- `DEN_WEB_OFFLINEGPT_AUTH_CALLBACK_URL` (runtime): Canonical URL where the app returns after auth completes.
 - `DEN_WEB_POSTHOG_KEY` (server/runtime): PostHog project key used for Den analytics.
 - `DEN_WEB_POSTHOG_HOST` (server/runtime): PostHog ingest host or same-origin proxy path.
   - default: `/ow`
@@ -92,7 +92,7 @@ Runtime logs and telemetry scrubbing avoid request bodies, cookies, authorizatio
 - `DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP`: whether unauthenticated users can self-serve signup into the singleton organization.
 - When SSO is configured on the singleton organization, auth becomes SSO-only.
 - `DEN_REQUIRE_EMAIL_VERIFICATION`: set `false` for the single-org default to avoid signup verification-code flows; hosted multi-org should set `true`.
-- `DEN_MCP_CLAIM_NAMESPACE`: namespace used for MCP token claim URIs. Leave blank to use `BETTER_AUTH_URL`; set a stable value before issuing tokens if hosts may change. Use `https://openworklabs.com` to preserve the original hosted MCP claim names.
+- `DEN_MCP_CLAIM_NAMESPACE`: namespace used for MCP token claim URIs. Leave blank to use `BETTER_AUTH_URL`; set a stable value before issuing tokens if hosts may change. Use `https://offlinegptlabs.com` to preserve the original hosted MCP claim names.
 - `DEN_BOOTSTRAP_ADMIN_EMAILS`: comma-separated platform admin emails seeded by `den-api` on startup. Blank disables bootstrap admin seeding.
 
 ## Deploy on Vercel
@@ -101,12 +101,12 @@ Recommended project settings:
 
 - Root directory: `ee/apps/den-web`
 - Framework preset: Next.js
-- Build command: `cd ../../.. && pnpm --filter @openwork-ee/den-web build`
+- Build command: `cd ../../.. && pnpm --filter @offlinegpt-ee/den-web build`
 - Output directory: `.next`
 - Install command: use the command committed in `vercel.json`
 
-The filtered install includes Den Web's workspace dependency closure, so shared packages like `@openwork-ee/utils` remain available without installing unrelated native desktop and server dependencies.
+The filtered install includes Den Web's workspace dependency closure, so shared packages like `@offlinegpt-ee/utils` remain available without installing unrelated native desktop and server dependencies.
 
 Then assign custom domain:
 
-- `app.openworklabs.com`
+- `app.offlinegptlabs.com`

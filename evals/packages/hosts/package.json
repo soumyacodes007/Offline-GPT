@@ -1,5 +1,5 @@
 {
-  "name": "@openwork/hosts",
+  "name": "@offlinegpt/hosts",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -36,8 +36,8 @@
     }
   },
   "dependencies": {
-    "@openwork/cdp": "workspace:*",
-    "@openwork/paths": "link:../../../packages/paths",
-    "@openwork/timeline": "workspace:*"
+    "@offlinegpt/cdp": "workspace:*",
+    "@offlinegpt/paths": "link:../../../packages/paths",
+    "@offlinegpt/timeline": "workspace:*"
   }
 }

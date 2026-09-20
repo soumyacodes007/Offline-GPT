@@ -1,5 +1,5 @@
-import { and, asc, eq, isNull, lt } from "@openwork-ee/den-db/drizzle"
-import { WorkerTable, WorkerTokenTable } from "@openwork-ee/den-db/schema"
+import { and, asc, eq, isNull, lt } from "@offlinegpt-ee/den-db/drizzle"
+import { WorkerTable, WorkerTokenTable } from "@offlinegpt-ee/den-db/schema"
 import { automationUpdateChangedRows } from "../automations/update-result.js"
 import { db } from "../db.js"
 import { env } from "../env.js"

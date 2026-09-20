@@ -8,10 +8,10 @@ import {
   liveSharedProductionStateEnv,
   removeOwnedSurfaceFiles,
   resolveInstalledProductionDesktopState,
-} from "@openwork/hosts";
+} from "@offlinegpt/hosts";
 import {
   test,
-} from "@openwork/testkit";
+} from "@offlinegpt/testkit";
 import { desktopProductionLive } from "../../worlds/desktop-prod-live.ts";
 
 test("live shared production desktop state requires consent and selects state without mutating it", async ({ evidence }) => {
@@ -27,13 +27,13 @@ test("live shared production desktop state requires consent and selects state wi
   );
   assert.equal(stateAcquisitions, 0);
 
-  const fixtureRoot = await mkdtemp(join(tmpdir(), "openwork-prod-live-state-"));
+  const fixtureRoot = await mkdtemp(join(tmpdir(), "offlinegpt-prod-live-state-"));
   try {
     const homeDir = join(fixtureRoot, "home");
-    const dataDir = join(homeDir, ".openwork", "openwork-server");
-    const configDir = join(homeDir, ".config", "openwork");
+    const dataDir = join(homeDir, ".offlinegpt", "offlinegpt-server");
+    const configDir = join(homeDir, ".config", "offlinegpt");
     const opencodeConfigDir = join(homeDir, ".config", "opencode");
-    const userDataDir = join(homeDir, "Library", "Application Support", "com.differentai.openwork");
+    const userDataDir = join(homeDir, "Library", "Application Support", "com.differentai.offlinegpt");
     const opencodeDb = join(homeDir, "Library", "Application Support", "opencode", "opencode.db");
     await mkdir(dataDir, { recursive: true });
     await mkdir(configDir, { recursive: true });
@@ -45,9 +45,9 @@ test("live shared production desktop state requires consent and selects state wi
       join(configDir, "desktop-bootstrap.json"),
       join(configDir, "env.json"),
       join(configDir, "server.json"),
-      join(userDataDir, "openwork-server-state.json"),
-      join(userDataDir, "openwork-server-tokens.json"),
-      join(userDataDir, "openwork-workspaces.json"),
+      join(userDataDir, "offlinegpt-server-state.json"),
+      join(userDataDir, "offlinegpt-server-tokens.json"),
+      join(userDataDir, "offlinegpt-workspaces.json"),
     ]) {
       await writeFile(path, "{}\n", "utf8");
     }
@@ -65,9 +65,9 @@ test("live shared production desktop state requires consent and selects state wi
       opencodeDb,
       opencodeConfigDir,
       serverConfigPath: join(configDir, "server.json"),
-      serverStatePath: join(userDataDir, "openwork-server-state.json"),
-      serverTokenStorePath: join(userDataDir, "openwork-server-tokens.json"),
-      workspaceStatePath: join(userDataDir, "openwork-workspaces.json"),
+      serverStatePath: join(userDataDir, "offlinegpt-server-state.json"),
+      serverTokenStorePath: join(userDataDir, "offlinegpt-server-tokens.json"),
+      workspaceStatePath: join(userDataDir, "offlinegpt-workspaces.json"),
     });
 
     const isolatedProfile = join(fixtureRoot, "isolated-eval-profile");
@@ -76,25 +76,25 @@ test("live shared production desktop state requires consent and selects state wi
     const launchEnv = electronSurfaceEnv(
       profilePaths,
       {
-        appName: "OpenWork Eval production-live",
-        appIdentifier: "com.differentai.openwork.eval.production-live",
+        appName: "OfflineGPT Eval production-live",
+        appIdentifier: "com.differentai.offlinegpt.eval.production-live",
         port: 31_001,
         cdpPort: 31_002,
       },
       liveSharedProductionStateEnv(resolved),
     );
-    assert.equal(launchEnv.OPENWORK_DATA_DIR, dataDir);
+    assert.equal(launchEnv.OFFLINEGPT_DATA_DIR, dataDir);
     assert.equal(launchEnv.OPENCODE_DB, opencodeDb);
-    assert.equal(launchEnv.OPENWORK_DESKTOP_WORKSPACE_STATE_PATH, join(userDataDir, "openwork-workspaces.json"));
-    assert.equal(launchEnv.OPENWORK_SERVER_TOKEN_STORE_PATH, join(userDataDir, "openwork-server-tokens.json"));
-    assert.equal(launchEnv.OPENWORK_SERVER_STATE_PATH, join(userDataDir, "openwork-server-state.json"));
-    assert.equal(launchEnv.OPENWORK_ENV_STORE, join(configDir, "env.json"));
-    assert.equal(launchEnv.OPENWORK_SERVER_CONFIG, join(configDir, "server.json"));
-    assert.equal(launchEnv.OPENWORK_DEV_SHARED_STATE, "1");
-    assert.equal(launchEnv.OPENWORK_ELECTRON_USERDATA, profilePaths.userDataDir);
-    assert.notEqual(launchEnv.OPENWORK_ELECTRON_USERDATA, dataDir);
-    assert.equal(launchEnv.OPENWORK_ELECTRON_APP_IDENTIFIER, "com.differentai.openwork.eval.production-live");
-    assert.equal(launchEnv.OPENWORK_ELECTRON_REMOTE_DEBUG_PORT, "31002");
+    assert.equal(launchEnv.OFFLINEGPT_DESKTOP_WORKSPACE_STATE_PATH, join(userDataDir, "offlinegpt-workspaces.json"));
+    assert.equal(launchEnv.OFFLINEGPT_SERVER_TOKEN_STORE_PATH, join(userDataDir, "offlinegpt-server-tokens.json"));
+    assert.equal(launchEnv.OFFLINEGPT_SERVER_STATE_PATH, join(userDataDir, "offlinegpt-server-state.json"));
+    assert.equal(launchEnv.OFFLINEGPT_ENV_STORE, join(configDir, "env.json"));
+    assert.equal(launchEnv.OFFLINEGPT_SERVER_CONFIG, join(configDir, "server.json"));
+    assert.equal(launchEnv.OFFLINEGPT_DEV_SHARED_STATE, "1");
+    assert.equal(launchEnv.OFFLINEGPT_ELECTRON_USERDATA, profilePaths.userDataDir);
+    assert.notEqual(launchEnv.OFFLINEGPT_ELECTRON_USERDATA, dataDir);
+    assert.equal(launchEnv.OFFLINEGPT_ELECTRON_APP_IDENTIFIER, "com.differentai.offlinegpt.eval.production-live");
+    assert.equal(launchEnv.OFFLINEGPT_ELECTRON_REMOTE_DEBUG_PORT, "31002");
 
     await removeOwnedSurfaceFiles({
       name: "production-live",
@@ -117,7 +117,7 @@ test("live shared production desktop state requires consent and selects state wi
     );
     evidence.recordAssertionEvidence(
       "Dev Electron points at installed production stores from an isolated profile",
-      "The launch environment selected production OpenWork, OpenCode, workspace, config, and token paths while retaining an isolated Electron userData directory.",
+      "The launch environment selected production OfflineGPT, OpenCode, workspace, config, and token paths while retaining an isolated Electron userData directory.",
       true,
     );
     evidence.recordAssertionEvidence(

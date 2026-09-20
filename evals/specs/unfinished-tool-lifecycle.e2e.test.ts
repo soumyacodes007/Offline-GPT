@@ -1,4 +1,4 @@
-import { spec } from "@openwork/testkit";
+import { spec } from "@offlinegpt/testkit";
 import { arrangeControl, unfinishedTools } from "../worlds/chat.ts";
 
 const test = spec.world(unfinishedTools);

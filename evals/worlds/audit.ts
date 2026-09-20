@@ -1,6 +1,6 @@
 import { configureProvider } from "./chat.ts";
 import { streamedMarkdownAnswer, streamedMarkdownMarker, streamedMarkdownReasoning } from "./chat.ts";
-import type { Seed } from "@openwork/env";
+import type { Seed } from "@offlinegpt/env";
 
 export async function auditMarkdown(seed: Seed) {
   const providerId = "audit-streamed-markdown-mock";

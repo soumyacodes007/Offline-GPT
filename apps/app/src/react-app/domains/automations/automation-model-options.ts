@@ -2,9 +2,9 @@ import type { DenOrgLlmProvider } from "@/app/lib/den"
 import { formatGenericBehaviorLabel, getModelBehaviorSummary } from "@/app/lib/model-behavior"
 import type { ModelOption, ProviderListItem } from "@/app/types"
 import { resolveModelDisplayName, resolveModelProviderDisplayName } from "@/app/utils"
-import type { AutomationModel } from "@openwork/types/automations"
-import { AUTOMATION_FREE_MODEL } from "@openwork/types/automations"
-import { INFERENCE_MODEL_ALIASES } from "@openwork/types/den/inference"
+import type { AutomationModel } from "@offlinegpt/types/automations"
+import { AUTOMATION_FREE_MODEL } from "@offlinegpt/types/automations"
+import { INFERENCE_MODEL_ALIASES } from "@offlinegpt/types/den/inference"
 
 /** providerId → modelId → the local runtime's model record. */
 export type AutomationProviderCatalog = Record<string, Record<string, ProviderListItem["models"][string]>>
@@ -14,7 +14,7 @@ export type AutomationModelOption = {
   modelId: string
   providerName: string
   modelName: string
-  accessKind: "free" | "openwork_managed" | "authorized_custom"
+  accessKind: "free" | "offlinegpt_managed" | "authorized_custom"
 }
 
 export type ResolvedProposalModel = {
@@ -27,15 +27,15 @@ const freeStarterModel: AutomationModelOption = {
   accessKind: "free",
 }
 
-function openWorkManagedModels(provider: DenOrgLlmProvider): AutomationModelOption[] {
+function offlineGptManagedModels(provider: DenOrgLlmProvider): AutomationModelOption[] {
   return Object.entries(INFERENCE_MODEL_ALIASES)
     .filter(([, model]) => model.enabled)
     .map(([modelId, model]) => ({
-      providerId: "openwork",
+      providerId: "offlinegpt",
       modelId,
       providerName: provider.name,
-      modelName: model.displayName.replace(/^OpenWork:\s*/, ""),
-      accessKind: "openwork_managed" as const,
+      modelName: model.displayName.replace(/^OfflineGPT:\s*/, ""),
+      accessKind: "offlinegpt_managed" as const,
     }))
 }
 
@@ -52,21 +52,21 @@ function authorizedProviderModels(provider: DenOrgLlmProvider): AutomationModelO
 /**
  * Den's usable-provider response is already scoped to the active member. Keep
  * the submitted value normalized to the same IDs the server revalidates:
- * `opencode`, `openwork`, or the concrete `lpr_*` provider record.
+ * `opencode`, `offlinegpt`, or the concrete `lpr_*` provider record.
  */
 export function automationModelOptions(
   providers: readonly DenOrgLlmProvider[],
   options: { includeFreeStarter?: boolean } = {},
 ): AutomationModelOption[] {
-  const managed = providers.flatMap((provider) => provider.source === "openwork"
-    ? openWorkManagedModels(provider)
+  const managed = providers.flatMap((provider) => provider.source === "offlinegpt"
+    ? offlineGptManagedModels(provider)
     : authorizedProviderModels(provider))
 
   return [
     ...(options.includeFreeStarter === false ? [] : [freeStarterModel]),
     ...managed,
   ].sort((left, right) => {
-    const kindOrder = ["free", "openwork_managed", "authorized_custom"]
+    const kindOrder = ["free", "offlinegpt_managed", "authorized_custom"]
     return kindOrder.indexOf(left.accessKind) - kindOrder.indexOf(right.accessKind)
       || left.providerName.localeCompare(right.providerName)
       || left.modelName.localeCompare(right.modelName)
@@ -105,7 +105,7 @@ export function resolveProposalModel(
   }
 
   const provider = providers.find((candidate) =>
-    candidate.source !== "openwork"
+    candidate.source !== "offlinegpt"
     && candidate.providerId === proposed.providerId
     && candidate.models.some((model) => model.id === proposed.modelId))
   if (provider) {

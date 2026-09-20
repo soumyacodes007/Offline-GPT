@@ -9,7 +9,7 @@ import type {
   AutomationUsage,
   CreateAutomationDefinition,
   UpdateAutomation,
-} from "@openwork/types/automations"
+} from "@offlinegpt/types/automations"
 
 export type Awaitable<T> = T | Promise<T>
 

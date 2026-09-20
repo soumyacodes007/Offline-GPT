@@ -121,7 +121,7 @@ describe("plugin import flow", () => {
         credentialMode: "shared",
       });
 
-      storedValues.set("openwork.plugin-import-draft.v1", JSON.stringify({
+      storedValues.set("offlinegpt.plugin-import-draft.v1", JSON.stringify({
         ...draft,
         authType: "none",
         credentialMode: "shared",
@@ -131,7 +131,7 @@ describe("plugin import flow", () => {
         credentialMode: "shared",
       });
 
-      storedValues.set("openwork.plugin-import-draft.v1", JSON.stringify({
+      storedValues.set("offlinegpt.plugin-import-draft.v1", JSON.stringify({
         version: draft.version,
         githubUrl: draft.githubUrl,
         preview: draft.preview,
@@ -145,7 +145,7 @@ describe("plugin import flow", () => {
         selectedServerKeys: ["crm"],
         selectedSkillKeys: ["research"],
       });
-      expect(storedValues.has("openwork.plugin-import-draft.v1")).toBe(true);
+      expect(storedValues.has("offlinegpt.plugin-import-draft.v1")).toBe(true);
       clearPluginImportDraft();
     } finally {
       if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);

@@ -181,7 +181,7 @@ export function LpDashboardPreview() {
     <div className="overflow-hidden rounded-[20px] border border-[#e1e4e8] bg-white">
       <div className="flex h-12 items-center gap-3 border-b border-[#e1e4e8] px-5">
         <TrafficLights />
-        <span className="text-[12px] font-medium text-[var(--lp-muted)]">OpenWork — Acme Inc</span>
+        <span className="text-[12px] font-medium text-[var(--lp-muted)]">OfflineGPT — Acme Inc</span>
       </div>
       <div className="flex min-h-[570px]">
         <aside className="hidden w-[200px] shrink-0 flex-col border-r border-[#e1e4e8] bg-[#f7f8fa] p-3 md:flex">

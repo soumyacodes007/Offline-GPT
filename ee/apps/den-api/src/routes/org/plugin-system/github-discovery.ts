@@ -440,7 +440,7 @@ function agentPluginAssetWarnings(input: {
     )).length
   }, 0)
   return extraAssetCount > 0
-    ? [`${extraAssetCount} additional skill asset${extraAssetCount === 1 ? " was" : "s were"} found. OpenWork imports the SKILL.md entrypoint; referenced skill assets are not installed yet.`]
+    ? [`${extraAssetCount} additional skill asset${extraAssetCount === 1 ? " was" : "s were"} found. OfflineGPT imports the SKILL.md entrypoint; referenced skill assets are not installed yet.`]
     : []
 }
 
@@ -562,7 +562,7 @@ export function buildGithubRepoDiscovery(input: {
       const validationWarnings = validation.ok ? validation.warnings : [...validation.warnings, ...validation.errors]
       const noComponentsWarning = !validation.ok || hasSupportedComponents
         ? []
-        : ["This Agent Plugin has no skills or MCP configuration that OpenWork can import."]
+        : ["This Agent Plugin has no skills or MCP configuration that OfflineGPT can import."]
       const manifestName = typeof candidate.value.name === "string" ? candidate.value.name : null
       const manifestDescription = typeof candidate.value.description === "string" ? candidate.value.description : null
 
@@ -636,7 +636,7 @@ export function buildGithubRepoDiscovery(input: {
   //   } satisfies GithubRepoDiscoveryResult
   // }
 
-  warnings.push(`OpenWork supports Agent Plugins ${AGENT_PLUGIN_V1_SUPPORTED_VERSIONS.join(" and ")} and Claude-compatible plugins. Add a standards-compliant plugin.json, .claude-plugin/marketplace.json, or .claude-plugin/plugin.json to this repository.`)
+  warnings.push(`OfflineGPT supports Agent Plugins ${AGENT_PLUGIN_V1_SUPPORTED_VERSIONS.join(" and ")} and Claude-compatible plugins. Add a standards-compliant plugin.json, .claude-plugin/marketplace.json, or .claude-plugin/plugin.json to this repository.`)
 
   return {
     classification: "unsupported",

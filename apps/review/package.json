@@ -1,5 +1,5 @@
 {
-  "name": "@openwork/review-app",
+  "name": "@offlinegpt/review-app",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@openwork/review": "workspace:*",
+    "@offlinegpt/review": "workspace:*",
     "next": "16.2.11",
     "react": "catalog:",
     "react-dom": "catalog:"

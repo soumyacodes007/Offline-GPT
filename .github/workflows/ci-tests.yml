@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: openwork-tests-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: offlinegpt-tests-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -55,7 +55,7 @@ jobs:
             core.setOutput("lane", lane)
             core.info(`Selected lane: ${lane}`)
 
-  openwork-tests-core:
+  offlinegpt-tests-core:
     needs: classify-changes
     if: needs.classify-changes.outputs.lane == 'full'
     runs-on: blacksmith-16vcpu-ubuntu-2204
@@ -71,7 +71,7 @@ jobs:
       - name: Check journey selection, reporting, and alerts
         run: node --test evals/scripts/journey-ci.test.mjs evals/scripts/flake-report.test.mjs
 
-  openwork-tests-build:
+  offlinegpt-tests-build:
     needs: classify-changes
     if: needs.classify-changes.outputs.lane == 'full'
     runs-on: blacksmith-16vcpu-ubuntu-2204
@@ -98,9 +98,9 @@ jobs:
       - name: Bundle the server plugins the way packaged builds do
         run: |
           rm -rf packages/types/dist
-          pnpm --filter openwork-server build
+          pnpm --filter offlinegpt-server build
       - name: Typecheck Electron main against the IPC contract
-        run: pnpm --filter @openwork/desktop typecheck:electron
+        run: pnpm --filter @offlinegpt/desktop typecheck:electron
       - name: Prepare virtual display
         run: |
           if ! command -v xvfb-run >/dev/null || ! command -v xdpyinfo >/dev/null; then
@@ -110,7 +110,7 @@ jobs:
       - name: Package and smoke-test the installed desktop
         timeout-minutes: 7
         env:
-          OPENWORK_PACKAGED_SMOKE_DIR: ${{ runner.temp }}/openwork-packaged-smoke
+          OFFLINEGPT_PACKAGED_SMOKE_DIR: ${{ runner.temp }}/offlinegpt-packaged-smoke
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: node apps/desktop/scripts/packaged-smoke.mjs --server-built
       - name: Upload packaged smoke evidence and timings
@@ -119,14 +119,14 @@ jobs:
         with:
           name: packaged-desktop-smoke-${{ github.run_attempt }}
           path: |
-            ${{ runner.temp }}/openwork-packaged-smoke/timing.json
-            ${{ runner.temp }}/openwork-packaged-smoke/profiles/**/electron.log
+            ${{ runner.temp }}/offlinegpt-packaged-smoke/timing.json
+            ${{ runner.temp }}/offlinegpt-packaged-smoke/profiles/**/electron.log
             evals/results/test-runs/**
           retention-days: 7
 
   # Broad tests, source-layout guards, and test-framework checks remain visible
   # here without blocking unrelated PRs. No retries or ignored failures.
-  openwork-tests-extended:
+  offlinegpt-tests-extended:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -142,16 +142,16 @@ jobs:
         uses: ./.github/actions/setup-tests
       - name: Run all app tests
         if: (success() || failure()) && steps.setup.outcome == 'success'
-        run: pnpm --filter @openwork/app test
+        run: pnpm --filter @offlinegpt/app test
       - name: Run all server tests
         if: (success() || failure()) && steps.setup.outcome == 'success'
-        run: pnpm --filter openwork-server test
+        run: pnpm --filter offlinegpt-server test
       - name: Run Den API tests
         if: (success() || failure()) && steps.setup.outcome == 'success'
-        run: pnpm --filter @openwork-ee/den-api test
+        run: pnpm --filter @offlinegpt-ee/den-api test
       - name: Run all desktop tests
         if: (success() || failure()) && steps.setup.outcome == 'success'
-        run: pnpm --filter @openwork/desktop test
+        run: pnpm --filter @offlinegpt/desktop test
       - name: Run release script tests
         if: (success() || failure()) && steps.setup.outcome == 'success'
         run: node --test scripts/release/*.test.mjs
@@ -166,10 +166,10 @@ jobs:
         run: pnpm test:e2e
       - name: Build server plugins
         if: (success() || failure()) && steps.setup.outcome == 'success'
-        run: pnpm --filter openwork-server build
+        run: pnpm --filter offlinegpt-server build
       - name: Typecheck Electron
         if: (success() || failure()) && steps.setup.outcome == 'success'
-        run: pnpm --filter @openwork/desktop typecheck:electron
+        run: pnpm --filter @offlinegpt/desktop typecheck:electron
 
   validate-models-snapshot:
     needs: classify-changes
@@ -258,8 +258,8 @@ jobs:
 
   # Single stable context for branch rulesets to require. Green only when
   # the lane selected by classification succeeds; always reports.
-  openwork-tests-required:
-    needs: [classify-changes, openwork-tests-core, openwork-tests-build, validate-models-snapshot, validate-docs]
+  offlinegpt-tests-required:
+    needs: [classify-changes, offlinegpt-tests-core, offlinegpt-tests-build, validate-models-snapshot, validate-docs]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -267,8 +267,8 @@ jobs:
         env:
           CLASSIFY_RESULT: ${{ needs.classify-changes.result }}
           LANE: ${{ needs.classify-changes.outputs.lane }}
-          CORE_RESULT: ${{ needs.openwork-tests-core.result }}
-          BUILD_RESULT: ${{ needs.openwork-tests-build.result }}
+          CORE_RESULT: ${{ needs.offlinegpt-tests-core.result }}
+          BUILD_RESULT: ${{ needs.offlinegpt-tests-build.result }}
           SNAPSHOT_RESULT: ${{ needs.validate-models-snapshot.result }}
           DOCS_RESULT: ${{ needs.validate-docs.result }}
         run: |

@@ -67,16 +67,16 @@ export function windowsBrandAppUserModelId(baseAppId, sourceUrl) {
 }
 
 export function windowsBrandShortcutFileName(appName) {
-  const safeName = String(appName ?? "OpenWork")
+  const safeName = String(appName ?? "OfflineGPT")
     .replace(/[<>:"/\\|?*]/g, "-")
-    .trim() || "OpenWork";
+    .trim() || "OfflineGPT";
   return `${safeName}.lnk`;
 }
 
 export function windowsInstalledShortcutFileName(appName) {
-  const safeName = String(appName ?? "OpenWork")
+  const safeName = String(appName ?? "OfflineGPT")
     .replace(/[<>:"/\\|?*]/g, "-")
-    .trim() || "OpenWork";
+    .trim() || "OfflineGPT";
   return `${safeName}.lnk`;
 }
 

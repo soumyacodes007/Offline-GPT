@@ -2,12 +2,12 @@
 import { useCallback, useMemo } from "react";
 
 import type { createClient } from "../../../../app/lib/opencode";
-import type { OpenworkServerClient, OpenworkWorkspaceInfo } from "../../../../app/lib/openwork-server";
+import type { OfflineGptServerClient, OfflineGptWorkspaceInfo } from "../../../../app/lib/offlinegpt-server";
 import { deleteRouteSession } from "../../../shell/route-workspaces";
 import { setSessionArchived } from "../../../../app/lib/opencode-session";
 import type { ResolvedWorkspaceEndpoint } from "../../../../app/lib/workspace-endpoint";
 import { getDisplaySessionTitle } from "../../../../app/lib/session-title";
-import { useControlAction, type OpenworkControlAction } from "../../../shell/control/control-provider";
+import { useControlAction, type OfflineGptControlAction } from "../../../shell/control/control-provider";
 import { useSessionManagementStore } from "../sidebar/session-management-store";
 import { isSameWorkbenchSession, useWorkbenchStore } from "../chat/workbench-store";
 
@@ -20,7 +20,7 @@ type SessionLike = {
   };
 };
 
-type SessionControlWorkspace = OpenworkWorkspaceInfo & {
+type SessionControlWorkspace = OfflineGptWorkspaceInfo & {
   displayNameResolved: string;
 };
 
@@ -31,7 +31,7 @@ type UseSessionControlActionsInput = {
   selectedWorkspaceRoot: string;
   selectedSessionId: string | null;
   canCreateTask: boolean;
-  openworkClient: OpenworkServerClient | null;
+  offlinegptClient: OfflineGptServerClient | null;
   opencodeClient: ReturnType<typeof createClient> | null;
   archiveDisabledReason?: string;
   endpointForWorkspace: (workspace: SessionControlWorkspace | null | undefined) => ResolvedWorkspaceEndpoint | null;
@@ -77,7 +77,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
     navigateToSession,
     navigateToSessionRoot,
     openModelPicker,
-    openworkClient,
+    offlinegptClient,
     opencodeClient,
     archiveDisabledReason,
     refreshRouteState,
@@ -89,7 +89,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   } = input;
   const pinnedIds = useSessionManagementStore((s) => s.pinnedIds);
 
-  const createTaskControlAction = useMemo<OpenworkControlAction>(() => ({
+  const createTaskControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.create_task",
     label: "Create a new task",
     description: "Create a new session in the selected workspace.",
@@ -104,7 +104,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   }), [canCreateTask, createTaskInWorkspace, selectedWorkspaceId]);
   useControlAction(createTaskControlAction);
 
-  const listSessionsControlAction = useMemo<OpenworkControlAction>(() => ({
+  const listSessionsControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.list_sessions",
     label: "List available sessions",
     description: "Return sessions across workspaces. Entries include `pinned`, and pinned sessions come first.",
@@ -129,7 +129,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   }), [pinnedIds, sessionsByWorkspaceId, workspaces]);
   useControlAction(listSessionsControlAction);
 
-  const openSessionControlAction = useMemo<OpenworkControlAction>(() => ({
+  const openSessionControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.open",
     label: "Open a session by ID",
     description: "Focus a visible session or reuse its existing tab. Use list_sessions first to get the session ID.",
@@ -166,7 +166,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   }), [navigateToSession, sessionsByWorkspaceId, workspaces]);
   useControlAction(openSessionControlAction);
 
-  const renameSessionControlAction = useMemo<OpenworkControlAction>(() => ({
+  const renameSessionControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.rename",
     label: "Rename a session",
     description: "Rename a session by ID. Use list_sessions first to match the title the user said.",
@@ -196,7 +196,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   }), [opencodeClient, refreshRouteState, selectedWorkspaceRoot, sessionsByWorkspaceId, workspaces]);
   useControlAction(renameSessionControlAction);
 
-  const deleteSessionControlAction = useMemo<OpenworkControlAction>(() => ({
+  const deleteSessionControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.delete",
     label: "Delete a session",
     description: "Delete a session by ID. Destructive: only run after explicit user confirmation.",
@@ -207,13 +207,13 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       { name: "sessionId", type: "string", required: true, description: "Session ID from session.list_sessions." },
       { name: "confirmed", type: "boolean", required: true, description: "Must be true after explicit user confirmation." },
     ],
-    disabled: !openworkClient,
+    disabled: !offlinegptClient,
     execute: async (args) => {
       const sessionId = stringArg(args, "sessionId");
       const confirmed = booleanArg(args, "confirmed");
       if (!sessionId) return { ok: false, error: "sessionId is required" };
       if (!confirmed) return { ok: false, error: "Deletion requires confirmed: true after explicit user confirmation" };
-      if (!openworkClient) return { ok: false, error: "OpenWork server is not connected" };
+      if (!offlinegptClient) return { ok: false, error: "OfflineGPT server is not connected" };
 
       const targetWorkspace = findSessionWorkspace(workspaces, sessionsByWorkspaceId, sessionId);
       if (!targetWorkspace) return { ok: false, error: "Session was not found in the current session list" };
@@ -226,10 +226,10 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       await refreshRouteState();
       return { ok: true, sessionId, deleted: true };
     },
-  }), [endpointForWorkspace, navigateToSessionRoot, openworkClient, refreshRouteState, selectedSessionId, sessionsByWorkspaceId, workspaces]);
+  }), [endpointForWorkspace, navigateToSessionRoot, offlinegptClient, refreshRouteState, selectedSessionId, sessionsByWorkspaceId, workspaces]);
   useControlAction(deleteSessionControlAction);
 
-  const modelPickerControlAction = useMemo<OpenworkControlAction>(() => ({
+  const modelPickerControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.model_picker.open",
     label: "Open the model picker",
     description: "Open the current session model picker.",
@@ -263,7 +263,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
     return selectedWorkspaceId || undefined;
   }, [selectedWorkspaceId, workspaces]);
 
-  const pinControlAction = useMemo<OpenworkControlAction>(() => ({
+  const pinControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.pin",
     label: "Pin or unpin a session",
     description: "Toggle pin on a session. Pinned sessions appear in a global section at the top of the sidebar.",
@@ -280,7 +280,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   }), []);
   useControlAction(pinControlAction);
 
-  const archiveControlAction = useMemo<OpenworkControlAction>(() => ({
+  const archiveControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.archive",
     label: "Archive or unarchive a session",
     description: archiveDisabledReason ?? "Archive a session (non-destructive, preserves context). Archived sessions move to the Archived section. Pass archived=false to unarchive.",
@@ -305,7 +305,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   }), [archiveDisabledReason, opencodeClient, refreshRouteState, selectedWorkspaceRoot, sessionsByWorkspaceId, workspaces]);
   useControlAction(archiveControlAction);
 
-  const groupCreateControlAction = useMemo<OpenworkControlAction>(() => ({
+  const groupCreateControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.group.create",
     label: "Create a session group",
     description: "Create a new group (folder/separator) in the current workspace sidebar. Sessions can then be moved into it.",
@@ -329,7 +329,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   }), [resolveWorkspaceId]);
   useControlAction(groupCreateControlAction);
 
-  const groupMoveControlAction = useMemo<OpenworkControlAction>(() => ({
+  const groupMoveControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.group.move",
     label: "Move a session to a group",
     description: "Assign a session to a group (folder). Pass groupId=null or omit to remove from current group. Use session.group.list to see available groups.",
@@ -353,7 +353,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   }), [resolveWorkspaceId, sessionsByWorkspaceId, workspaces]);
   useControlAction(groupMoveControlAction);
 
-  const groupRemoveControlAction = useMemo<OpenworkControlAction>(() => ({
+  const groupRemoveControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.group.remove",
     label: "Remove a session group",
     description: "Remove a group from the workspace. Sessions in the group become ungrouped (not deleted).",
@@ -379,7 +379,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   }), [resolveWorkspaceId]);
   useControlAction(groupRemoveControlAction);
 
-  const groupListControlAction = useMemo<OpenworkControlAction>(() => ({
+  const groupListControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.group.list",
     label: "List session groups",
     description: "List all groups in a workspace with their IDs and labels.",

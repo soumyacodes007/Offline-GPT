@@ -8,7 +8,7 @@ import { denApiCredentials, denApiEndpoint } from "../../(den)/_lib/den-api-orig
 
 function completionUrl(intentId: string, failed = false) {
   const url = new URL("/sso/test/complete", window.location.origin);
-  url.searchParams.set("openworkSsoTest", intentId);
+  url.searchParams.set("offlinegptSsoTest", intentId);
   if (failed) url.searchParams.set("failed", "1");
   return url.toString();
 }
@@ -38,7 +38,7 @@ function SsoTestStartContent() {
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
-            "x-openwork-legacy-org-id": organizationId,
+            "x-offlinegpt-legacy-org-id": organizationId,
           },
           credentials: denApiCredentials(endpoint),
           body: JSON.stringify({}),
@@ -65,7 +65,7 @@ function SsoTestStartContent() {
   return (
     <DenStatusScreen
       title={error ? "We couldn’t start the test" : "Testing your SSO connection"}
-      description="This test does not enable SSO or replace your current OpenWork session."
+      description="This test does not enable SSO or replace your current OfflineGPT session."
       status="Preparing your organization’s sign-in page…"
       error={error}
     />

@@ -14,22 +14,22 @@ export function connectCallbackPage(input:
   const body = input.ok
     ? `<div class="status-row success">
         <span class="status-icon" aria-hidden="true">✓</span>
-        <span><strong>${escapeHtml(input.name)} is connected to OpenWork.</strong><small>Connection complete</small></span>
+        <span><strong>${escapeHtml(input.name)} is connected to OfflineGPT.</strong><small>Connection complete</small></span>
       </div>
-      <p>You can close this window and return to OpenWork.</p>`
+      <p>You can close this window and return to OfflineGPT.</p>`
     : `<div class="status-row failure">
         <span class="status-icon" aria-hidden="true">!</span>
         <span><strong>${escapeHtml(input.name)}</strong><small>${escapeHtml(input.message)}</small></span>
       </div>
       ${input.referenceId ? `<p class="reference">Diagnostic reference: <code>${escapeHtml(input.referenceId)}</code></p>` : ""}
-      <p>Return to OpenWork to try connecting again. You can close this window.</p>`
+      <p>Return to OfflineGPT to try connecting again. You can close this window.</p>`
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
-    <title>${title} — OpenWork</title>
+    <title>${title} — OfflineGPT</title>
     <style>
       :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --dls-surface: #ffffff; --dls-border: #e5e7eb; --dls-text-primary: #011627; --dls-text-secondary: #667085; --dls-hover: #f2f4f7; }
       * { box-sizing: border-box; }
@@ -84,7 +84,7 @@ export function connectCallbackPage(input:
     fill="#FFFFFF"
     d="M443.216 29.48C452.02 29.0815 460.018 30.0261 467.903 34.1434C489.625 45.4892 510.693 58.4477 532.373 69.8693C514.905 78.2946 493.564 90.995 476.372 100.542L386.895 149.628C376.357 155.498 365.774 161.287 355.148 166.992C337.373 176.588 322.776 183.695 307.595 197.464C287.772 215.608 273.675 239.14 267.014 265.17C262.116 284.284 262.909 298.302 262.917 317.836L262.939 357.47L262.926 471.524L262.961 530.447C262.98 532.198 263.562 543.941 263.164 544.751L262.58 544.549L215.582 518.061C189.232 503.261 169.189 495.747 169.845 460.795C170.068 448.934 169.804 435.617 169.812 423.605L169.831 344.391L169.818 269.769C169.814 254.383 168.977 231.859 171.873 217.311C175.825 198.048 184.641 180.127 197.478 165.236C204.056 157.596 211.686 150.929 220.143 145.432C231.916 137.708 249.246 128.979 262.061 121.995L328.787 85.3185L391.28 50.97C401.594 45.3095 412 39.3027 422.528 34.3441C428.812 31.3849 436.148 30.2484 443.216 29.48Z"
   />
-</svg><span>OpenWork</span></div>
+</svg><span>OfflineGPT</span></div>
       <h1>${title}</h1>
       ${body}
     </main>

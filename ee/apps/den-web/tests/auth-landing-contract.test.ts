@@ -11,9 +11,9 @@ describe("Den auth landing contract", () => {
   test("starts the email-first panel with the approved heading", () => {
     const source = readFileSync(authPanelPath, "utf8");
 
-    expect(source).toContain('title: "Start using OpenWork"');
+    expect(source).toContain('title: "Start using OfflineGPT"');
     expect(source).toContain("Enter your email and we'll send you to the right sign-in step.");
-    expect(source).not.toContain("Continue to OpenWork.");
+    expect(source).not.toContain("Continue to OfflineGPT.");
   });
 
   test("signed-in desktop handoff shows account email and a pasteable link by default", () => {
@@ -24,7 +24,7 @@ describe("Den auth landing contract", () => {
     expect(source).toContain("showCopyLinkByDefault");
     expect(source).toContain('data-testid="desktop-handoff-copy-link"');
     expect(source).toContain("desktopAuthRequested && user && !setupPending");
-    expect(source).toContain("Retry opening OpenWork");
+    expect(source).toContain("Retry opening OfflineGPT");
     expect(source).toContain("onClick={retryDesktopAuthHandoff}");
     expect(source).not.toContain("showAuthFeedback && authInfo && !authError");
   });

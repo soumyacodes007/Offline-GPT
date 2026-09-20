@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { startServer } from "./server.js";
-import { openworkRuntimeConfigFilePath, writeOpenworkRuntimeConfigFile } from "./openwork-runtime-config.js";
+import { offlinegptRuntimeConfigFilePath, writeOfflineGptRuntimeConfigFile } from "./offlinegpt-runtime-config.js";
 import { writeRuntimeOpencodeConfig } from "./runtime-opencode-config-store.js";
 import type { ServerConfig } from "./types.js";
 
@@ -26,14 +26,14 @@ afterEach(async () => {
 });
 
 async function createWorkspaceRoot() {
-  const root = await mkdtemp(join(tmpdir(), "openwork-activate-"));
+  const root = await mkdtemp(join(tmpdir(), "offlinegpt-activate-"));
   await mkdir(join(root, ".opencode"), { recursive: true });
   roots.push(root);
   return root;
 }
 
 function hostAuth(token: string) {
-  return { "X-OpenWork-Host-Token": token };
+  return { "X-OfflineGPT-Host-Token": token };
 }
 
 function clientAuth(token: string) {
@@ -183,7 +183,7 @@ function startMockOpencode() {
   };
 }
 
-function startMockRemoteOpenwork() {
+function startMockRemoteOfflineGpt() {
   const requests: Array<{ pathname: string; authorization: string | null }> = [];
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -209,7 +209,7 @@ function startMockRemoteOpenwork() {
   return { server, requests };
 }
 
-async function startOpenworkServerWithWorkspaces(input: {
+async function startOfflineGptServerWithWorkspaces(input: {
   configPath: string;
   workspaces: ServerConfig["workspaces"];
   authorizedRoots: string[];
@@ -266,13 +266,13 @@ describe("workspace activation", () => {
         baseUrl: opencodeBaseUrl,
       },
     ];
-    const openwork = await startOpenworkServerWithWorkspaces({
+    const offlinegpt = await startOfflineGptServerWithWorkspaces({
       configPath: join(firstRoot, "server.json"),
       workspaces,
       authorizedRoots: [firstRoot, secondRoot],
     });
 
-    const base = `http://127.0.0.1:${openwork.server.port}`;
+    const base = `http://127.0.0.1:${offlinegpt.server.port}`;
     const disposeCount = () => mock.requests.filter(
       (request) => request.method === "POST" && request.pathname === "/instance/dispose",
     ).length;
@@ -282,7 +282,7 @@ describe("workspace activation", () => {
 
     const response = await fetch(`${base}/workspaces/ws_2/activate`, {
       method: "POST",
-      headers: hostAuth(openwork.hostToken),
+      headers: hostAuth(offlinegpt.hostToken),
     });
 
     expect(response.status).toBe(200);
@@ -295,7 +295,7 @@ describe("workspace activation", () => {
 
     const sameWorkspaceResponse = await fetch(`${base}/workspaces/ws_2/activate`, {
       method: "POST",
-      headers: hostAuth(openwork.hostToken),
+      headers: hostAuth(offlinegpt.hostToken),
     });
 
     expect(sameWorkspaceResponse.status).toBe(200);
@@ -306,8 +306,8 @@ describe("workspace activation", () => {
   test("activation re-attaches the target workspace's runtime MCPs without any dispose", async () => {
     const firstRoot = await createWorkspaceRoot();
     const secondRoot = await createWorkspaceRoot();
-    const previousDb = process.env.OPENWORK_RUNTIME_DB;
-    process.env.OPENWORK_RUNTIME_DB = join(firstRoot, "runtime.sqlite");
+    const previousDb = process.env.OFFLINEGPT_RUNTIME_DB;
+    process.env.OFFLINEGPT_RUNTIME_DB = join(firstRoot, "runtime.sqlite");
     const mock = startMockOpencode();
     const opencodeBaseUrl = `http://127.0.0.1:${mock.server.port}`;
     const workspaces: ServerConfig["workspaces"] = [
@@ -315,21 +315,21 @@ describe("workspace activation", () => {
       { id: "ws_2", name: "Two", path: secondRoot, preset: "starter", workspaceType: "local", baseUrl: opencodeBaseUrl },
     ];
     try {
-      const openwork = await startOpenworkServerWithWorkspaces({
+      const offlinegpt = await startOfflineGptServerWithWorkspaces({
         configPath: join(firstRoot, "server.json"),
         workspaces,
         authorizedRoots: [firstRoot, secondRoot],
       });
-      await writeRuntimeOpencodeConfig(openwork.config, "ws_2", (current) => ({
+      await writeRuntimeOpencodeConfig(offlinegpt.config, "ws_2", (current) => ({
         ...current,
         mcp: {
           posthog: { type: "remote", url: "https://mcp.posthog.com/mcp", enabled: true },
         },
       }));
 
-      const response = await fetch(`http://127.0.0.1:${openwork.server.port}/workspaces/ws_2/activate`, {
+      const response = await fetch(`http://127.0.0.1:${offlinegpt.server.port}/workspaces/ws_2/activate`, {
         method: "POST",
-        headers: hostAuth(openwork.hostToken),
+        headers: hostAuth(offlinegpt.hostToken),
       });
       expect(response.status).toBe(200);
 
@@ -346,16 +346,16 @@ describe("workspace activation", () => {
       // The runtime MCP reached the engine dynamically with no preceding dispose.
       expect(mock.requests.some((request) => request.pathname === "/instance/dispose")).toBe(false);
     } finally {
-      if (previousDb === undefined) delete process.env.OPENWORK_RUNTIME_DB;
-      else process.env.OPENWORK_RUNTIME_DB = previousDb;
+      if (previousDb === undefined) delete process.env.OFFLINEGPT_RUNTIME_DB;
+      else process.env.OFFLINEGPT_RUNTIME_DB = previousDb;
     }
   });
 
   test("activation rewrites identical engine config file bytes", async () => {
     const firstRoot = await createWorkspaceRoot();
     const secondRoot = await createWorkspaceRoot();
-    const previousDb = process.env.OPENWORK_RUNTIME_DB;
-    process.env.OPENWORK_RUNTIME_DB = join(firstRoot, "runtime.sqlite");
+    const previousDb = process.env.OFFLINEGPT_RUNTIME_DB;
+    process.env.OFFLINEGPT_RUNTIME_DB = join(firstRoot, "runtime.sqlite");
     const mock = startMockOpencode();
     const opencodeBaseUrl = `http://127.0.0.1:${mock.server.port}`;
     const workspaces: ServerConfig["workspaces"] = [
@@ -363,27 +363,27 @@ describe("workspace activation", () => {
       { id: "ws_2", name: "Two", path: secondRoot, preset: "starter", workspaceType: "local", baseUrl: opencodeBaseUrl },
     ];
     try {
-      const openwork = await startOpenworkServerWithWorkspaces({
+      const offlinegpt = await startOfflineGptServerWithWorkspaces({
         configPath: join(firstRoot, "server.json"),
         workspaces,
         authorizedRoots: [firstRoot, secondRoot],
       });
       // Distinct per-workspace runtime MCP rows must not influence the file.
-      await writeRuntimeOpencodeConfig(openwork.config, "ws_1", (current) => ({
+      await writeRuntimeOpencodeConfig(offlinegpt.config, "ws_1", (current) => ({
         ...current,
         mcp: { one: { type: "remote", url: "https://one.example/mcp", enabled: true } },
       }));
-      await writeRuntimeOpencodeConfig(openwork.config, "ws_2", (current) => ({
+      await writeRuntimeOpencodeConfig(offlinegpt.config, "ws_2", (current) => ({
         ...current,
         mcp: { two: { type: "remote", url: "https://two.example/mcp", enabled: true } },
       }));
-      await writeOpenworkRuntimeConfigFile(openwork.config);
-      const filePath = openworkRuntimeConfigFilePath(openwork.config);
+      await writeOfflineGptRuntimeConfigFile(offlinegpt.config);
+      const filePath = offlinegptRuntimeConfigFilePath(offlinegpt.config);
       const before = await readFile(filePath, "utf8");
 
-      const response = await fetch(`http://127.0.0.1:${openwork.server.port}/workspaces/ws_2/activate`, {
+      const response = await fetch(`http://127.0.0.1:${offlinegpt.server.port}/workspaces/ws_2/activate`, {
         method: "POST",
-        headers: hostAuth(openwork.hostToken),
+        headers: hostAuth(offlinegpt.hostToken),
       });
       expect(response.status).toBe(200);
 
@@ -397,21 +397,21 @@ describe("workspace activation", () => {
         await Bun.sleep(20);
       }
       expect(mcpPushed).toBe(true);
-      const rewritten = await writeOpenworkRuntimeConfigFile(openwork.config);
+      const rewritten = await writeOfflineGptRuntimeConfigFile(offlinegpt.config);
       expect(rewritten.changed).toBe(false);
       expect(await readFile(filePath, "utf8")).toBe(before);
       expect(mock.requests.some((request) => request.pathname === "/instance/dispose")).toBe(false);
     } finally {
-      if (previousDb === undefined) delete process.env.OPENWORK_RUNTIME_DB;
-      else process.env.OPENWORK_RUNTIME_DB = previousDb;
+      if (previousDb === undefined) delete process.env.OFFLINEGPT_RUNTIME_DB;
+      else process.env.OFFLINEGPT_RUNTIME_DB = previousDb;
     }
   });
 
   test("returns without waiting for post-activation MCP registration", async () => {
     const firstRoot = await createWorkspaceRoot();
     const secondRoot = await createWorkspaceRoot();
-    const previousDb = process.env.OPENWORK_RUNTIME_DB;
-    process.env.OPENWORK_RUNTIME_DB = join(firstRoot, "runtime.sqlite");
+    const previousDb = process.env.OFFLINEGPT_RUNTIME_DB;
+    process.env.OFFLINEGPT_RUNTIME_DB = join(firstRoot, "runtime.sqlite");
     const mock = startMockOpencode();
     const opencodeBaseUrl = `http://127.0.0.1:${mock.server.port}`;
     const workspaces: ServerConfig["workspaces"] = [
@@ -420,21 +420,21 @@ describe("workspace activation", () => {
     ];
     const heldRegistration = mock.holdNextMcpRegistration();
     try {
-      const openwork = await startOpenworkServerWithWorkspaces({
+      const offlinegpt = await startOfflineGptServerWithWorkspaces({
         configPath: join(firstRoot, "server.json"),
         workspaces,
         authorizedRoots: [firstRoot, secondRoot],
       });
-      await writeRuntimeOpencodeConfig(openwork.config, "ws_2", (current) => ({
+      await writeRuntimeOpencodeConfig(offlinegpt.config, "ws_2", (current) => ({
         ...current,
         mcp: {
           posthog: { type: "remote", url: "https://mcp.posthog.com/mcp", enabled: true },
         },
       }));
 
-      const activation = fetch(`http://127.0.0.1:${openwork.server.port}/workspaces/ws_2/activate`, {
+      const activation = fetch(`http://127.0.0.1:${offlinegpt.server.port}/workspaces/ws_2/activate`, {
         method: "POST",
-        headers: hostAuth(openwork.hostToken),
+        headers: hostAuth(offlinegpt.hostToken),
       });
       expect(await Promise.race([
         heldRegistration.reached.then(() => true),
@@ -459,8 +459,8 @@ describe("workspace activation", () => {
       expect((await activation).status).toBe(200);
     } finally {
       heldRegistration.release();
-      if (previousDb === undefined) delete process.env.OPENWORK_RUNTIME_DB;
-      else process.env.OPENWORK_RUNTIME_DB = previousDb;
+      if (previousDb === undefined) delete process.env.OFFLINEGPT_RUNTIME_DB;
+      else process.env.OFFLINEGPT_RUNTIME_DB = previousDb;
     }
   });
 
@@ -473,24 +473,24 @@ describe("workspace activation", () => {
       { id: "ws_1", name: "One", path: firstRoot, preset: "starter", workspaceType: "local", baseUrl: opencodeBaseUrl },
       { id: "ws_2", name: "Two", path: secondRoot, preset: "starter", workspaceType: "local", baseUrl: opencodeBaseUrl },
     ];
-    const openwork = await startOpenworkServerWithWorkspaces({
+    const offlinegpt = await startOfflineGptServerWithWorkspaces({
       configPath: join(firstRoot, "server.json"),
       workspaces,
       authorizedRoots: [firstRoot, secondRoot],
     });
     mock.setBusy(firstRoot, true);
 
-    const base = `http://127.0.0.1:${openwork.server.port}`;
+    const base = `http://127.0.0.1:${offlinegpt.server.port}`;
     const promptResponse = await fetch(`${base}/workspace/ws_2/opencode/session/ses_b/prompt_async`, {
       method: "POST",
-      headers: clientAuth(openwork.token),
+      headers: clientAuth(offlinegpt.token),
       body: JSON.stringify({ parts: [{ type: "text", text: "Keep running" }] }),
     });
     expect(promptResponse.status).toBe(204);
 
     const response = await fetch(`${base}/workspaces/ws_2/activate`, {
       method: "POST",
-      headers: hostAuth(openwork.hostToken),
+      headers: hostAuth(offlinegpt.hostToken),
     });
 
     expect(response.status).toBe(200);
@@ -528,16 +528,16 @@ describe("workspace activation", () => {
       `${JSON.stringify({ workspaces, authorizedRoots: [firstRoot, secondRoot] }, null, 2)}\n`,
       "utf8",
     );
-    const openwork = await startOpenworkServerWithWorkspaces({
+    const offlinegpt = await startOfflineGptServerWithWorkspaces({
       configPath,
       workspaces,
       authorizedRoots: [firstRoot, secondRoot],
     });
 
-    const base = `http://127.0.0.1:${openwork.server.port}`;
+    const base = `http://127.0.0.1:${offlinegpt.server.port}`;
     const persistedResponse = await fetch(`${base}/workspaces/ws_2/activate?persist=true`, {
       method: "POST",
-      headers: hostAuth(openwork.hostToken),
+      headers: hostAuth(offlinegpt.hostToken),
     });
     expect(persistedResponse.status).toBe(200);
     const persistedBody = await persistedResponse.json();
@@ -547,7 +547,7 @@ describe("workspace activation", () => {
 
     const volatileResponse = await fetch(`${base}/workspaces/ws_1/activate`, {
       method: "POST",
-      headers: hostAuth(openwork.hostToken),
+      headers: hostAuth(offlinegpt.hostToken),
     });
     expect(volatileResponse.status).toBe(200);
     const volatileBody = await volatileResponse.json();
@@ -557,7 +557,7 @@ describe("workspace activation", () => {
 
     const bodyPersistedResponse = await fetch(`${base}/workspaces/ws_1/activate`, {
       method: "POST",
-      headers: { ...hostAuth(openwork.hostToken), "Content-Type": "application/json" },
+      headers: { ...hostAuth(offlinegpt.hostToken), "Content-Type": "application/json" },
       body: JSON.stringify({ persist: true }),
     });
     expect(bodyPersistedResponse.status).toBe(200);
@@ -573,16 +573,16 @@ describe("workspace lifecycle registry", () => {
     const configRoot = await createWorkspaceRoot();
     const workspaceRoot = await createWorkspaceRoot();
     const configPath = join(configRoot, "server.json");
-    const openwork = await startOpenworkServerWithWorkspaces({
+    const offlinegpt = await startOfflineGptServerWithWorkspaces({
       configPath,
       workspaces: [],
       authorizedRoots: [],
     });
 
-    const base = `http://127.0.0.1:${openwork.server.port}`;
+    const base = `http://127.0.0.1:${offlinegpt.server.port}`;
     const response = await fetch(`${base}/workspaces/local`, {
       method: "POST",
-      headers: { ...hostAuth(openwork.hostToken), "Content-Type": "application/json" },
+      headers: { ...hostAuth(offlinegpt.hostToken), "Content-Type": "application/json" },
       body: JSON.stringify({ folderPath: workspaceRoot, name: "Persisted Local", preset: "starter" }),
     });
 
@@ -601,7 +601,7 @@ describe("workspace lifecycle registry", () => {
     const configRoot = await createWorkspaceRoot();
     const workspaceRoot = await createWorkspaceRoot();
     const configPath = join(configRoot, "server.json");
-    const openwork = await startOpenworkServerWithWorkspaces({
+    const offlinegpt = await startOfflineGptServerWithWorkspaces({
       configPath,
       workspaces: [],
       authorizedRoots: [],
@@ -610,10 +610,10 @@ describe("workspace lifecycle registry", () => {
       opencodePassword: "runtime-pass",
     });
 
-    const base = `http://127.0.0.1:${openwork.server.port}`;
+    const base = `http://127.0.0.1:${offlinegpt.server.port}`;
     const response = await fetch(`${base}/workspaces/local`, {
       method: "POST",
-      headers: { ...hostAuth(openwork.hostToken), "Content-Type": "application/json" },
+      headers: { ...hostAuth(offlinegpt.hostToken), "Content-Type": "application/json" },
       body: JSON.stringify({ folderPath: workspaceRoot, name: "Runtime Local", preset: "starter" }),
     });
     expect(response.status).toBe(201);
@@ -627,27 +627,27 @@ describe("workspace lifecycle registry", () => {
     expect(workspace?.opencodePassword).toBeUndefined();
   });
 
-  test("creates and persists remote OpenWork workspace records", async () => {
+  test("creates and persists remote OfflineGPT workspace records", async () => {
     const workspaceRoot = await createWorkspaceRoot();
     const configPath = join(workspaceRoot, "server.json");
     await writeFile(configPath, `${JSON.stringify({ workspaces: [], authorizedRoots: [] }, null, 2)}\n`, "utf8");
-    const remote = startMockRemoteOpenwork();
-    const openwork = await startOpenworkServerWithWorkspaces({
+    const remote = startMockRemoteOfflineGpt();
+    const offlinegpt = await startOfflineGptServerWithWorkspaces({
       configPath,
       workspaces: [],
       authorizedRoots: [],
     });
 
-    const base = `http://127.0.0.1:${openwork.server.port}`;
+    const base = `http://127.0.0.1:${offlinegpt.server.port}`;
     const response = await fetch(`${base}/workspaces/remote`, {
       method: "POST",
-      headers: { ...hostAuth(openwork.hostToken), "Content-Type": "application/json" },
+      headers: { ...hostAuth(offlinegpt.hostToken), "Content-Type": "application/json" },
       body: JSON.stringify({
         baseUrl: `http://127.0.0.1:${remote.server.port}`,
-        openworkHostUrl: `http://127.0.0.1:${remote.server.port}`,
-        openworkToken: "remote_token",
+        offlinegptHostUrl: `http://127.0.0.1:${remote.server.port}`,
+        offlinegptToken: "remote_token",
         directory: "/remote/project",
-        remoteType: "openwork",
+        remoteType: "offlinegpt",
         sandboxRunId: "run_1",
       }),
     });
@@ -655,15 +655,15 @@ describe("workspace lifecycle registry", () => {
     expect(response.status).toBe(201);
     const body = await response.json();
     expect(body.activeId).toBe("rem_ws_remote");
-    expect(body.workspaces[0].openworkWorkspaceId).toBe("ws_remote");
-    expect(body.workspaces[0].openworkWorkspaceName).toBe("Remote Project");
+    expect(body.workspaces[0].offlinegptWorkspaceId).toBe("ws_remote");
+    expect(body.workspaces[0].offlinegptWorkspaceName).toBe("Remote Project");
     expect(remote.requests[0]).toEqual({ pathname: "/workspaces", authorization: "Bearer remote_token" });
 
     const persisted = await readPersistedConfig(configPath);
     const workspaces = workspacesFromConfig(persisted);
     expect(workspaces[0]?.id).toBe("rem_ws_remote");
     expect(workspaces[0]?.workspaceType).toBe("remote");
-    expect(workspaces[0]?.remoteType).toBe("openwork");
+    expect(workspaces[0]?.remoteType).toBe("offlinegpt");
     expect(workspaces[0]?.sandboxRunId).toBe("run_1");
     expect(authorizedRootsFromConfig(persisted)).toEqual([]);
   });
@@ -678,9 +678,9 @@ describe("workspace lifecycle registry", () => {
         path: "/remote/one",
         preset: "remote",
         workspaceType: "remote",
-        remoteType: "openwork",
+        remoteType: "offlinegpt",
         baseUrl: "http://127.0.0.1:9",
-        openworkWorkspaceId: "ws_one",
+        offlinegptWorkspaceId: "ws_one",
       },
       {
         id: "rem_ws_two",
@@ -688,22 +688,22 @@ describe("workspace lifecycle registry", () => {
         path: "/remote/two",
         preset: "remote",
         workspaceType: "remote",
-        remoteType: "openwork",
+        remoteType: "offlinegpt",
         baseUrl: "http://127.0.0.1:9",
-        openworkWorkspaceId: "ws_two",
+        offlinegptWorkspaceId: "ws_two",
       },
     ];
     await writeFile(configPath, `${JSON.stringify({ workspaces, authorizedRoots: [] }, null, 2)}\n`, "utf8");
-    const openwork = await startOpenworkServerWithWorkspaces({
+    const offlinegpt = await startOfflineGptServerWithWorkspaces({
       configPath,
       workspaces,
       authorizedRoots: [],
     });
-    const base = `http://127.0.0.1:${openwork.server.port}`;
+    const base = `http://127.0.0.1:${offlinegpt.server.port}`;
 
     const renameResponse = await fetch(`${base}/workspaces/rem_ws_one/display-name`, {
       method: "PATCH",
-      headers: { ...hostAuth(openwork.hostToken), "Content-Type": "application/json" },
+      headers: { ...hostAuth(offlinegpt.hostToken), "Content-Type": "application/json" },
       body: JSON.stringify({ displayName: "Renamed One" }),
     });
     expect(renameResponse.status).toBe(200);
@@ -712,14 +712,14 @@ describe("workspace lifecycle registry", () => {
 
     const activateResponse = await fetch(`${base}/workspaces/rem_ws_two/activate?persist=true`, {
       method: "POST",
-      headers: hostAuth(openwork.hostToken),
+      headers: hostAuth(offlinegpt.hostToken),
     });
     expect(activateResponse.status).toBe(200);
     expect(await readPersistedWorkspaceIds(configPath)).toEqual(["rem_ws_two", "rem_ws_one"]);
 
     const deleteResponse = await fetch(`${base}/workspaces/rem_ws_one`, {
       method: "DELETE",
-      headers: hostAuth(openwork.hostToken),
+      headers: hostAuth(offlinegpt.hostToken),
     });
     expect(deleteResponse.status).toBe(200);
     persisted = await readPersistedConfig(configPath);

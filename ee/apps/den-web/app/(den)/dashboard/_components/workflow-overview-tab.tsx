@@ -5,7 +5,7 @@ import type {
   GeneratedArtifactView,
   WorkflowArtifactSnapshot,
   WorkflowDetail,
-} from "@openwork/types/workflows";
+} from "@offlinegpt/types/workflows";
 import { DenButton } from "../../_components/ui/button";
 import { DenCard } from "../../_components/ui/card";
 import { DenChip } from "../../_components/ui/chip";
@@ -213,7 +213,7 @@ export function WorkflowOverviewTab({
         <div className="mt-5">
           {views.length === 0 ? (
             <p className="border-t border-dashed border-gray-200 py-8 text-center text-[13px] text-gray-400">
-              No custom display yet. In OpenWork chat, ask: “Design a display for the {detail.title} workflow.”
+              No custom display yet. In OfflineGPT chat, ask: “Design a display for the {detail.title} workflow.”
             </p>
           ) : (
             <DenList>

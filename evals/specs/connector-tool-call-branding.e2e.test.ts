@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { spec } from "@openwork/testkit";
+import { spec } from "@offlinegpt/testkit";
 import { connectorBranding, isRecord } from "../worlds/library.ts";
 
 const test = spec.world(connectorBranding, { timeout: 420_000 });
@@ -12,7 +12,7 @@ test("connector-backed tool calls show first-class branding and human-readable l
   await step("the real search and connector action are readable while the tool runs", async () => {
     await user.see({ text: /Searched your connections for.*Slack list_channels/ }, { timeoutMs: 60_000 });
     await user.see({ text: /^Listing channels$/ }, { timeoutMs: 30_000 });
-    await user.notSee({ text: /openwork-cloud_execute_capability/ });
+    await user.notSee({ text: /offlinegpt-cloud_execute_capability/ });
     await user.screenshot();
   });
 
@@ -40,7 +40,7 @@ test("connector-backed tool calls show first-class branding and human-readable l
     await user.reload();
     await user.see({ text: /^Listed channels$/ }, { timeoutMs: 30_000 });
     expect(await inspect()).toMatchObject({ count: 1, connector: "Slack" });
-    await user.notSee({ text: /openwork-cloud_execute_capability/ });
+    await user.notSee({ text: /offlinegpt-cloud_execute_capability/ });
     await user.click({ role: "button", label: "Listed channels. Show technical details" });
     await user.see({ text: /"limit":\s*3/ });
     await user.click({ role: "button", label: "Listed channels. Hide technical details" });

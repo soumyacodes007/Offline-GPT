@@ -20,7 +20,7 @@ import {
   resolveHandoffOrgPlan,
 } from "./den-sign-in-intent";
 
-export const DEN_HANDOFF_AUTO_CONTINUE_KEY = "openwork.den.handoffAutoContinueAt";
+export const DEN_HANDOFF_AUTO_CONTINUE_KEY = "offlinegpt.den.handoffAutoContinueAt";
 
 export type HandoffActiveOrg = {
   id: string;
@@ -136,7 +136,7 @@ export async function exchangeHandoffAndSignIn(
   grant: string,
   options: ExchangeHandoffOptions,
 ): Promise<ExchangeHandoffResult> {
-  const fallback = options.fallbackErrorMessage ?? "Failed to sign in to OpenWork Cloud.";
+  const fallback = options.fallbackErrorMessage ?? "Failed to sign in to OfflineGPT Cloud.";
   const attempt = ++handoffAttemptCounter;
 
   const fail = (

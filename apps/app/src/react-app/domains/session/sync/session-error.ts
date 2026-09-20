@@ -89,7 +89,7 @@ function sessionErrorKind(
 
 function errorTitle(kind: OpencodeSessionErrorKind, fallback: string) {
   if (kind === "disk-full") return "Storage error reported";
-  if (kind === "database-error") return "OpenWork couldn’t access its saved data";
+  if (kind === "database-error") return "OfflineGPT couldn’t access its saved data";
   if (kind === "aborted") return "Task interrupted";
   if (kind === "provider-timeout") return "Provider did not respond in time";
   if (kind === "provider-incomplete") return "The model response was interrupted";
@@ -102,7 +102,7 @@ function errorDescription(kind: OpencodeSessionErrorKind) {
     return "A storage limit was reported by the task runtime or a connected service. This does not necessarily mean your computer is full. Check the affected service or workspace before freeing local disk space.";
   }
   if (kind === "database-error") {
-    return "Try again. If this keeps happening, check the available disk space on the device running this task and restart OpenWork. For a cloud workspace, contact its administrator.";
+    return "Try again. If this keeps happening, check the available disk space on the device running this task and restart OfflineGPT. For a cloud workspace, contact its administrator.";
   }
   if (kind === "aborted") {
     return "OpenCode stopped before the task finished. Output and files already produced are kept.";

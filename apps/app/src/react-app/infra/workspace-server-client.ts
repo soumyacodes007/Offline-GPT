@@ -30,14 +30,14 @@ function normalizeLocalServer(localServer: LocalServerHandle): NormalizedLocalSe
 }
 
 function remoteBaseUrl(workspace: NonNullable<WorkspaceServerClientWorkspace>): string {
-  return trim(workspace.baseUrl) || trim(workspace.openworkHostUrl);
+  return trim(workspace.baseUrl) || trim(workspace.offlinegptHostUrl);
 }
 
 function remoteToken(workspace: NonNullable<WorkspaceServerClientWorkspace>): string {
   return (
-    trim(workspace.openworkToken) ||
-    trim(workspace.openworkClientToken) ||
-    trim(workspace.openworkHostToken)
+    trim(workspace.offlinegptToken) ||
+    trim(workspace.offlinegptClientToken) ||
+    trim(workspace.offlinegptHostToken)
   );
 }
 
@@ -70,10 +70,10 @@ export function createWorkspaceServerClientCacheKey(
 }
 
 /**
- * Workspace-scoped OpenWork server client resolver.
+ * Workspace-scoped OfflineGPT server client resolver.
  *
  * The returned endpoint includes the correctly mounted workspace URLs and a
- * memoized OpenWork server client. The cache is intentionally per resolver so
+ * memoized OfflineGPT server client. The cache is intentionally per resolver so
  * React routes/stores do not share mutable clients across workspace contexts.
  */
 export function createWorkspaceServerClientResolver(

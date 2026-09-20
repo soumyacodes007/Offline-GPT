@@ -1,11 +1,11 @@
-import { eq } from "@openwork-ee/den-db/drizzle"
-import { AuthAccountTable, AuthUserTable, RateLimitTable } from "@openwork-ee/den-db/schema"
-import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
-import { desktopConfigSchema } from "@openwork/types/den/desktop-policies"
+import { eq } from "@offlinegpt-ee/den-db/drizzle"
+import { AuthAccountTable, AuthUserTable, RateLimitTable } from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
+import { desktopConfigSchema } from "@offlinegpt/types/den/desktop-policies"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
-import { OPENWORK_DOWNLOAD_URL } from "../../CONSTS.js"
+import { OFFLINEGPT_DOWNLOAD_URL } from "../../CONSTS.js"
 import { cache } from "../../cache.js"
 import { db } from "../../db.js"
 import { env } from "../../env.js"
@@ -103,10 +103,10 @@ function normalizeAuthProvider(providerId: string) {
   if (normalized === "credential" || normalized === "email-password") {
     return "email"
   }
-  if (normalized.startsWith("openwork-sso-")) {
+  if (normalized.startsWith("offlinegpt-sso-")) {
     return "sso"
   }
-  if (normalized.startsWith("openwork-scim-")) {
+  if (normalized.startsWith("offlinegpt-scim-")) {
     return "scim"
   }
   return normalized || "unknown"
@@ -211,8 +211,8 @@ export function registerMeRoutes<T extends { Variables: AuthContextVariables & P
     "/v1/me/send-download-link",
     describeRoute({
       tags: ["Users"],
-      summary: "Send current user the OpenWork desktop download link",
-      description: "Emails the authenticated user a link to download the OpenWork desktop app.",
+      summary: "Send current user the OfflineGPT desktop download link",
+      description: "Emails the authenticated user a link to download the OfflineGPT desktop app.",
       responses: {
         200: jsonResponse("Download link email sent successfully.", sendDownloadLinkResponseSchema),
         400: jsonResponse("The signed-in account is missing an email address.", invalidRequestSchema),
@@ -240,7 +240,7 @@ export function registerMeRoutes<T extends { Variables: AuthContextVariables & P
           to: email,
           template: "downloadLink",
           props: {
-            downloadUrl: OPENWORK_DOWNLOAD_URL,
+            downloadUrl: OFFLINEGPT_DOWNLOAD_URL,
           },
         })
       } catch (error) {

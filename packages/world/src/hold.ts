@@ -10,7 +10,7 @@ const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 
 export function defaultScriptWorldSnapshotDirectory(): string {
   return resolve(
-    process.env.OPENWORK_WORLD_SNAPSHOT_DIR
+    process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR
       ?? join(REPO_ROOT, "evals", "results", ".worlds", "scripts"),
   );
 }
@@ -67,8 +67,8 @@ export async function hold(options: HoldOptions = {}): Promise<void> {
   const name = options.name ?? basename(sourcePath, extname(sourcePath));
   assertWorldName(name);
   const stage = resolveStage(process.env);
-  const recipeHash = process.env.OPENWORK_WORLD_RECIPE_HASH;
-  const place = process.env.OPENWORK_WORLD_PLACE;
+  const recipeHash = process.env.OFFLINEGPT_WORLD_RECIPE_HASH;
+  const place = process.env.OFFLINEGPT_WORLD_PLACE;
   const stagedName = receiptName(name, stage);
 
   const snapshotDirectory = resolve(options.snapshotDir ?? defaultScriptWorldSnapshotDirectory());

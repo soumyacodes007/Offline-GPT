@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { eq, inArray } from "@openwork-ee/den-db/drizzle"
+import { eq, inArray } from "@offlinegpt-ee/den-db/drizzle"
 import {
   AuditEventTable,
   AuthSessionTable,
@@ -7,8 +7,8 @@ import {
   MemberTable,
   OrganizationRoleTable,
   OrganizationTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { shouldRevokeSessionsForRoleChange } from "../src/organization-role-hierarchy.js"
 
 const API_ORIGIN = "http://127.0.0.1:8790"
@@ -29,7 +29,7 @@ describe("organization role change session revocation", () => {
   })
 
   test("the role route preserves a promoted bearer session and revokes it on demotion", async () => {
-    process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/openwork_test"
+    process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
     process.env.DB_MODE ??= "mysql"
     process.env.DEN_DB_ENCRYPTION_KEY ??= "role-session-test-encryption-key-1234567890"
     process.env.BETTER_AUTH_SECRET ??= "role-session-test-secret-123456789012345"
@@ -114,7 +114,7 @@ describe("organization role change session revocation", () => {
           headers: {
             authorization: `Bearer ${ownerToken}`,
             "content-type": "application/json",
-            "x-openwork-org-id": organizationId,
+            "x-offlinegpt-org-id": organizationId,
             origin: API_ORIGIN,
           },
           body: JSON.stringify({ role }),

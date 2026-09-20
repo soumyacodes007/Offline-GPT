@@ -1,5 +1,5 @@
 {
-  "name": "@openwork/env",
+  "name": "@offlinegpt/env",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,11 +16,11 @@
     }
   },
   "dependencies": {
-    "@openwork/behaviors": "workspace:*",
-    "@openwork/cdp": "workspace:*",
-    "@openwork/hosts": "workspace:*",
-    "@openwork/labs": "workspace:*",
-    "@openwork/world": "link:../../../packages/world",
+    "@offlinegpt/behaviors": "workspace:*",
+    "@offlinegpt/cdp": "workspace:*",
+    "@offlinegpt/hosts": "workspace:*",
+    "@offlinegpt/labs": "workspace:*",
+    "@offlinegpt/world": "link:../../../packages/world",
     "mysql2": "^3.11.3"
   }
 }

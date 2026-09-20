@@ -3,7 +3,7 @@ import { createHash } from "node:crypto"
 
 const API_ORIGIN = "http://127.0.0.1:8790"
 
-process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test"
+process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
 process.env.DB_MODE ??= "mysql"
 process.env.DEN_DB_ENCRYPTION_KEY ??= "mcp-apps-test-encryption-key-1234567890"
 process.env.BETTER_AUTH_SECRET ??= "mcp-apps-test-secret-1234567890123"
@@ -22,12 +22,12 @@ beforeAll(async () => {
 test("connect app-host server names mirror the desktop naming convention", () => {
   const connectionId = "emc_01dashboardfixture0000000000"
   const digest = createHash("sha256").update(connectionId).digest("hex").slice(0, 12)
-  expect(connections.connectMcpAppHostServerName(connectionId)).toBe(`openwork-app-host-connect-${digest}`)
+  expect(connections.connectMcpAppHostServerName(connectionId)).toBe(`offlinegpt-app-host-connect-${digest}`)
 })
 
 test("projected tool names sanitize like the desktop host", () => {
-  expect(connections.projectedMcpToolName("openwork-app-host-connect-abc123", "render_report"))
-    .toBe("openwork-app-host-connect-abc123_render_report")
+  expect(connections.projectedMcpToolName("offlinegpt-app-host-connect-abc123", "render_report"))
+    .toBe("offlinegpt-app-host-connect-abc123_render_report")
   expect(connections.projectedMcpToolName("my server!", "tool.name"))
     .toBe("my_server__tool_name")
 })

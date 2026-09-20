@@ -1,7 +1,7 @@
 // Keep selected built-in-browser logins in step with a browser profile.
 //
 // Consent and policy are separate: policy only makes setup available, while
-// the user explicitly chooses one profile and the sites OpenWork may keep
+// the user explicitly chooses one profile and the sites OfflineGPT may keep
 // reading. Cookie values stay inside this main-process module. Persisted state,
 // IPC responses, renderer state, and errors contain metadata only.
 import { execFile } from "node:child_process";
@@ -22,7 +22,7 @@ import {
   importSourceAvailability,
   registrableDomain,
   toElectronCookie,
-} from "@openwork/browser-logins";
+} from "@offlinegpt/browser-logins";
 import {
   chromiumProfileCandidates,
   deriveChromiumKey,
@@ -32,7 +32,7 @@ import {
   readFirefoxCookieMetadata,
   readFirefoxCookies,
   sqliteCompanionFiles,
-} from "@openwork/browser-logins/node";
+} from "@offlinegpt/browser-logins/node";
 
 const require = createRequire(import.meta.url);
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
@@ -173,8 +173,8 @@ async function describeSourceFiles(sourcePath) {
 /**
  * @typedef {{
  *   cookies: {
- *     set(details: import("@openwork/browser-logins").ElectronCookieDetails): Promise<void>,
- *     get(filter: Record<string, unknown>): Promise<Array<import("@openwork/browser-logins").ElectronCookieLike>>,
+ *     set(details: import("@offlinegpt/browser-logins").ElectronCookieDetails): Promise<void>,
+ *     get(filter: Record<string, unknown>): Promise<Array<import("@offlinegpt/browser-logins").ElectronCookieLike>>,
  *     remove(url: string, name: string): Promise<void>,
  *     flushStore?: () => Promise<void>,
  *   },
@@ -328,7 +328,7 @@ export function createBrowserLoginSync({
   async function copyStableSource(source) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const before = await describeSourceFiles(source.path);
-      const copyDir = await mkdtemp(path.join(tmpdir(), "openwork-login-sync-"));
+      const copyDir = await mkdtemp(path.join(tmpdir(), "offlinegpt-login-sync-"));
       const copyPath = path.join(copyDir, "cookies.sqlite");
       try {
         for (const file of before.files) await copyFile(file.filePath, `${copyPath}${file.suffix}`);
@@ -878,24 +878,24 @@ export function createBrowserLoginSync({
 
   function registerIpc(ipcMain, { evalSeam = false } = {}) {
     if (evalSeam) {
-      ipcMain.handle("openwork:browser-logins:writeTestStore", (_event, request) => writeTestStore(request && typeof request === "object" ? request : {}));
-      ipcMain.handle("openwork:browser-logins:testWitnessUrl", () => startTestWitness());
+      ipcMain.handle("offlinegpt:browser-logins:writeTestStore", (_event, request) => writeTestStore(request && typeof request === "object" ? request : {}));
+      ipcMain.handle("offlinegpt:browser-logins:testWitnessUrl", () => startTestWitness());
     }
     // Renderer code may only revoke access. Enabling is derived from trusted
     // main-process installation state and can never be asserted by the renderer.
-    ipcMain.handle("openwork:browser-logins:disableForManagedContext", () => setPolicyAllowed(false));
-    ipcMain.handle("openwork:browser-logins:sources", () => listSources());
-    ipcMain.handle("openwork:browser-logins:preview", (_event, request) => preview(request && typeof request === "object" ? request : {}));
-    ipcMain.handle("openwork:browser-logins:configure", (_event, request) => configure(request && typeof request === "object" ? request : {}));
-    ipcMain.handle("openwork:browser-logins:state", () => getState());
-    ipcMain.handle("openwork:browser-logins:syncNow", () => syncNow());
-    ipcMain.handle("openwork:browser-logins:pause", () => pause());
-    ipcMain.handle("openwork:browser-logins:resume", () => resume());
-    ipcMain.handle("openwork:browser-logins:stopSite", (_event, site) => stopSite(site));
-    ipcMain.handle("openwork:browser-logins:disconnect", (_event, request) => disconnect(request && typeof request === "object" ? request : {}));
-    ipcMain.handle("openwork:browser-logins:signedIn", () => listSignedInSites());
-    ipcMain.handle("openwork:browser-logins:forgetSite", (_event, site) => forgetSite(site));
-    ipcMain.handle("openwork:browser-logins:forgetAll", () => forgetAll());
+    ipcMain.handle("offlinegpt:browser-logins:disableForManagedContext", () => setPolicyAllowed(false));
+    ipcMain.handle("offlinegpt:browser-logins:sources", () => listSources());
+    ipcMain.handle("offlinegpt:browser-logins:preview", (_event, request) => preview(request && typeof request === "object" ? request : {}));
+    ipcMain.handle("offlinegpt:browser-logins:configure", (_event, request) => configure(request && typeof request === "object" ? request : {}));
+    ipcMain.handle("offlinegpt:browser-logins:state", () => getState());
+    ipcMain.handle("offlinegpt:browser-logins:syncNow", () => syncNow());
+    ipcMain.handle("offlinegpt:browser-logins:pause", () => pause());
+    ipcMain.handle("offlinegpt:browser-logins:resume", () => resume());
+    ipcMain.handle("offlinegpt:browser-logins:stopSite", (_event, site) => stopSite(site));
+    ipcMain.handle("offlinegpt:browser-logins:disconnect", (_event, request) => disconnect(request && typeof request === "object" ? request : {}));
+    ipcMain.handle("offlinegpt:browser-logins:signedIn", () => listSignedInSites());
+    ipcMain.handle("offlinegpt:browser-logins:forgetSite", (_event, site) => forgetSite(site));
+    ipcMain.handle("offlinegpt:browser-logins:forgetAll", () => forgetAll());
   }
 
   function shutdown() {

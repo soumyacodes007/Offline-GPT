@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test"
-import { createDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId, type DenTypeId } from "@offlinegpt-ee/utils/typeid"
 
-process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test_plugin_mcp_parity"
+process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test_plugin_mcp_parity"
 process.env.DEN_DB_ENCRYPTION_KEY = process.env.DEN_DB_ENCRYPTION_KEY ?? "local-dev-db-encryption-key-please-change-1234567890"
 process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "local-dev-secret-not-for-production-use!!"
 process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://127.0.0.1:8790"
@@ -11,8 +11,8 @@ process.env.DEN_ALLOW_PRIVATE_MCP_URLS = "1"
 
 let app: typeof import("../src/app.js").default
 let db: typeof import("../src/db.js").db
-let schema: typeof import("@openwork-ee/den-db/schema")
-let drizzle: typeof import("@openwork-ee/den-db/drizzle")
+let schema: typeof import("@offlinegpt-ee/den-db/schema")
+let drizzle: typeof import("@offlinegpt-ee/den-db/drizzle")
 let session: typeof import("../src/session.js")
 
 const organizationId = createDenTypeId("organization")
@@ -31,7 +31,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 beforeAll(async () => {
   mock.restore()
-  const realDb = (await import("@openwork-ee/den-db")).createDenDb({
+  const realDb = (await import("@offlinegpt-ee/den-db")).createDenDb({
     databaseUrl: process.env.DATABASE_URL ?? "",
     mode: "mysql",
   }).db
@@ -40,8 +40,8 @@ beforeAll(async () => {
   const [appMod, dbMod, schemaMod, drizzleMod, sessionMod] = await Promise.all([
     import("../src/app.js"),
     import("../src/db.js"),
-    import("@openwork-ee/den-db/schema"),
-    import("@openwork-ee/den-db/drizzle"),
+    import("@offlinegpt-ee/den-db/schema"),
+    import("@offlinegpt-ee/den-db/drizzle"),
     import("../src/session.js"),
   ])
   app = appMod.default

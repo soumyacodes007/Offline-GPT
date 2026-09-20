@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 
 import { MCP_QUICK_CONNECT } from "../src/app/constants";
 
-describe("built-in OpenWork MCP visibility", () => {
-  test("hides internal OpenWork MCPs and omits the retired admin connector", () => {
-    expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "openwork-cloud")?.defaultHidden).toBe(true);
-    expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "openwork-admin")).toBeUndefined();
-    expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "openwork-ui")?.defaultHidden).toBe(true);
+describe("built-in OfflineGPT MCP visibility", () => {
+  test("hides internal OfflineGPT MCPs and omits the retired admin connector", () => {
+    expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "offlinegpt-cloud")?.defaultHidden).toBe(true);
+    expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "offlinegpt-admin")).toBeUndefined();
+    expect(MCP_QUICK_CONNECT.find((entry) => entry.serverName === "offlinegpt-ui")?.defaultHidden).toBe(true);
   });
 
   test("keeps directory apps visible by default", () => {

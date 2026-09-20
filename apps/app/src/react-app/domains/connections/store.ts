@@ -7,7 +7,7 @@ import { applyEdits, modify, parse, printParseErrorCode } from "jsonc-parser";
 import { t } from "../../../i18n";
 import {
   getMcpServerName,
-  isBuiltInOpenWorkExtension,
+  isBuiltInOfflineGPTExtension,
   MCP_QUICK_CONNECT,
   type McpDirectoryInfo,
 } from "../../../app/constants";
@@ -33,9 +33,9 @@ import {
   validateMcpServerName,
 } from "../../../app/mcp";
 import {
-  buildOpenworkWorkspaceBaseUrl,
-  type OpenworkServerClient,
-} from "../../../app/lib/openwork-server";
+  buildOfflineGptWorkspaceBaseUrl,
+  type OfflineGptServerClient,
+} from "../../../app/lib/offlinegpt-server";
 import type {
   Client,
   McpServerEntry,
@@ -44,9 +44,9 @@ import type {
   ReloadTrigger,
 } from "../../../app/types";
 import { isDesktopRuntime, normalizeDirectoryPath, safeStringify } from "../../../app/utils";
-import { conflictsWithOpenworkConnect } from "./mcp-connection-boundary";
+import { conflictsWithOfflineGptConnect } from "./mcp-connection-boundary";
 
-import type { OpenworkServerStore } from "./openwork-server-store";
+import type { OfflineGptServerStore } from "./offlinegpt-server-store";
 import { attemptSilentMcpReauth } from "./mcp-silent-reauth";
 import {
   createMcpStatusSynchronizer,
@@ -61,7 +61,7 @@ import {
   clearCloudMcpDisabledIntent,
   cloudMcpDisplaySummary,
   recordCloudMcpDisabledIntent,
-  runOpenworkCloudMcpReconciler,
+  runOfflineGptCloudMcpReconciler,
   type CloudMcpOperationContext,
 } from "./cloud-mcp-reconciler";
 
@@ -72,9 +72,9 @@ type SetStateAction<T> = T | ((current: T) => T);
 // den-api): when the two were equal, the marker was stale the instant it
 // was written and every sync tick re-wrote the MCP config.
 const CLOUD_MCP_REFRESH_MARGIN_MS = 24 * 60 * 60 * 1000;
-const LOCAL_OPENWORK_SERVER_RECOVERY_TIMEOUT_MS = 30_000;
+const LOCAL_OFFLINEGPT_SERVER_RECOVERY_TIMEOUT_MS = 30_000;
 
-async function withLocalOpenworkServerRecoveryTimeout<T>(
+async function withLocalOfflineGptServerRecoveryTimeout<T>(
   task: Promise<T>,
   timeoutMs: number,
 ): Promise<T> {
@@ -119,10 +119,10 @@ export function createConnectionsStore(options: {
   selectedWorkspaceId: () => string;
   selectedWorkspaceRoot: () => string;
   workspaceType: () => "local" | "remote";
-  openworkServer: OpenworkServerStore;
+  offlinegptServer: OfflineGptServerStore;
   runtimeWorkspaceId: () => string | null;
   ensureRuntimeWorkspaceId?: () => Promise<string | null | undefined>;
-  localOpenworkServerRecoveryTimeoutMs?: number;
+  localOfflineGptServerRecoveryTimeoutMs?: number;
   setProjectDir?: (value: string) => void;
   developerMode: () => boolean;
   markReloadRequired?: (reason: ReloadReason, trigger?: ReloadTrigger) => void;
@@ -191,13 +191,13 @@ export function createConnectionsStore(options: {
     return `${workspaceType}:${workspaceId}:${root}:${runtimeWorkspaceId}`;
   };
 
-  const getOpenworkSnapshot = () => options.openworkServer.getSnapshot();
+  const getOfflineGptSnapshot = () => options.offlinegptServer.getSnapshot();
 
-  const resolveOpenworkWorkspaceId = async () => {
+  const resolveOfflineGptWorkspaceId = async () => {
     const current = options.runtimeWorkspaceId()?.trim();
     if (current) return current;
-    const openworkSnapshot = getOpenworkSnapshot();
-    if (openworkSnapshot.openworkServerStatus !== "connected" || !openworkSnapshot.openworkServerClient) {
+    const offlinegptSnapshot = getOfflineGptSnapshot();
+    if (offlinegptSnapshot.offlinegptServerStatus !== "connected" || !offlinegptSnapshot.offlinegptServerClient) {
       return null;
     }
     const ensured = (await options.ensureRuntimeWorkspaceId?.())?.trim();
@@ -205,51 +205,51 @@ export function createConnectionsStore(options: {
     return options.workspaceType() === "local" ? options.selectedWorkspaceId().trim() || null : null;
   };
 
-  const resolveConfigOpenworkTarget = async (mode: "read" | "write") => {
-    const openworkSnapshot = getOpenworkSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId = await resolveOpenworkWorkspaceId();
-    const hasOpenworkTarget =
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      Boolean(openworkClient && openworkWorkspaceId);
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.config?.[mode] !== false;
+  const resolveConfigOfflineGptTarget = async (mode: "read" | "write") => {
+    const offlinegptSnapshot = getOfflineGptSnapshot();
+    const offlinegptClient = offlinegptSnapshot.offlinegptServerClient;
+    const offlinegptWorkspaceId = await resolveOfflineGptWorkspaceId();
+    const hasOfflineGptTarget =
+      offlinegptSnapshot.offlinegptServerStatus === "connected" &&
+      Boolean(offlinegptClient && offlinegptWorkspaceId);
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.config?.[mode] !== false;
     return {
-      openworkClient,
-      openworkWorkspaceId,
-      hasOpenworkTarget,
-      canUseOpenworkServer,
+      offlinegptClient,
+      offlinegptWorkspaceId,
+      hasOfflineGptTarget,
+      canUseOfflineGptServer,
     };
   };
 
-  const resolveMcpOpenworkTarget = async (mode: "read" | "write") => {
-    let openworkSnapshot = getOpenworkSnapshot();
-    let openworkClient = openworkSnapshot.openworkServerClient;
-    let openworkWorkspaceId = await resolveOpenworkWorkspaceId();
-    if ((!openworkClient || !openworkWorkspaceId || openworkSnapshot.openworkServerStatus !== "connected")
+  const resolveMcpOfflineGptTarget = async (mode: "read" | "write") => {
+    let offlinegptSnapshot = getOfflineGptSnapshot();
+    let offlinegptClient = offlinegptSnapshot.offlinegptServerClient;
+    let offlinegptWorkspaceId = await resolveOfflineGptWorkspaceId();
+    if ((!offlinegptClient || !offlinegptWorkspaceId || offlinegptSnapshot.offlinegptServerStatus !== "connected")
       && isDesktopRuntime()
       && options.workspaceType() === "local") {
-      openworkClient = await withLocalOpenworkServerRecoveryTimeout(
-        options.openworkServer.ensureLocalOpenworkServerClient(),
-        options.localOpenworkServerRecoveryTimeoutMs ?? LOCAL_OPENWORK_SERVER_RECOVERY_TIMEOUT_MS,
+      offlinegptClient = await withLocalOfflineGptServerRecoveryTimeout(
+        options.offlinegptServer.ensureLocalOfflineGptServerClient(),
+        options.localOfflineGptServerRecoveryTimeoutMs ?? LOCAL_OFFLINEGPT_SERVER_RECOVERY_TIMEOUT_MS,
       );
-      openworkSnapshot = getOpenworkSnapshot();
-      openworkWorkspaceId = options.runtimeWorkspaceId()?.trim()
+      offlinegptSnapshot = getOfflineGptSnapshot();
+      offlinegptWorkspaceId = options.runtimeWorkspaceId()?.trim()
         || (await options.ensureRuntimeWorkspaceId?.())?.trim()
         || options.selectedWorkspaceId().trim()
         || null;
     }
-    const hasOpenworkTarget =
-      Boolean(openworkClient && openworkWorkspaceId);
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.mcp?.[mode] !== false;
+    const hasOfflineGptTarget =
+      Boolean(offlinegptClient && offlinegptWorkspaceId);
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.mcp?.[mode] !== false;
     return {
-      openworkClient,
-      openworkWorkspaceId,
-      hasOpenworkTarget,
-      canUseOpenworkServer,
+      offlinegptClient,
+      offlinegptWorkspaceId,
+      hasOfflineGptTarget,
+      canUseOfflineGptServer,
     };
   };
 
@@ -264,14 +264,14 @@ export function createConnectionsStore(options: {
 
   const readMcpConfigFile = async (scope: "project" | "global"): Promise<OpencodeConfigFile | null> => {
     const projectDir = options.projectDir().trim();
-    const { openworkClient, openworkWorkspaceId, hasOpenworkTarget, canUseOpenworkServer } =
-      await resolveConfigOpenworkTarget("read");
+    const { offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget, canUseOfflineGptServer } =
+      await resolveConfigOfflineGptTarget("read");
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-      return openworkClient.readOpencodeConfigFile(openworkWorkspaceId, scope);
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+      return offlinegptClient.readOpencodeConfigFile(offlinegptWorkspaceId, scope);
     }
 
-    if (hasOpenworkTarget) {
+    if (hasOfflineGptTarget) {
       return null;
     }
 
@@ -288,31 +288,31 @@ export function createConnectionsStore(options: {
       return activeClient;
     }
 
-    const openworkSnapshot = getOpenworkSnapshot();
-    const openworkBaseUrl = openworkSnapshot.openworkServerBaseUrl.trim();
-    const token = openworkSnapshot.openworkServerAuth.token?.trim();
-    if (!openworkBaseUrl || !token) {
+    const offlinegptSnapshot = getOfflineGptSnapshot();
+    const offlinegptBaseUrl = offlinegptSnapshot.offlinegptServerBaseUrl.trim();
+    const token = offlinegptSnapshot.offlinegptServerAuth.token?.trim();
+    if (!offlinegptBaseUrl || !token) {
       return null;
     }
 
     const mountedBaseUrl =
-      buildOpenworkWorkspaceBaseUrl(openworkBaseUrl, await resolveOpenworkWorkspaceId()) ?? openworkBaseUrl;
+      buildOfflineGptWorkspaceBaseUrl(offlinegptBaseUrl, await resolveOfflineGptWorkspaceId()) ?? offlinegptBaseUrl;
     activeClient = createClient(`${mountedBaseUrl.replace(/\/+$/, "")}/opencode`, undefined, {
       token,
-      mode: "openwork",
+      mode: "offlinegpt",
     });
     options.setClient(activeClient);
     return activeClient;
   };
 
-  const resolveWritableOpenworkTarget = async () => {
-    return resolveMcpOpenworkTarget("write");
+  const resolveWritableOfflineGptTarget = async () => {
+    return resolveMcpOfflineGptTarget("write");
   };
 
   const resolveCloudMcpOperationContext = async (fallbackUrl?: string | null): Promise<CloudMcpOperationContext | null> => {
     const settings = readDenSettings();
-    const workspaceId = await resolveOpenworkWorkspaceId();
-    const serverBaseUrl = getOpenworkSnapshot().openworkServerClient?.baseUrl.trim() ?? "";
+    const workspaceId = await resolveOfflineGptWorkspaceId();
+    const serverBaseUrl = getOfflineGptSnapshot().offlinegptServerClient?.baseUrl.trim() ?? "";
     const orgId = settings.activeOrgId?.trim() ?? "";
     if (!workspaceId || !serverBaseUrl || !orgId) return null;
     return {
@@ -346,29 +346,29 @@ export function createConnectionsStore(options: {
     return resolvedProjectDir;
   };
 
-  const listMcpFromOpenworkServer = async (projectDir: string) => {
-    const openworkSnapshot = getOpenworkSnapshot();
-    const { openworkClient, openworkWorkspaceId, hasOpenworkTarget, canUseOpenworkServer } =
-      await resolveMcpOpenworkTarget("read");
-    const canTryOpenworkServer = canUseOpenworkServer;
+  const listMcpFromOfflineGptServer = async (projectDir: string) => {
+    const offlinegptSnapshot = getOfflineGptSnapshot();
+    const { offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget, canUseOfflineGptServer } =
+      await resolveMcpOfflineGptTarget("read");
+    const canTryOfflineGptServer = canUseOfflineGptServer;
 
     recordPerfLog(options.developerMode(), "mcp.refresh", "server-path-check", {
       workspaceType: options.workspaceType(),
       projectDir: projectDir || null,
-      openworkStatus: openworkSnapshot.openworkServerStatus,
-      hasOpenworkClient: Boolean(openworkClient),
-      openworkWorkspaceId: openworkWorkspaceId ?? null,
-      canReadMcp: openworkSnapshot.openworkServerCapabilities?.mcp?.read ?? null,
-      canTryOpenworkServer,
+      offlinegptStatus: offlinegptSnapshot.offlinegptServerStatus,
+      hasOfflineGptClient: Boolean(offlinegptClient),
+      offlinegptWorkspaceId: offlinegptWorkspaceId ?? null,
+      canReadMcp: offlinegptSnapshot.offlinegptServerCapabilities?.mcp?.read ?? null,
+      canTryOfflineGptServer,
     });
 
-    if (hasOpenworkTarget && !canTryOpenworkServer) {
-      throw new Error("OpenWork server cannot read MCP config for this workspace.");
+    if (hasOfflineGptTarget && !canTryOfflineGptServer) {
+      throw new Error("OfflineGPT server cannot read MCP config for this workspace.");
     }
 
-    if (!canTryOpenworkServer || !openworkClient || !openworkWorkspaceId) return null;
+    if (!canTryOfflineGptServer || !offlinegptClient || !offlinegptWorkspaceId) return null;
 
-    let response = await openworkClient.listMcp(openworkWorkspaceId);
+    let response = await offlinegptClient.listMcp(offlinegptWorkspaceId);
     // Upgrade the enabled bundled helper when a local workspace is opened.
     // Never enable a disabled entry, rewrite a custom command, or target a remote worker.
     if (isDesktopRuntime() && options.workspaceType() === "local") {
@@ -380,13 +380,13 @@ export function createConnectionsStore(options: {
         && ((command.length === 2 && command[1] === "mcp") || (command.length === 3 && command[1] === "relay"))) {
         const currentCommand = await resolveDesktopCommand("getComputerUseMcpCommand", false);
         const bundled = currentCommand && (command[0] === currentCommand[0]
-          || command[0].endsWith("/OpenWork Computer Use.app/Contents/MacOS/ComputerUse"));
+          || command[0].endsWith("/OfflineGPT Computer Use.app/Contents/MacOS/ComputerUse"));
         if (bundled && JSON.stringify(command) !== JSON.stringify(currentCommand)) {
-          const writable = await resolveWritableOpenworkTarget();
-          if (writable.canUseOpenworkServer && writable.openworkClient && writable.openworkWorkspaceId === openworkWorkspaceId
+          const writable = await resolveWritableOfflineGptTarget();
+          if (writable.canUseOfflineGptServer && writable.offlinegptClient && writable.offlinegptWorkspaceId === offlinegptWorkspaceId
             && !mcpMutationDenied(true)) {
-            await writable.openworkClient.addMcp(openworkWorkspaceId, { name: "computer-use", config: { ...config, command: currentCommand } });
-            response = await openworkClient.listMcp(openworkWorkspaceId);
+            await writable.offlinegptClient.addMcp(offlinegptWorkspaceId, { name: "computer-use", config: { ...config, command: currentCommand } });
+            response = await offlinegptClient.listMcp(offlinegptWorkspaceId);
           }
         }
       }
@@ -403,7 +403,7 @@ export function createConnectionsStore(options: {
     // Read through the same workspace mount as configuration. The chat client
     // can still point at the previous/default workspace during restoration.
     try {
-      nextStatuses = filterConfiguredStatuses(await openworkClient.getMcpStatus(openworkWorkspaceId), next);
+      nextStatuses = filterConfiguredStatuses(await offlinegptClient.getMcpStatus(offlinegptWorkspaceId), next);
     } catch {
       nextStatuses = {};
     }
@@ -437,9 +437,9 @@ export function createConnectionsStore(options: {
     };
   };
 
-  const resolveDesktopCommand = async (commandName: "getComputerUseMcpCommand" | "getOpenworkUiMcpCommand", fallbackOnError = true) => {
+  const resolveDesktopCommand = async (commandName: "getComputerUseMcpCommand" | "getOfflineGptUiMcpCommand", fallbackOnError = true) => {
     try {
-      const command = await window.__OPENWORK_ELECTRON__?.invokeDesktop?.(commandName);
+      const command = await window.__OFFLINEGPT_ELECTRON__?.invokeDesktop?.(commandName);
       if (Array.isArray(command) && command.every((part) => typeof part === "string") && command.length > 0) {
         return command;
       }
@@ -447,7 +447,7 @@ export function createConnectionsStore(options: {
       if (!fallbackOnError) {
         throw error instanceof Error
           ? error
-          : new Error("Computer Use helper app is unavailable. Restart OpenWork or reinstall the app.");
+          : new Error("Computer Use helper app is unavailable. Restart OfflineGPT or reinstall the app.");
       }
       // Fall through to the published package command in the manifest/catalog.
     }
@@ -456,22 +456,22 @@ export function createConnectionsStore(options: {
 
   const resolveLocalMcpCommand = async (entry: McpDirectoryInfo) => {
     const mcpResource = extensionResource(entry.extensionManifest, "mcp");
-    if (mcpResource?.localCommandRef === "openwork.computerUseMcp") {
+    if (mcpResource?.localCommandRef === "offlinegpt.computerUseMcp") {
       const command = await resolveDesktopCommand("getComputerUseMcpCommand", false);
-      if (!command) throw new Error("Computer Use requires the bundled OpenWork helper on macOS.");
+      if (!command) throw new Error("Computer Use requires the bundled OfflineGPT helper on macOS.");
       return command;
     }
-    if (mcpResource?.localCommandRef === "openwork.uiMcp" || entry.serverName === "openwork-ui") {
-      const command = await resolveDesktopCommand("getOpenworkUiMcpCommand");
+    if (mcpResource?.localCommandRef === "offlinegpt.uiMcp" || entry.serverName === "offlinegpt-ui") {
+      const command = await resolveDesktopCommand("getOfflineGptUiMcpCommand");
       return command ?? entry.command;
     }
     return entry.command;
   };
 
   const resolveLocalMcpEnvironment = async (entry: McpDirectoryInfo) => {
-    if (entry.serverName !== "openwork-ui") return undefined;
+    if (entry.serverName !== "offlinegpt-ui") return undefined;
     try {
-      const environment = await window.__OPENWORK_ELECTRON__?.invokeDesktop?.("getOpenworkUiMcpEnvironment");
+      const environment = await window.__OFFLINEGPT_ELECTRON__?.invokeDesktop?.("getOfflineGptUiMcpEnvironment");
       if (environment && typeof environment === "object" && !Array.isArray(environment)) {
         return Object.fromEntries(
           Object.entries(environment).filter((entry): entry is [string, string] =>
@@ -480,7 +480,7 @@ export function createConnectionsStore(options: {
         );
       }
     } catch {
-      // Discovery fallback in openwork-ui-mcp still handles normal launches.
+      // Discovery fallback in offlinegpt-ui-mcp still handles normal launches.
     }
     return undefined;
   };
@@ -524,7 +524,7 @@ export function createConnectionsStore(options: {
 
     try {
       if (isCurrentRefresh()) setStateField("mcpStatus", null);
-      const serverResult = await listMcpFromOpenworkServer(projectDir);
+      const serverResult = await listMcpFromOfflineGptServer(projectDir);
       if (serverResult) {
         // Surface engine registration failures instead of leaving users
         // staring at an MCP that silently shows as disconnected.
@@ -554,9 +554,9 @@ export function createConnectionsStore(options: {
       recordPerfLog(options.developerMode(), "mcp.refresh", "server-path-error", {
         message: error instanceof Error ? error.message : String(error),
       });
-      const serverTarget = await resolveMcpOpenworkTarget("read").catch(() => null);
+      const serverTarget = await resolveMcpOfflineGptTarget("read").catch(() => null);
       if (!isCurrentRefresh()) return;
-      if (isRemoteWorkspace || serverTarget?.hasOpenworkTarget) {
+      if (isRemoteWorkspace || serverTarget?.hasOfflineGptTarget) {
         mutateState((current) => ({
           ...current,
           mcpServers: [],
@@ -571,7 +571,7 @@ export function createConnectionsStore(options: {
       if (!isCurrentRefresh()) return;
       mutateState((current) => ({
         ...current,
-        mcpStatus: "OpenWork server unavailable. MCP config is read-only.",
+        mcpStatus: "OfflineGPT server unavailable. MCP config is read-only.",
         mcpServers: [],
         mcpStatuses: {},
       }));
@@ -623,10 +623,10 @@ export function createConnectionsStore(options: {
         ...globalServers.filter((entry) => !projectNames.has(entry.name)),
         ...projectServers,
       ];
-      // Runtime-DB MCPs (source "config.remote") only exist on the OpenWork
+      // Runtime-DB MCPs (source "config.remote") only exist on the OfflineGPT
       // server. Keep the last-known entries instead of silently dropping them
       // while the server is briefly unreachable (startup race) — otherwise
-      // enabled MCPs like openwork-ui render as "off".
+      // enabled MCPs like offlinegpt-ui render as "off".
       const fileNames = new Set(fileServers.map((entry) => entry.name));
       const runtimeServers = state.mcpServers.filter(
         (entry) => entry.source === "config.remote" && !fileNames.has(entry.name),
@@ -694,7 +694,7 @@ export function createConnectionsStore(options: {
 
   function builtInMcp(name: string) {
     return MCP_QUICK_CONNECT.find((entry) =>
-      isBuiltInOpenWorkExtension(entry) && getMcpServerName(entry) === name,
+      isBuiltInOfflineGPTExtension(entry) && getMcpServerName(entry) === name,
     );
   }
 
@@ -705,15 +705,15 @@ export function createConnectionsStore(options: {
     if (builtIn) entry = builtIn;
     // Cloud repair uses the signed-in organization's reconciler below, not
     // caller-supplied MCP configuration. Existing service access stays usable.
-    if (entry.managedBy !== "openwork-connect") {
+    if (entry.managedBy !== "offlinegpt-connect") {
       const error = mcpMutationDenied(Boolean(builtIn));
       if (error) return { ok: false, error };
     }
     const startedAt = perfNow();
-    const openworkSnapshot = getOpenworkSnapshot();
+    const offlinegptSnapshot = getOfflineGptSnapshot();
     const isRemoteWorkspace =
       options.workspaceType() === "remote" ||
-      (!isDesktopRuntime() && openworkSnapshot.openworkServerStatus === "connected");
+      (!isDesktopRuntime() && offlinegptSnapshot.offlinegptServerStatus === "connected");
     const projectDir = options.projectDir().trim();
     const entryType = entry.type ?? "remote";
 
@@ -724,28 +724,28 @@ export function createConnectionsStore(options: {
       projectDir: projectDir || null,
     });
 
-    const { openworkClient, openworkWorkspaceId, hasOpenworkTarget, canUseOpenworkServer } =
-      await resolveWritableOpenworkTarget();
+    const { offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget, canUseOfflineGptServer } =
+      await resolveWritableOfflineGptTarget();
 
-    if (isRemoteWorkspace && !canUseOpenworkServer) {
-      const error = "OpenWork server unavailable. MCP config is read-only.";
+    if (isRemoteWorkspace && !canUseOfflineGptServer) {
+      const error = "OfflineGPT server unavailable. MCP config is read-only.";
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
-        reason: "openwork-server-unavailable",
+        reason: "offlinegpt-server-unavailable",
       });
       return { ok: false, error };
     }
 
-    if (hasOpenworkTarget && !canUseOpenworkServer) {
-      const error = "OpenWork server MCP config is read-only.";
+    if (hasOfflineGptTarget && !canUseOfflineGptServer) {
+      const error = "OfflineGPT server MCP config is read-only.";
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
-        reason: "openwork-server-read-only",
+        reason: "offlinegpt-server-read-only",
       });
       return { ok: false, error };
     }
 
-    if (!canUseOpenworkServer && !isDesktopRuntime()) {
+    if (!canUseOfflineGptServer && !isDesktopRuntime()) {
       const error = t("mcp.desktop_required");
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
@@ -754,7 +754,7 @@ export function createConnectionsStore(options: {
       return { ok: false, error };
     }
 
-    if (!isRemoteWorkspace && !projectDir && !canUseOpenworkServer) {
+    if (!isRemoteWorkspace && !projectDir && !canUseOfflineGptServer) {
       const error = t("mcp.pick_workspace_first");
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
@@ -763,8 +763,8 @@ export function createConnectionsStore(options: {
       return { ok: false, error };
     }
 
-    const activeClient = canUseOpenworkServer ? options.client() ?? await ensureActiveClient().catch(() => null) : await ensureActiveClient();
-    if (!activeClient && !canUseOpenworkServer) {
+    const activeClient = canUseOfflineGptServer ? options.client() ?? await ensureActiveClient().catch(() => null) : await ensureActiveClient();
+    if (!activeClient && !canUseOfflineGptServer) {
       const error = t("mcp.connect_server_first");
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
@@ -774,7 +774,7 @@ export function createConnectionsStore(options: {
     }
 
     const resolvedProjectDir = activeClient ? await resolveProjectDir(activeClient, projectDir) : projectDir;
-    if (!resolvedProjectDir && !canUseOpenworkServer) {
+    if (!resolvedProjectDir && !canUseOfflineGptServer) {
       const error = t("mcp.pick_workspace_first");
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
@@ -786,11 +786,11 @@ export function createConnectionsStore(options: {
     const slug = entry.id ?? getMcpServerName(entry);
     const action = snapshot.mcpServers.some((server) => server.name === slug) ? "updated" : "added";
 
-    if (conflictsWithOpenworkConnect(entry)) {
-      const error = t("mcp.name_reserved_openwork_connect");
+    if (conflictsWithOfflineGptConnect(entry)) {
+      const error = t("mcp.name_reserved_offlinegpt_connect");
       setStateField("mcpStatus", error);
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
-        reason: "openwork-connect-name-reserved",
+        reason: "offlinegpt-connect-name-reserved",
       });
       return { ok: false, error };
     }
@@ -798,21 +798,21 @@ export function createConnectionsStore(options: {
     try {
       mutateState((current) => ({ ...current, mcpStatus: null, mcpConnectingName: entry.name }));
 
-      if (entry.managedBy === "openwork-connect") {
+      if (entry.managedBy === "offlinegpt-connect") {
         if (slug !== CLOUD_MCP_SERVER_NAME) {
-          throw new Error("OpenWork Connect MCP metadata is invalid.");
+          throw new Error("OfflineGPT Connect MCP metadata is invalid.");
         }
-        if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-          throw new Error("OpenWork server is required to repair agent access to connected services.");
+        if (!canUseOfflineGptServer || !offlinegptClient || !offlinegptWorkspaceId) {
+          throw new Error("OfflineGPT server is required to repair agent access to connected services.");
         }
         const context = await resolveCloudMcpOperationContext(null);
         if (!context) {
-          throw new Error("Sign in to OpenWork Cloud and choose an organization first.");
+          throw new Error("Sign in to OfflineGPT Cloud and choose an organization first.");
         }
         clearCloudMcpDisabledIntent(context);
-        const result = await runOpenworkCloudMcpReconciler({
+        const result = await runOfflineGptCloudMcpReconciler({
           mode: "repair",
-          client: openworkClient,
+          client: offlinegptClient,
           context: { ...context, trigger: "desktop-explicit-connect" },
           mintToken: mintCloudControlMcpToken,
           force: true,
@@ -845,15 +845,15 @@ export function createConnectionsStore(options: {
 
       if (entry.managedOAuth) {
         if (isRemoteWorkspace || !isDesktopRuntime()) {
-          throw new Error("OpenWork-managed MCP OAuth is currently available for local desktop workspaces only.");
+          throw new Error("OfflineGPT-managed MCP OAuth is currently available for local desktop workspaces only.");
         }
         if (entryType !== "remote" || !entry.url) {
-          throw new Error("OpenWork-managed OAuth requires a remote MCP URL.");
+          throw new Error("OfflineGPT-managed OAuth requires a remote MCP URL.");
         }
-        if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-          throw new Error("The local OpenWork server is required for managed MCP sign-in.");
+        if (!canUseOfflineGptServer || !offlinegptClient || !offlinegptWorkspaceId) {
+          throw new Error("The local OfflineGPT server is required for managed MCP sign-in.");
         }
-        const result = await openworkClient.addManagedMcp(openworkWorkspaceId, {
+        const result = await offlinegptClient.addManagedMcp(offlinegptWorkspaceId, {
           name: slug,
           url: entry.url,
           oauth: {
@@ -864,8 +864,8 @@ export function createConnectionsStore(options: {
           },
         });
         const connected = await waitForManagedMcpAuthorization(
-          openworkClient,
-          openworkWorkspaceId,
+          offlinegptClient,
+          offlinegptWorkspaceId,
           slug,
           result,
         );
@@ -888,9 +888,9 @@ export function createConnectionsStore(options: {
       // Resolve dynamic URLs for built-in MCPs
       let resolvedUrl = entry.url;
       let resolvedHeaders: Record<string, string> | undefined;
-      if (!resolvedUrl && entry.serverName === "openwork-ui") {
+      if (!resolvedUrl && entry.serverName === "offlinegpt-ui") {
         try {
-          const bridgeInfo = await window.__OPENWORK_ELECTRON__?.invokeDesktop?.("getUiControlBridgeInfo");
+          const bridgeInfo = await window.__OFFLINEGPT_ELECTRON__?.invokeDesktop?.("getUiControlBridgeInfo");
           if (bridgeInfo?.baseUrl) {
             resolvedUrl = `${bridgeInfo.baseUrl}/mcp`;
             if (bridgeInfo.token) {
@@ -909,7 +909,7 @@ export function createConnectionsStore(options: {
 
       if (entryType === "remote") {
         if (!resolvedUrl) {
-          throw new Error("Missing MCP URL. Is the OpenWork desktop app running?");
+          throw new Error("Missing MCP URL. Is the OfflineGPT desktop app running?");
         }
         mcpEntryConfig["url"] = resolvedUrl;
         if (resolvedHeaders) {
@@ -939,8 +939,8 @@ export function createConnectionsStore(options: {
         }
       }
 
-      if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-        await openworkClient.addMcp(openworkWorkspaceId, {
+      if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+        await offlinegptClient.addMcp(offlinegptWorkspaceId, {
           name: slug,
           config: mcpEntryConfig,
         });
@@ -984,12 +984,12 @@ export function createConnectionsStore(options: {
         }
       }
 
-      if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-        // The OpenWork server is the source of truth for workspace-scoped MCP
+      if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+        // The OfflineGPT server is the source of truth for workspace-scoped MCP
         // config in the React port. Avoid also calling the OpenCode SDK's MCP
         // hot-add endpoint here: when the SDK client is rooted at the aggregate
         // `/opencode` route it can resolve to an internal `local_*` workspace
-        // id that the OpenWork server does not expose, producing a confusing
+        // id that the OfflineGPT server does not expose, producing a confusing
         // `workspace_not_found` after the config write already succeeded.
       } else {
         if (!activeClient || !resolvedProjectDir) {
@@ -1075,8 +1075,8 @@ export function createConnectionsStore(options: {
 
   /**
    * Background reconciliation for the Den cloud MCP: when the desktop is
-   * signed in to OpenWork Cloud with an active org, keep the
-   * `openwork-cloud` MCP entry configured with a fresh first-party token.
+   * signed in to OfflineGPT Cloud with an active org, keep the
+   * `offlinegpt-cloud` MCP entry configured with a fresh first-party token.
    * Quiet by design — a failed mint never opens the OAuth modal.
    *
    * `force` bypasses the freshness marker: used by the user-facing Refresh
@@ -1088,11 +1088,11 @@ export function createConnectionsStore(options: {
     const settings = readDenSettings();
     const orgId = settings.activeOrgId?.trim() ?? "";
     if (!orgId || !settings.authToken?.trim()) return "skipped";
-    const workspaceId = await resolveOpenworkWorkspaceId();
+    const workspaceId = await resolveOfflineGptWorkspaceId();
     if (!workspaceId) return "skipped";
-    const openworkClient = getOpenworkSnapshot().openworkServerClient;
-    const serverBaseUrl = openworkClient?.baseUrl.trim() ?? "";
-    if (!openworkClient || !serverBaseUrl) return "skipped";
+    const offlinegptClient = getOfflineGptSnapshot().offlinegptServerClient;
+    const serverBaseUrl = offlinegptClient?.baseUrl.trim() ?? "";
+    if (!offlinegptClient || !serverBaseUrl) return "skipped";
 
     const entry = MCP_QUICK_CONNECT.find((candidate) => candidate.serverName === CLOUD_MCP_SERVER_NAME);
     if (!entry) return "skipped";
@@ -1103,9 +1103,9 @@ export function createConnectionsStore(options: {
     const configuredEntry = snapshot.mcpServers.find((server) => server.name === CLOUD_MCP_SERVER_NAME);
     if (configuredEntry?.config.enabled === false) return "skipped";
 
-    const result = await runOpenworkCloudMcpReconciler({
+    const result = await runOfflineGptCloudMcpReconciler({
       mode: "repair",
-      client: openworkClient,
+      client: offlinegptClient,
       context: {
         ...scope,
         denAuthToken: settings.authToken,
@@ -1127,7 +1127,7 @@ export function createConnectionsStore(options: {
   }
 
   async function waitForManagedMcpAuthorization(
-    openworkClient: OpenworkServerClient,
+    offlinegptClient: OfflineGptServerClient,
     workspaceId: string,
     name: string,
     result: { status: "connected" } | { status: "needs_auth"; authorizeUrl: string },
@@ -1136,7 +1136,7 @@ export function createConnectionsStore(options: {
     await openDesktopUrl(assertDesktopWebUrl(result.authorizeUrl));
     for (let attempt = 0; attempt < 120; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 1_000));
-      const connection = await openworkClient.getManagedMcp(workspaceId, name);
+      const connection = await offlinegptClient.getManagedMcp(workspaceId, name);
       if (connection.status === "connected") return true;
       if (connection.status === "reconnect_required") {
         throw new Error(connection.lastError || "MCP sign-in needs to be restarted.");
@@ -1149,13 +1149,13 @@ export function createConnectionsStore(options: {
   async function authorizeMcp(entry: McpServerEntry) {
     if (entry.managedOAuth) {
       try {
-        const { openworkClient, openworkWorkspaceId, canUseOpenworkServer } = await resolveWritableOpenworkTarget();
-        if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
-          throw new Error("The local OpenWork server is required for managed MCP sign-in.");
+        const { offlinegptClient, offlinegptWorkspaceId, canUseOfflineGptServer } = await resolveWritableOfflineGptTarget();
+        if (!canUseOfflineGptServer || !offlinegptClient || !offlinegptWorkspaceId) {
+          throw new Error("The local OfflineGPT server is required for managed MCP sign-in.");
         }
         mutateState((current) => ({ ...current, mcpStatus: null, mcpConnectingName: entry.name }));
-        const result = await openworkClient.connectManagedMcp(openworkWorkspaceId, entry.name);
-        const connected = await waitForManagedMcpAuthorization(openworkClient, openworkWorkspaceId, entry.name, result);
+        const result = await offlinegptClient.connectManagedMcp(offlinegptWorkspaceId, entry.name);
+        const connected = await waitForManagedMcpAuthorization(offlinegptClient, offlinegptWorkspaceId, entry.name, result);
         await refreshMcpServers();
         if (connected) setStateField("mcpStatus", t("mcp.connected"));
       } catch (error) {
@@ -1191,38 +1191,38 @@ export function createConnectionsStore(options: {
   }
 
   async function logoutMcpAuth(name: string) {
-    const openworkSnapshot = getOpenworkSnapshot();
+    const offlinegptSnapshot = getOfflineGptSnapshot();
     const isRemoteWorkspace =
       options.workspaceType() === "remote" ||
-      (!isDesktopRuntime() && openworkSnapshot.openworkServerStatus === "connected");
+      (!isDesktopRuntime() && offlinegptSnapshot.offlinegptServerStatus === "connected");
     const projectDir = options.projectDir().trim();
 
-    const { openworkClient, openworkWorkspaceId, hasOpenworkTarget, canUseOpenworkServer } =
-      await resolveWritableOpenworkTarget();
+    const { offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget, canUseOfflineGptServer } =
+      await resolveWritableOfflineGptTarget();
 
-    if (isRemoteWorkspace && !canUseOpenworkServer) {
-      setStateField("mcpStatus", "OpenWork server unavailable. MCP auth is read-only.");
+    if (isRemoteWorkspace && !canUseOfflineGptServer) {
+      setStateField("mcpStatus", "OfflineGPT server unavailable. MCP auth is read-only.");
       return;
     }
 
-    if (hasOpenworkTarget && !canUseOpenworkServer) {
-      setStateField("mcpStatus", "OpenWork server MCP auth is read-only.");
+    if (hasOfflineGptTarget && !canUseOfflineGptServer) {
+      setStateField("mcpStatus", "OfflineGPT server MCP auth is read-only.");
       return;
     }
 
-    if (!canUseOpenworkServer && !isDesktopRuntime()) {
+    if (!canUseOfflineGptServer && !isDesktopRuntime()) {
       setStateField("mcpStatus", t("mcp.desktop_required"));
       return;
     }
 
-    const activeClient = canUseOpenworkServer ? options.client() : await ensureActiveClient();
-    if (!activeClient && !canUseOpenworkServer) {
+    const activeClient = canUseOfflineGptServer ? options.client() : await ensureActiveClient();
+    if (!activeClient && !canUseOfflineGptServer) {
       setStateField("mcpStatus", t("mcp.connect_server_first"));
       return;
     }
 
     const resolvedProjectDir = activeClient ? await resolveProjectDir(activeClient, projectDir) : projectDir;
-    if (!resolvedProjectDir && !canUseOpenworkServer) {
+    if (!resolvedProjectDir && !canUseOfflineGptServer) {
       setStateField("mcpStatus", t("mcp.pick_workspace_first"));
       return;
     }
@@ -1231,8 +1231,8 @@ export function createConnectionsStore(options: {
     setStateField("mcpStatus", null);
 
     try {
-      if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-        await openworkClient.logoutMcpAuth(openworkWorkspaceId, safeName);
+      if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+        await offlinegptClient.logoutMcpAuth(offlinegptWorkspaceId, safeName);
       } else {
         if (!activeClient || !resolvedProjectDir) {
           throw new Error(t("mcp.connect_server_first"));
@@ -1260,14 +1260,14 @@ export function createConnectionsStore(options: {
     try {
       setStateField("mcpStatus", null);
 
-      const { openworkClient, openworkWorkspaceId, hasOpenworkTarget, canUseOpenworkServer } =
-        await resolveWritableOpenworkTarget();
+      const { offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget, canUseOfflineGptServer } =
+        await resolveWritableOfflineGptTarget();
 
-      if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-        await openworkClient.removeMcp(openworkWorkspaceId, name);
+      if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+        await offlinegptClient.removeMcp(offlinegptWorkspaceId, name);
       } else {
-        if (hasOpenworkTarget) {
-          setStateField("mcpStatus", "OpenWork server MCP config is read-only.");
+        if (hasOfflineGptTarget) {
+          setStateField("mcpStatus", "OfflineGPT server MCP config is read-only.");
           return;
         }
         const projectDir = options.projectDir().trim();
@@ -1341,15 +1341,15 @@ export function createConnectionsStore(options: {
   async function setMcpEnabled(name: string, enabled: boolean) {
     if (mcpMutationDenied(Boolean(builtInMcp(name)))) return;
     try {
-      const { openworkClient, openworkWorkspaceId, canUseOpenworkServer } =
-        await resolveWritableOpenworkTarget();
+      const { offlinegptClient, offlinegptWorkspaceId, canUseOfflineGptServer } =
+        await resolveWritableOfflineGptTarget();
 
-      if (!canUseOpenworkServer || !openworkClient || !openworkWorkspaceId) {
+      if (!canUseOfflineGptServer || !offlinegptClient || !offlinegptWorkspaceId) {
         setStateField("mcpStatus", t("mcp.toggle_requires_server"));
         return;
       }
 
-      await openworkClient.setMcpEnabled(openworkWorkspaceId, name, enabled);
+      await offlinegptClient.setMcpEnabled(offlinegptWorkspaceId, name, enabled);
       if (name === CLOUD_MCP_SERVER_NAME) {
         const context = await resolveCloudMcpOperationContext(null);
         if (enabled) {
@@ -1429,7 +1429,7 @@ export function createConnectionsStore(options: {
       return;
     }
 
-    if (!isDesktopRuntime() && getOpenworkSnapshot().openworkServerStatus !== "connected") {
+    if (!isDesktopRuntime() && getOfflineGptSnapshot().offlinegptServerStatus !== "connected") {
       return;
     }
 

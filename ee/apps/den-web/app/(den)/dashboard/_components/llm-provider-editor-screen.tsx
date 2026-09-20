@@ -616,8 +616,8 @@ export function LlmProviderEditorScreen({
             return;
         }
 
-        if (provider?.source === "openwork") {
-            setSaveError("OpenWork-managed providers are controlled from Inference settings.");
+        if (provider?.source === "offlinegpt") {
+            setSaveError("OfflineGPT-managed providers are controlled from Inference settings.");
             return;
         }
 

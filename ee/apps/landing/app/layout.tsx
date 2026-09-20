@@ -16,11 +16,11 @@ const posthogEnabled = process.env.VERCEL_ENV === "production";
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "OpenWork",
+  name: "OfflineGPT",
   legalName: "Different AI",
-  url: "https://openworklabs.com",
-  logo: "https://openworklabs.com/openwork-mark.svg",
-  sameAs: ["https://github.com/different-ai/openwork"]
+  url: "https://offlinegptlabs.com",
+  logo: "https://offlinegptlabs.com/offlinegpt-mark.svg",
+  sameAs: ["https://github.com/different-ai/offlinegpt"]
 };
 
 const inter = Inter({
@@ -36,8 +36,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata = {
-  metadataBase: new URL("https://openworklabs.com"),
-  title: "OpenWork — Open source Claude Cowork alternative for teams",
+  metadataBase: new URL("https://offlinegptlabs.com"),
+  title: "OfflineGPT — Open source Claude Cowork alternative for teams",
   description:
     "Bring your own model and provider, wire in your tools and context, and ship reusable agent setups across your org — with guardrails built in.",
   alternates: {
@@ -49,7 +49,7 @@ export const metadata = {
   },
   openGraph: {
     type: "website",
-    siteName: "OpenWork",
+    siteName: "OfflineGPT",
     locale: "en_US",
     images: ["/og-image-clean.png"]
   },

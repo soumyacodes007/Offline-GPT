@@ -1,7 +1,7 @@
 import "../load-env.js"
 
-import { parseObservabilityEnv } from "@openwork-ee/utils/observability"
-import type { ObservabilityConfig, ObservabilityEnv } from "@openwork-ee/utils/observability"
+import { parseObservabilityEnv } from "@offlinegpt-ee/utils/observability"
+import type { ObservabilityConfig, ObservabilityEnv } from "@offlinegpt-ee/utils/observability"
 
 const SERVICE_NAME = "den-api"
 

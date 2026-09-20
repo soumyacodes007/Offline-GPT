@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
-import { and, asc, eq, gte, inArray, isNull } from "@openwork-ee/den-db/drizzle"
-import { ModelsAnalyticsSettingsTable as Settings, ModelsAnalyticsEventTable as Event } from "@openwork-ee/den-db/schema"
-import { modelsAnalyticsEventSchema, readModelsAnalyticsSettings } from "@openwork-ee/telemetry"
+import { and, asc, eq, gte, inArray, isNull } from "@offlinegpt-ee/den-db/drizzle"
+import { ModelsAnalyticsSettingsTable as Settings, ModelsAnalyticsEventTable as Event } from "@offlinegpt-ee/den-db/schema"
+import { modelsAnalyticsEventSchema, readModelsAnalyticsSettings } from "@offlinegpt-ee/telemetry"
 import type { Hono } from "hono"
 import { z } from "zod"
 import { db } from "./db.js"
@@ -22,7 +22,7 @@ async function send(config: z.infer<typeof configSchema>, spans: unknown[]) {
   const response = await postModelsAnalytics(new URL("/api/public/otel/v1/traces", config.host), {
     "Content-Type": "application/json", "x-langfuse-ingestion-version": "4",
     Authorization: `Basic ${Buffer.from(`${config.publicKey}:${config.secretKey}`).toString("base64")}`,
-  }, JSON.stringify({ resourceSpans: [{ resource: { attributes: [{ key: "service.name", value: { stringValue: "openwork-models" } }] }, scopeSpans: [{ scope: { name: "openwork.task-analytics", version: "1" }, spans }] }] }))
+  }, JSON.stringify({ resourceSpans: [{ resource: { attributes: [{ key: "service.name", value: { stringValue: "offlinegpt-models" } }] }, scopeSpans: [{ scope: { name: "offlinegpt.task-analytics", version: "1" }, spans }] }] }))
   const ack = z.object({ partialSuccess: z.object({ rejectedSpans: z.union([z.number(), z.string()]).optional() }).optional() }).safeParse(response)
   if (!ack.success || Number(ack.data.partialSuccess?.rejectedSpans ?? 0) > 0) throw new Error("langfuse_rejected_spans")
 }
@@ -34,7 +34,7 @@ export function modelsAnalyticsSpan(row: typeof Event.$inferSelect) {
   const terminal = event.type.startsWith("task.") && event.type !== "task.started"
   const attributes: Record<string, string | number | boolean> = {
     "langfuse.user.id": row.member_id, "langfuse.session.id": event.sessionId,
-    "langfuse.trace.name": "OpenWork task", "langfuse.trace.metadata.organization_id": row.org_id,
+    "langfuse.trace.name": "OfflineGPT task", "langfuse.trace.metadata.organization_id": row.org_id,
     "langfuse.trace.metadata.task_id": event.taskId,
     "langfuse.observation.type": event.type === "model.call" ? "generation" : event.type === "tool.executed" ? "tool" : "span",
     "langfuse.trace.metadata.event_type": event.type,
@@ -55,7 +55,7 @@ export function modelsAnalyticsSpan(row: typeof Event.$inferSelect) {
   return {
     traceId, spanId: terminal ? hash([traceId, "task"]).slice(0, 16) : row.id.slice(0, 16),
     ...(!terminal ? { parentSpanId: hash([traceId, "task"]).slice(0, 16) } : {}),
-    name: terminal ? "OpenWork task" : event.model ?? event.skill ?? event.tool ?? event.type,
+    name: terminal ? "OfflineGPT task" : event.model ?? event.skill ?? event.tool ?? event.type,
     kind: 1, startTimeUnixNano: String(BigInt(start) * 1_000_000n), endTimeUnixNano: String(BigInt(end) * 1_000_000n),
     status: { code: event.status === "failed" ? 2 : 0 },
     attributes: Object.entries(attributes).map(([key, value]) => ({ key, value: typeof value === "number" ? { doubleValue: value } : typeof value === "boolean" ? { boolValue: value } : { stringValue: value } })),

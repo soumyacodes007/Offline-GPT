@@ -3,12 +3,12 @@ import { readFile } from "node:fs/promises";
 
 import type { EnvService } from "./env-file.js";
 import { selectPrimaryCredentialEnvName, syncManagedProviderAuth } from "./managed-provider-auth.js";
-import { writeOpenworkRuntimeConfigFile } from "./openwork-runtime-config.js";
+import { writeOfflineGptRuntimeConfigFile } from "./offlinegpt-runtime-config.js";
 import {
-  hasOpenworkWorkspaceConfig,
-  readOpenworkWorkspaceConfig,
-  writeOpenworkWorkspaceConfig,
-} from "./openwork-workspace-config-store.js";
+  hasOfflineGptWorkspaceConfig,
+  readOfflineGptWorkspaceConfig,
+  writeOfflineGptWorkspaceConfig,
+} from "./offlinegpt-workspace-config-store.js";
 import {
   mergeRuntimeProviderUpdate,
   readGlobalRuntimeOpencodeConfig,
@@ -18,7 +18,7 @@ import {
   writeRuntimeOpencodeConfig,
 } from "./runtime-opencode-config-store.js";
 import type { ServerConfig } from "./types.js";
-import { openworkConfigPath } from "./workspace-files.js";
+import { offlinegptConfigPath } from "./workspace-files.js";
 import { findManagedEngineWorkspace } from "./workspaces.js";
 
 type JsonRecord = Record<string, unknown>;
@@ -352,7 +352,7 @@ async function requestJson(
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${session.token}`,
-        "x-openwork-legacy-org-id": session.orgId,
+        "x-offlinegpt-legacy-org-id": session.orgId,
       },
       signal: AbortSignal.timeout(requestTimeoutMs),
     });
@@ -401,11 +401,11 @@ function hashString(value: string): string {
 }
 
 function runtimeProviderId(provider: DenProvider): string {
-  return provider.source === "openwork" ? "openwork" : provider.id;
+  return provider.source === "offlinegpt" ? "offlinegpt" : provider.id;
 }
 
 function isCloudManagedProviderKey(providerId: string): boolean {
-  return /^lpr_/i.test(providerId) || providerId.trim() === "openwork";
+  return /^lpr_/i.test(providerId) || providerId.trim() === "offlinegpt";
 }
 
 function readProviderEnvNames(providerConfig: JsonRecord): string[] {
@@ -421,7 +421,7 @@ function upsertEnvEntry(entries: EnvEntry[], key: string, value: string): void {
   else entries.push({ key: trimmedKey, value: trimmedValue });
 }
 
-function readOpenWorkInferenceBaseUrl(providerConfig: JsonRecord): string | null {
+function readOfflineGPTInferenceBaseUrl(providerConfig: JsonRecord): string | null {
   const options = providerConfig.options;
   if (isRecord(options)) {
     const baseUrl = readRequiredString(options.baseURL);
@@ -447,10 +447,10 @@ function providerEnvEntries(provider: DenProviderConnection): EnvEntry[] {
   if (provider.apiKey && envNames[0]) upsertEnvEntry(entries, envNames[0], provider.apiKey);
 
   const primaryCredential = provider.apiKey?.trim() || entries[0]?.value || "";
-  if (provider.source === "openwork" && primaryCredential) {
-    upsertEnvEntry(entries, "OPENWORK_API_KEY", primaryCredential);
-    const baseUrl = readOpenWorkInferenceBaseUrl(provider.providerConfig);
-    if (baseUrl) upsertEnvEntry(entries, "OPENWORK_INFERENCE_BASE_URL", baseUrl);
+  if (provider.source === "offlinegpt" && primaryCredential) {
+    upsertEnvEntry(entries, "OFFLINEGPT_API_KEY", primaryCredential);
+    const baseUrl = readOfflineGPTInferenceBaseUrl(provider.providerConfig);
+    if (baseUrl) upsertEnvEntry(entries, "OFFLINEGPT_INFERENCE_BASE_URL", baseUrl);
   }
   return entries;
 }
@@ -474,7 +474,7 @@ function buildProviderConfig(provider: DenProviderConnection): JsonRecord {
     name: provider.name,
     env: readProviderEnvNames(provider.providerConfig),
   };
-  if (Object.keys(models).length > 0 || provider.source !== "openwork") config.models = models;
+  if (Object.keys(models).length > 0 || provider.source !== "offlinegpt") config.models = models;
 
   const npm = readRequiredString(provider.providerConfig.npm);
   if (npm) config.npm = npm;
@@ -579,19 +579,19 @@ function managedProviderMap(providers: Record<string, Record<string, unknown>>):
   return Object.fromEntries(Object.entries(providers).filter(([providerId]) => isCloudManagedProviderKey(providerId)));
 }
 
-function removeCloudProviderImportBaselines(openwork: JsonRecord): JsonRecord | null {
-  if (!isRecord(openwork.cloudImports) || !isRecord(openwork.cloudImports.providers)) return null;
-  if (Object.keys(openwork.cloudImports.providers).length === 0) return null;
+function removeCloudProviderImportBaselines(offlinegpt: JsonRecord): JsonRecord | null {
+  if (!isRecord(offlinegpt.cloudImports) || !isRecord(offlinegpt.cloudImports.providers)) return null;
+  if (Object.keys(offlinegpt.cloudImports.providers).length === 0) return null;
   return {
-    ...openwork,
+    ...offlinegpt,
     cloudImports: {
-      ...openwork.cloudImports,
+      ...offlinegpt.cloudImports,
       providers: {},
     },
   };
 }
 
-async function readLegacyOpenworkConfig(path: string): Promise<JsonRecord | null> {
+async function readLegacyOfflineGptConfig(path: string): Promise<JsonRecord | null> {
   try {
     const parsed: unknown = JSON.parse(await readFile(path, "utf8"));
     return isRecord(parsed) ? parsed : null;
@@ -601,12 +601,12 @@ async function readLegacyOpenworkConfig(path: string): Promise<JsonRecord | null
 }
 
 function configuredIntervalMs(): number {
-  const configured = Number(process.env.OPENWORK_CLOUD_PROVIDER_SYNC_INTERVAL_MS ?? "");
+  const configured = Number(process.env.OFFLINEGPT_CLOUD_PROVIDER_SYNC_INTERVAL_MS ?? "");
   return Number.isFinite(configured) && configured > 0 ? configured : defaultIntervalMs;
 }
 
 function configuredReloadRetryMs(): number {
-  const configured = Number(process.env.OPENWORK_ENGINE_RELOAD_RETRY_MS ?? "");
+  const configured = Number(process.env.OFFLINEGPT_ENGINE_RELOAD_RETRY_MS ?? "");
   return Number.isFinite(configured) && configured > 0 ? configured : 15_000;
 }
 
@@ -996,7 +996,7 @@ export class CloudProviderSync {
     const workspaceCleanup = await this.cleanupWorkspaceTakeovers();
     const engineWorkspace = findManagedEngineWorkspace(this.config.workspaces) ?? this.config.workspaces[0];
     const runtimeFileChanged = engineWorkspace
-      ? (await writeOpenworkRuntimeConfigFile(this.config)).changed
+      ? (await writeOfflineGptRuntimeConfigFile(this.config)).changed
       : false;
     // Deliver credentials before disposing the current provider instances.
     // OpenCode constructs and caches SDK clients from config + auth together;
@@ -1085,16 +1085,16 @@ export class CloudProviderSync {
         runtimeChanged = runtimeChanged || result.changed;
       }
 
-      const hasStoredConfig = await hasOpenworkWorkspaceConfig(this.config, workspace.id);
-      const openwork = hasStoredConfig
-        ? await readOpenworkWorkspaceConfig(this.config, workspace.id)
+      const hasStoredConfig = await hasOfflineGptWorkspaceConfig(this.config, workspace.id);
+      const offlinegpt = hasStoredConfig
+        ? await readOfflineGptWorkspaceConfig(this.config, workspace.id)
         : workspace.workspaceType !== "remote" && workspace.path.trim().length > 0
-          ? await readLegacyOpenworkConfig(openworkConfigPath(workspace.path))
+          ? await readLegacyOfflineGptConfig(offlinegptConfigPath(workspace.path))
           : null;
-      if (!openwork) continue;
-      const next = removeCloudProviderImportBaselines(openwork);
+      if (!offlinegpt) continue;
+      const next = removeCloudProviderImportBaselines(offlinegpt);
       if (!next) continue;
-      await writeOpenworkWorkspaceConfig(this.config, workspace.id, () => next);
+      await writeOfflineGptWorkspaceConfig(this.config, workspace.id, () => next);
       changed = true;
     }
     return { changed, runtimeChanged };
@@ -1136,7 +1136,7 @@ export class CloudProviderSync {
 
     const engineWorkspace = findManagedEngineWorkspace(this.config.workspaces) ?? this.config.workspaces[0];
     if (engineWorkspace) {
-      const fileResult = await writeOpenworkRuntimeConfigFile(this.config);
+      const fileResult = await writeOfflineGptRuntimeConfigFile(this.config);
       this.reloadPending = this.reloadPending || providerChanged || fileResult.changed;
     }
     const authResult = await syncManagedProviderAuth({

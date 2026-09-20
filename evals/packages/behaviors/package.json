@@ -1,5 +1,5 @@
 {
-  "name": "@openwork/behaviors",
+  "name": "@offlinegpt/behaviors",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -31,9 +31,9 @@
     }
   },
   "dependencies": {
-    "@openwork/cdp": "workspace:*",
-    "@openwork/labs": "workspace:*",
-    "@openwork/matchers": "workspace:*",
-    "@openwork/timeline": "workspace:*"
+    "@offlinegpt/cdp": "workspace:*",
+    "@offlinegpt/labs": "workspace:*",
+    "@offlinegpt/matchers": "workspace:*",
+    "@offlinegpt/timeline": "workspace:*"
   }
 }

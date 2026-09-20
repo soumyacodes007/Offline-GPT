@@ -1,6 +1,6 @@
-import { allocateFreePorts } from "@openwork/cdp";
-import { faultProxy as startFaultProxy, mcpMock } from "@openwork/env";
-import type { MockHandle, Place, Seed } from "@openwork/env";
+import { allocateFreePorts } from "@offlinegpt/cdp";
+import { faultProxy as startFaultProxy, mcpMock } from "@offlinegpt/env";
+import type { MockHandle, Place, Seed } from "@offlinegpt/env";
 
 /**
  * A member's browser talking to den-api through a proxy that can answer the

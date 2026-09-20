@@ -2,8 +2,8 @@ import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import {
   BrowserFrame,
   RecordedBrowser,
-} from "@openwork/presentation";
-import type { BrowserRecording } from "@openwork/presentation";
+} from "@offlinegpt/presentation";
+import type { BrowserRecording } from "@offlinegpt/presentation";
 
 export type OnboardingVideoProps = { recording: BrowserRecording };
 
@@ -30,7 +30,7 @@ export function OnboardingVideo({ recording }: OnboardingVideoProps) {
           transformOrigin: "0 0",
         }}
       >
-        <BrowserFrame section="Get started" address="OpenWork">
+        <BrowserFrame section="Get started" address="OfflineGPT">
           <RecordedBrowser recording={recording} seconds={seconds} />
         </BrowserFrame>
       </div>

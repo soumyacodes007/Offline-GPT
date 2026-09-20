@@ -1,5 +1,5 @@
-import { openworkCloudMcpConnectionActionSchema } from "@openwork/types/den/mcp-connection-action"
-import { connectionActionPayloadSchema, type ConnectionActionPayload } from "@openwork/types/connection-action-app"
+import { offlinegptCloudMcpConnectionActionSchema } from "@offlinegpt/types/den/mcp-connection-action"
+import { connectionActionPayloadSchema, type ConnectionActionPayload } from "@offlinegpt/types/connection-action-app"
 
 export type ToolErrorAttribution = {
   label: string
@@ -18,10 +18,10 @@ export type ChatToolReconnectProgress =
   | { phase: "authorization_opened"; authorizeUrl: string }
 export type ChatToolReconnectResult = "connected"
 
-const OPENWORK_CLOUD_CAPABILITY_TOOLS = new Set([
-  "openwork-cloud_search_capabilities",
-  "openwork-cloud_execute_capability",
-  "openwork-cloud_connection_action",
+const OFFLINEGPT_CLOUD_CAPABILITY_TOOLS = new Set([
+  "offlinegpt-cloud_search_capabilities",
+  "offlinegpt-cloud_execute_capability",
+  "offlinegpt-cloud_connection_action",
 ])
 
 const MAX_PARSED_RESULT_LENGTH = 64 * 1_024
@@ -81,8 +81,8 @@ export function connectionCardPayloadFromChatToolResult(
   result: unknown,
   input?: unknown,
 ): ConnectionActionPayload | null {
-  if (!OPENWORK_CLOUD_CAPABILITY_TOOLS.has(toolName)) return null
-  if (toolName === "openwork-cloud_search_capabilities" && (!isRecord(input) || input.intent !== "connect")) return null
+  if (!OFFLINEGPT_CLOUD_CAPABILITY_TOOLS.has(toolName)) return null
+  if (toolName === "offlinegpt-cloud_search_capabilities" && (!isRecord(input) || input.intent !== "connect")) return null
   const parsed = parseResultRecord(result)
   if (!parsed) return null
   const candidates = [parsed, parsed.connectionAction, parsed.connectionStatus,
@@ -91,7 +91,7 @@ export function connectionCardPayloadFromChatToolResult(
   const targets = new Map<string, ConnectionActionPayload>()
   for (const candidate of candidates) {
     const payload = connectionActionPayloadSchema.safeParse(
-      isRecord(candidate) && openworkCloudMcpConnectionActionSchema.safeParse(candidate).success
+      isRecord(candidate) && offlinegptCloudMcpConnectionActionSchema.safeParse(candidate).success
         ? { ...candidate, schemaVersion: "1" }
         : candidate,
     )
@@ -107,11 +107,11 @@ export function reconnectActionFromChatToolResult(
   result: unknown,
   input?: unknown,
 ): ChatToolReconnectAction | null {
-  // Only canonical OpenWork Cloud tools may produce a native connection action.
+  // Only canonical OfflineGPT Cloud tools may produce a native connection action.
   // Discovery may offer authorization only for an explicit setup request;
   // finding an unavailable connection is not itself a reason to prompt.
-  if (!OPENWORK_CLOUD_CAPABILITY_TOOLS.has(toolName)) return null
-  if (toolName === "openwork-cloud_search_capabilities" && (!isRecord(input) || input.intent !== "connect")) return null
+  if (!OFFLINEGPT_CLOUD_CAPABILITY_TOOLS.has(toolName)) return null
+  if (toolName === "offlinegpt-cloud_search_capabilities" && (!isRecord(input) || input.intent !== "connect")) return null
 
   const parsed = parseResultRecord(result)
   if (!parsed) return null
@@ -127,7 +127,7 @@ export function reconnectActionFromChatToolResult(
   ]
   if (candidates.length === 0) {
     const payload = connectionCardPayloadFromChatToolResult(toolName, parsed, input)
-    if (!payload || payload.actor !== "member" || payload.action?.surface !== "openwork_your_connections"
+    if (!payload || payload.actor !== "member" || payload.action?.surface !== "offlinegpt_your_connections"
       || !((payload.state === "needs_connection" && payload.action.type === "connect")
         || (payload.state === "reauth_required" && payload.action.type === "reconnect"))) return null
     // The portable probe omits credential metadata. The signed-in desktop
@@ -137,11 +137,11 @@ export function reconnectActionFromChatToolResult(
   }
   const reconnectTargets = new Map<string, ChatToolReconnectAction>()
   for (const connectionStatus of candidates) {
-    const parsedStatus = openworkCloudMcpConnectionActionSchema.safeParse(connectionStatus)
+    const parsedStatus = offlinegptCloudMcpConnectionActionSchema.safeParse(connectionStatus)
     if (!parsedStatus.success) continue
     const status = parsedStatus.data
     if (status.authType !== "oauth" || status.credentialMode !== "per_member" || status.actor !== "member"
-      || status.action.surface !== "openwork_your_connections"
+      || status.action.surface !== "offlinegpt_your_connections"
       || !((status.state === "needs_connection" && status.action.type === "connect")
         || (status.state === "reauth_required" && status.action.type === "reconnect"))) continue
     const { connectionId, connectionName } = status
@@ -170,15 +170,15 @@ export function attributeChatToolError(errorText: string): ToolErrorAttribution 
   const providerCode = stringValue(diagnostic, "providerCode")
 
   if (
-    errorText.includes("OpenWork stopped waiting after")
+    errorText.includes("OfflineGPT stopped waiting after")
     || /The capability call exceeded \d+(?:\.\d+)?s\b/.test(errorText)
     || code === "MCP_LIFECYCLE_DEADLINE"
     || code === "MCP_REQUEST_TIMEOUT"
     || category === "lifecycle_deadline"
   ) {
     return confirmed(
-      "OpenWork timeout",
-      "OpenWork created this deadline. The external operation may still have completed, so verify its state before retrying.",
+      "OfflineGPT timeout",
+      "OfflineGPT created this deadline. The external operation may still have completed, so verify its state before retrying.",
     )
   }
 
@@ -187,7 +187,7 @@ export function attributeChatToolError(errorText: string): ToolErrorAttribution 
     || code === "MCP_URL_BLOCKED"
     || code === "MCP_FETCH_FORBIDDEN_PORT"
   ) {
-    return confirmed("Blocked by OpenWork", "OpenWork blocked the request before it was sent.")
+    return confirmed("Blocked by OfflineGPT", "OfflineGPT blocked the request before it was sent.")
   }
 
   if (httpStatus !== undefined && (httpStatus < 200 || httpStatus >= 300)) {

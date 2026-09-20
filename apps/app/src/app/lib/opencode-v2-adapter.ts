@@ -316,7 +316,7 @@ function toolAttachments(
 
 function toolPartMetadata(tool: string): Pick<ToolPart, "metadata"> {
   // Adapter provenance stays separate from metadata returned by the tool.
-  return tool === "execute" ? { metadata: { openworkV2CodeMode: true } } : {};
+  return tool === "execute" ? { metadata: { offlinegptV2CodeMode: true } } : {};
 }
 
 function toolOutput(value: unknown, result?: unknown): string {
@@ -1254,7 +1254,7 @@ function createWebFetch(auth: { token?: string }): typeof globalThis.fetch {
 
 function createV2Fetch(auth: { token?: string }): typeof globalThis.fetch {
   return isDesktopRuntime()
-    ? createDesktopFetch({ mode: "openwork", token: auth.token })
+    ? createDesktopFetch({ mode: "offlinegpt", token: auth.token })
     : createWebFetch(auth);
 }
 
@@ -1318,7 +1318,7 @@ export function createClientV2(
 ): ReturnType<typeof createClient> {
   const baseUrl = opencode2BaseUrl.replace(/\/+$/, "");
   const fetchImpl = createV2Fetch(auth);
-  const compatibilityClient = createClient(baseUrl, directory, { mode: "openwork", token: auth.token });
+  const compatibilityClient = createClient(baseUrl, directory, { mode: "offlinegpt", token: auth.token });
   const permissionSessionByRequestID = new Map<string, string>();
   const questionFormsByID = new Map<string, NonNullable<ReturnType<typeof mapV2Question>>>();
 
@@ -1590,7 +1590,7 @@ export function createClientV2(
       if (!modelResult.response.ok) return failedResult(modelResult);
       if (parameters.system !== undefined) {
         const instructions = await request("PUT",
-          `/api/session/${encodeURIComponent(parameters.sessionID)}/instructions/entries/openwork-context`,
+          `/api/session/${encodeURIComponent(parameters.sessionID)}/instructions/entries/offlinegpt-context`,
           { value: parameters.system }, options?.signal);
         if (!instructions.response.ok) return failedResult(instructions);
       }

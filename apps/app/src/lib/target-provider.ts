@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { OpenworkServerClient } from "@/app/lib/openwork-server";
+import type { OfflineGptServerClient } from "@/app/lib/offlinegpt-server";
 
 import type { OpenTarget } from "@/react-app/domains/session/artifacts/open-target";
 
@@ -12,7 +12,7 @@ export type OpenTargetOptions = {
 type OpenTargetHandler = (target: OpenTarget, options?: OpenTargetOptions) => void;
 
 type OpenTargetContextValue = {
-  client?: OpenworkServerClient;
+  client?: OfflineGptServerClient;
   workspaceId?: string;
   workspaceRoot?: string;
   openTargets: OpenTarget[];
@@ -21,7 +21,7 @@ type OpenTargetContextValue = {
 
 type OpenTargetProviderProps = {
   children: React.ReactNode;
-  client?: OpenworkServerClient;
+  client?: OfflineGptServerClient;
   workspaceId?: string;
   workspaceRoot?: string;
   openTargets?: OpenTarget[] | undefined;

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "offlinegpt-connect",
+  "version": "1.0.0",
+  "description": "Use the skills, MCP connections, and connected services assigned to you through OfflineGPT.",
+  "author": {
+    "name": "OfflineGPT",
+    "url": "https://offlinegptlabs.com"
+  },
+  "homepage": "https://offlinegptlabs.com/docs/cloud/run-in-the-cloud/cloud-mcp",
+  "repository": "https://github.com/different-ai/offlinegpt",
+  "license": "MIT",
+  "keywords": [
+    "offlinegpt",
+    "mcp",
+    "agent-skills",
+    "organization"
+  ]
+}

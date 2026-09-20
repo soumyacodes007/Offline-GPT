@@ -1,10 +1,10 @@
-import { connectorCatalogSchema, type ConnectorCatalog } from "@openwork/types/connection-action-app"
+import { connectorCatalogSchema, type ConnectorCatalog } from "@offlinegpt/types/connection-action-app"
 import { EXTERNAL_MCP_PRESETS } from "../capability-sources/external-mcp-presets.js"
-import { openworkOrganizationConnectionsUrl } from "./connection-navigation.js"
+import { offlinegptOrganizationConnectionsUrl } from "./connection-navigation.js"
 
 export function connectorCatalogForQuery(query: string, showAll = false): ConnectorCatalog | null {
   const setupUrl = (id: string) => {
-    const url = new URL(openworkOrganizationConnectionsUrl())
+    const url = new URL(offlinegptOrganizationConnectionsUrl())
     url.searchParams.set("quickAdd", id)
     return url.toString()
   }

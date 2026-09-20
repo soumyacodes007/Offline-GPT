@@ -4,7 +4,7 @@ import { z } from "zod"
  * and character sets are API surface consumed by the desktop app, workers,
  * and den-web — change them only with a coordinated client migration.
  *
- * This package is the client-safe half of @openwork-ee/telemetry: it must not
+ * This package is the client-safe half of @offlinegpt-ee/telemetry: it must not
  * import den-db, node builtins, or anything else that cannot run in a browser
  * bundle. It ships TypeScript source (no build step); browser apps transpile
  * it and the server telemetry package bundles it. */

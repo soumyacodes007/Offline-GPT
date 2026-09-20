@@ -1,18 +1,18 @@
-import { browserScript, reattachSurface } from "@openwork/cdp";
+import { browserScript, reattachSurface } from "@offlinegpt/cdp";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { join, resolve } from "node:path";
-import { evalIn, assertNoLiveSecret, liveOpenAiEnabled, liveOpenAiModel, liveProviderId, provisionLiveOpenAi } from "@openwork/behaviors";
-import { resolveEvalEngine, SkipError, type Seed } from "@openwork/env";
-import type { MockAgentWorkload } from "@openwork/labs";
+import { evalIn, assertNoLiveSecret, liveOpenAiEnabled, liveOpenAiModel, liveProviderId, provisionLiveOpenAi } from "@offlinegpt/behaviors";
+import { resolveEvalEngine, SkipError, type Seed } from "@offlinegpt/env";
+import type { MockAgentWorkload } from "@offlinegpt/labs";
 import { chatContinuity } from "./chat-continuity.ts";
 
 const repoRoot = resolve(import.meta.dirname, "../..");
 
 declare global {
   interface Window {
-    __openworkSubmissionFault?: { attempts: number; release: () => void };
+    __offlinegptSubmissionFault?: { attempts: number; release: () => void };
   }
 }
 
@@ -97,8 +97,8 @@ export async function configureProvider(
 ): Promise<void> {
   // TODO(primitive): configure a workspace provider and select its model.
   const result = await seed.evalIn(app, browserScript(async (workspaceId, providerId, modelId, defaultModel, opencodeJson) => {
-    const port = localStorage.getItem("openwork.server.port");
-    const token = localStorage.getItem("openwork.server.token");
+    const port = localStorage.getItem("offlinegpt.server.port");
+    const token = localStorage.getItem("offlinegpt.server.token");
     if (!port || !token) return "missing local server credentials";
     const opencode = JSON.parse(opencodeJson);
     const request = async (path: string, init?: RequestInit) => {
@@ -119,18 +119,18 @@ export async function configureProvider(
     if (patched !== "ok") return patched;
     const reloaded = await request("/workspace/" + encodeURIComponent(workspaceId) + "/engine/reload", { method: "POST" });
     if (reloaded !== "ok") return reloaded;
-    const raw = localStorage.getItem("openwork.preferences");
+    const raw = localStorage.getItem("offlinegpt.preferences");
     let preferences: Record<string, unknown> = {};
     try { preferences = raw ? JSON.parse(raw) : {}; } catch { preferences = {}; }
     if (!preferences || typeof preferences !== "object" || Array.isArray(preferences)) preferences = {};
-    localStorage.setItem("openwork.preferences", JSON.stringify({
+    localStorage.setItem("offlinegpt.preferences", JSON.stringify({
       ...preferences,
       defaultModel: { providerID: providerId, modelID: modelId },
       modelVariant: null,
       providerStepCompleted: true,
     }));
-    localStorage.setItem("openwork.defaultModel", defaultModel);
-    localStorage.removeItem("openwork.sessionModels." + workspaceId);
+    localStorage.setItem("offlinegpt.defaultModel", defaultModel);
+    localStorage.removeItem("offlinegpt.sessionModels." + workspaceId);
     return "ok";
   }, [workspaceId, providerId, modelId, `${providerId}/${modelId}`, JSON.stringify(opencode)]), { awaitPromise: true, timeoutMs: 120_000 });
   if (result !== "ok") throw new Error(`Provider configuration failed: ${String(result)}`);
@@ -138,8 +138,8 @@ export async function configureProvider(
   const ready = await seed.evalIn(app, browserScript(async (workspaceId, engine, providerId, modelId) => {
     const deadline = Date.now() + 60000;
     while (Date.now() < deadline) {
-      const base = "http://127.0.0.1:" + localStorage.getItem("openwork.server.port");
-      const headers = { Authorization: "Bearer " + localStorage.getItem("openwork.server.token") };
+      const base = "http://127.0.0.1:" + localStorage.getItem("offlinegpt.server.port");
+      const headers = { Authorization: "Bearer " + localStorage.getItem("offlinegpt.server.token") };
       try {
         const statusResponse = await fetch(base + "/experimental/engine-v2-preview/status", { headers });
         const status = statusResponse.ok ? await statusResponse.json() : null;
@@ -150,7 +150,7 @@ export async function configureProvider(
         }
         const mounted = base + "/workspace/" + encodeURIComponent(workspaceId);
         const response = await fetch(mounted + (engine === "v2" ? "/opencode2/api/model" : "/opencode/session"), { headers });
-        if (response.ok && window.__openworkControl) {
+        if (response.ok && window.__offlinegptControl) {
           if (engine === "v1") return true;
           const catalog = JSON.stringify(await response.json());
           if (catalog.includes(providerId) && catalog.includes(modelId)) return true;
@@ -181,11 +181,11 @@ export async function arrangeControl(
   return seed.evalIn(app, browserScript(async (action, argsJson) => {
     const deadline = Date.now() + 30000;
     while (Date.now() < deadline) {
-      const available = window.__openworkControl?.listActions().find((candidate) => candidate.id === action && !candidate.disabled);
+      const available = window.__offlinegptControl?.listActions().find((candidate) => candidate.id === action && !candidate.disabled);
       if (available) break;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    const result = await window.__openworkControl.execute(action, JSON.parse(argsJson));
+    const result = await window.__offlinegptControl.execute(action, JSON.parse(argsJson));
     if (!result?.ok) throw new Error(String(result?.error ?? "control action failed"));
     return result.value;
   }, [action, JSON.stringify(args ?? null)]), { awaitPromise: true, timeoutMs: 120_000 });
@@ -238,8 +238,8 @@ async function splitPaneQuestions(
   // Arrange an allowed native question tool independently of custom-agent defaults.
   // TODO(primitive): write workspace fixture files through a first-class seed API.
   const questionPolicyWritten = await seed.evalIn(app, browserScript(async (workspaceId, content) => {
-    const port = localStorage.getItem("openwork.server.port");
-    const token = localStorage.getItem("openwork.server.token");
+    const port = localStorage.getItem("offlinegpt.server.port");
+    const token = localStorage.getItem("offlinegpt.server.token");
     const response = await fetch("http://127.0.0.1:" + port + "/workspace/" + encodeURIComponent(workspaceId) + "/files/content", {
       method: "POST",
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
@@ -355,10 +355,10 @@ export async function restartUpdateTaskWorld(seed: Seed) {
   const originalTimeOrigin = await evalIn(base.app, () => performance.timeOrigin);
   await seed.evalIn(base.app, () => {
     const currentVersion = "0.18.0";
-    window.__openworkReadDesktopVersionMetadataEval = () => ({
+    window.__offlinegptReadDesktopVersionMetadataEval = () => ({
       minAppVersion: "0.1.0", latestAppVersion: "9.9.9", publishedDesktopVersions: ["9.9.9"],
     });
-    window.__openworkUpdaterEvalBridge = {
+    window.__offlinegptUpdaterEvalBridge = {
       getChannel: async () => ({ channel: "stable", currentVersion }),
       setChannel: async (channel) => ({ channel, currentVersion }),
       check: async () => ({ available: true, channel: "stable", currentVersion, latestVersion: "9.9.9" }),
@@ -366,7 +366,7 @@ export async function restartUpdateTaskWorld(seed: Seed) {
       // Do not replace a binary in a journey. Unlike the download-only fixture,
       // confirmation goes through real main-process app.relaunch()/app.quit().
       installAndRestart: async () => {
-        await window.__OPENWORK_ELECTRON__.shell.relaunch();
+        await window.__OFFLINEGPT_ELECTRON__.shell.relaunch();
         return { ok: true };
       },
       onDownloadProgress: () => () => {},
@@ -427,7 +427,7 @@ export async function newSplitPrimary(seed: Seed) {
   const switchSession = await seedSessionRetry(seed, app, { title: "Split switch target" });
   const session = await seedSessionRetry(seed, app, { title: "New split primary" });
   const splitFacts = () => evalIn(app, () => {
-    const context = window.__openworkControl?.context?.();
+    const context = window.__offlinegptControl?.context?.();
     const layout = context?.conversations?.layout;
     const primaryPane = document.querySelector<HTMLElement>('[data-workbench-pane="primary"]');
     const secondaryPanes = [...document.querySelectorAll<HTMLElement>('[data-workbench-pane="secondary"]')];
@@ -452,10 +452,10 @@ export async function newSplitPrimary(seed: Seed) {
     };
   });
   const agentContextViaServer = () => evalIn(app, async () => {
-    const response = await fetch("http://127.0.0.1:" + localStorage.getItem("openwork.server.port") + "/experimental/ui-control/request", {
+    const response = await fetch("http://127.0.0.1:" + localStorage.getItem("offlinegpt.server.port") + "/experimental/ui-control/request", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + localStorage.getItem("openwork.server.token"),
+        Authorization: "Bearer " + localStorage.getItem("offlinegpt.server.token"),
         "content-type": "application/json",
       },
       body: JSON.stringify({ kind: "context" }),
@@ -517,7 +517,7 @@ async function startManualApprovalServer(approvalTimeoutMs: number) {
     const { tmpdir } = await import("node:os");
     const { join } = await import("node:path");
     const { startServer } = await import("./src/server.ts");
-    const root = mkdtempSync(join(tmpdir(), "openwork-attachment-spec-"));
+    const root = mkdtempSync(join(tmpdir(), "offlinegpt-attachment-spec-"));
     const server = await startServer({
       host: "127.0.0.1", port: 0, token: "owt_spec_token", hostToken: "owt_spec_host_token",
       approval: { mode: "manual", timeoutMs: ${approvalTimeoutMs} }, corsOrigins: ["*"],
@@ -533,7 +533,7 @@ async function startManualApprovalServer(approvalTimeoutMs: number) {
     stdio: ["ignore", "pipe", "pipe"],
   });
   const port = await new Promise<number>((resolvePort, reject) => {
-    const timer = setTimeout(() => reject(new Error("Standalone openwork-server did not report a port within 30s.")), 30_000);
+    const timer = setTimeout(() => reject(new Error("Standalone offlinegpt-server did not report a port within 30s.")), 30_000);
     let buffered = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
@@ -549,7 +549,7 @@ async function startManualApprovalServer(approvalTimeoutMs: number) {
     child.stderr.on("data", (chunk: string) => { stderr += chunk; });
     child.on("exit", (code) => {
       clearTimeout(timer);
-      reject(new Error(`Standalone openwork-server exited early (code ${code}): ${(stderr || buffered).slice(0, 500)}`));
+      reject(new Error(`Standalone offlinegpt-server exited early (code ${code}): ${(stderr || buffered).slice(0, 500)}`));
     });
     child.on("error", reject);
   });
@@ -628,7 +628,7 @@ export async function attachmentUpload(seed: Seed) {
             attempts: 0,
             release: () => { release(); window.fetch = originalFetch; },
           };
-          window.__openworkSubmissionFault = fault;
+          window.__offlinegptSubmissionFault = fault;
           window.fetch = async (input, init) => {
             const url = input instanceof Request ? input.url : String(input);
             const method = init?.method ?? (input instanceof Request ? input.method : "GET");
@@ -641,7 +641,7 @@ export async function attachmentUpload(seed: Seed) {
         });
       },
       async releaseUploads() {
-        await seed.evalIn(app, () => window.__openworkSubmissionFault?.release());
+        await seed.evalIn(app, () => window.__offlinegptSubmissionFault?.release());
       },
       approvalTimeoutMs,
       uploadStatus: uploadResponse.status,
@@ -707,15 +707,15 @@ export async function renderCycle(seed: Seed) {
     });
     // TODO(primitive): enable the renderer profiler before desktop launch.
     await seed.evalIn(app, () => {
-      localStorage.setItem("openwork.debug.profiler", "1");
-      localStorage.removeItem("openwork.debug.profilerOverlay");
+      localStorage.setItem("offlinegpt.debug.profiler", "1");
+      localStorage.removeItem("offlinegpt.debug.profilerOverlay");
       location.reload();
       return true;
     });
     const controlsReady = await seed.evalIn(app, async () => {
       const deadline = Date.now() + 30000;
       while (Date.now() < deadline) {
-        if (window.__openworkControl?.listActions().some((action) => action.id === "session.create_task" && !action.disabled)) return true;
+        if (window.__offlinegptControl?.listActions().some((action) => action.id === "session.create_task" && !action.disabled)) return true;
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
       return false;
@@ -725,7 +725,7 @@ export async function renderCycle(seed: Seed) {
     await seed.composerText(app, `Reply with exactly: ${renderCycleFirstReply}`);
     // TODO(primitive): send an arranged historical turn and await its completion.
     const historical = await seed.evalIn(app, browserScript(async (expectedReply) => {
-      const sent = await window.__openworkControl.execute("composer.send", null);
+      const sent = await window.__offlinegptControl.execute("composer.send", null);
       if (!sent?.ok) throw new Error(String(sent?.error ?? "composer.send failed"));
       const deadline = Date.now() + 30000;
       while (Date.now() < deadline) {
@@ -748,7 +748,7 @@ export async function renderCycle(seed: Seed) {
 }
 
 export async function streamedToolHistory(seed: Seed) {
-  if (resolveEvalEngine() !== "v1") throw new SkipError("native v1 transcript history (OPENWORK_EVAL_ENGINE=v1)");
+  if (resolveEvalEngine() !== "v1") throw new SkipError("native v1 transcript history (OFFLINEGPT_EVAL_ENGINE=v1)");
   const providerId = "streamed-history-mock";
   const modelId = "streamed-history-model";
   const prompt = "Continue the history review and report the latest tool result.";
@@ -783,8 +783,8 @@ export async function streamedToolHistory(seed: Seed) {
   // Persist through native HTTP boundaries while the real SSE subscriber builds
   // its cache. Never inject renderer messages or import the merge implementation.
   await seed.evalIn(app, browserScript(async (historyPath, history, commands, providerId, modelId) => {
-    const base = "http://127.0.0.1:" + localStorage.getItem("openwork.server.port");
-    const headers = { Authorization: "Bearer " + localStorage.getItem("openwork.server.token"), "Content-Type": "application/json" };
+    const base = "http://127.0.0.1:" + localStorage.getItem("offlinegpt.server.port");
+    const headers = { Authorization: "Bearer " + localStorage.getItem("offlinegpt.server.token"), "Content-Type": "application/json" };
     const deadline = Date.now() + 150000;
     const post = async (path: string, body: unknown) => {
       if (Date.now() >= deadline) throw new Error("Native history arrangement exceeded 150 seconds");
@@ -873,18 +873,18 @@ export async function streamedMarkdown(seed: Seed) {
   });
   // A tiny H.264 clip, served through the same authenticated file endpoint as user files.
   await seed.evalIn(app, browserScript(async (workspaceId, dataBase64) => {
-    const base = "http://127.0.0.1:" + localStorage.getItem("openwork.server.port");
+    const base = "http://127.0.0.1:" + localStorage.getItem("offlinegpt.server.port");
     const response = await fetch(base + "/workspace/" + encodeURIComponent(workspaceId) + "/files/raw", {
       method: "POST",
-      headers: { Authorization: "Bearer " + localStorage.getItem("openwork.server.token"), "Content-Type": "application/json" },
+      headers: { Authorization: "Bearer " + localStorage.getItem("offlinegpt.server.token"), "Content-Type": "application/json" },
       body: JSON.stringify({ path: "clip.mp4", dataBase64 }),
     });
     if (!response.ok) throw new Error("Video fixture write failed: " + response.status);
   }, [workspace.workspaceId, (await readFile(new URL("../fixtures/assistant-video.mp4", import.meta.url))).toString("base64")]), { awaitPromise: true });
   const engine = resolveEvalEngine();
   const ready = await seed.evalIn(app, browserScript(async (workspaceId, engine, providerId, modelId) => {
-    const base = "http://127.0.0.1:" + localStorage.getItem("openwork.server.port");
-    const headers = { Authorization: "Bearer " + localStorage.getItem("openwork.server.token") };
+    const base = "http://127.0.0.1:" + localStorage.getItem("offlinegpt.server.port");
+    const headers = { Authorization: "Bearer " + localStorage.getItem("offlinegpt.server.token") };
     const deadline = Date.now() + 60000;
     while (Date.now() < deadline) {
       const status = await (await fetch(base + "/experimental/engine-v2-preview/status", { headers })).json();
@@ -907,7 +907,7 @@ export async function streamedMarkdown(seed: Seed) {
       await seed.evalIn(app, () => {
         const originalFetch = window.fetch;
         const fault = { attempts: 0, release: () => {} };
-        window.__openworkSubmissionFault = fault;
+        window.__offlinegptSubmissionFault = fault;
         window.fetch = async (input, init) => {
           const url = input instanceof Request ? input.url : String(input);
           const method = init?.method ?? (input instanceof Request ? input.method : "GET");
@@ -927,14 +927,14 @@ export async function streamedMarkdown(seed: Seed) {
       });
     },
     async submissionAttempts() {
-      return seed.evalIn(app, () => window.__openworkSubmissionFault?.attempts ?? 0);
+      return seed.evalIn(app, () => window.__offlinegptSubmissionFault?.attempts ?? 0);
     },
     async rejectSubmission() {
-      await seed.evalIn(app, () => window.__openworkSubmissionFault?.release());
+      await seed.evalIn(app, () => window.__offlinegptSubmissionFault?.release());
     },
     async videoState(play = false) {
       return seed.evalIn(app, browserScript(async (play) => {
-        const video = document.querySelector<HTMLVideoElement>('video[data-openwork-video-path="clip.mp4"]');
+        const video = document.querySelector<HTMLVideoElement>('video[data-offlinegpt-video-path="clip.mp4"]');
         if (!video) return null;
         if (play) await video.play();
         return { controls: video.controls, autoplay: video.autoplay, ready: video.readyState >= 2,
@@ -1093,7 +1093,7 @@ async function writeProviderConfig(path: string, providerId: string, modelId: st
       [providerId]: {
         npm: "@ai-sdk/openai-compatible",
         name: modelName,
-        options: { baseURL: baseUrl, apiKey: "sk-openwork-eval" },
+        options: { baseURL: baseUrl, apiKey: "sk-offlinegpt-eval" },
         models: { [modelId]: { name: modelName } },
       },
     },
@@ -1105,7 +1105,7 @@ async function selectModelInWorld(seed: Seed, app: Awaited<ReturnType<Seed["desk
   const selected = await seed.evalIn(app, browserScript(async (modelName) => {
     const deadline = Date.now() + 60000;
     if (!document.querySelector<HTMLInputElement>('input[placeholder="Search providers and models..."]')) {
-      const result = await window.__openworkControl.execute("session.model_picker.open", null);
+      const result = await window.__offlinegptControl.execute("session.model_picker.open", null);
       if (!result?.ok) return false;
     }
     while (Date.now() < deadline) {
@@ -1314,8 +1314,8 @@ async function configureCrossWorkspaces(
 ): Promise<void> {
   // TODO(primitive): configure one provider across several workspaces and select its model.
   const configured = await seed.evalIn(app, browserScript(async (workspaceIdsJson, providerBaseUrl) => {
-    const port = localStorage.getItem("openwork.server.port");
-    const token = localStorage.getItem("openwork.server.token");
+    const port = localStorage.getItem("offlinegpt.server.port");
+    const token = localStorage.getItem("offlinegpt.server.token");
     if (!port || !token) return "missing local server credentials";
     const workspaceIds = JSON.parse(workspaceIdsJson);
     const root = "http://127.0.0.1:" + port;
@@ -1342,17 +1342,17 @@ async function configureCrossWorkspaces(
       const reload = await fetch(root + "/workspace/" + encodeURIComponent(workspaceId) + "/engine/reload", { method: "POST", headers });
       if (!reload.ok && reload.status !== 504) return "reload:" + reload.status + ":" + (await reload.text()).slice(0, 300);
     }
-    const raw = localStorage.getItem("openwork.preferences");
+    const raw = localStorage.getItem("offlinegpt.preferences");
     let preferences: Record<string, unknown> = {};
     try { preferences = raw ? JSON.parse(raw) : {}; } catch { preferences = {}; }
     if (!preferences || typeof preferences !== "object" || Array.isArray(preferences)) preferences = {};
-    localStorage.setItem("openwork.preferences", JSON.stringify({
+    localStorage.setItem("offlinegpt.preferences", JSON.stringify({
       ...preferences,
       defaultModel: { providerID: "composer-switch-mock", modelID: "composer-switch-model" },
       modelVariant: null,
       providerStepCompleted: true,
     }));
-    localStorage.setItem("openwork.defaultModel", "composer-switch-mock/composer-switch-model");
+    localStorage.setItem("offlinegpt.defaultModel", "composer-switch-mock/composer-switch-model");
     return "ok";
   }, [JSON.stringify(workspaceIds), `${baseUrl}/v1`]), { awaitPromise: true, timeoutMs: 180_000 });
   if (configured !== "ok") throw new Error(`Cross-workspace provider configuration failed: ${String(configured)}`);
@@ -1529,7 +1529,7 @@ export async function sessionSubmitErrorIsolation(seed: Seed) {
   const sessionA = await seedSessionRetry(seed, base.app, { title: "Storage failure task A" });
   const endpoint = base.app.client.webSocketDebuggerUrl;
   if (!endpoint) throw new Error("Submit fault requires the desktop CDP endpoint");
-  const origin = await evalIn(base.app, () => "http://127.0.0.1:" + localStorage.getItem("openwork.server.port"));
+  const origin = await evalIn(base.app, () => "http://127.0.0.1:" + localStorage.getItem("offlinegpt.server.port"));
   const paths = (id: string) => ["workspace", "w"].flatMap(mount => ["opencode", "opencode2/api"].map(engine =>
     `/${mount}/${encodeURIComponent(base.workspace.workspaceId)}/${engine}/session/${encodeURIComponent(id)}/prompt_async`));
   const pathsA = paths(sessionA.sessionId);
@@ -1642,12 +1642,12 @@ export async function snapshotFailure(seed: Seed) {
   const failureJson = await seed.evalIn(app, browserScript(async () => {
     const deadline = Date.now() + 30000;
     while (Date.now() < deadline) {
-      const available = window.__openworkControl?.listActions()
+      const available = window.__offlinegptControl?.listActions()
         .find((candidate) => candidate.id === "eval.session_snapshot.fail" && !candidate.disabled);
       if (available) break;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    const result = await window.__openworkControl.execute("eval.session_snapshot.fail", null);
+    const result = await window.__offlinegptControl.execute("eval.session_snapshot.fail", null);
     if (!result?.ok) throw new Error(String(result?.error ?? "control action failed"));
     return JSON.stringify(result.result);
   }, []), { awaitPromise: true, timeoutMs: 120_000 });
@@ -1738,8 +1738,8 @@ export async function computerMentions(seed: Seed) {
     async submittedParts() {
       // TODO(primitive): inspect submitted engine parts, including synthetic routing instructions.
       return seed.evalIn(app, browserScript(async (workspaceId) => {
-        const port = localStorage.getItem("openwork.server.port");
-        const token = localStorage.getItem("openwork.server.token");
+        const port = localStorage.getItem("offlinegpt.server.port");
+        const token = localStorage.getItem("offlinegpt.server.token");
         const base = "http://127.0.0.1:" + port + "/workspace/" + encodeURIComponent(workspaceId) + "/opencode/session";
         const headers = { Authorization: "Bearer " + token };
         const listed = await fetch(base, { headers });
@@ -1778,14 +1778,14 @@ export async function visualization(seed: Seed) {
     ] }],
   };
   const mock = seed.mock({ agentWorkloads: [
-    { latestUserTurn: true, promptMarker: "Sketch a project overview", finalReply: "Your first sketch is ready.", steps: [{ tool: "openwork_visualization", arguments: design }] },
-    { latestUserTurn: true, promptMarker: "Create version 2", finalReply: "Your revised sketch is ready.", steps: [{ tool: "openwork_visualization", arguments: { ...design, revision: 2, description: "A calmer overview" } }] },
+    { latestUserTurn: true, promptMarker: "Sketch a project overview", finalReply: "Your first sketch is ready.", steps: [{ tool: "offlinegpt_visualization", arguments: design }] },
+    { latestUserTurn: true, promptMarker: "Create version 2", finalReply: "Your revised sketch is ready.", steps: [{ tool: "offlinegpt_visualization", arguments: { ...design, revision: 2, description: "A calmer overview" } }] },
   ] });
   const den = await seed.den({ mocks: { agent: mock } });
   const app = await seed.desktop({ name: "visualization", model: `${providerId}/${modelId}` });
   const workspace = await seed.workspace(app, seed.tmpPath("visualization"));
   await configureProvider(seed, app, workspace.workspaceId, providerId, modelId, {
-    permission: { openwork_visualization: "allow" },
+    permission: { offlinegpt_visualization: "allow" },
     provider: { [providerId]: {
       npm: "@ai-sdk/openai-compatible", name: "Visualization mock",
       options: { baseURL: `${den.mocks.agent.url}/v1`, apiKey: "sk-visualization" },
@@ -1840,7 +1840,7 @@ export async function workspaceEngineUpgrade(seed: Seed) {
   };
 }
 
-/** A running conversation whose workspace skills can change through OpenWork. */
+/** A running conversation whose workspace skills can change through OfflineGPT. */
 export async function skillLifecycle(seed: Seed) {
   const live = liveOpenAiEnabled();
   const orgName = "Skill lifecycle";
@@ -1851,8 +1851,8 @@ export async function skillLifecycle(seed: Seed) {
     const workspace = await seed.workspace(app, seed.tmpPath("skill-lifecycle"));
     const request = async (path: string) => {
       const response = await seed.evalIn(app, browserScript(async (path) => {
-        const response = await fetch("http://127.0.0.1:" + localStorage.getItem("openwork.server.port") + path, {
-          headers: { Authorization: "Bearer " + localStorage.getItem("openwork.server.token") },
+        const response = await fetch("http://127.0.0.1:" + localStorage.getItem("offlinegpt.server.port") + path, {
+          headers: { Authorization: "Bearer " + localStorage.getItem("offlinegpt.server.token") },
           signal: AbortSignal.timeout(10000),
         });
         return { status: response.status, json: await response.json() };
@@ -1866,8 +1866,8 @@ export async function skillLifecycle(seed: Seed) {
     // This world arranges an opted-in native v2 conversation, including when
     // invoked by the standard E2E command without an engine override.
     await seed.evalIn(app, async () => {
-      const response = await fetch("http://127.0.0.1:" + localStorage.getItem("openwork.server.port") + "/experimental/engine-v2-preview", {
-        method: "PUT", headers: { Authorization: "Bearer " + localStorage.getItem("openwork.server.token"), "Content-Type": "application/json" },
+      const response = await fetch("http://127.0.0.1:" + localStorage.getItem("offlinegpt.server.port") + "/experimental/engine-v2-preview", {
+        method: "PUT", headers: { Authorization: "Bearer " + localStorage.getItem("offlinegpt.server.token"), "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: true, chatRouting: true }), signal: AbortSignal.timeout(180000),
       });
       if (!response.ok) throw new Error("Could not enable the native engine");
@@ -1890,7 +1890,7 @@ export async function skillLifecycle(seed: Seed) {
         const result = await fetch(`${den.mocks.model.url}/admin/agent-workloads`, {
           method: "POST", headers: { "content-type": "application/json" },
           body: JSON.stringify({ workloads: [{ latestUserTurn: true, promptMarker: prompt,
-            finalReply: "OpenWork: UNAVAILABLE", finalReplyFrom: "last-tool-text",
+            finalReply: "OfflineGPT: UNAVAILABLE", finalReplyFrom: "last-tool-text",
             steps: [{ tool: "skill", argumentsFrom: "skill-catalog", arguments: { skill: skillName } }],
           }] }),
         });

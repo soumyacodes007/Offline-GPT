@@ -51,9 +51,9 @@ export type ModelPickerModalProps = {
   onOpenSettings: () => void;
   onClose: (options?: { restorePromptFocus?: boolean }) => void;
   /** Den entitlement present. Picker no longer upsells here; callers still pass it. */
-  openWorkModelsEntitled?: boolean;
+  offlineGptModelsEntitled?: boolean;
   /** The server is waiting to reload managed models for this workspace. */
-  openWorkModelsSyncing?: boolean;
+  offlineGptModelsSyncing?: boolean;
   onRefreshOrganizationModels?: () => void | Promise<void>;
   restrictToCloud?: boolean;
 };
@@ -145,7 +145,7 @@ export function ModelPickerModal(props: ModelPickerModalProps) {
     const q = props.query.trim().toLowerCase();
     const visibleOptions = dedupeGlmModelOptions(
       props.options.filter(
-        (option) => option.providerID.trim().toLowerCase() !== "openwork",
+        (option) => option.providerID.trim().toLowerCase() !== "offlinegpt",
       ),
       props.current,
     );

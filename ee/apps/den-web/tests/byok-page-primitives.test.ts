@@ -45,7 +45,7 @@ describe("Bring your Own Keys page", () => {
     for (const primitive of ["DenOptionCard", "DenSectionHeader", "DenListRow", "DenBrandMark", "DenChip", "DenNotice"]) {
       expect(screen).toContain(primitive);
     }
-    expect(screen).not.toContain("OpenWork Model Keys");
+    expect(screen).not.toContain("OfflineGPT Model Keys");
     expect(screen).not.toContain("getProviderEnvNames");
     expect(screen).not.toContain("<table");
     expect(screen).not.toContain("<input");

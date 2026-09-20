@@ -1,18 +1,18 @@
 extends: ./electron-builder.base.yml
-appId: com.differentai.openwork
-productName: OpenWork Cloud
+appId: com.differentai.offlinegpt
+productName: OfflineGPT Cloud
 extraMetadata:
-  openworkDistribution: cloud
+  offlinegptDistribution: cloud
 protocols:
-  - name: OpenWork Cloud
+  - name: OfflineGPT Cloud
     schemes:
-      - openwork
+      - offlinegpt
 publish:
   - provider: github
     owner: different-ai
-    repo: openwork
+    repo: offlinegpt
     releaseType: release
     channel: cloud
 linux:
-  executableName: openwork-cloud
-artifactName: openwork-cloud-${os}-${arch}-${version}.${ext}
+  executableName: offlinegpt-cloud
+artifactName: offlinegpt-cloud-${os}-${arch}-${version}.${ext}

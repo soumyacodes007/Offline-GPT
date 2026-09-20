@@ -1,6 +1,6 @@
 "use client";
 
-import type { TelemetryAnalyticsModels } from "@openwork-ee/telemetry-contracts";
+import type { TelemetryAnalyticsModels } from "@offlinegpt-ee/telemetry-contracts";
 import { analyticsSurfaceClass, AnalyticsEmptyState } from "./analytics-layout";
 
 export function ModelUsageList({ models, isLoading }: {
@@ -15,7 +15,7 @@ export function ModelUsageList({ models, isLoading }: {
       <p className="mt-0.5 text-[12px] text-[#637291]">Distinct sessions, last 30 days</p>
       <div className="mt-4 space-y-3">
         {isLoading ? <p className="text-[12px] text-[#637291]">Loading model usage…</p> : null}
-        {!isLoading && models.length === 0 ? <AnalyticsEmptyState title="No model usage yet">Model sessions from your team will appear here as they use OpenWork.</AnalyticsEmptyState> : null}
+        {!isLoading && models.length === 0 ? <AnalyticsEmptyState title="No model usage yet">Model sessions from your team will appear here as they use OfflineGPT.</AnalyticsEmptyState> : null}
         {models.map((model) => (
           <div key={model.id}>
             <div className="flex items-center justify-between gap-3 text-[12px]">

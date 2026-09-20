@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { getGithubData } from "../lib/github";
 import { automaticDownloadHref } from "../lib/automatic-download";
-import type { DetectedPlatform } from "@openwork/ui/react";
+import type { DetectedPlatform } from "@offlinegpt/ui/react";
 
 type GithubFixtureAsset = {
   name: string;
@@ -21,10 +21,10 @@ type GithubFetchFixtures = {
   releases: GithubFixtureRelease[];
 };
 
-const repoUrl = "https://api.github.com/repos/different-ai/openwork";
-const latestReleaseUrl = "https://api.github.com/repos/different-ai/openwork/releases/latest";
-const releasesUrl = "https://api.github.com/repos/different-ai/openwork/releases?per_page=50";
-const fallbackReleaseUrl = "https://github.com/different-ai/openwork/releases";
+const repoUrl = "https://api.github.com/repos/different-ai/offlinegpt";
+const latestReleaseUrl = "https://api.github.com/repos/different-ai/offlinegpt/releases/latest";
+const releasesUrl = "https://api.github.com/repos/different-ai/offlinegpt/releases?per_page=50";
+const fallbackReleaseUrl = "https://github.com/different-ai/offlinegpt/releases";
 const releaseTag = "v0.17.38";
 const releasePageUrl = `${fallbackReleaseUrl}/tag/${releaseTag}`;
 const downloadBaseUrl = `${fallbackReleaseUrl}/download/${releaseTag}`;
@@ -83,8 +83,8 @@ afterEach(() => {
 describe("getGithubData", () => {
   test("never substitutes another architecture when a public installer is missing", async () => {
     const release = releaseWithAssets([
-      asset("openwork-mac-arm64-0.17.38.dmg"),
-      asset("openwork-win-arm64-0.17.38.exe")
+      asset("offlinegpt-mac-arm64-0.17.38.dmg"),
+      asset("offlinegpt-win-arm64-0.17.38.exe")
     ]);
     installGithubFetch({ latestRelease: release, releases: [release] });
     const data = await getGithubData();
@@ -92,7 +92,7 @@ describe("getGithubData", () => {
     expect(data.installers.windows.x64).toBe(releasePageUrl);
     expect(automaticDownloadHref(data.installers, { os: "macos", arch: "x64", osVersion: null, source: "ua-ch" }, "Macintosh", 0)).toBeNull();
 
-    const universal = asset("openwork-mac-universal-0.17.38.dmg");
+    const universal = asset("offlinegpt-mac-universal-0.17.38.dmg");
     const universalRelease = releaseWithAssets([universal]);
     installGithubFetch({ latestRelease: universalRelease, releases: [universalRelease] });
     const universalData = await getGithubData();
@@ -102,12 +102,12 @@ describe("getGithubData", () => {
 
   test("one-click selection uses the detected architecture, with safe manual fallbacks", async () => {
     const release = releaseWithAssets([
-      asset("openwork-mac-arm64-0.17.38.dmg"),
-      asset("openwork-mac-x64-0.17.38.dmg"),
-      asset("openwork-win-arm64-0.17.38.exe"),
-      asset("openwork-win-x64-0.17.38.exe"),
-      asset("openwork-linux-x86_64-0.17.38.AppImage"),
-      asset("openwork-linux-arm64-0.17.38.tar.gz")
+      asset("offlinegpt-mac-arm64-0.17.38.dmg"),
+      asset("offlinegpt-mac-x64-0.17.38.dmg"),
+      asset("offlinegpt-win-arm64-0.17.38.exe"),
+      asset("offlinegpt-win-x64-0.17.38.exe"),
+      asset("offlinegpt-linux-x86_64-0.17.38.AppImage"),
+      asset("offlinegpt-linux-arm64-0.17.38.tar.gz")
     ]);
     installGithubFetch({ latestRelease: release, releases: [release] });
     const { installers } = await getGithubData();
@@ -134,23 +134,23 @@ describe("getGithubData", () => {
   });
 
   test("selects only public desktop assets when installer assets are listed first", async () => {
-    const macArm64 = asset("openwork-mac-arm64-0.17.38.dmg");
-    const macX64 = asset("openwork-mac-x64-0.17.38.dmg");
-    const winArm64 = asset("openwork-win-arm64-0.17.38.exe");
-    const winX64 = asset("openwork-win-x64-0.17.38.exe");
-    const linuxX64 = asset("openwork-linux-x86_64-0.17.38.AppImage");
+    const macArm64 = asset("offlinegpt-mac-arm64-0.17.38.dmg");
+    const macX64 = asset("offlinegpt-mac-x64-0.17.38.dmg");
+    const winArm64 = asset("offlinegpt-win-arm64-0.17.38.exe");
+    const winX64 = asset("offlinegpt-win-x64-0.17.38.exe");
+    const linuxX64 = asset("offlinegpt-linux-x86_64-0.17.38.AppImage");
     const release = releaseWithAssets([
-      asset("OpenWork-Installer-mac-arm64.dmg"),
-      asset("OpenWork-Installer-mac-x64.dmg"),
-      asset("OpenWork-Installer-win-x64.exe"),
-      asset("openwork-cloud-mac-arm64-0.17.38.dmg"),
-      asset("openwork-cloud-mac-x64-0.17.38.dmg"),
-      asset("openwork-cloud-win-x64-0.17.38.exe"),
-      asset("openwork-cloud-linux-x86_64-0.17.38.AppImage"),
-      asset("openwork-enterprise-mac-arm64-0.17.38.dmg"),
-      asset("openwork-enterprise-mac-x64-0.17.38.dmg"),
-      asset("openwork-enterprise-win-x64-0.17.38.exe"),
-      asset("openwork-enterprise-linux-x86_64-0.17.38.AppImage"),
+      asset("OfflineGPT-Installer-mac-arm64.dmg"),
+      asset("OfflineGPT-Installer-mac-x64.dmg"),
+      asset("OfflineGPT-Installer-win-x64.exe"),
+      asset("offlinegpt-cloud-mac-arm64-0.17.38.dmg"),
+      asset("offlinegpt-cloud-mac-x64-0.17.38.dmg"),
+      asset("offlinegpt-cloud-win-x64-0.17.38.exe"),
+      asset("offlinegpt-cloud-linux-x86_64-0.17.38.AppImage"),
+      asset("offlinegpt-enterprise-mac-arm64-0.17.38.dmg"),
+      asset("offlinegpt-enterprise-mac-x64-0.17.38.dmg"),
+      asset("offlinegpt-enterprise-win-x64-0.17.38.exe"),
+      asset("offlinegpt-enterprise-linux-x86_64-0.17.38.AppImage"),
       macArm64,
       macX64,
       winArm64,
@@ -174,9 +174,9 @@ describe("getGithubData", () => {
 
   test("falls back to release pages when a release contains only installer assets", async () => {
     const release = releaseWithAssets([
-      asset("OpenWork-Installer-mac-arm64.dmg"),
-      asset("OpenWork-Installer-mac-x64.dmg"),
-      asset("OpenWork-Installer-win-x64.exe")
+      asset("OfflineGPT-Installer-mac-arm64.dmg"),
+      asset("OfflineGPT-Installer-mac-x64.dmg"),
+      asset("OfflineGPT-Installer-win-x64.exe")
     ]);
 
     installGithubFetch({ latestRelease: release, releases: [release] });

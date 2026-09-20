@@ -1,17 +1,17 @@
 import { mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { join } from "node:path";
-import type { Seed } from "@openwork/env";
+import type { Seed } from "@offlinegpt/env";
 import {
-  bootManagedOpenworkServer,
+  bootManagedOfflineGptServer,
   close,
   isRecord,
   listen,
   readBody,
   sendJson,
   sendStream,
-  type ManagedOpenworkServer,
-} from "./openwork-server-cli.ts";
+  type ManagedOfflineGptServer,
+} from "./offlinegpt-server-cli.ts";
 
 export const MOCK_REPLY = "MOCK OK";
 
@@ -69,7 +69,7 @@ function mockProvider(requests: AgentUiContextProviderRequest[]): Server {
         sendStream(response, toolResults.length === 0
           ? [
             { id, object: "chat.completion.chunk", choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }] },
-            { id, object: "chat.completion.chunk", choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: `call_openwork_context_${requests.length}`, type: "function", function: { name: "openwork_context", arguments: JSON.stringify({}) } }] }, finish_reason: null }] },
+            { id, object: "chat.completion.chunk", choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: `call_offlinegpt_context_${requests.length}`, type: "function", function: { name: "offlinegpt_context", arguments: JSON.stringify({}) } }] }, finish_reason: null }] },
             { id, object: "chat.completion.chunk", choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] },
           ]
           : [
@@ -134,7 +134,7 @@ export async function agentUiContext(seed: Seed): Promise<AgentUiContextWorld> {
   const token = "agent-ui-context-client-token";
   let output = "";
   const sink = (chunk: string) => { output += chunk; };
-  let managed: ManagedOpenworkServer | null = null;
+  let managed: ManagedOfflineGptServer | null = null;
   const windows = new Set<FakeWindow>();
 
   const dispose = async () => {
@@ -147,7 +147,7 @@ export async function agentUiContext(seed: Seed): Promise<AgentUiContextWorld> {
   };
 
   try {
-    managed = await bootManagedOpenworkServer({ scratch, workspace, token, sink });
+    managed = await bootManagedOfflineGptServer({ scratch, workspace, token, sink });
     const server = managed;
     const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
 

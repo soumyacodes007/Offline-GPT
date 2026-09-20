@@ -44,7 +44,7 @@ export class WebContentsView {
   constructor(options) {
     createdViews.push(this);
     const listeners = new EventEmitter();
-    const requestHook = options?.webPreferences?.partition === "persist:openwork-browser" ? requestHooks.at(-1) : null;
+    const requestHook = options?.webPreferences?.partition === "persist:offlinegpt-browser" ? requestHooks.at(-1) : null;
     let attached = false;
     const targetId = "target-" + createdViews.length;
     const view = this;
@@ -199,21 +199,21 @@ function createPanel(checkPolicy = async (_request) => {}, remoteDebugPort = 0) 
   const views = () => createdViews.slice(firstView);
   const commands = (view) => view.webContents.debugger.commands;
   const messages = (channel) => sent.filter((entry) => entry.channel === channel).map((entry) => entry.payload);
-  const approve = (allowed = true, tabId = invoke("openwork:browser:state").activeTabId) => {
-    const tab = invoke("openwork:browser:state").tabs.find((tab) => tab.id === tabId);
+  const approve = (allowed = true, tabId = invoke("offlinegpt:browser:state").activeTabId) => {
+    const tab = invoke("offlinegpt:browser:state").tabs.find((tab) => tab.id === tabId);
     assert.ok(tab?.browserApproval, "the tab has a pending approval");
-    return invoke("openwork:browser:approve", tabId, tab.browserApproval.id, allowed);
+    return invoke("offlinegpt:browser:approve", tabId, tab.browserApproval.id, allowed);
   };
   async function openLinkMenu(payload = LINK) {
-    invoke("openwork:browser:linkContextMenu", payload);
+    invoke("offlinegpt:browser:linkContextMenu", payload);
     await flush();
     const view = views().find((view) => view.webContents.getURL() === "http://localhost/overlay.html");
     assert.ok(view, "the link menu creates an overlay renderer");
-    emit("openwork:menu-overlay:ready", { sender: view.webContents });
+    emit("offlinegpt:menu-overlay:ready", { sender: view.webContents });
     await flush();
-    const request = view.webContents.sent.findLast((entry) => entry.channel === "openwork:menu-overlay:show")?.payload;
+    const request = view.webContents.sent.findLast((entry) => entry.channel === "offlinegpt:menu-overlay:show")?.payload;
     assert.ok(request, "the ready overlay receives its menu");
-    const choose = (itemId) => emit("openwork:menu-overlay:choose", { sender: view.webContents }, { requestId: request.id, itemId });
+    const choose = (itemId) => emit("offlinegpt:menu-overlay:choose", { sender: view.webContents }, { requestId: request.id, itemId });
     return { view, request, choose };
   }
   return { invoke, emit, mainContents, onScreen, commands, children, messages, views, policies, openLinkMenu, panel, approve };
@@ -227,11 +227,11 @@ test("browser manager construction before app readiness defers session hooks unt
   const { invoke } = createPanel();
   assert.equal(browserSession.listenerCount("will-download"), 0);
   controls.ready = true;
-  invoke("openwork:browser:createTab", "about:blank", "A");
-  invoke("openwork:browser:createTab", "about:blank", "B");
+  invoke("offlinegpt:browser:createTab", "about:blank", "A");
+  invoke("offlinegpt:browser:createTab", "about:blank", "B");
   await flush();
   assert.equal(browserSession.listenerCount("will-download"), 1, "download tracking is installed once");
-  invoke("openwork:browser:destroy");
+  invoke("offlinegpt:browser:destroy");
 });
 
 function gate() {
@@ -252,11 +252,11 @@ function createTaskPanel(t) {
 
 test("showing the panel sizes the active tab and resets viewport emulation left on it", async () => {
   const { invoke, onScreen, commands } = createPanel();
-  invoke("openwork:browser:createTab", "https://example.com");
+  invoke("offlinegpt:browser:createTab", "https://example.com");
   assert.equal(onScreen(), null, "a tab created while the panel is hidden stays off screen");
   await flush();
 
-  invoke("openwork:browser:show", PANEL_BOUNDS);
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS);
   await flush();
 
   const view = onScreen();
@@ -268,17 +268,17 @@ test("showing the panel sizes the active tab and resets viewport emulation left 
 
 test("selecting a tab from the tab strip resets that tab only", async () => {
   const { invoke, onScreen, commands } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS);
-  const first = invoke("openwork:browser:createTab", "https://one.example");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS);
+  const first = invoke("offlinegpt:browser:createTab", "https://one.example");
   const firstView = onScreen();
-  invoke("openwork:browser:createTab", "https://two.example");
+  invoke("offlinegpt:browser:createTab", "https://two.example");
   const secondView = onScreen();
   assert.notEqual(firstView, secondView);
   await flush();
   commands(firstView).length = 0;
   commands(secondView).length = 0;
 
-  invoke("openwork:browser:selectTab", first.tabId);
+  invoke("offlinegpt:browser:selectTab", first.tabId);
   await flush();
 
   assert.equal(onScreen(), firstView);
@@ -288,8 +288,8 @@ test("selecting a tab from the tab strip resets that tab only", async () => {
 
 test("focusing a tab's page resets its viewport emulation unless a debugger is already attached", async () => {
   const { invoke, onScreen, commands } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS);
-  invoke("openwork:browser:createTab", "https://example.com");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS);
+  invoke("offlinegpt:browser:createTab", "https://example.com");
   const view = onScreen();
   await flush();
   commands(view).length = 0;
@@ -308,10 +308,10 @@ test("focusing a tab's page resets its viewport emulation unless a debugger is a
 
 test("agent navigation that brings a background tab on screen leaves its viewport emulation alone", async () => {
   const { invoke, onScreen, commands } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS);
-  invoke("openwork:browser:createTab", "https://one.example");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS);
+  invoke("offlinegpt:browser:createTab", "https://one.example");
   const firstView = onScreen();
-  invoke("openwork:browser:createTab", "https://two.example");
+  invoke("offlinegpt:browser:createTab", "https://two.example");
   assert.notEqual(onScreen(), firstView, "the first tab is in the background");
   await flush();
   commands(firstView).length = 0;
@@ -334,16 +334,16 @@ const FOREGROUND_SEQUENCE = [
 
 test("a tab opened for a background conversation loads silently and leaves the visible conversation's tab on screen", async () => {
   const { invoke, onScreen, commands, children, messages, views } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  invoke("openwork:browser:createTab", "https://a.example", "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:createTab", "https://a.example", "A");
   const visibleView = onScreen();
   await flush();
   commands(visibleView).length = 0;
 
-  const { tabId } = invoke("openwork:browser:createTab", "https://b.example", "B");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://b.example", "B");
   await flush();
 
-  const state = invoke("openwork:browser:state");
+  const state = invoke("offlinegpt:browser:state");
   const backgroundTab = state.tabs.find((tab) => tab.id === tabId);
   const backgroundView = views().find((view) => view !== visibleView);
   assert.deepEqual(children, [visibleView], "background content stays detached from the window");
@@ -355,23 +355,23 @@ test("a tab opened for a background conversation loads silently and leaves the v
   assert.deepEqual(commands(backgroundView), BACKGROUND_SEQUENCE, "the page lays out and focuses like a visible one");
   assert.equal(backgroundView.webContents.debugger.isAttached(), true, "our emulation session stays open while unseen");
   assert.deepEqual(commands(visibleView), [], "the visible tab is untouched");
-  assert.equal(messages("openwork:browser:panel-opened").at(-1).tab.id, tabId, "the explicit open selects B's page only in B's panel");
-  assert.equal(messages("openwork:browser:panel-opened").at(-1).ownerSessionId, "B");
+  assert.equal(messages("offlinegpt:browser:panel-opened").at(-1).tab.id, tabId, "the explicit open selects B's page only in B's panel");
+  assert.equal(messages("offlinegpt:browser:panel-opened").at(-1).ownerSessionId, "B");
 
   // Even an unexpectedly large background surface must not intercept the app.
   backgroundView.setBounds({ x: 0, y: 0, width: 1280, height: 800 });
-  invoke("openwork:browser:hide");
+  invoke("offlinegpt:browser:hide");
   assert.deepEqual(children, []);
   assert.equal(onScreen(), null);
-  assert.ok(invoke("openwork:browser:state").nativeViews.every((view) => !view.aboveApp));
+  assert.ok(invoke("offlinegpt:browser:state").nativeViews.every((view) => !view.aboveApp));
 });
 
 test("navigating a background conversation's tab reports its owner instead of taking the screen", async () => {
   const { invoke, onScreen, messages, views } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  invoke("openwork:browser:createTab", "https://a.example", "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:createTab", "https://a.example", "A");
   const visibleView = onScreen();
-  const { tabId } = invoke("openwork:browser:createTab", "https://b.example", "B");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://b.example", "B");
   const backgroundView = views().find((view) => view !== visibleView);
   await flush();
 
@@ -379,23 +379,23 @@ test("navigating a background conversation's tab reports its owner instead of ta
   await flush();
 
   assert.equal(onScreen(), visibleView, "A's tab stays on screen");
-  const opens = messages("openwork:browser:panel-opened");
+  const opens = messages("offlinegpt:browser:panel-opened");
   assert.equal(opens.at(-2).tab.id, tabId, "the explicit open selects its page");
   assert.deepEqual(opens.at(-1), { ownerSessionId: "B" }, "later navigation does not override an artifact selection");
 });
 
 test("switching to the background conversation swaps its tab on screen and restores a normal viewport", async () => {
   const { invoke, onScreen, commands, children, views } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  invoke("openwork:browser:createTab", "https://a.example", "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:createTab", "https://a.example", "A");
   const aView = onScreen();
-  invoke("openwork:browser:createTab", "https://b.example", "B");
+  invoke("offlinegpt:browser:createTab", "https://b.example", "B");
   const bView = views().find((view) => view !== aView);
   await flush();
   commands(aView).length = 0;
   commands(bView).length = 0;
 
-  invoke("openwork:browser:setVisibleSession", "B");
+  invoke("offlinegpt:browser:setVisibleSession", "B");
   await flush();
 
   assert.equal(onScreen(), bView, "B's tab takes the screen");
@@ -405,113 +405,113 @@ test("switching to the background conversation swaps its tab on screen and resto
   assert.equal(bView.webContents.debugger.isAttached(), false, "our session is released for the user-driven reset path");
   assert.deepEqual(commands(aView), BACKGROUND_SEQUENCE, "A's tab now keeps painting in the background");
   assert.deepEqual(aView.getBounds(), { x: 0, y: 0, width: 1280, height: 800 });
-  const state = invoke("openwork:browser:state");
+  const state = invoke("offlinegpt:browser:state");
   assert.equal(state.visibleSessionId, "B");
   assert.equal(state.activeTabId, state.activeTabIdByOwner.B);
 });
 
 test("closing a conversation's last tab tells only that conversation its panel is empty", async () => {
   const { invoke, onScreen, messages } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  invoke("openwork:browser:createTab", "https://a.example", "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:createTab", "https://a.example", "A");
   const aView = onScreen();
-  const { tabId } = invoke("openwork:browser:createTab", "https://b.example", "B");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://b.example", "B");
   await flush();
 
-  invoke("openwork:browser:closeTab", tabId);
+  invoke("offlinegpt:browser:closeTab", tabId);
 
   assert.equal(onScreen(), aView, "A keeps browsing");
-  assert.deepEqual(messages("openwork:browser:panel-closed"), [{ ownerSessionId: "B" }]);
-  assert.deepEqual(invoke("openwork:browser:state").tabs.map((tab) => tab.ownerSessionId), ["A"]);
+  assert.deepEqual(messages("offlinegpt:browser:panel-closed"), [{ ownerSessionId: "B" }]);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs.map((tab) => tab.ownerSessionId), ["A"]);
 });
 
 test("capacity refuses allocation without replacing existing tabs and closing frees a slot", async () => {
   const { invoke, views } = createPanel();
-  const limit = invoke("openwork:browser:state").tabLimit;
+  const limit = invoke("offlinegpt:browser:state").tabLimit;
   assert.equal(limit, 12);
-  for (let i = 0; i < limit; i++) invoke("openwork:browser:createTab", "about:blank", `owner-${i}`);
-  const before = invoke("openwork:browser:state");
-  assert.throws(() => invoke("openwork:browser:createTab", "about:blank", "overflow"), /12 browser tabs open.*Close.*try again/);
-  await assert.rejects(invoke("openwork:browser:openUrl", "https://example.com", "builtin", { sessionId: "overflow" }), /12 browser tabs open/);
+  for (let i = 0; i < limit; i++) invoke("offlinegpt:browser:createTab", "about:blank", `owner-${i}`);
+  const before = invoke("offlinegpt:browser:state");
+  assert.throws(() => invoke("offlinegpt:browser:createTab", "about:blank", "overflow"), /12 browser tabs open.*Close.*try again/);
+  await assert.rejects(invoke("offlinegpt:browser:openUrl", "https://example.com", "builtin", { sessionId: "overflow" }), /12 browser tabs open/);
   assert.equal(views().length, limit, "rejection allocates no native view");
-  assert.deepEqual(invoke("openwork:browser:state").tabs, before.tabs);
-  invoke("openwork:browser:closeTab", before.tabs[0].id);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, before.tabs);
+  invoke("offlinegpt:browser:closeTab", before.tabs[0].id);
   assert.equal(views()[0].webContents.isDestroyed(), true);
-  invoke("openwork:browser:createTab", "about:blank", "retry");
-  assert.equal(invoke("openwork:browser:state").tabs.length, limit);
+  invoke("offlinegpt:browser:createTab", "about:blank", "retry");
+  assert.equal(invoke("offlinegpt:browser:state").tabs.length, limit);
 });
 
 test("owner cleanup is exact and idempotent and releases only an empty background host", async () => {
   const { invoke, views, messages } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  invoke("openwork:browser:createTab", "about:blank", "A");
-  invoke("openwork:browser:createTab", "about:blank", null);
-  const b = invoke("openwork:browser:createTab", "about:blank", "B");
-  const c = invoke("openwork:browser:createTab", "about:blank", "C");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:createTab", "about:blank", "A");
+  invoke("offlinegpt:browser:createTab", "about:blank", null);
+  const b = invoke("offlinegpt:browser:createTab", "about:blank", "B");
+  const c = invoke("offlinegpt:browser:createTab", "about:blank", "C");
   await flush();
-  for (const invalid of [undefined, null, "", "   ", 1]) assert.deepEqual(invoke("openwork:browser:closeSessionTabs", invalid), []);
-  assert.deepEqual(invoke("openwork:browser:closeSessionTabs", "B"), [b.tabId]);
-  assert.deepEqual(invoke("openwork:browser:closeSessionTabs", "B"), []);
+  for (const invalid of [undefined, null, "", "   ", 1]) assert.deepEqual(invoke("offlinegpt:browser:closeSessionTabs", invalid), []);
+  assert.deepEqual(invoke("offlinegpt:browser:closeSessionTabs", "B"), [b.tabId]);
+  assert.deepEqual(invoke("offlinegpt:browser:closeSessionTabs", "B"), []);
   assert.equal(views()[2].webContents.isDestroyed(), true);
-  assert.equal(invoke("openwork:browser:state").backgroundWindowCount, 1, "C still uses the hidden host");
-  assert.deepEqual(invoke("openwork:browser:closeSessionTabs", "C"), [c.tabId]);
-  assert.equal(invoke("openwork:browser:state").backgroundWindowCount, 0);
-  assert.deepEqual(invoke("openwork:browser:state").tabs.map(tab => tab.ownerSessionId), ["A", null]);
+  assert.equal(invoke("offlinegpt:browser:state").backgroundWindowCount, 1, "C still uses the hidden host");
+  assert.deepEqual(invoke("offlinegpt:browser:closeSessionTabs", "C"), [c.tabId]);
+  assert.equal(invoke("offlinegpt:browser:state").backgroundWindowCount, 0);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs.map(tab => tab.ownerSessionId), ["A", null]);
   assert.ok(views().slice(0, 2).every(view => !view.webContents.isDestroyed()));
-  assert.deepEqual(messages("openwork:browser:panel-closed"), [{ ownerSessionId: "B" }, { ownerSessionId: "C" }]);
-  invoke("openwork:browser:closeAllTabs");
+  assert.deepEqual(messages("offlinegpt:browser:panel-closed"), [{ ownerSessionId: "B" }, { ownerSessionId: "C" }]);
+  invoke("offlinegpt:browser:closeAllTabs");
   assert.ok(views().every(view => view.webContents.isDestroyed()));
 });
 
 test("external target destruction releases owner state and the empty hidden host", async () => {
   const { invoke, views } = createPanel();
-  invoke("openwork:browser:createTab", "about:blank", "B");
+  invoke("offlinegpt:browser:createTab", "about:blank", "B");
   await flush();
   views()[0].webContents.close();
-  assert.deepEqual(invoke("openwork:browser:state").tabs, []);
-  assert.equal(invoke("openwork:browser:state").backgroundWindowCount, 0);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, []);
+  assert.equal(invoke("offlinegpt:browser:state").backgroundWindowCount, 0);
 });
 
 test("failed navigation rolls back its allocation while another owner's page survives", async (t) => {
   const { invoke, views, approve } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  invoke("openwork:browser:createTab", "about:blank", "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:createTab", "about:blank", "A");
   await flush();
-  const before = invoke("openwork:browser:state");
+  const before = invoke("offlinegpt:browser:state");
   t.mock.method(navigation, "load", async () => { throw new Error("ERR_UNSAFE_PORT"); });
-  const opening = invoke("openwork:browser:openUrl", "http://127.0.0.1:1", "builtin", { sessionId: "B" });
+  const opening = invoke("offlinegpt:browser:openUrl", "http://127.0.0.1:1", "builtin", { sessionId: "B" });
   await flush();
-  invoke("openwork:browser:setVisibleSession", "B");
+  invoke("offlinegpt:browser:setVisibleSession", "B");
   approve();
   await assert.rejects(opening, { code: "browser_operation_failed" });
-  invoke("openwork:browser:setVisibleSession", "A");
-  assert.deepEqual(invoke("openwork:browser:state").tabs, before.tabs);
-  assert.equal(invoke("openwork:browser:state").backgroundWindowCount, 0);
+  invoke("offlinegpt:browser:setVisibleSession", "A");
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, before.tabs);
+  assert.equal(invoke("offlinegpt:browser:state").backgroundWindowCount, 0);
   assert.equal(views()[1].webContents.isDestroyed(), true);
   assert.equal(views()[0].webContents.isDestroyed(), false);
 });
 
 test("tabs created without a conversation stay shared and behave as before", async () => {
   const { invoke, onScreen, messages } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS);
-  invoke("openwork:browser:createTab", "https://shared.example");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS);
+  invoke("offlinegpt:browser:createTab", "https://shared.example");
   await flush();
 
-  const state = invoke("openwork:browser:state");
+  const state = invoke("offlinegpt:browser:state");
   assert.equal(state.tabs[0].ownerSessionId, null);
   assert.ok(onScreen(), "a shared tab is on screen");
 
-  invoke("openwork:browser:setVisibleSession", "A");
+  invoke("offlinegpt:browser:setVisibleSession", "A");
   assert.ok(onScreen(), "a shared tab stays on screen for every conversation");
-  invoke("openwork:browser:closeAllTabs");
-  assert.deepEqual(messages("openwork:browser:panel-closed"), [{ ownerSessionId: null }]);
+  invoke("offlinegpt:browser:closeAllTabs");
+  assert.deepEqual(messages("offlinegpt:browser:panel-closed"), [{ ownerSessionId: null }]);
 });
 
 test("suspension requires explicit confirmation with Cancel as both defaults and never falls back to the active tab", async () => {
   const { invoke, views } = createPanel();
-  const { tabId } = invoke("openwork:browser:createTab", "https://example.com", "A");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://example.com", "A");
   await flush();
-  const before = invoke("openwork:browser:state").tabs;
+  const before = invoke("offlinegpt:browser:state").tabs;
   controls.confirm = async (options) => {
     assert.equal(options.title, "Suspend browser tab?");
     assert.equal(options.type, "warning");
@@ -521,26 +521,26 @@ test("suspension requires explicit confirmation with Cancel as both defaults and
     assert.match(options.detail, /Form input, scroll position, and page history will be lost/);
     return 0;
   };
-  assert.equal(await invoke("openwork:browser:suspendTab", tabId), null);
-  for (const id of [undefined, null, "", "missing"]) await assert.rejects(invoke("openwork:browser:suspendTab", id), /Unknown/);
-  assert.deepEqual(invoke("openwork:browser:state").tabs, before);
+  assert.equal(await invoke("offlinegpt:browser:suspendTab", tabId), null);
+  for (const id of [undefined, null, "", "missing"]) await assert.rejects(invoke("offlinegpt:browser:suspendTab", id), /Unknown/);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, before);
   assert.equal(views()[0].webContents.isDestroyed(), false);
   assert.equal(effects.length, 1);
 });
 
 test("confirmed suspension frees native resources but retains identity and owner until an explicit selection reloads", async () => {
   const { invoke, views, messages } = createPanel();
-  const { tabId } = invoke("openwork:browser:createTab", "https://example.com/form", "B");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://example.com/form", "B");
   controls.confirm = async () => 1;
   for (let cycle = 0; cycle < 4; cycle++) {
     await flush();
     const previous = views().at(-1);
-    assert.equal(await invoke("openwork:browser:suspendTab", tabId), tabId);
+    assert.equal(await invoke("offlinegpt:browser:suspendTab", tabId), tabId);
     assert.equal(previous.webContents.isDestroyed(), true);
-    invoke("openwork:browser:setVisibleSession", "A");
-    invoke("openwork:browser:show", PANEL_BOUNDS, "B");
-    invoke("openwork:browser:bounds", PANEL_BOUNDS);
-    const state = invoke("openwork:browser:state");
+    invoke("offlinegpt:browser:setVisibleSession", "A");
+    invoke("offlinegpt:browser:show", PANEL_BOUNDS, "B");
+    invoke("offlinegpt:browser:bounds", PANEL_BOUNDS);
+    const state = invoke("offlinegpt:browser:state");
     assert.equal(state.tabs.length, 1);
     assert.equal(state.tabs[0].id, tabId);
     assert.equal(state.tabs[0].ownerSessionId, "B");
@@ -550,41 +550,41 @@ test("confirmed suspension frees native resources but retains identity and owner
     assert.equal(state.activeTabIdByOwner.B, tabId);
     assert.deepEqual(state.nativeViews, []);
     assert.equal(state.backgroundWindowCount, 0);
-    assert.deepEqual(messages("openwork:browser:panel-closed"), []);
-    assert.equal(await invoke("openwork:browser:selectTab", tabId), tabId);
+    assert.deepEqual(messages("offlinegpt:browser:panel-closed"), []);
+    assert.equal(await invoke("offlinegpt:browser:selectTab", tabId), tabId);
     assert.notEqual(views().at(-1), previous);
     assert.deepEqual(views().at(-1).webContents.loads, ["https://example.com/form"]);
     assert.equal(views().filter(view => !view.webContents.isDestroyed()).length, 1);
-    assert.equal(invoke("openwork:browser:state").tabs[0].automationProtected, false);
+    assert.equal(invoke("offlinegpt:browser:state").tabs[0].automationProtected, false);
   }
-  invoke("openwork:browser:closeSessionTabs", "B");
-  assert.deepEqual(invoke("openwork:browser:state").tabs, []);
+  invoke("offlinegpt:browser:closeSessionTabs", "B");
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, []);
 });
 
 test("automation is protected before navigation consent and returns its native target only after first-document background emulation", async (t) => {
   const { invoke, views, commands, approve } = createTaskPanel(t);
-  invoke("openwork:browser:show", PANEL_BOUNDS, "B");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "B");
   const document = gate();
   const emulation = gate();
   controls.beforeLoad = () => document.promise;
   controls.beforeCommand = () => emulation.promise;
   let returned = false;
-  const opening = invoke("openwork:browser:openUrl", "https://example.com", "builtin", { sessionId: "B" });
+  const opening = invoke("offlinegpt:browser:openUrl", "https://example.com", "builtin", { sessionId: "B" });
   void opening.then(() => { returned = true; });
   await flush();
-  const tab = invoke("openwork:browser:state").tabs[0];
+  const tab = invoke("offlinegpt:browser:state").tabs[0];
   assert.equal(tab.automationProtected, true);
   assert.deepEqual(views()[0].webContents.loads, [], "navigation waits for the owner's consent");
   assert.deepEqual(commands(views()[0]), [], "no Emulation before the first dom-ready");
-  await assert.rejects(invoke("openwork:browser:suspendTab", tab.id), /protected or busy/);
-  assert.throws(() => invoke("openwork:browser:releaseTab", tab.id, "B"), /busy/);
+  await assert.rejects(invoke("offlinegpt:browser:suspendTab", tab.id), /protected or busy/);
+  assert.throws(() => invoke("offlinegpt:browser:releaseTab", tab.id, "B"), /busy/);
   assert.equal(approve(true, tab.id), true);
   await flush();
   assert.deepEqual(views()[0].webContents.loads, ["https://example.com/"], "the approved destination loads without a marker page");
-  invoke("openwork:browser:setVisibleSession", "A");
+  invoke("offlinegpt:browser:setVisibleSession", "A");
   assert.deepEqual(commands(views()[0]), [], "background emulation still waits for the first document");
-  await assert.rejects(invoke("openwork:browser:suspendTab", tab.id), /protected or busy/);
-  assert.throws(() => invoke("openwork:browser:releaseTab", tab.id, "B"), /busy/);
+  await assert.rejects(invoke("offlinegpt:browser:suspendTab", tab.id), /protected or busy/);
+  assert.throws(() => invoke("offlinegpt:browser:releaseTab", tab.id, "B"), /busy/);
   document.finish();
   await flush();
   assert.equal(returned, false, "a ready document alone is not a usable background handle");
@@ -595,15 +595,15 @@ test("automation is protected before navigation consent and returns its native t
   assert.equal(handle.owner_session_id, "B");
   assert.deepEqual(commands(views()[0]), BACKGROUND_SEQUENCE);
   const loads = [...views()[0].webContents.loads];
-  assert.equal((await invoke("openwork:browser:restoreTab", tab.id, "B")).target_id, handle.target_id);
+  assert.equal((await invoke("offlinegpt:browser:restoreTab", tab.id, "B")).target_id, handle.target_id);
   assert.deepEqual(views()[0].webContents.loads, loads, "reacquiring a live page never navigates it");
   assert.deepEqual(effects, [], "protected suspension never opens the confirmation dialog");
 });
 
 test("restore and release enforce exact ownership and protection lasts until explicit release", async (t) => {
   const { invoke, views, approve } = createTaskPanel(t);
-  invoke("openwork:browser:show", PANEL_BOUNDS, "B");
-  const opening = invoke("openwork:browser:openUrl", "https://example.com", "builtin", { sessionId: "B" });
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "B");
+  const opening = invoke("offlinegpt:browser:openUrl", "https://example.com", "builtin", { sessionId: "B" });
   await flush();
   assert.deepEqual(views()[0].webContents.loads, [], "navigation waits for the owner's consent");
   assert.equal(approve(), true);
@@ -611,146 +611,146 @@ test("restore and release enforce exact ownership and protection lasts until exp
   const tabId = first.tab_id;
   controls.confirm = async () => 1;
   for (const owner of [undefined, null, "", "A"]) {
-    await assert.rejects(invoke("openwork:browser:restoreTab", tabId, owner), /owner mismatch/);
-    assert.throws(() => invoke("openwork:browser:releaseTab", tabId, owner), /owner mismatch/);
+    await assert.rejects(invoke("offlinegpt:browser:restoreTab", tabId, owner), /owner mismatch/);
+    assert.throws(() => invoke("offlinegpt:browser:releaseTab", tabId, owner), /owner mismatch/);
   }
-  await assert.rejects(invoke("openwork:browser:suspendTab", tabId), /protected/);
-  assert.deepEqual(invoke("openwork:browser:releaseTab", tabId, "B"), { tabId, released: true });
+  await assert.rejects(invoke("offlinegpt:browser:suspendTab", tabId), /protected/);
+  assert.deepEqual(invoke("offlinegpt:browser:releaseTab", tabId, "B"), { tabId, released: true });
   assert.equal(views()[0].webContents.isDestroyed(), false, "release is not a close or navigation");
-  await invoke("openwork:browser:suspendTab", tabId);
-  const suspended = invoke("openwork:browser:state").tabs;
-  await assert.rejects(invoke("openwork:browser:restoreTab", tabId, "A"), /owner mismatch/);
+  await invoke("offlinegpt:browser:suspendTab", tabId);
+  const suspended = invoke("offlinegpt:browser:state").tabs;
+  await assert.rejects(invoke("offlinegpt:browser:restoreTab", tabId, "A"), /owner mismatch/);
   assert.equal(views().length, 1, "ownership is checked before allocating a native page");
-  assert.deepEqual(invoke("openwork:browser:state").tabs, suspended);
-  const restored = await invoke("openwork:browser:restoreTab", tabId, "B");
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, suspended);
+  const restored = await invoke("offlinegpt:browser:restoreTab", tabId, "B");
   assert.equal(restored.tab_id, tabId);
   assert.equal(restored.owner_session_id, "B");
   assert.notEqual(restored.target_id, first.target_id);
   assert.deepEqual(views()[1].webContents.loads, [first.url]);
-  await assert.rejects(invoke("openwork:browser:suspendTab", tabId), /protected/);
+  await assert.rejects(invoke("offlinegpt:browser:suspendTab", tabId), /protected/);
   views()[1].webContents.close();
-  assert.deepEqual(invoke("openwork:browser:state").tabs, [], "ordinary CDP close still deletes the logical tab");
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, [], "ordinary CDP close still deletes the logical tab");
 });
 
 test("confirmation rechecks the captured page for active work, loading, downloads, and media", async (t) => {
   const { EventEmitter } = await import("node:events");
   const { invoke, views } = createTaskPanel(t);
-  const { tabId } = invoke("openwork:browser:createTab", "https://example.com", "B");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://example.com", "B");
   await flush();
   const contents = views()[0].webContents;
   for (const field of ["loading", "audible"]) {
     controls.confirm = async () => { contents[field] = true; return 1; };
-    await assert.rejects(invoke("openwork:browser:suspendTab", tabId), /loading, downloading, or playing/);
+    await assert.rejects(invoke("offlinegpt:browser:suspendTab", tabId), /loading, downloading, or playing/);
     contents[field] = false;
   }
   controls.confirm = async () => { contents.emit("media-started-playing"); return 1; };
-  await assert.rejects(invoke("openwork:browser:suspendTab", tabId), /playing media/);
+  await assert.rejects(invoke("offlinegpt:browser:suspendTab", tabId), /playing media/);
   contents.emit("media-paused");
   const download = new EventEmitter();
   controls.confirm = async () => { browserSession.emit("will-download", null, download, contents); return 1; };
-  await assert.rejects(invoke("openwork:browser:suspendTab", tabId), /downloading/);
+  await assert.rejects(invoke("offlinegpt:browser:suspendTab", tabId), /downloading/);
   download.emit("done");
-  controls.confirm = async () => { await invoke("openwork:browser:restoreTab", tabId, "B"); return 1; };
-  await assert.rejects(invoke("openwork:browser:suspendTab", tabId), /protected/);
-  invoke("openwork:browser:releaseTab", tabId, "B");
-  const other = invoke("openwork:browser:createTab", "about:blank", "B");
-  controls.confirm = async () => { invoke("openwork:browser:closeTab", tabId); return 1; };
-  await assert.rejects(invoke("openwork:browser:suspendTab", tabId), /Unknown/);
-  assert.deepEqual(invoke("openwork:browser:state").tabs.map(tab => tab.id), [other.tabId]);
+  controls.confirm = async () => { await invoke("offlinegpt:browser:restoreTab", tabId, "B"); return 1; };
+  await assert.rejects(invoke("offlinegpt:browser:suspendTab", tabId), /protected/);
+  invoke("offlinegpt:browser:releaseTab", tabId, "B");
+  const other = invoke("offlinegpt:browser:createTab", "about:blank", "B");
+  controls.confirm = async () => { invoke("offlinegpt:browser:closeTab", tabId); return 1; };
+  await assert.rejects(invoke("offlinegpt:browser:suspendTab", tabId), /Unknown/);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs.map(tab => tab.id), [other.tabId]);
 });
 
 test("beforeunload veto leaves the live document intact and pending close retains capacity even after timeout", async (t) => {
   const { invoke, views } = createPanel();
-  invoke("openwork:browser:setVisibleSession", "A");
-  const { tabId } = invoke("openwork:browser:createTab", "https://example.com", "A");
+  invoke("offlinegpt:browser:setVisibleSession", "A");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://example.com", "A");
   await flush();
   const contents = views()[0].webContents;
   controls.confirm = async () => 1;
   contents.closeMode = "veto";
-  await assert.rejects(invoke("openwork:browser:suspendTab", tabId), /page prevented/);
+  await assert.rejects(invoke("offlinegpt:browser:suspendTab", tabId), /page prevented/);
   assert.equal(contents.isDestroyed(), false);
-  assert.equal(invoke("openwork:browser:state").tabs[0].status, "ready");
-  for (let i = 1; i < 12; i++) invoke("openwork:browser:createTab", "about:blank", "A");
-  await invoke("openwork:browser:selectTab", tabId);
+  assert.equal(invoke("offlinegpt:browser:state").tabs[0].status, "ready");
+  for (let i = 1; i < 12; i++) invoke("offlinegpt:browser:createTab", "about:blank", "A");
+  await invoke("offlinegpt:browser:selectTab", tabId);
   contents.closeMode = "pending";
   t.mock.timers.enable({ apis: ["setTimeout"] });
-  const pending = invoke("openwork:browser:suspendTab", tabId);
+  const pending = invoke("offlinegpt:browser:suspendTab", tabId);
   const rejected = assert.rejects(pending, /still waiting to close/);
   await flush();
-  assert.equal(invoke("openwork:browser:state").tabs[0].status, "suspending");
-  await assert.rejects(invoke("openwork:browser:restoreTab", tabId, "A"), /busy/);
-  await assert.rejects(invoke("openwork:browser:selectTab", tabId), /suspending/);
-  assert.throws(() => invoke("openwork:browser:reload"), /suspending/);
+  assert.equal(invoke("offlinegpt:browser:state").tabs[0].status, "suspending");
+  await assert.rejects(invoke("offlinegpt:browser:restoreTab", tabId, "A"), /busy/);
+  await assert.rejects(invoke("offlinegpt:browser:selectTab", tabId), /suspending/);
+  assert.throws(() => invoke("offlinegpt:browser:reload"), /suspending/);
   t.mock.timers.tick(2501);
   await rejected;
-  assert.throws(() => invoke("openwork:browser:createTab", "about:blank"), /12 browser tabs/);
-  assert.equal(invoke("openwork:browser:state").nativeViews.length, 12);
+  assert.throws(() => invoke("offlinegpt:browser:createTab", "about:blank"), /12 browser tabs/);
+  assert.equal(invoke("offlinegpt:browser:state").nativeViews.length, 12);
   contents.close();
-  assert.equal(invoke("openwork:browser:state").tabs[0].status, "suspended");
-  invoke("openwork:browser:createTab", "about:blank");
-  assert.equal(invoke("openwork:browser:state").tabs.length, 13);
+  assert.equal(invoke("offlinegpt:browser:state").tabs[0].status, "suspended");
+  invoke("offlinegpt:browser:createTab", "about:blank");
+  assert.equal(invoke("offlinegpt:browser:state").tabs.length, 13);
 });
 
 test("failed and capacity-blocked restoration preserve saved metadata and a retry returns the same logical tab", async (t) => {
   const { invoke, views } = createTaskPanel(t);
-  const { tabId } = invoke("openwork:browser:createTab", "https://example.com", "B");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://example.com", "B");
   await flush();
   controls.confirm = async () => 1;
-  await invoke("openwork:browser:suspendTab", tabId);
-  const saved = invoke("openwork:browser:state").tabs[0];
+  await invoke("offlinegpt:browser:suspendTab", tabId);
+  const saved = invoke("offlinegpt:browser:state").tabs[0];
   controls.beforeLoad = async () => { throw new Error("Navigation failed"); };
-  await assert.rejects(invoke("openwork:browser:restoreTab", tabId, "B"), /Navigation failed/);
-  assert.deepEqual(invoke("openwork:browser:state").tabs, [saved]);
+  await assert.rejects(invoke("offlinegpt:browser:restoreTab", tabId, "B"), /Navigation failed/);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, [saved]);
   assert.ok(views().every(view => view.webContents.isDestroyed()));
-  assert.equal(invoke("openwork:browser:state").backgroundWindowCount, 0);
+  assert.equal(invoke("offlinegpt:browser:state").backgroundWindowCount, 0);
   controls.beforeLoad = async () => {};
   controls.beforeCommand = async (method) => { if (method === "Target.getTargetInfo") throw new Error("Target failed"); };
-  await assert.rejects(invoke("openwork:browser:restoreTab", tabId, "B"), /Target failed/);
-  assert.deepEqual(invoke("openwork:browser:state").tabs, [saved]);
+  await assert.rejects(invoke("offlinegpt:browser:restoreTab", tabId, "B"), /Target failed/);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, [saved]);
   controls.beforeCommand = async () => {};
-  for (let i = 0; i < 12; i++) invoke("openwork:browser:createTab", "about:blank", "A");
-  await assert.rejects(invoke("openwork:browser:restoreTab", tabId, "B"), /12 browser tabs/);
-  assert.deepEqual(invoke("openwork:browser:state").tabs[0], saved);
-  invoke("openwork:browser:closeSessionTabs", "A");
-  assert.equal((await invoke("openwork:browser:restoreTab", tabId, "B")).tab_id, tabId);
+  for (let i = 0; i < 12; i++) invoke("offlinegpt:browser:createTab", "about:blank", "A");
+  await assert.rejects(invoke("offlinegpt:browser:restoreTab", tabId, "B"), /12 browser tabs/);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs[0], saved);
+  invoke("offlinegpt:browser:closeSessionTabs", "A");
+  assert.equal((await invoke("offlinegpt:browser:restoreTab", tabId, "B")).tab_id, tabId);
 });
 
 test("deletion cancels pending suspension and restoration without resurrecting saved tabs", async (t) => {
   const { invoke, views } = createTaskPanel(t);
   controls.confirm = async () => 1;
-  const { tabId } = invoke("openwork:browser:createTab", "https://example.com", "B");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://example.com", "B");
   await flush();
   views()[0].webContents.closeMode = "pending";
-  const suspending = invoke("openwork:browser:suspendTab", tabId);
+  const suspending = invoke("offlinegpt:browser:suspendTab", tabId);
   const closed = assert.rejects(suspending, /closed/);
   await flush();
-  invoke("openwork:browser:closeSessionTabs", "B");
+  invoke("offlinegpt:browser:closeSessionTabs", "B");
   await closed;
-  assert.deepEqual(invoke("openwork:browser:state").tabs, []);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, []);
 
-  const saved = invoke("openwork:browser:createTab", "https://example.com", "B");
+  const saved = invoke("offlinegpt:browser:createTab", "https://example.com", "B");
   await flush();
-  await invoke("openwork:browser:suspendTab", saved.tabId);
+  await invoke("offlinegpt:browser:suspendTab", saved.tabId);
   const loading = gate();
   controls.beforeLoad = () => loading.promise;
-  const restoring = invoke("openwork:browser:restoreTab", saved.tabId, "B");
+  const restoring = invoke("offlinegpt:browser:restoreTab", saved.tabId, "B");
   const cancelled = assert.rejects(restoring, /destroyed|closed/);
-  await assert.rejects(invoke("openwork:browser:restoreTab", saved.tabId, "B"), /busy/);
-  assert.equal(invoke("openwork:browser:state").nativeViews.length, 1);
-  invoke("openwork:browser:closeAllTabs");
+  await assert.rejects(invoke("offlinegpt:browser:restoreTab", saved.tabId, "B"), /busy/);
+  assert.equal(invoke("offlinegpt:browser:state").nativeViews.length, 1);
+  invoke("offlinegpt:browser:closeAllTabs");
   loading.finish();
   await cancelled;
-  assert.deepEqual(invoke("openwork:browser:state").tabs, []);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, []);
   assert.ok(views().every(view => view.webContents.isDestroyed()));
 
   controls.beforeLoad = async () => {};
   for (const channel of ["closeTab", "closeSessionTabs", "closeAllTabs", "destroy"]) {
-    const next = invoke("openwork:browser:createTab", "about:blank", "B");
+    const next = invoke("offlinegpt:browser:createTab", "about:blank", "B");
     await flush();
-    await invoke("openwork:browser:suspendTab", next.tabId);
-    invoke(`openwork:browser:${channel}`, channel === "closeSessionTabs" ? "B" : next.tabId);
-    assert.deepEqual(invoke("openwork:browser:state").tabs, []);
-    await assert.rejects(invoke("openwork:browser:selectTab", next.tabId), /Unknown/);
+    await invoke("offlinegpt:browser:suspendTab", next.tabId);
+    invoke(`offlinegpt:browser:${channel}`, channel === "closeSessionTabs" ? "B" : next.tabId);
+    assert.deepEqual(invoke("offlinegpt:browser:state").tabs, []);
+    await assert.rejects(invoke("offlinegpt:browser:selectTab", next.tabId), /Unknown/);
   }
 });
 
@@ -764,7 +764,7 @@ test("a catalog choice launches only the selected browser with the exact link, n
 
   assert.deepEqual(policies, [{ url: LINK.url, external: true }]);
   assert.deepEqual(effects, [{ type: "browser", id: "firefox", url: LINK.url }]);
-  assert.deepEqual(invoke("openwork:browser:state").tabs, []);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, []);
 });
 
 test("external policy denial prevents catalog and default launches without a built-in fallback", async () => {
@@ -776,7 +776,7 @@ test("external policy denial prevents catalog and default launches without a bui
 
     assert.deepEqual(policies, [{ url: LINK.url, external: true }], itemId);
     assert.deepEqual(effects, [{ type: "dialog" }], itemId);
-    assert.deepEqual(invoke("openwork:browser:state").tabs, [], itemId);
+    assert.deepEqual(invoke("offlinegpt:browser:state").tabs, [], itemId);
   }
 });
 
@@ -788,15 +788,15 @@ test("copying a link neither checks policy nor launches a browser", async () => 
 
   assert.deepEqual(effects, [{ type: "copy", url: LINK.url }]);
   assert.deepEqual(policies, []);
-  assert.deepEqual(invoke("openwork:browser:state").tabs, []);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, []);
 });
 
 test("link menus reject untrusted senders, subframes, and non-HTTP payloads", async () => {
   const { emit, invoke, mainContents, views, policies } = createPanel();
-  emit("openwork:browser:linkContextMenu", { sender: {}, senderFrame: mainContents.mainFrame }, LINK);
-  emit("openwork:browser:linkContextMenu", { sender: mainContents, senderFrame: {} }, LINK);
-  for (const url of ["javascript:alert(1)", "file:///tmp/link.html", "data:text/html,link", "openwork://settings"]) {
-    invoke("openwork:browser:linkContextMenu", { ...LINK, url });
+  emit("offlinegpt:browser:linkContextMenu", { sender: {}, senderFrame: mainContents.mainFrame }, LINK);
+  emit("offlinegpt:browser:linkContextMenu", { sender: mainContents, senderFrame: {} }, LINK);
+  for (const url of ["javascript:alert(1)", "file:///tmp/link.html", "data:text/html,link", "offlinegpt://settings"]) {
+    invoke("offlinegpt:browser:linkContextMenu", { ...LINK, url });
   }
   await flush();
 
@@ -809,18 +809,18 @@ test("the built-in choice retains the captured owner when focus changes before p
   /** @type {(() => void) | undefined} */
   let allow;
   const { openLinkMenu, invoke, policies } = createPanel(() => new Promise((resolve) => { allow = resolve; }));
-  invoke("openwork:browser:setVisibleSession", "B");
+  invoke("offlinegpt:browser:setVisibleSession", "B");
   const { choose } = await openLinkMenu();
   choose("open-builtin");
   await flush();
   assert.deepEqual(policies, [{ url: LINK.url, external: false }]);
-  assert.deepEqual(invoke("openwork:browser:state").tabs, [], "navigation waits for policy");
-  invoke("openwork:browser:setVisibleSession", "C");
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, [], "navigation waits for policy");
+  invoke("offlinegpt:browser:setVisibleSession", "C");
   assert.ok(allow, "the pending policy check exposes its completion");
   allow();
   await flush();
 
-  const state = invoke("openwork:browser:state");
+  const state = invoke("offlinegpt:browser:state");
   assert.equal(state.visibleSessionId, "C");
   assert.deepEqual(state.tabs.map(({ url, ownerSessionId }) => ({ url, ownerSessionId })), [{ url: LINK.url, ownerSessionId: "A" }]);
   assert.equal(state.activeTabId, null, "the captured owner's tab does not take the visible conversation");
@@ -829,19 +829,19 @@ test("the built-in choice retains the captured owner when focus changes before p
 
 test("forged menu requests, senders, and action IDs are ignored without dismissing the valid menu", async () => {
   const { openLinkMenu, invoke, emit, policies, children } = createPanel();
-  invoke("openwork:browser:createTab", "https://existing.example");
+  invoke("offlinegpt:browser:createTab", "https://existing.example");
   const { view, request, choose } = await openLinkMenu();
-  const tabs = invoke("openwork:browser:state").tabs;
+  const tabs = invoke("offlinegpt:browser:state").tabs;
   policies.length = 0;
-  emit("openwork:menu-overlay:choose", { sender: view.webContents }, { requestId: "forged", itemId: "browser:firefox" });
-  invoke("openwork:menu-overlay:choose", { requestId: request.id, itemId: "browser:firefox" });
+  emit("offlinegpt:menu-overlay:choose", { sender: view.webContents }, { requestId: "forged", itemId: "browser:firefox" });
+  invoke("offlinegpt:menu-overlay:choose", { requestId: request.id, itemId: "browser:firefox" });
   choose("browser:unlisted");
   choose("close-all-tabs");
   await flush();
 
   assert.deepEqual(policies, []);
   assert.deepEqual(effects, []);
-  assert.deepEqual(invoke("openwork:browser:state").tabs, tabs);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, tabs);
   assert.ok(children.includes(view), "invalid choices leave the menu open");
   choose("copy-url");
   assert.deepEqual(effects, [{ type: "copy", url: LINK.url }]);
@@ -850,45 +850,45 @@ test("forged menu requests, senders, and action IDs are ignored without dismissi
 
 test("automation open waits for its owner's consent and then reuses only that owned task tab", async () => {
   const { invoke, onScreen, views, panel, approve } = createPanel(undefined, 9222);
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  invoke("openwork:browser:createTab", "https://a.example", "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:createTab", "https://a.example", "A");
   const foreground = onScreen();
-  const opening = invoke("openwork:browser:openUrl", "https://b.example/", "builtin", { sessionId: "B" });
+  const opening = invoke("offlinegpt:browser:openUrl", "https://b.example/", "builtin", { sessionId: "B" });
   await flush();
   assert.equal(onScreen(), foreground);
   assert.deepEqual(views()[1].webContents.loads, [], "background approval sends no destination load");
-  invoke("openwork:browser:setVisibleSession", "B");
+  invoke("offlinegpt:browser:setVisibleSession", "B");
   approve();
   const opened = await opening;
   assert.deepEqual(opened, {
     provider: "builtin", browser_url: "http://127.0.0.1:9222", target_id: views()[1].webContents.getOrCreateDevToolsTargetId(),
-    tab_id: invoke("openwork:browser:state").activeTabIdByOwner.B, url: "https://b.example/", owner_session_id: "B", visible: true,
+    tab_id: invoke("offlinegpt:browser:state").activeTabIdByOwner.B, url: "https://b.example/", owner_session_id: "B", visible: true,
   });
-  invoke("openwork:browser:setVisibleSession", "A");
+  invoke("offlinegpt:browser:setVisibleSession", "A");
   assert.equal(onScreen(), foreground);
   assert.deepEqual(views()[1].webContents.loads, ["https://b.example/"]);
   assert.equal((await panel.browserTask({ sessionId: "B", operation: "open", args: { url: opened.url } })).tabId, opened.tab_id);
-  assert.deepEqual(await invoke("openwork:browser:openUrl", opened.url, "builtin", { sessionId: "B" }), { ...opened, visible: false });
+  assert.deepEqual(await invoke("offlinegpt:browser:openUrl", opened.url, "builtin", { sessionId: "B" }), { ...opened, visible: false });
   assert.equal(views().length, 2, "both automation rails reuse the owned task tab");
 });
 
 test("automation open rejects paused and disabled control before creating or navigating a tab", async () => {
   const { invoke, onScreen, views } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  const { tabId } = invoke("openwork:browser:createTab", "https://a.example/", "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://a.example/", "A");
   await flush();
-  invoke("openwork:browser:taskControl", tabId, "pause");
-  const before = invoke("openwork:browser:state");
+  invoke("offlinegpt:browser:taskControl", tabId, "pause");
+  const before = invoke("offlinegpt:browser:state");
   const foreground = onScreen();
   const loads = [...foreground.webContents.loads];
-  await assert.rejects(invoke("openwork:browser:openUrl", "https://a.example/new", "builtin", { sessionId: "A" }), { code: "paused" });
-  invoke("openwork:browser:setControlEnabled", false);
-  await assert.rejects(invoke("openwork:browser:openUrl", "https://a.example/new", "builtin", { sessionId: "A" }), { code: "browser_disabled" });
+  await assert.rejects(invoke("offlinegpt:browser:openUrl", "https://a.example/new", "builtin", { sessionId: "A" }), { code: "paused" });
+  invoke("offlinegpt:browser:setControlEnabled", false);
+  await assert.rejects(invoke("offlinegpt:browser:openUrl", "https://a.example/new", "builtin", { sessionId: "A" }), { code: "browser_disabled" });
   assert.equal(views().length, 1);
   assert.equal(onScreen(), foreground);
-  assert.deepEqual(invoke("openwork:browser:state").tabs.map((tab) => tab.id), before.tabs.map((tab) => tab.id));
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs.map((tab) => tab.id), before.tabs.map((tab) => tab.id));
   assert.deepEqual(foreground.webContents.loads, loads);
-  invoke("openwork:browser:navigate", "https://a.example/person");
+  invoke("offlinegpt:browser:navigate", "https://a.example/person");
   await flush();
   assert.equal(foreground.webContents.getURL(), "https://a.example/person", "human navigation remains separate");
 });
@@ -898,13 +898,13 @@ test("takeover cancels automation opening during policy and during navigation", 
   let releasePolicy;
   const policy = new Promise((resolve) => { releasePolicy = () => resolve(undefined); });
   const { invoke, views, approve } = createPanel(async ({ url }) => { if (url.endsWith("/policy")) await policy; });
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  const { tabId } = invoke("openwork:browser:createTab", "https://a.example/", "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "https://a.example/", "A");
   await flush();
-  const beforeDispatch = invoke("openwork:browser:openUrl", "https://a.example/policy", "builtin", { sessionId: "A" });
-  invoke("openwork:browser:taskControl", tabId, "pause");
+  const beforeDispatch = invoke("offlinegpt:browser:openUrl", "https://a.example/policy", "builtin", { sessionId: "A" });
+  invoke("offlinegpt:browser:taskControl", tabId, "pause");
   await assert.rejects(beforeDispatch, { code: "paused" });
-  invoke("openwork:browser:taskControl", tabId, "resume");
+  invoke("offlinegpt:browser:taskControl", tabId, "resume");
   releasePolicy();
   await flush();
   assert.equal(views().length, 1, "resuming cannot revive a canceled opening");
@@ -913,19 +913,19 @@ test("takeover cancels automation opening during policy and during navigation", 
   let finishLoad;
   const loading = new Promise((resolve) => { finishLoad = () => resolve(undefined); });
   t.mock.method(navigation, "load", () => loading);
-  const inFlight = invoke("openwork:browser:openUrl", "https://a.example/slow", "builtin", { sessionId: "A" });
+  const inFlight = invoke("offlinegpt:browser:openUrl", "https://a.example/slow", "builtin", { sessionId: "A" });
   await flush();
   assert.equal(views().length, 2);
   approve();
   await flush();
-  invoke("openwork:browser:taskControl", tabId, "pause");
+  invoke("offlinegpt:browser:taskControl", tabId, "pause");
   await assert.rejects(inFlight, { code: "paused" });
   assert.equal(views()[1].webContents.stops, 1);
   finishLoad();
   await flush();
   assert.deepEqual(views()[1].webContents.loads, ["https://a.example/slow"]);
   assert.equal(views()[1].webContents.isDestroyed(), true, "a canceled open releases its abandoned page");
-  assert.ok(invoke("openwork:browser:state").tabs.every((tab) => tab.browserTask.status === "paused"));
+  assert.ok(invoke("offlinegpt:browser:state").tabs.every((tab) => tab.browserTask.status === "paused"));
 });
 
 test("a first task open stays blank through asynchronous panel mounting and localhost needs explicit consent", async () => {
@@ -934,87 +934,87 @@ test("a first task open stays blank through asynchronous panel mounting and loca
   const url = "http://localhost:4173/preview";
   const opening = panel.browserTask({ sessionId: "A", operation: "open", args: { url } });
   await flush();
-  const pending = invoke("openwork:browser:state").tabs[0];
+  const pending = invoke("offlinegpt:browser:state").tabs[0];
   assert.equal(pending.url, "about:blank");
   assert.equal(pending.browserApproval.approveLabel, "Allow origin in this tab");
   assert.match(pending.browserApproval.message, /http:\/\/localhost:4173/);
   assert.deepEqual(views()[0].webContents.loads, []);
   assert.deepEqual(views()[0].webContents.destinations, []);
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  assert.equal(invoke("openwork:browser:state").tabs[0].browserApproval.id, pending.browserApproval.id, "mounting preserves the pending review");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  assert.equal(invoke("offlinegpt:browser:state").tabs[0].browserApproval.id, pending.browserApproval.id, "mounting preserves the pending review");
   approve();
   const result = await opening;
   assert.equal(result.ok, true);
-  assert.equal(invoke("openwork:browser:state").tabs[0].browserTask.status, "idle");
+  assert.equal(invoke("offlinegpt:browser:state").tabs[0].browserTask.status, "idle");
   assert.deepEqual(views()[0].webContents.loads, [url]);
   assert.deepEqual(views()[0].webContents.destinations, [url]);
   assert.equal(requestHooks.length, hooksBefore + 1, "one all-request listener handles both policy and consent");
   const reading = panel.browserTask({ sessionId: "A", operation: "observe", args: { tabId: result.tabId } });
   await flush();
-  assert.equal(invoke("openwork:browser:state").tabs[0].browserApproval.title, "Allow website access?", "navigation did not grant reading or action access");
+  assert.equal(invoke("offlinegpt:browser:state").tabs[0].browserApproval.title, "Allow website access?", "navigation did not grant reading or action access");
   approve(false);
   assert.equal((await reading).code, "user_denied");
 });
 
 test("local development auto-approval opens browser tasks without a permission card", async (t) => {
-  const previousDevMode = process.env.OPENWORK_DEV_MODE;
-  const previousAutoApprove = process.env.OPENWORK_BROWSER_AUTO_APPROVE;
+  const previousDevMode = process.env.OFFLINEGPT_DEV_MODE;
+  const previousAutoApprove = process.env.OFFLINEGPT_BROWSER_AUTO_APPROVE;
   t.after(() => {
-    if (previousDevMode === undefined) delete process.env.OPENWORK_DEV_MODE;
-    else process.env.OPENWORK_DEV_MODE = previousDevMode;
-    if (previousAutoApprove === undefined) delete process.env.OPENWORK_BROWSER_AUTO_APPROVE;
-    else process.env.OPENWORK_BROWSER_AUTO_APPROVE = previousAutoApprove;
+    if (previousDevMode === undefined) delete process.env.OFFLINEGPT_DEV_MODE;
+    else process.env.OFFLINEGPT_DEV_MODE = previousDevMode;
+    if (previousAutoApprove === undefined) delete process.env.OFFLINEGPT_BROWSER_AUTO_APPROVE;
+    else process.env.OFFLINEGPT_BROWSER_AUTO_APPROVE = previousAutoApprove;
   });
-  process.env.OPENWORK_DEV_MODE = "1";
-  process.env.OPENWORK_BROWSER_AUTO_APPROVE = "1";
+  process.env.OFFLINEGPT_DEV_MODE = "1";
+  process.env.OFFLINEGPT_BROWSER_AUTO_APPROVE = "1";
 
   const { invoke, panel, views } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
   const opening = panel.browserTask({ sessionId: "A", operation: "open", args: { url: "https://example.com/" } });
   const result = await opening;
 
   assert.equal(result.ok, true);
   assert.deepEqual(views()[0].webContents.destinations, ["https://example.com/"]);
-  assert.equal(invoke("openwork:browser:state").tabs[0].browserApproval, null);
+  assert.equal(invoke("offlinegpt:browser:state").tabs[0].browserApproval, null);
 });
 
 test("local development auto-approval can finish the first open while the browser panel mounts", async (t) => {
-  const previousDevMode = process.env.OPENWORK_DEV_MODE;
-  const previousAutoApprove = process.env.OPENWORK_BROWSER_AUTO_APPROVE;
+  const previousDevMode = process.env.OFFLINEGPT_DEV_MODE;
+  const previousAutoApprove = process.env.OFFLINEGPT_BROWSER_AUTO_APPROVE;
   t.after(() => {
-    if (previousDevMode === undefined) delete process.env.OPENWORK_DEV_MODE;
-    else process.env.OPENWORK_DEV_MODE = previousDevMode;
-    if (previousAutoApprove === undefined) delete process.env.OPENWORK_BROWSER_AUTO_APPROVE;
-    else process.env.OPENWORK_BROWSER_AUTO_APPROVE = previousAutoApprove;
+    if (previousDevMode === undefined) delete process.env.OFFLINEGPT_DEV_MODE;
+    else process.env.OFFLINEGPT_DEV_MODE = previousDevMode;
+    if (previousAutoApprove === undefined) delete process.env.OFFLINEGPT_BROWSER_AUTO_APPROVE;
+    else process.env.OFFLINEGPT_BROWSER_AUTO_APPROVE = previousAutoApprove;
   });
-  process.env.OPENWORK_DEV_MODE = "1";
-  process.env.OPENWORK_BROWSER_AUTO_APPROVE = "1";
+  process.env.OFFLINEGPT_DEV_MODE = "1";
+  process.env.OFFLINEGPT_BROWSER_AUTO_APPROVE = "1";
 
   const { invoke, panel, views } = createPanel();
   const result = await panel.browserTask({ sessionId: "A", operation: "open", args: { url: "https://www.google.com/travel/flights" } });
 
   assert.equal(result.ok, true);
   assert.deepEqual(views()[0].webContents.destinations, ["https://www.google.com/travel/flights"]);
-  assert.equal(invoke("openwork:browser:state").tabs[0].browserApproval, null);
+  assert.equal(invoke("offlinegpt:browser:state").tabs[0].browserApproval, null);
 });
 
 test("denied, canceled, closed and background task opens never load and release their blank tabs", async () => {
   for (const end of ["deny", "cancel", "close", "background"]) {
     const { invoke, panel, views, approve } = createPanel();
-    invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+    invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
     const controller = new AbortController();
     const opening = panel.browserTask({ sessionId: end === "background" ? "B" : "A", operation: "open", args: { url: "http://127.0.0.1:4173/" } }, { signal: controller.signal });
     await flush();
-    const tab = invoke("openwork:browser:state").tabs[0];
+    const tab = invoke("offlinegpt:browser:state").tabs[0];
     if (end === "deny") approve(false);
-    if (end === "close") invoke("openwork:browser:closeTab", tab.id);
+    if (end === "close") invoke("offlinegpt:browser:closeTab", tab.id);
     if (end === "cancel") controller.abort();
     if (end === "background") {
       assert.equal(views()[0].webContents.debugger.isAttached(), false, "an uninitialized consent tab must not enter background emulation");
       assert.deepEqual(views()[0].webContents.debugger.commands, []);
-      assert.equal(invoke("openwork:browser:state").backgroundWindowCount, 0, "pending consent needs no hidden native host");
+      assert.equal(invoke("offlinegpt:browser:state").backgroundWindowCount, 0, "pending consent needs no hidden native host");
       assert.equal(approve(true, tab.id), false, "another visible conversation cannot approve");
-      assert.ok(invoke("openwork:browser:state").tabs[0].browserApproval);
+      assert.ok(invoke("offlinegpt:browser:state").tabs[0].browserApproval);
       controller.abort();
     }
     assert.equal((await opening).ok, false, end);
@@ -1022,38 +1022,38 @@ test("denied, canceled, closed and background task opens never load and release 
     assert.deepEqual(views()[0].webContents.loads, [], end);
     assert.deepEqual(views()[0].webContents.destinations, [], end);
     assert.equal(views()[0].webContents.isDestroyed(), true, end);
-    assert.deepEqual(invoke("openwork:browser:state").tabs, [], end);
+    assert.deepEqual(invoke("offlinegpt:browser:state").tabs, [], end);
   }
 });
 
 test("the task timeout cancels the longer approval dialog and late acceptance cannot navigate", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const { invoke, panel, views } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
   const opening = panel.browserTask({ sessionId: "A", operation: "open", args: { url: "https://slow.example/" } });
   await flush();
-  const tab = invoke("openwork:browser:state").tabs[0];
+  const tab = invoke("offlinegpt:browser:state").tabs[0];
   t.mock.timers.tick(30_000);
   assert.equal((await opening).code, "timeout");
-  assert.equal(invoke("openwork:browser:approve", tab.id, tab.browserApproval.id, true), false);
+  assert.equal(invoke("offlinegpt:browser:approve", tab.id, tab.browserApproval.id, true), false);
   assert.deepEqual(views()[0].webContents.loads, []);
   assert.deepEqual(views()[0].webContents.destinations, []);
-  assert.deepEqual(invoke("openwork:browser:state").tabs, []);
+  assert.deepEqual(invoke("offlinegpt:browser:state").tabs, []);
 });
 
 test("blocked main-window links require navigation consent and retain their originating owner", async () => {
   for (const allowed of [false, true]) {
     const { invoke, panel, views, approve } = createPanel();
-    invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+    invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
     panel.routeBlockedMainWindowNavigation("https://linked.example/private");
-    invoke("openwork:browser:setVisibleSession", "B");
+    invoke("offlinegpt:browser:setVisibleSession", "B");
     await flush();
-    const tab = invoke("openwork:browser:state").tabs[0];
+    const tab = invoke("offlinegpt:browser:state").tabs[0];
     assert.equal(tab.ownerSessionId, "A", "the destination belongs to the conversation that initiated the navigation");
     assert.equal(tab.browserApproval.approveLabel, "Allow origin in this tab");
     assert.deepEqual(views()[0].webContents.destinations, []);
     assert.equal(approve(true, tab.id), false, "another conversation cannot authorize the destination");
-    invoke("openwork:browser:setVisibleSession", "A");
+    invoke("offlinegpt:browser:setVisibleSession", "A");
     approve(allowed, tab.id);
     await flush();
     assert.deepEqual(views()[0].webContents.destinations, allowed ? ["https://linked.example/private"] : []);
@@ -1063,7 +1063,7 @@ test("blocked main-window links require navigation consent and retain their orig
 
 test("task navigation reuses only exact-origin consent in the same tab", async () => {
   const { invoke, panel, views, approve } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
   const opening = panel.browserTask({ sessionId: "A", operation: "open", args: { url: "http://127.0.0.1:4173/" } });
   await flush(); approve();
   const { tabId } = await opening;
@@ -1086,7 +1086,7 @@ test("task navigation reuses only exact-origin consent in the same tab", async (
 test("the request hook holds a cross-origin main-frame redirect before any target request", async (t) => {
   for (const outcome of ["deny", "allow", "cancel", "close", "background"]) {
     const { invoke, panel, views, approve } = createPanel();
-    invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+    invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
     const start = "https://redirect.example/";
     const destination = "http://127.0.0.1:4173/private";
     t.mock.method(navigation, "load", async (url, contents) => {
@@ -1099,13 +1099,13 @@ test("the request hook holds a cross-origin main-frame redirect before any targe
     await flush(); approve();
     await flush();
     assert.deepEqual(views()[0].webContents.destinations, [start]);
-    assert.match(invoke("openwork:browser:state").tabs[0].browserApproval.message, /http:\/\/127.0.0.1:4173/);
-    const tab = invoke("openwork:browser:state").tabs[0];
+    assert.match(invoke("offlinegpt:browser:state").tabs[0].browserApproval.message, /http:\/\/127.0.0.1:4173/);
+    const tab = invoke("offlinegpt:browser:state").tabs[0];
     if (outcome === "allow" || outcome === "deny") approve(outcome === "allow");
     if (outcome === "cancel") controller.abort();
-    if (outcome === "close") invoke("openwork:browser:closeTab", tab.id);
+    if (outcome === "close") invoke("offlinegpt:browser:closeTab", tab.id);
     if (outcome === "background") {
-      invoke("openwork:browser:setVisibleSession", "B");
+      invoke("offlinegpt:browser:setVisibleSession", "B");
       assert.equal(approve(true, tab.id), false);
       assert.deepEqual(views()[0].webContents.destinations, [start]);
       controller.abort();
@@ -1118,7 +1118,7 @@ test("the request hook holds a cross-origin main-frame redirect before any targe
 
 test("navigation grants do not cross tabs or conversations and canceled approval cannot be revived", async () => {
   const { invoke, panel, views, approve } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
   const opening = panel.browserTask({ sessionId: "A", operation: "open", args: { url: "https://owned.example/" } });
   await flush(); approve();
   const first = await opening;
@@ -1126,12 +1126,12 @@ test("navigation grants do not cross tabs or conversations and canceled approval
   for (const sessionId of ["A", "B"]) {
     const second = panel.browserTask({ sessionId, operation: "open", args: { url: "https://owned.example/second" } });
     await flush();
-    const tab = invoke("openwork:browser:state").tabs.at(-1);
+    const tab = invoke("offlinegpt:browser:state").tabs.at(-1);
     assert.ok(tab.browserApproval, "the first tab's grant is not reused");
     assert.deepEqual(views().at(-1).webContents.loads, []);
-    invoke("openwork:browser:closeSessionTabs", sessionId);
+    invoke("offlinegpt:browser:closeSessionTabs", sessionId);
     assert.equal((await second).ok, false);
-    assert.equal(invoke("openwork:browser:approve", tab.id, tab.browserApproval.id, true), false);
+    assert.equal(invoke("offlinegpt:browser:approve", tab.id, tab.browserApproval.id, true), false);
     assert.deepEqual(views().at(-1).webContents.destinations, []);
   }
 });
@@ -1141,7 +1141,7 @@ test("managed policy denial precedes loading and is rechecked after navigation a
   const { invoke, panel, views, approve } = createPanel(async ({ url, hasUpload }) => {
     if (url !== "about:blank" && (blocked || hasUpload)) throw new Error("managed denial");
   });
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
   const open = () => panel.browserTask({ sessionId: "A", operation: "open", args: { url: "http://localhost:4173/" } });
   assert.equal((await open()).code, "website_blocked");
   assert.equal(views().length, 0);
@@ -1153,7 +1153,7 @@ test("managed policy denial precedes loading and is rechecked after navigation a
   blocked = false;
   const accepted = open();
   await flush();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
   approve();
   assert.equal((await accepted).ok, true);
   const contents = views()[1].webContents;
@@ -1166,15 +1166,15 @@ test("managed policy denial precedes loading and is rechecked after navigation a
 
 test("takeover cancels pending navigation, permits manual browsing without grants, and requires fresh consent on resume", async () => {
   const { invoke, emit, panel, views, approve, mainContents } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
-  const { tabId } = invoke("openwork:browser:createTab", "about:blank", "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
+  const { tabId } = invoke("offlinegpt:browser:createTab", "about:blank", "A");
   await flush();
   const url = "http://localhost:4173/";
   const navigate = () => panel.browserTask({ sessionId: "A", operation: "navigate", args: { tabId, url } });
   const pending = navigate();
   await flush();
-  const approvalId = invoke("openwork:browser:state").tabs[0].browserApproval.id;
-  invoke("openwork:browser:taskControl", tabId, "pause");
+  const approvalId = invoke("offlinegpt:browser:state").tabs[0].browserApproval.id;
+  invoke("offlinegpt:browser:taskControl", tabId, "pause");
   assert.equal((await pending).ok, false);
   assert.deepEqual(views()[0].webContents.destinations, []);
   assert.equal((await navigate()).code, "paused");
@@ -1186,16 +1186,16 @@ test("takeover cancels pending navigation, permits manual browsing without grant
   }
   for (const channel of ["navigate", "back", "forward", "reload"]) {
     for (const event of [{ sender: contents, senderFrame: {} }, { sender: mainContents, senderFrame: {} }]) {
-      assert.throws(() => emit(`openwork:browser:${channel}`, event, url), /browser toolbar/);
+      assert.throws(() => emit(`offlinegpt:browser:${channel}`, event, url), /browser toolbar/);
       assert.deepEqual(await contents.request("https://forged-toolbar.example/"), { cancel: true });
     }
   }
   assert.deepEqual(contents.destinations, [], "neither queued input nor a forged toolbar message contacts a destination");
-  invoke("openwork:browser:navigate", url);
+  invoke("offlinegpt:browser:navigate", url);
   await flush();
   assert.deepEqual(views()[0].webContents.destinations, [url], "manual takeover navigation is still available");
-  invoke("openwork:browser:taskControl", tabId, "resume");
-  assert.equal(invoke("openwork:browser:approve", tabId, approvalId, true), false);
+  invoke("offlinegpt:browser:taskControl", tabId, "resume");
+  assert.equal(invoke("offlinegpt:browser:approve", tabId, approvalId, true), false);
   const resumed = navigate();
   await flush();
   assert.deepEqual(views()[0].webContents.destinations, [url]);
@@ -1209,18 +1209,18 @@ test("a request already waiting on managed policy cannot become manual traffic a
   const { invoke, panel, views, approve } = createPanel(async ({ url, method }) => {
     if (method && url.endsWith("/held")) await new Promise((resolve) => { release = () => resolve(undefined); });
   });
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
   const opening = panel.browserTask({ sessionId: "A", operation: "open", args: { url: "https://owned.example/" } });
   await flush(); approve();
   const { tabId } = await opening;
   const request = views()[0].webContents.request("https://other.example/held");
   await flush();
-  invoke("openwork:browser:taskControl", tabId, "pause");
-  invoke("openwork:browser:taskControl", tabId, "resume");
+  invoke("offlinegpt:browser:taskControl", tabId, "pause");
+  invoke("offlinegpt:browser:taskControl", tabId, "resume");
   release();
   assert.deepEqual(await request, { cancel: true });
   assert.deepEqual(views()[0].webContents.destinations, ["https://owned.example/"]);
-  assert.equal(invoke("openwork:browser:state").tabs[0].browserApproval, null);
+  assert.equal(invoke("offlinegpt:browser:state").tabs[0].browserApproval, null);
 });
 
 test("hiding a tab during post-acceptance policy checking withholds navigation and its grant", async () => {
@@ -1230,13 +1230,13 @@ test("hiding a tab during post-acceptance policy checking withholds navigation a
   const { invoke, panel, views, approve } = createPanel(async () => {
     if (hold) await new Promise((resolve) => { release = () => resolve(undefined); });
   });
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
   const opening = panel.browserTask({ sessionId: "A", operation: "open", args: { url: "http://localhost:4173/" } });
   await flush();
   hold = true;
   approve();
   await flush();
-  invoke("openwork:browser:hide");
+  invoke("offlinegpt:browser:hide");
   hold = false;
   release();
   assert.equal((await opening).code, "needs_attention");
@@ -1247,7 +1247,7 @@ test("hiding a tab during post-acceptance policy checking withholds navigation a
 
 test("task popups inherit the navigation gate but no grants, including late popups after pause", async () => {
   const { invoke, panel, views, approve } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
   const url = "https://owned.example/";
   const opening = panel.browserTask({ sessionId: "A", operation: "open", args: { url } });
   await flush(); approve();
@@ -1259,7 +1259,7 @@ test("task popups inherit the navigation gate but no grants, including late popu
   assert.deepEqual(child.destinations, []);
   approve(false);
   assert.deepEqual(await pending, { cancel: true });
-  invoke("openwork:browser:taskControl", tabId, "pause");
+  invoke("offlinegpt:browser:taskControl", tabId, "pause");
   const lateChild = popup();
   assert.deepEqual(await lateChild.request(url), { cancel: true });
   assert.deepEqual(lateChild.destinations, []);
@@ -1267,15 +1267,15 @@ test("task popups inherit the navigation gate but no grants, including late popu
 
 test("adopting a manual popup guards its existing opener without sharing the popup's grant", async () => {
   const { invoke, panel, views, approve } = createPanel();
-  invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+  invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
   const url = "https://related.example/";
   const privateUrl = "http://127.0.0.1:4173/private";
-  const openerTab = invoke("openwork:browser:createTab", url, "A");
+  const openerTab = invoke("offlinegpt:browser:createTab", url, "A");
   await flush();
   const opener = views()[0].webContents;
   const popup = opener.windowOpenHandler({ url, disposition: "foreground-tab" }).createWindow({});
   await popup.loadURL(url);
-  const popupId = invoke("openwork:browser:state").activeTabId;
+  const popupId = invoke("offlinegpt:browser:state").activeTabId;
   const adopting = panel.browserTask({ sessionId: "A", operation: "open", args: { tabId: popupId, url } });
   await flush(); approve();
   assert.equal((await adopting).ok, true);
@@ -1284,15 +1284,15 @@ test("adopting a manual popup guards its existing opener without sharing the pop
   // window.opener.location. The pre-existing opener must not remain unguarded.
   assert.deepEqual(await opener.request(privateUrl), { cancel: true });
   assert.deepEqual(opener.destinations, [url]);
-  invoke("openwork:browser:selectTab", openerTab.tabId);
+  invoke("offlinegpt:browser:selectTab", openerTab.tabId);
   const sameOrigin = opener.request(url);
   await flush();
-  assert.ok(invoke("openwork:browser:state").tabs[0].browserApproval, "the popup's grant does not authorize its opener");
+  assert.ok(invoke("offlinegpt:browser:state").tabs[0].browserApproval, "the popup's grant does not authorize its opener");
   approve(false);
   assert.deepEqual(await sameOrigin, { cancel: true });
   const privateNavigation = opener.request(privateUrl);
   await flush();
-  assert.match(invoke("openwork:browser:state").tabs[0].browserApproval.message, /http:\/\/127.0.0.1:4173/);
+  assert.match(invoke("offlinegpt:browser:state").tabs[0].browserApproval.message, /http:\/\/127.0.0.1:4173/);
   assert.deepEqual(opener.destinations, [url], "the private destination is held until its own approval");
   approve();
   assert.deepEqual(await privateNavigation, { cancel: false });
@@ -1302,7 +1302,7 @@ test("adopting a manual popup guards its existing opener without sharing the pop
 test("parent observations preserve popup approval and grants, but deliberate lifecycle endings still revoke them", async () => {
   for (const ending of ["cancel", "takeover", "close"]) {
     const { invoke, panel, views, approve } = createPanel();
-    invoke("openwork:browser:show", PANEL_BOUNDS, "A");
+    invoke("offlinegpt:browser:show", PANEL_BOUNDS, "A");
     const url = "https://parent.example/";
     const opening = panel.browserTask({ sessionId: "A", operation: "open", args: { url } });
     await flush(); approve();
@@ -1318,10 +1318,10 @@ test("parent observations preserve popup approval and grants, but deliberate lif
     const child = parent.windowOpenHandler({ url, disposition: "foreground-tab" }).createWindow({});
     const pending = child.request("http://localhost:4173/preview");
     await flush();
-    const childId = invoke("openwork:browser:state").activeTabId;
-    const approvalId = invoke("openwork:browser:state").tabs.at(-1).browserApproval.id;
+    const childId = invoke("offlinegpt:browser:state").activeTabId;
+    const approvalId = invoke("offlinegpt:browser:state").tabs.at(-1).browserApproval.id;
     assert.equal((await observe()).ok, true);
-    assert.equal(invoke("openwork:browser:state").tabs.at(-1).browserApproval?.id, approvalId, "observing the parent preserves the pending popup review");
+    assert.equal(invoke("offlinegpt:browser:state").tabs.at(-1).browserApproval?.id, approvalId, "observing the parent preserves the pending popup review");
     assert.deepEqual(child.destinations, []);
     approve();
     assert.deepEqual(await pending, { cancel: false });
@@ -1330,7 +1330,7 @@ test("parent observations preserve popup approval and grants, but deliberate lif
 
     const canceledNavigation = child.request("https://another.example/");
     await flush();
-    const canceledApprovalId = invoke("openwork:browser:state").tabs.at(-1).browserApproval.id;
+    const canceledApprovalId = invoke("offlinegpt:browser:state").tabs.at(-1).browserApproval.id;
     if (ending === "cancel") {
       /** @type {() => void} */
       let finish = () => assert.fail("The observation has not reached its wait point.");
@@ -1342,10 +1342,10 @@ test("parent observations preserve popup approval and grants, but deliberate lif
       assert.equal((await inFlight).ok, false);
       finish();
     }
-    if (ending === "takeover") invoke("openwork:browser:taskControl", tabId, "pause");
-    if (ending === "close") invoke("openwork:browser:closeTab", tabId);
+    if (ending === "takeover") invoke("offlinegpt:browser:taskControl", tabId, "pause");
+    if (ending === "close") invoke("offlinegpt:browser:closeTab", tabId);
     assert.deepEqual(await canceledNavigation, { cancel: true }, ending);
-    assert.equal(invoke("openwork:browser:approve", childId, canceledApprovalId, true), false, ending);
+    assert.equal(invoke("offlinegpt:browser:approve", childId, canceledApprovalId, true), false, ending);
     assert.deepEqual(await child.request("http://localhost:4173/after-ending"), { cancel: true }, "a surviving popup remains guarded after its parent's lifetime ends");
     assert.deepEqual(child.destinations, ["http://localhost:4173/preview", "http://localhost:4173/next"], ending);
   }

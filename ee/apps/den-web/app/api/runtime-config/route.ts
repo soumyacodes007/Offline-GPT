@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { joinBaseUrl, readBaseUrlEnv } from "@openwork/types/url";
-import { denUrls } from "@openwork-ee/utils";
-import { DEFAULT_OPENWORK_WEB_URL } from "../../(den)/_lib/runtime-config";
+import { joinBaseUrl, readBaseUrlEnv } from "@offlinegpt/types/url";
+import { denUrls } from "@offlinegpt-ee/utils";
+import { DEFAULT_OFFLINEGPT_WEB_URL } from "../../(den)/_lib/runtime-config";
 
 export const dynamic = "force-dynamic";
 
@@ -75,11 +75,11 @@ export async function GET() {
   return NextResponse.json(
     {
       denApiUrl: readDenApiUrl(),
-      openworkAppConnectUrl: readPublicRuntimeEnv("DEN_WEB_OPENWORK_APP_CONNECT_URL"),
-      openworkWebUrl: readPublicRuntimeEnv("DEN_WEB_OPENWORK_WEB_URL") || DEFAULT_OPENWORK_WEB_URL,
-      openworkAuthCallbackUrl: readPublicRuntimeEnv("DEN_WEB_OPENWORK_AUTH_CALLBACK_URL"),
+      offlinegptAppConnectUrl: readPublicRuntimeEnv("DEN_WEB_OFFLINEGPT_APP_CONNECT_URL"),
+      offlinegptWebUrl: readPublicRuntimeEnv("DEN_WEB_OFFLINEGPT_WEB_URL") || DEFAULT_OFFLINEGPT_WEB_URL,
+      offlinegptAuthCallbackUrl: readPublicRuntimeEnv("DEN_WEB_OFFLINEGPT_AUTH_CALLBACK_URL"),
       orgMode,
-      singleOrgName: readPublicRuntimeEnv("DEN_SINGLE_ORG_NAME") || "OpenWork",
+      singleOrgName: readPublicRuntimeEnv("DEN_SINGLE_ORG_NAME") || "OfflineGPT",
       singleOrgSlug: readPublicRuntimeEnv("DEN_SINGLE_ORG_SLUG") || "default",
       singleOrgAllowPublicSignup: readBooleanEnv("DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP", orgMode === "multi_org"),
       singleOrgSsoConfigured

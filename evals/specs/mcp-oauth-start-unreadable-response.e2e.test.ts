@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { spec } from "@openwork/testkit";
+import { spec } from "@offlinegpt/testkit";
 import { oauthStartUnreadableWeb } from "../worlds/mcp-oauth-start-unreadable.ts";
 
 // A member clicks Connect and den-api's OAuth-start answer never reaches the
@@ -9,9 +9,9 @@ import { oauthStartUnreadableWeb } from "../worlds/mcp-oauth-start-unreadable.ts
 // echoing the browser's "Failed to fetch", and it must not pretend the provider
 // was involved. With the response readable again the same button starts the
 // provider sign-in.
-const test = spec.world(oauthStartUnreadableWeb, { timeout: 600_000, needs: { optIn: ["OPENWORK_EVAL_E2E_TESTS"], placement: "local" } });
+const test = spec.world(oauthStartUnreadableWeb, { timeout: 600_000, needs: { optIn: ["OFFLINEGPT_EVAL_E2E_TESTS"], placement: "local" } });
 
-const unreadableMessage = /OpenWork could not read the answer from its API when starting the sign-in/;
+const unreadableMessage = /OfflineGPT could not read the answer from its API when starting the sign-in/;
 const connectButton = { role: "button", label: "Connect" } as const;
 
 test("the connections page explains an OAuth-start answer the browser could not read, then connects once it can", async ({ world, user, probe, evidence, step }) => {

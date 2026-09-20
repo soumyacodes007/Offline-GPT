@@ -10,10 +10,10 @@ describe("Automation runtime placement", () => {
   test("Den's My Automations is a monitor that routes management to the creating surface", () => {
     const screen = read("../app/(den)/dashboard/_components/automations-screen.tsx");
 
-    expect(screen).toContain("Create and edit Cloud Automations in OpenWork Web; Desktop Automations are managed in the desktop app.");
-    expect(screen).toContain("Open in OpenWork Web");
-    expect(screen).toContain("Manage in OpenWork Web");
-    expect(screen).toContain("Manage in OpenWork Desktop");
+    expect(screen).toContain("Create and edit Cloud Automations in OfflineGPT Web; Desktop Automations are managed in the desktop app.");
+    expect(screen).toContain("Open in OfflineGPT Web");
+    expect(screen).toContain("Manage in OfflineGPT Web");
+    expect(screen).toContain("Manage in OfflineGPT Desktop");
     for (const heading of ["Running now", "Needs attention", "Scheduled", "Paused"]) {
       expect(screen).toContain(`title: "${heading}"`);
     }
@@ -37,10 +37,10 @@ describe("Automation runtime placement", () => {
     expect(existsSync(fileURLToPath(new URL("../app/(den)/dashboard/_components/cloud-automation-form.tsx", import.meta.url)))).toBe(false);
   });
 
-  test("Workflow → Automate deep-links into the OpenWork Web editor with the exact version pinned", () => {
+  test("Workflow → Automate deep-links into the OfflineGPT Web editor with the exact version pinned", () => {
     const detail = read("../app/(den)/dashboard/_components/workflow-detail-screen.tsx");
 
-    expect(detail).toContain("Automate in OpenWork Web");
+    expect(detail).toContain("Automate in OfflineGPT Web");
     expect(detail).toContain("/automations?create=1&workflow=${encodeURIComponent(workflowId)}&version=${encodeURIComponent(detail.script.currentVersion.id)}");
     expect(detail).not.toContain("href={`/dashboard/automations?workflow=");
   });

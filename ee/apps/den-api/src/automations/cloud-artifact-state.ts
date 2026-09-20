@@ -1,4 +1,4 @@
-import type { AutomationNeedsAttentionReason } from "@openwork/types/automations"
+import type { AutomationNeedsAttentionReason } from "@offlinegpt/types/automations"
 
 export type CloudArtifactStateUpdate =
   | {

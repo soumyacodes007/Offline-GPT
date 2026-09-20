@@ -28,9 +28,9 @@ import { t } from "@/i18n";
 import { usePlatform } from "../../../kernel/platform";
 import { isDenSessionRestoring, useDenAuth } from "../../cloud/den-auth-provider";
 import { useDesktopRestriction } from "../../cloud/desktop-config-provider";
-import { useControlAction, type OpenworkControlAction } from "../../../shell/control/control-provider";
+import { useControlAction, type OfflineGptControlAction } from "../../../shell/control/control-provider";
 import { useShellConfig } from "../../../shell/shell-config";
-import type { OpenworkServerStatus } from "../../../../app/lib/openwork-server";
+import type { OfflineGptServerStatus } from "../../../../app/lib/offlinegpt-server";
 import {
   buildDenAuthUrl,
   clearDenSession,
@@ -42,13 +42,13 @@ import { markDesktopSignInInitiated } from "../../../../app/lib/den-sign-in-inte
 import { exchangeHandoffAndSignIn } from "../../../../app/lib/den-handoff";
 import { parseManualAuthInput } from "../../../../app/lib/manual-auth-input";
 import {
-  openWorkConnectAttentionTitle,
-  resolveOpenWorkConnectStatus,
-  type OpenWorkConnectStatus,
-} from "../../connections/openwork-connect-status";
+  offlineGptConnectAttentionTitle,
+  resolveOfflineGPTConnectStatus,
+  type OfflineGPTConnectStatus,
+} from "../../connections/offlinegpt-connect-status";
 import type { SessionCloudMcpMaintenanceState } from "../../connections/use-session-mcp-maintenance";
 
-const DOCS_URL = "https://openworklabs.com/docs";
+const DOCS_URL = "https://offlinegptlabs.com/docs";
 const BOOT_STARTED_AT = Date.now();
 const INITIALIZING_MS = 15_000;
 
@@ -81,7 +81,7 @@ type RuntimeStatus = {
 
 type RuntimeStatusInput = {
   clientConnected: boolean;
-  openworkServerStatus: OpenworkServerStatus;
+  offlinegptServerStatus: OfflineGptServerStatus;
   initializing: boolean;
   reloadBusy?: boolean;
   reloadError?: string | null;
@@ -101,7 +101,7 @@ export function resolveRuntimeStatus(input: RuntimeStatusInput): RuntimeStatus {
   // This row renders app-scoped facts only. Per-session loading (messages
   // still fetching, a model verdict still pending) stays in the pane and the
   // composer — one session's state must not paint the whole app as booting.
-  if (input.openworkServerStatus === "disconnected" && input.initializing) {
+  if (input.offlinegptServerStatus === "disconnected" && input.initializing) {
     return {
       variant: "loading",
       label: t("session.preparing_workspace"),
@@ -111,7 +111,7 @@ export function resolveRuntimeStatus(input: RuntimeStatusInput): RuntimeStatus {
   if (input.clientConnected) {
     return { variant: "connected", label: t("status.ready_for_tasks"), detail: null };
   }
-  if (input.openworkServerStatus === "limited") {
+  if (input.offlinegptServerStatus === "limited") {
     return { variant: "partial", label: t("status.limited_mode"), detail: t("status.limited_hint") };
   }
   return {
@@ -121,7 +121,7 @@ export function resolveRuntimeStatus(input: RuntimeStatusInput): RuntimeStatus {
   };
 }
 
-function connectDotVariant(status: OpenWorkConnectStatus): StatusDotVariant {
+function connectDotVariant(status: OfflineGPTConnectStatus): StatusDotVariant {
   if (status.state === "ready") return "connected";
   if (status.state === "checking") return "loading";
   return "disconnected";
@@ -129,18 +129,18 @@ function connectDotVariant(status: OpenWorkConnectStatus): StatusDotVariant {
 
 /**
  * Non-developer mode shows one status row: the runtime status, unless
- * OpenWork Connect needs attention (or is the only signal available).
+ * OfflineGPT Connect needs attention (or is the only signal available).
  * Developer mode keeps the two separate rows.
  */
 export function resolveCollapsedStatus(
   runtime: RuntimeStatus | null,
-  connect: OpenWorkConnectStatus | null,
+  connect: OfflineGPTConnectStatus | null,
 ): RuntimeStatus | null {
   if (runtime && runtime.variant !== "connected") return runtime;
   if (connect && connect.state === "needs_attention") {
     return {
       variant: "disconnected",
-      label: `OpenWork Connect: ${connect.label}`,
+      label: `OfflineGPT Connect: ${connect.label}`,
       detail: connect.description,
     };
   }
@@ -148,7 +148,7 @@ export function resolveCollapsedStatus(
   if (connect) {
     return {
       variant: connectDotVariant(connect),
-      label: `OpenWork Connect: ${connect.label}`,
+      label: `OfflineGPT Connect: ${connect.label}`,
       detail: connect.description,
     };
   }
@@ -165,7 +165,7 @@ function accountInitials(name: string | null, email: string) {
 
 export type AccountStatusMenuProps = {
   clientConnected: boolean;
-  openworkServerStatus: OpenworkServerStatus;
+  offlinegptServerStatus: OfflineGptServerStatus;
   developerMode: boolean;
   /** Hidden until a workspace is selected, matching the old status bar. */
   showConnectionStatus: boolean;
@@ -173,7 +173,7 @@ export type AccountStatusMenuProps = {
   mcpConnectedCount: number;
   reloadBusy?: boolean;
   reloadError?: string | null;
-  openWorkConnectState?: SessionCloudMcpMaintenanceState;
+  offlineGptConnectState?: SessionCloudMcpMaintenanceState;
   showSettingsButton?: boolean;
   onOpenAccountSettings?: () => void;
   onSendFeedback?: () => void;
@@ -213,9 +213,9 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
   // no new response field is required. Missing values retain the hook’s default.
   const controlSettingsBlocked = useDesktopRestriction("allowControlSettings");
 
-  const docsControlAction = useMemo<OpenworkControlAction>(() => ({
+  const docsControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "status.docs.open",
-    label: "Open OpenWork docs",
+    label: "Open OfflineGPT docs",
     description: "Open the documentation from the account menu.",
     sideEffect: "external",
     targetRef: triggerRef,
@@ -223,10 +223,10 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
   }), [openDocs]);
   useControlAction(docsControlAction);
 
-  const feedbackControlAction = useMemo<OpenworkControlAction>(() => ({
+  const feedbackControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "status.feedback.open",
     label: "Send feedback",
-    description: "Open the OpenWork feedback surface from the account menu.",
+    description: "Open the OfflineGPT feedback surface from the account menu.",
     sideEffect: "external",
     disabled: !props.onSendFeedback,
     targetRef: triggerRef,
@@ -234,7 +234,7 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
   }), [props.onSendFeedback]);
   useControlAction(feedbackControlAction);
 
-  const settingsControlAction = useMemo<OpenworkControlAction>(() => ({
+  const settingsControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "status.settings.open",
     label: "Open settings from the account menu",
     description: "Use the account menu in the sidebar footer.",
@@ -257,24 +257,24 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
   });
   const accountLabel = signedIn
     ? user.name?.trim() || user.email
-    : restoringSession ? "OpenWork Cloud" : "Sign in";
+    : restoringSession ? "OfflineGPT Cloud" : "Sign in";
   const accountDetail = signedIn
-    ? (user.name ? user.email : "OpenWork Cloud")
-    : restoringSession ? "Restoring your session" : "Sync with OpenWork Cloud";
+    ? (user.name ? user.email : "OfflineGPT Cloud")
+    : restoringSession ? "Restoring your session" : "Sync with OfflineGPT Cloud";
 
   const runtimeStatus = props.showConnectionStatus
     ? resolveRuntimeStatus({
       clientConnected: props.clientConnected,
-      openworkServerStatus: props.openworkServerStatus,
+      offlinegptServerStatus: props.offlinegptServerStatus,
       initializing,
       reloadBusy: props.reloadBusy,
       reloadError: props.reloadError,
     })
     : null;
-  const connectStatus = resolveOpenWorkConnectStatus(
+  const connectStatus = resolveOfflineGPTConnectStatus(
     denAuth.isSignedIn
       || (denAuth.status === "checking" && Boolean(readDenSettings().authToken?.trim())),
-    props.openWorkConnectState,
+    props.offlineGptConnectState,
   );
   const connectNeedsAttention = connectStatus?.state === "needs_attention";
   const collapsedStatus = resolveCollapsedStatus(runtimeStatus, connectStatus);
@@ -337,9 +337,9 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
             className="flex w-full items-center gap-2 rounded-lg ps-1.5 pe-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent max-lg:min-h-11"
             aria-label={signedIn ? `${user.email} — account and status` : "Account and status"}
             title={connectNeedsAttention
-              ? openWorkConnectAttentionTitle(connectStatus.description)
+              ? offlineGptConnectAttentionTitle(connectStatus.description)
               : connectStatus
-                ? `${runtimeStatus ? `${runtimeStatus.label} · ` : ""}OpenWork Connect: ${connectStatus.label}`
+                ? `${runtimeStatus ? `${runtimeStatus.label} · ` : ""}OfflineGPT Connect: ${connectStatus.label}`
                 : runtimeStatus?.label}
           >
               {signedIn ? (
@@ -393,13 +393,13 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
                   </div>
                 ) : null}
                 {connectStatus ? (
-                  <div data-testid="openwork-connect-status" className="flex items-start gap-2">
+                  <div data-testid="offlinegpt-connect-status" className="flex items-start gap-2">
                     <span className="mt-1">
                       <StatusDot variant={connectDotVariant(connectStatus)} />
                     </span>
                     <div className="min-w-0">
                       <div className="text-[11.5px] font-medium text-foreground">
-                        {`OpenWork Connect: ${connectStatus.label}`}
+                        {`OfflineGPT Connect: ${connectStatus.label}`}
                       </div>
                       <div className="text-[10.5px] leading-tight text-muted-foreground">
                         {connectStatus.description}
@@ -479,7 +479,7 @@ export function AccountStatusMenu(props: AccountStatusMenuProps) {
             >
               <span className="inline-flex min-w-0 items-center gap-2">
                 <UserRound className="size-3.5" />
-                <span className="truncate">Sign in to OpenWork Cloud</span>
+                <span className="truncate">Sign in to OfflineGPT Cloud</span>
               </span>
               <ArrowUpRight className="size-3.5" />
             </Button>

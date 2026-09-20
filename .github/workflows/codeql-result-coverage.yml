@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   coverage:
-    if: github.repository == 'different-ai/openwork'
+    if: github.repository == 'different-ai/offlinegpt'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -6,8 +6,8 @@ import {
   automationListSchema,
   automationRunReceiptSchema,
   automationRunSchema,
-} from "@openwork/types/automations";
-import { workflowArtifactSnapshotSchema } from "@openwork/types/workflows";
+} from "@offlinegpt/types/automations";
+import { workflowArtifactSnapshotSchema } from "@offlinegpt/types/workflows";
 import { getErrorMessage, requestJson } from "../../_lib/den-flow";
 
 async function payload(path: string, init: RequestInit = { method: "GET" }) {

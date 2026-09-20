@@ -2,10 +2,10 @@ import {
   connectionActionAppSchemaVersion,
   connectionActionPayloadSchema,
   type ConnectionActionPayload,
-} from "@openwork/types/connection-action-app"
+} from "@offlinegpt/types/connection-action-app"
 import type { ExternalConnectionStatus } from "./external-capabilities.js"
 
-export { connectionActionPayloadSchema } from "@openwork/types/connection-action-app"
+export { connectionActionPayloadSchema } from "@offlinegpt/types/connection-action-app"
 
 export function connectionActionPayloadFromStatus(status: ExternalConnectionStatus): ConnectionActionPayload {
   return connectionActionPayloadSchema.parse({

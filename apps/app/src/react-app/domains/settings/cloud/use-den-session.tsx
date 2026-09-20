@@ -40,7 +40,7 @@ type SettingsTone = "ready" | "warning" | "neutral" | "error";
 
 declare global {
   interface WindowEventMap {
-    "openwork-den-session-updated": CustomEvent<DenSessionUpdatedDetail>;
+    "offlinegpt-den-session-updated": CustomEvent<DenSessionUpdatedDetail>;
   }
 }
 
@@ -192,7 +192,7 @@ export function useDenSession({
       // again, fresh cloud providers will be detected as new and surface
       // the toast (which is the intended behavior).
       try {
-        const raw = window.localStorage.getItem("openwork.acknowledgedProviders");
+        const raw = window.localStorage.getItem("offlinegpt.acknowledgedProviders");
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
@@ -200,7 +200,7 @@ export function useDenSession({
               (id: unknown) => typeof id === "string" && !/^lpr_/i.test(id),
             );
             window.localStorage.setItem(
-              "openwork.acknowledgedProviders",
+              "offlinegpt.acknowledgedProviders",
               JSON.stringify(kept),
             );
           }

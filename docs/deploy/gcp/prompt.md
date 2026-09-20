@@ -1,9 +1,9 @@
 # GCP Deployment Agent Prompt Template
 
-Copy this prompt into your agent and replace every `{{PLACEHOLDER}}` before running it. The agent is expected to operate from a local OpenWork repository checkout and use CLI/API tools for infrastructure. Any browser-only step should be handed back to the operator.
+Copy this prompt into your agent and replace every `{{PLACEHOLDER}}` before running it. The agent is expected to operate from a local OfflineGPT repository checkout and use CLI/API tools for infrastructure. Any browser-only step should be handed back to the operator.
 
 ```text
-You are deploying OpenWork EE to Google Cloud from this repository checkout:
+You are deploying OfflineGPT EE to Google Cloud from this repository checkout:
 
 {{REPOSITORY_PATH}}
 
@@ -13,10 +13,10 @@ Read and obey `AGENTS.md`. Use the current repository documentation as the sourc
 - `packages/docs/self-host/deploy-to-your-cloud/google-cloud.mdx`
 - `packages/docs/self-host/deploy-to-your-cloud/first-administrator.mdx`
 - `docs/gcp-gke-helm.md`
-- `packaging/helm/openwork-ee/README.md`
-- `packaging/helm/openwork-ee/examples/values.gcp-ingress.yaml`
+- `packaging/helm/offlinegpt-ee/README.md`
+- `packaging/helm/offlinegpt-ee/examples/values.gcp-ingress.yaml`
 
-Goal: provision and deploy a production-like OpenWork EE install on GCP using the latest published Helm chart that contains the documented first-administrator setup flow. Leave the deployment running unless I ask for cleanup.
+Goal: provision and deploy a production-like OfflineGPT EE install on GCP using the latest published Helm chart that contains the documented first-administrator setup flow. Leave the deployment running unless I ask for cleanup.
 
 Customer inputs:
 
@@ -28,18 +28,18 @@ Customer inputs:
 - Organization name: `{{ORGANIZATION_NAME}}`
 - Initial owner email: `{{INITIAL_OWNER_EMAIL}}`
 - Platform/bootstrap admin email, if separate: `{{PLATFORM_ADMIN_EMAIL_OR_SAME_AS_OWNER}}`
-- OpenWork version: `{{OPENWORK_VERSION_OR_LATEST_RELEASE}}` where `latest` means check GitHub releases and the published Helm chart before deploying.
+- OfflineGPT version: `{{OFFLINEGPT_VERSION_OR_LATEST_RELEASE}}` where `latest` means check GitHub releases and the published Helm chart before deploying.
 - Administrator setup code: `{{OPERATOR_PROVIDES_CODE_OR_AGENT_GENERATES_ONE}}`. If the agent generates the code, give it to me through an agreed secure channel and never print it in task logs.
 
 Agent-created resource names and defaults (change if required):
 
-- GKE cluster name: Kubernetes cluster to create, default `openwork-ee`.
-- Kubernetes namespace: Kubernetes namespace for OpenWork workloads, default `openwork-ee`.
-- Helm release name: Helm's install/upgrade release name, default `openwork-ee`.
-- Cloud SQL instance name: GCP Cloud SQL resource to create, default `openwork-ee-mysql`.
-- Cloud SQL database name: MySQL database to create inside Cloud SQL, default `openwork_den`.
-- Cloud SQL user: MySQL user to create for OpenWork, default `openwork`.
-- Reserved global address name: GCP resource name for the static global IPv4 address used by the HTTPS load balancer, default `openwork-ee-ip`. This is not the IP address; the agent creates the address and reports the allocated IP.
+- GKE cluster name: Kubernetes cluster to create, default `offlinegpt-ee`.
+- Kubernetes namespace: Kubernetes namespace for OfflineGPT workloads, default `offlinegpt-ee`.
+- Helm release name: Helm's install/upgrade release name, default `offlinegpt-ee`.
+- Cloud SQL instance name: GCP Cloud SQL resource to create, default `offlinegpt-ee-mysql`.
+- Cloud SQL database name: MySQL database to create inside Cloud SQL, default `offlinegpt_den`.
+- Cloud SQL user: MySQL user to create for OfflineGPT, default `offlinegpt`.
+- Reserved global address name: GCP resource name for the static global IPv4 address used by the HTTPS load balancer, default `offlinegpt-ee-ip`. This is not the IP address; the agent creates the address and reports the allocated IP.
 
 Operating rules:
 

@@ -35,7 +35,7 @@ const SIMPLE_ICON_MISSES = new Set([
   "amazonwebservices",
   "fireworks",
   "opencode",
-  "openwork",
+  "offlinegpt",
 ]);
 
 /** Apex domains for providers whose id does not resolve to their own domain. */
@@ -62,7 +62,7 @@ const PROVIDER_DOMAINS: Record<string, string> = {
   ollama: "ollama.com",
   xai: "x.ai",
   opencode: "opencode.ai",
-  openwork: "openworklabs.com",
+  offlinegpt: "offlinegptlabs.com",
   abacus: "abacus.ai",
 };
 

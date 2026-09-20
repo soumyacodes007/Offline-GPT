@@ -1,20 +1,20 @@
-# OpenWork Server
+# OfflineGPT Server
 
-Filesystem-backed API for OpenWork remote clients. This package provides the OpenWork server layer described in `apps/app/pr/openwork-server.md` and is intentionally independent from the desktop app.
+Filesystem-backed API for OfflineGPT remote clients. This package provides the OfflineGPT server layer described in `apps/app/pr/offlinegpt-server.md` and is intentionally independent from the desktop app.
 
 ## Quick start
 
 ```bash
-npm install -g openwork-server
-openwork-server --workspace /path/to/workspace --approval auto
+npm install -g offlinegpt-server
+offlinegpt-server --workspace /path/to/workspace --approval auto
 ```
 
-`openwork-server` ships as a compiled binary, so Bun is not required at runtime.
+`offlinegpt-server` ships as a compiled binary, so Bun is not required at runtime.
 
 Or from source:
 
 ```bash
-pnpm --filter openwork-server dev -- \
+pnpm --filter offlinegpt-server dev -- \
   --workspace /path/to/workspace \
   --approval auto
 ```
@@ -57,13 +57,13 @@ This prevents duplicate recovery admissions, not exactly-once execution of exter
 tools; uncertain earlier effects must be inspected or clarified before continuing.
 
 Desktop Automation and remote-command requests opt out with
-`x-openwork-task-recovery: off`; their existing execution ownership is unchanged.
+`x-offlinegpt-task-recovery: off`; their existing execution ownership is unchanged.
 Runtime journey verification for actual Electron restarts on both engines remains
 separate from the focused coordinator and mocked-proxy tests.
 
 ## Config file
 
-Defaults to `~/.config/openwork/server.json` (override with `OPENWORK_SERVER_CONFIG` or `--config`).
+Defaults to `~/.config/offlinegpt/server.json` (override with `OFFLINEGPT_SERVER_CONFIG` or `--config`).
 
 ```json
 {
@@ -85,33 +85,33 @@ Defaults to `~/.config/openwork/server.json` (override with `OPENWORK_SERVER_CON
 
 ## Environment variables
 
-- `OPENWORK_SERVER_CONFIG` path to config JSON
-- `OPENWORK_HOST` / `OPENWORK_PORT`
-- `OPENWORK_TOKEN` client bearer token
-- `OPENWORK_HOST_TOKEN` host approval token
-- `OPENWORK_APPROVAL_MODE` (`manual` | `auto`)
-- `OPENWORK_APPROVAL_TIMEOUT_MS`
-- `OPENWORK_WORKSPACES` (JSON array or comma-separated list of paths)
-- `OPENWORK_CORS_ORIGINS` (comma-separated list or `*`)
-- `OPENWORK_OPENCODE_BASE_URL`
-- `OPENWORK_OPENCODE_DIRECTORY`
-- `OPENWORK_OPENCODE_USERNAME`
-- `OPENWORK_OPENCODE_PASSWORD`
+- `OFFLINEGPT_SERVER_CONFIG` path to config JSON
+- `OFFLINEGPT_HOST` / `OFFLINEGPT_PORT`
+- `OFFLINEGPT_TOKEN` client bearer token
+- `OFFLINEGPT_HOST_TOKEN` host approval token
+- `OFFLINEGPT_APPROVAL_MODE` (`manual` | `auto`)
+- `OFFLINEGPT_APPROVAL_TIMEOUT_MS`
+- `OFFLINEGPT_WORKSPACES` (JSON array or comma-separated list of paths)
+- `OFFLINEGPT_CORS_ORIGINS` (comma-separated list or `*`)
+- `OFFLINEGPT_OPENCODE_BASE_URL`
+- `OFFLINEGPT_OPENCODE_DIRECTORY`
+- `OFFLINEGPT_OPENCODE_USERNAME`
+- `OFFLINEGPT_OPENCODE_PASSWORD`
 
 Token management (scoped tokens):
 
-- `OPENWORK_TOKEN_STORE` path to token store JSON (default: alongside `server.json`)
+- `OFFLINEGPT_TOKEN_STORE` path to token store JSON (default: alongside `server.json`)
 
 File injection / artifacts:
 
-- `OPENWORK_INBOX_ENABLED` (`1` | `0`)
-- `OPENWORK_INBOX_MAX_BYTES` (default: 50MB, capped)
-- `OPENWORK_OUTBOX_ENABLED` (`1` | `0`)
+- `OFFLINEGPT_INBOX_ENABLED` (`1` | `0`)
+- `OFFLINEGPT_INBOX_MAX_BYTES` (default: 50MB, capped)
+- `OFFLINEGPT_OUTBOX_ENABLED` (`1` | `0`)
 
 Sandbox advertisement (for capability discovery):
 
-- `OPENWORK_SANDBOX_ENABLED` (`1` | `0`)
-- `OPENWORK_SANDBOX_BACKEND` (`docker` | `container` | `none`)
+- `OFFLINEGPT_SANDBOX_ENABLED` (`1` | `0`)
+- `OFFLINEGPT_SANDBOX_BACKEND` (`docker` | `container` | `none`)
 
 ## Endpoints
 
@@ -146,7 +146,7 @@ Token management (collaborator or owner bearer token):
 
 Inbox/outbox:
 
-- `POST /workspace/:id/inbox` (multipart upload into `.opencode/openwork/inbox/`)
+- `POST /workspace/:id/inbox` (multipart upload into `.opencode/offlinegpt/inbox/`)
 - `GET /workspace/:id/artifacts`
 - `GET /workspace/:id/artifacts/:artifactId`
 - `POST /workspace/:id/files/sessions`
@@ -177,7 +177,7 @@ All writes are gated by host approval.
 
 Host APIs accept either:
 
-- `X-OpenWork-Host-Token: <token>` (legacy host token), or
+- `X-OfflineGPT-Host-Token: <token>` (legacy host token), or
 - `Authorization: Bearer <token>` where the token scope is `owner`.
 
 Approvals endpoints:
@@ -185,7 +185,7 @@ Approvals endpoints:
 - `GET /approvals`
 - `POST /approvals/:id` with `{ "reply": "allow" | "deny" }`
 
-Set `OPENWORK_APPROVAL_MODE=auto` to auto-approve during local development.
+Set `OFFLINEGPT_APPROVAL_MODE=auto` to auto-approve during local development.
 
 ## Automatic title recovery
 
@@ -198,7 +198,7 @@ model, credentials, conversation content, and normal chat options stay intact.
 Access, quota, transport, and unrelated request errors do not trigger an added
 recovery request. The engine's own transport retry policy still applies.
 
-Engine log records with service `openwork.title` / message `Automatic title
+Engine log records with service `offlinegpt.title` / message `Automatic title
 generation` contain only session/provider/model IDs, outcome, recovery attempt,
 HTTP status, and the rejected parameter name. `accepted_after_recovery` means
 the provider accepted the retry; `title_available` separately confirms a real

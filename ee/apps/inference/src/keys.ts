@@ -1,12 +1,12 @@
 import { timingSafeEqual } from "node:crypto"
-import { and, eq, inArray, isNull } from "@openwork-ee/den-db/drizzle"
-import { InferenceKeyTable, InferenceOrgUpstreamProviderKeyTable, MemberTable, OrganizationTable } from "@openwork-ee/den-db"
-import { assertManagedModelsAllowed, ManagedModelsPolicyError } from "@openwork/types/den/managed-models-policy"
+import { and, eq, inArray, isNull } from "@offlinegpt-ee/den-db/drizzle"
+import { InferenceKeyTable, InferenceOrgUpstreamProviderKeyTable, MemberTable, OrganizationTable } from "@offlinegpt-ee/den-db"
+import { assertManagedModelsAllowed, ManagedModelsPolicyError } from "@offlinegpt/types/den/managed-models-policy"
 import {
   inferenceBearerKeyLookupDigests,
   type InferenceBearerKey,
-} from "@openwork-ee/utils/inference-bearer-key"
-import { normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/utils/inference-bearer-key"
+import { normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { db } from "./db.js"
 
 export function constantTimeEquals(a: string, b: string) {

@@ -1,5 +1,5 @@
-import { and, eq, inArray, isNull, or } from "@openwork-ee/den-db/drizzle"
-import { LlmProviderAccessTable, LlmProviderTable, MemberTable, TeamMemberTable } from "@openwork-ee/den-db/schema"
+import { and, eq, inArray, isNull, or } from "@offlinegpt-ee/den-db/drizzle"
+import { LlmProviderAccessTable, LlmProviderTable, MemberTable, TeamMemberTable } from "@offlinegpt-ee/den-db/schema"
 import { db } from "../../db.js"
 
 type MemberId = NonNullable<typeof LlmProviderAccessTable.$inferSelect.orgMembershipId>

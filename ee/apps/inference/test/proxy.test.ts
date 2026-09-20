@@ -1,11 +1,11 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { Hono } from "hono"
-import { assertManagedModelsAllowed, ManagedModelsPolicyError } from "@openwork/types/den/managed-models-policy"
+import { assertManagedModelsAllowed, ManagedModelsPolicyError } from "@offlinegpt/types/den/managed-models-policy"
 import type { InferenceHandledErrorReport, InferenceReporter, InferenceRequestReport } from "../src/inference-reporting.js"
 
-process.env.OPENWORK_DEV_MODE = "1"
-process.env.DATABASE_URL = "mysql://root:password@127.0.0.1:3306/openwork_den"
+process.env.OFFLINEGPT_DEV_MODE = "1"
+process.env.DATABASE_URL = "mysql://root:password@127.0.0.1:3306/offlinegpt_den"
 process.env.DEN_DB_ENCRYPTION_KEY = "local-dev-db-encryption-key-please-change-1234567890"
 process.env.OPENROUTER_UPSTREAM_URL = "https://upstream.test/api/v1"
 
@@ -109,7 +109,7 @@ function authHeaders(contentType?: string) {
 }
 
 function inferenceRequest(input: { method: string; headers: Headers; body?: string; path?: string }) {
-  return new Request(`http://openwork.test${input.path ?? "/api/v1/chat/completions"}`, {
+  return new Request(`http://offlinegpt.test${input.path ?? "/api/v1/chat/completions"}`, {
     method: input.method,
     headers: input.headers,
     body: input.body,
@@ -429,7 +429,7 @@ for (const streaming of [false, true]) {
   for (const completed of [false, true]) {
     test(`${streaming ? "streamed" : "JSON"} analytics requires managed protocol completion (${completed})`, async () => {
       const { observeModelResponse } = await import("../src/task-analytics.js")
-      const events: import("@openwork-ee/telemetry").ModelsAnalyticsEvent[] = []
+      const events: import("@offlinegpt-ee/telemetry").ModelsAnalyticsEvent[] = []
       const payload = {
         model: "z-ai/glm-5.2", provider: "test-provider",
         choices: [{ index: 0, ...(streaming ? { delta: { content: "private output" } } : { message: { role: "assistant", content: "private output" } }), finish_reason: completed ? "stop" : null }],
@@ -448,7 +448,7 @@ for (const streaming of [false, true]) {
       const text = await response.text()
       assert.equal(text.includes("upstream_incomplete"), !completed)
       assert.equal(events.length, 1)
-      assert.equal(events[0].id, response.headers.get("x-openwork-request-id"))
+      assert.equal(events[0].id, response.headers.get("x-offlinegpt-request-id"))
       assert.equal(events[0].status, completed ? "completed" : "failed")
       assert.equal(events[0].usageComplete, completed)
       assert.equal(events[0].inputTokens, 10)
@@ -463,7 +463,7 @@ for (const streaming of [false, true]) {
 
 test("downstream cancellation records one cancelled analytics event, never success", async () => {
   const { observeModelResponse } = await import("../src/task-analytics.js")
-  const events: import("@openwork-ee/telemetry").ModelsAnalyticsEvent[] = []
+  const events: import("@offlinegpt-ee/telemetry").ModelsAnalyticsEvent[] = []
   let cancelled = false
   const { app } = createTestServer({
     fetch: async () => new Response(new ReadableStream<Uint8Array>({
@@ -489,7 +489,7 @@ test("downstream cancellation records one cancelled analytics event, never succe
 
 test("cancelled, malformed and oversized usage stays incomplete with one accounting event", async () => {
   const { observeModelResponse } = await import("../src/task-analytics.js")
-  const events: import("@openwork-ee/telemetry").ModelsAnalyticsEvent[] = []
+  const events: import("@offlinegpt-ee/telemetry").ModelsAnalyticsEvent[] = []
   for (const status of ["cancelled", "completed"] satisfies ("cancelled" | "completed")[]) {
     const observer = observeModelResponse({ id: status, sessionId: "session", taskId: "task", startedAt: Date.now(), model: "model", streaming: true }, async (event) => { events.push(event) })
     observer.chunk(new TextEncoder().encode('data: {"usage":nope}\n\n'))
@@ -523,7 +523,7 @@ test("rewrites approved model aliases before forwarding JSON requests", async ()
   const response = await app.fetch(inferenceRequest({
     method: "POST",
     headers: authHeaders("application/json; charset=utf-8"),
-    body: JSON.stringify({ model: "openwork/z-ai/glm-5.2", messages: [{ role: "user", content: "Hello" }] }),
+    body: JSON.stringify({ model: "offlinegpt/z-ai/glm-5.2", messages: [{ role: "user", content: "Hello" }] }),
   }))
 
   assert.equal(response.status, 200)
@@ -539,7 +539,7 @@ test("rewrites approved model aliases before forwarding JSON requests", async ()
   const body = parseJsonObject(requireBodyText(upstream.body))
   assert.equal(body.model, "z-ai/glm-5.2")
   assert.equal(body.user, "member_123")
-  assert.equal(body.session_id, upstream.headers.get("x-openwork-request-id"))
+  assert.equal(body.session_id, upstream.headers.get("x-offlinegpt-request-id"))
   const trace = body.trace
   assert.ok(isRecord(trace))
   assert.equal(trace.generation_name, "z-ai/glm-5.2")
@@ -548,7 +548,7 @@ test("rewrites approved model aliases before forwarding JSON requests", async ()
   const report = requireRequestReport(reports)
   assert.equal(report.organizationId, "organization_123")
   assert.equal(report.inferenceKeyId, "inference_key_123")
-  assert.equal(report.openworkRequestId, upstream.headers.get("x-openwork-request-id"))
+  assert.equal(report.offlinegptRequestId, upstream.headers.get("x-offlinegpt-request-id"))
   assert.equal(report.route, "/api/v1/chat/completions")
   assert.equal(report.method, "POST")
   assert.equal(report.incomingModel, "z-ai/glm-5.2")
@@ -560,7 +560,7 @@ test("returns model_not_found for unknown JSON model aliases", async () => {
   const response = await app.fetch(inferenceRequest({
     method: "POST",
     headers: authHeaders("application/json"),
-    body: JSON.stringify({ model: "openwork/unknown-model", messages: [{ role: "user", content: "Hello" }] }),
+    body: JSON.stringify({ model: "offlinegpt/unknown-model", messages: [{ role: "user", content: "Hello" }] }),
   }))
 
   assert.equal(response.status, 404)
@@ -670,8 +670,8 @@ test("returns usage-limit 429 without reporting a handled error or contacting pr
 
     assert.equal(response.status, 429)
     assert.equal(await readErrorCode(response), "rate_limit_exceeded")
-    assert.equal(response.headers.get("x-openwork-limit-bucket-id"), "bucket_123")
-    assert.equal(response.headers.get("x-openwork-limit-window-type"), "monthly")
+    assert.equal(response.headers.get("x-offlinegpt-limit-bucket-id"), "bucket_123")
+    assert.equal(response.headers.get("x-offlinegpt-limit-window-type"), "monthly")
     assert.equal(response.headers.get("retry-after"), "90")
     assert.equal(response.headers.get("x-ratelimit-limit-tokens"), "100")
     assert.equal(response.headers.get("x-ratelimit-remaining-tokens"), "0")
@@ -701,7 +701,7 @@ test("reports handled upstream errors with searchable request context", async ()
   assert.equal(errorReport.reason, "upstream_failure")
   assert.equal(errorReport.organizationId, "organization_123")
   assert.equal(errorReport.inferenceKeyId, "inference_key_123")
-  assert.equal(errorReport.openworkRequestId, requestReport.openworkRequestId)
+  assert.equal(errorReport.offlinegptRequestId, requestReport.offlinegptRequestId)
   assert.equal(errorReport.route, "/api/v1/chat/completions")
   assert.equal(errorReport.method, "POST")
   assert.equal(errorReport.incomingModel, "z-ai/glm-5.2")
@@ -736,7 +736,7 @@ test("blocks an unknown model when Content-Type is omitted", async () => {
   const response = await app.fetch(inferenceRequest({
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ model: "openwork/unknown-model", messages: [{ role: "user", content: "Hello" }] }),
+    body: JSON.stringify({ model: "offlinegpt/unknown-model", messages: [{ role: "user", content: "Hello" }] }),
   }))
 
   assert.equal(response.status, 415)
@@ -751,7 +751,7 @@ test("blocks an unknown model sent as text/plain", async () => {
   const response = await app.fetch(inferenceRequest({
     method: "POST",
     headers: authHeaders("text/plain"),
-    body: JSON.stringify({ model: "openwork/unknown-model", messages: [{ role: "user", content: "Hello" }] }),
+    body: JSON.stringify({ model: "offlinegpt/unknown-model", messages: [{ role: "user", content: "Hello" }] }),
   }))
 
   assert.equal(response.status, 415)
@@ -765,8 +765,8 @@ test("accepts application/*+json media types", async () => {
   const { app, upstreamRequests } = createTestServer()
   const response = await app.fetch(inferenceRequest({
     method: "POST",
-    headers: authHeaders("application/vnd.openwork.request+json; charset=utf-8"),
-    body: JSON.stringify({ model: "openwork/z-ai/glm-5.2", messages: [{ role: "user", content: "Hello" }] }),
+    headers: authHeaders("application/vnd.offlinegpt.request+json; charset=utf-8"),
+    body: JSON.stringify({ model: "offlinegpt/z-ai/glm-5.2", messages: [{ role: "user", content: "Hello" }] }),
   }))
 
   assert.equal(response.status, 200)
@@ -794,7 +794,7 @@ test("does not forward caller headers or session IDs that can affect routing", a
   assert.equal(upstream.headers.get("x-session-id"), null)
   assert.equal(upstream.headers.get("x-openrouter-model"), null)
   const body = parseJsonObject(requireBodyText(upstream.body))
-  assert.equal(body.session_id, upstream.headers.get("x-openwork-request-id"))
+  assert.equal(body.session_id, upstream.headers.get("x-offlinegpt-request-id"))
 })
 
 for (const [field, value] of [
@@ -898,7 +898,7 @@ test("returns the authenticated local model catalog without forwarding", async (
   const model = payload.data[0]
   assert.ok(isRecord(model))
   assert.equal(typeof model.id, "string")
-  assert.ok(!model.id.startsWith("openwork/"))
+  assert.ok(!model.id.startsWith("offlinegpt/"))
   assert.equal(calls.findActiveInferenceKey, 1)
   assert.equal(calls.ensureUsableBuckets, 0)
   assert.equal(calls.getOpenRouterProviderKey, 0)

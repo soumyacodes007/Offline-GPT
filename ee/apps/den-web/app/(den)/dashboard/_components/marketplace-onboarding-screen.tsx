@@ -29,9 +29,9 @@ export function MarketplaceOnboardingScreen() {
     queryKey: ["onboarding", "inference", orgId],
     enabled: Boolean(orgId),
     queryFn: async () => {
-      if (!orgId) throw new Error("Choose a workspace to check OpenWork Models.");
-      const { response, payload } = await requestJson("/v1/inference", { method: "GET", headers: { "x-openwork-org-id": orgId } }, 12000);
-      if (!response.ok) throw new Error(getErrorMessage(payload, "Could not check OpenWork Models."));
+      if (!orgId) throw new Error("Choose a workspace to check OfflineGPT Models.");
+      const { response, payload } = await requestJson("/v1/inference", { method: "GET", headers: { "x-offlinegpt-org-id": orgId } }, 12000);
+      if (!response.ok) throw new Error(getErrorMessage(payload, "Could not check OfflineGPT Models."));
       return typeof payload === "object" && payload !== null && "inference" in payload
         && typeof payload.inference === "object" && payload.inference !== null
         && "enabled" in payload.inference && payload.inference.enabled === true;
@@ -50,24 +50,24 @@ export function MarketplaceOnboardingScreen() {
   }
 
   return (
-    <SetupFrame step="ready" title="Choose what powers your work." description="Use OpenWork Models or bring your own provider. You can decide now or set this up later.">
+    <SetupFrame step="ready" title="Choose what powers your work." description="Use OfflineGPT Models or bring your own provider. You can decide now or set this up later.">
       <div className="grid gap-6" data-testid="marketplace-onboarding">
         <section aria-labelledby="setup-models-heading" className="grid gap-4">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-neutral-400">Optional · Models</p>
             <h2 id="setup-models-heading" ref={modelsHeading} tabIndex={-1} className="mt-2 text-xl font-semibold tracking-[-0.03em]">Your choice of model.</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--dls-text-secondary)]" role="status">
-              {modelsLoading ? "Checking OpenWork Models..." : modelsError ? "Model status is unavailable. You can still complete setup." : modelsEnabled ? "OpenWork Models are on for this workspace." : "Signing in does not enable models. Keep your existing provider, or choose one when you are ready."}
+              {modelsLoading ? "Checking OfflineGPT Models..." : modelsError ? "Model status is unavailable. You can still complete setup." : modelsEnabled ? "OfflineGPT Models are on for this workspace." : "Signing in does not enable models. Keep your existing provider, or choose one when you are ready."}
             </p>
             {modelsEnabled ? <DenBadge icon={Check}>Models on</DenBadge> : null}
           </div>
           <div className="divide-y divide-[var(--dls-border)] overflow-hidden rounded-2xl border border-[var(--dls-border)]">
-            <div className="flex items-start gap-3 p-4 sm:p-5" data-testid="onboarding-choice-openwork-models">
+            <div className="flex items-start gap-3 p-4 sm:p-5" data-testid="onboarding-choice-offlinegpt-models">
               <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--dls-hover)]">
-                <img src="/openwork-mark.svg" alt="" aria-hidden className="h-5 w-5" />
+                <img src="/offlinegpt-mark.svg" alt="" aria-hidden className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-semibold">OpenWork Models</h3>
+                <h3 className="text-sm font-semibold">OfflineGPT Models</h3>
                 <p className="mt-1 text-[13px] leading-5 text-[var(--dls-text-secondary)]">Managed models, billed per member. No API keys to look after.</p>
                 <Link href={getInferenceRoute(orgSlug)} className="mt-3 inline-flex items-center gap-1.5 rounded-sm text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-neutral-950">
                   {modelsEnabled ? "Manage models" : "Explore models"}<ArrowUpRight className="size-3.5" aria-hidden />
@@ -92,7 +92,7 @@ export function MarketplaceOnboardingScreen() {
             <p className="mt-2 text-sm leading-6 text-[var(--dls-text-secondary)]">No model selection is required to complete setup.</p>
           </div>
           {authError ? <p role="alert" className="text-sm text-rose-600">{authError}</p> : null}
-          {desktopRedirectUrl ? <DesktopHandoffAction openworkUrl={desktopRedirectUrl} grant={getDesktopGrant(desktopRedirectUrl)} organizationName={activeOrg?.name ?? null} showCopyLinkByDefault /> : (
+          {desktopRedirectUrl ? <DesktopHandoffAction offlinegptUrl={desktopRedirectUrl} grant={getDesktopGrant(desktopRedirectUrl)} organizationName={activeOrg?.name ?? null} showCopyLinkByDefault /> : (
             <button type="button" onClick={() => void finish()} disabled={!orgId || completing} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2">
               {completing ? "Completing..." : desktopAuthRequested ? "Complete and open the app" : "Complete setup"}<ArrowRight className="size-4" aria-hidden />
             </button>

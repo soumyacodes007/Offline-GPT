@@ -6,7 +6,7 @@ export type LoginOptionAccount = {
 }
 
 const BETTER_AUTH_SECURE_SESSION_COOKIES = [
-  "__Secure-openwork-den.session_token",
+  "__Secure-offlinegpt-den.session_token",
   "__Secure-better-auth.session_token",
 ] as const
 

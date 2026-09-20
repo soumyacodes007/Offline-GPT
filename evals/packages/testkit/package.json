@@ -1,5 +1,5 @@
 {
-  "name": "@openwork/testkit",
+  "name": "@offlinegpt/testkit",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,13 +12,13 @@
     "./stack": "./src/stack.ts"
   },
   "dependencies": {
-    "@openwork/behaviors": "workspace:*",
-    "@openwork/cdp": "workspace:*",
-    "@openwork/env": "workspace:*",
-    "@openwork/test-evidence": "workspace:*",
-    "@openwork/test-artifacts": "workspace:*",
-    "@openwork/hosts": "workspace:*",
-    "@openwork/labs": "workspace:*",
+    "@offlinegpt/behaviors": "workspace:*",
+    "@offlinegpt/cdp": "workspace:*",
+    "@offlinegpt/env": "workspace:*",
+    "@offlinegpt/test-evidence": "workspace:*",
+    "@offlinegpt/test-artifacts": "workspace:*",
+    "@offlinegpt/hosts": "workspace:*",
+    "@offlinegpt/labs": "workspace:*",
     "mysql2": "^3.11.3",
     "vitest": "^3.2.4"
   }

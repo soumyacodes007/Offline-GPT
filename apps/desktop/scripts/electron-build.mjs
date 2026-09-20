@@ -12,7 +12,7 @@ const electronHelperDir = resolve(desktopRoot, "resources", "helpers");
 const electronRoot = resolve(desktopRoot, "electron");
 const packagedServerRoot = resolve(desktopRoot, "server");
 const packagedRuntimeRoot = resolve(desktopRoot, ".electron-runtime", "node_modules");
-const sentryBuildConfigPath = resolve(desktopRoot, ".electron-runtime", "openwork-sentry.json");
+const sentryBuildConfigPath = resolve(desktopRoot, ".electron-runtime", "offlinegpt-sentry.json");
 
 const pnpmCmd = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const nodeCmd = process.execPath;
@@ -34,8 +34,8 @@ function run(command, args, cwd, env) {
 }
 
 function writeSentryBuildConfig() {
-  const dsn = process.env.OPENWORK_DESKTOP_SENTRY_DSN?.trim() ?? "";
-  const tracesSampleRateRaw = process.env.OPENWORK_DESKTOP_SENTRY_TRACES_SAMPLE_RATE?.trim() ?? "";
+  const dsn = process.env.OFFLINEGPT_DESKTOP_SENTRY_DSN?.trim() ?? "";
+  const tracesSampleRateRaw = process.env.OFFLINEGPT_DESKTOP_SENTRY_TRACES_SAMPLE_RATE?.trim() ?? "";
   const tracesSampleRate = tracesSampleRateRaw ? Number(tracesSampleRateRaw) : 0.01;
   const config = {
     dsn: dsn || null,
@@ -53,17 +53,17 @@ writeSentryBuildConfig();
 // Build the server TS → JS so Electron can import it in-process
 // CI already compiles this exact checkout in the required build job.
 if (!process.argv.includes("--server-built")) {
-  run(pnpmCmd, ["--filter", "openwork-server", "build"], repoRoot);
+  run(pnpmCmd, ["--filter", "offlinegpt-server", "build"], repoRoot);
 }
-// automation-runner.mjs imports @openwork/headless-threads through its
+// automation-runner.mjs imports @offlinegpt/headless-threads through its
 // published "default" export (dist/index.js); build it so plain-node
 // consumers resolve it in packaged layouts.
-run(pnpmCmd, ["--filter", "@openwork/headless-threads", "build"], repoRoot);
-// OPENWORK_ELECTRON_BUILD tells Vite to emit relative asset paths so
+run(pnpmCmd, ["--filter", "@offlinegpt/headless-threads", "build"], repoRoot);
+// OFFLINEGPT_ELECTRON_BUILD tells Vite to emit relative asset paths so
 // index.html resolves /assets/* correctly when loaded via file:// from
 // inside the packaged .app bundle.
-run(pnpmCmd, ["--filter", "@openwork/app", "build"], repoRoot, {
-  OPENWORK_ELECTRON_BUILD: "1",
+run(pnpmCmd, ["--filter", "@offlinegpt/app", "build"], repoRoot, {
+  OFFLINEGPT_ELECTRON_BUILD: "1",
 });
 // Relocate repository constants for every compiled server module, including v2.
 const serverDistDir = resolve(repoRoot, "apps", "server", "dist");

@@ -1,7 +1,7 @@
-import { createDenDb } from "@openwork-ee/den-db"
-import { eq, sql } from "@openwork-ee/den-db/drizzle"
-import { WorkflowRunTable } from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenDb } from "@offlinegpt-ee/den-db"
+import { eq, sql } from "@offlinegpt-ee/den-db/drizzle"
+import { WorkflowRunTable } from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { afterAll, beforeAll, expect, test } from "bun:test"
 import {
   codemodeCodeDigest,
@@ -11,7 +11,7 @@ import {
   type RecordWorkflowRunInput,
 } from "../src/workflow-runs.js"
 
-const databaseUrl = "mysql://root:password@127.0.0.1:3306/openwork_test_workflow_runs"
+const databaseUrl = "mysql://root:password@127.0.0.1:3306/offlinegpt_test_workflow_runs"
 const database = createDenDb({ databaseUrl, mode: "mysql" }).db
 const organizationId = createDenTypeId("organization")
 const otherOrganizationId = createDenTypeId("organization")

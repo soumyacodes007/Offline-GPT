@@ -28,7 +28,7 @@ function getReauthCompleteUrl(nonce: string, error = false) {
 }
 
 type ReauthCompleteMessage = {
-  type: "openwork:reauth-complete";
+  type: "offlinegpt:reauth-complete";
   nonce: string;
   error: string | null;
 };
@@ -37,7 +37,7 @@ function getReauthCompleteMessage(data: unknown): ReauthCompleteMessage | null {
   if (!data || typeof data !== "object") {
     return null;
   }
-  if (!("type" in data) || data.type !== "openwork:reauth-complete") {
+  if (!("type" in data) || data.type !== "offlinegpt:reauth-complete") {
     return null;
   }
   if (!("nonce" in data) || typeof data.nonce !== "string") {
@@ -47,7 +47,7 @@ function getReauthCompleteMessage(data: unknown): ReauthCompleteMessage | null {
   if (error !== null && typeof error !== "string") {
     return null;
   }
-  return { type: "openwork:reauth-complete", nonce: data.nonce, error };
+  return { type: "offlinegpt:reauth-complete", nonce: data.nonce, error };
 }
 
 const REAUTH_SOCIAL_PROVIDERS: readonly SocialAuthProvider[] = ["google", "github"];
@@ -263,9 +263,9 @@ export function ReauthDialog({
   }
 
   async function continueSocial(provider: SocialAuthProvider) {
-    const popup = window.open("", "openwork-reauth", "popup,width=480,height=640");
+    const popup = window.open("", "offlinegpt-reauth", "popup,width=480,height=640");
     if (!popup) {
-      setError("OpenWork could not open the sign-in window. Allow popups for OpenWork, then try again.");
+      setError("OfflineGPT could not open the sign-in window. Allow popups for OfflineGPT, then try again.");
       return;
     }
 
@@ -315,9 +315,9 @@ export function ReauthDialog({
       return;
     }
 
-    const popup = window.open("", "openwork-reauth", "popup,width=480,height=640");
+    const popup = window.open("", "offlinegpt-reauth", "popup,width=480,height=640");
     if (!popup) {
-      setError("OpenWork could not open the sign-in window. Allow popups for OpenWork, then try again.");
+      setError("OfflineGPT could not open the sign-in window. Allow popups for OfflineGPT, then try again.");
       return;
     }
 

@@ -1,12 +1,12 @@
 import { unwrap } from "@/app/lib/opencode";
-import type { OpenworkServerClient } from "@/app/lib/openwork-server";
+import type { OfflineGptServerClient } from "@/app/lib/offlinegpt-server";
 import type { Client } from "@/app/types";
 
 type WorkspaceType = "local" | "remote" | string;
 
 export type UpdateManagedDisabledProvidersOptions = {
   opencodeClient: Client | null;
-  openworkClient?: OpenworkServerClient | null;
+  offlinegptClient?: OfflineGptServerClient | null;
   workspaceId?: string | null;
   workspaceType?: WorkspaceType | null;
   disabledProviders: unknown;
@@ -59,8 +59,8 @@ export async function updateManagedDisabledProviders(
   const disabledProviders = normalizeDisabledProviders(options.disabledProviders);
   const workspaceId = options.workspaceId?.trim() ?? "";
 
-  if (options.openworkClient && workspaceId && options.workspaceType === "local") {
-    const result = await options.openworkClient.setRuntimeDisabledProviders(workspaceId, disabledProviders);
+  if (options.offlinegptClient && workspaceId && options.workspaceType === "local") {
+    const result = await options.offlinegptClient.setRuntimeDisabledProviders(workspaceId, disabledProviders);
     return { managedRuntime: true, disabledProviders: result.disabledProviders };
   }
 

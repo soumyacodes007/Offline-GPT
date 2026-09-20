@@ -86,7 +86,7 @@ describe("session error resilience", () => {
   test("does not diagnose a generic database failure as a full disk", () => {
     const presentation = presentOpencodeSessionError("effect/sql/SqlError: Failed to execute statement\n at runLoop (/$bunfs/root/chunk.js:25:2045)")
     expect(presentation.kind).toBe("database-error")
-    expect(presentation.title).toBe("OpenWork couldn’t access its saved data")
+    expect(presentation.title).toBe("OfflineGPT couldn’t access its saved data")
     expect(presentation.description).toContain("check the available disk space")
     expect(presentation.description).not.toContain("has run out")
   })
@@ -140,7 +140,7 @@ describe("session error resilience", () => {
     const syncInput = {
       workspaceId: "workspace-1",
       baseUrl: "http://127.0.0.1:1234",
-      openworkToken: "token",
+      offlinegptToken: "token",
     }
     const cleanup = __createWorkspaceSessionSyncForTest(syncInput)
     const release = trackWorkspaceSessionSync(syncInput, "session-1")

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { workflowArtifactSnapshotSchema } from "@openwork/types/workflows"
+import { workflowArtifactSnapshotSchema } from "@offlinegpt/types/workflows"
 import {
   artifactDigest,
   artifactFreshness,

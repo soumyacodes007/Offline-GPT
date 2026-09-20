@@ -26,11 +26,11 @@ function probeDenUrls(overrides: Record<string, string>) {
       PATH: process.env.PATH ?? "",
       HOME: process.env.HOME ?? "",
       TMPDIR: process.env.TMPDIR ?? "",
-      DATABASE_URL: "mysql://root:password@127.0.0.1:3306/openwork_test",
+      DATABASE_URL: "mysql://root:password@127.0.0.1:3306/offlinegpt_test",
       DB_MODE: "mysql",
       DEN_DB_ENCRYPTION_KEY: "x".repeat(32),
       BETTER_AUTH_SECRET: "y".repeat(32),
-      OPENWORK_DEV_MODE: "0",
+      OFFLINEGPT_DEV_MODE: "0",
       PROVISIONER_MODE: "stub",
       ...overrides,
     },
@@ -57,7 +57,7 @@ describe("DEN_BASE_URL environment defaults", () => {
   test("derives local development API and MCP URLs from DEN_BASE_URL and PORT", () => {
     expect(probeDenUrls({
       DEN_BASE_URL: "http://localhost:3005",
-      OPENWORK_DEV_MODE: "1",
+      OFFLINEGPT_DEV_MODE: "1",
       PORT: "8790",
     })).toEqual({
       betterAuthUrl: "http://localhost:3005",
@@ -106,18 +106,18 @@ describe("DEN_BASE_URL environment defaults", () => {
 
   test("supports explicit shared cookie domains for sibling web and API hosts", () => {
     expect(probeDenUrls({
-      BETTER_AUTH_URL: "https://app.openworklabs.com",
-      DEN_API_PUBLIC_URL: "https://api.openworklabs.com",
-      DEN_BETTER_AUTH_COOKIE_DOMAIN: "openworklabs.com",
-      CORS_ORIGINS: "https://app.openworklabs.com,https://api.openworklabs.com,https://api.app.openworklabs.com",
+      BETTER_AUTH_URL: "https://app.offlinegptlabs.com",
+      DEN_API_PUBLIC_URL: "https://api.offlinegptlabs.com",
+      DEN_BETTER_AUTH_COOKIE_DOMAIN: "offlinegptlabs.com",
+      CORS_ORIGINS: "https://app.offlinegptlabs.com,https://api.offlinegptlabs.com,https://api.app.offlinegptlabs.com",
     })).toMatchObject({
-      betterAuthUrl: "https://app.openworklabs.com",
-      betterAuthCookieDomain: "openworklabs.com",
-      webUrl: "https://app.openworklabs.com",
-      apiPublicUrl: "https://api.openworklabs.com",
-      corsOrigins: ["https://app.openworklabs.com", "https://api.openworklabs.com", "https://api.app.openworklabs.com"],
-      betterAuthTrustedOrigins: ["https://app.openworklabs.com"],
-      webAppHosts: ["app.openworklabs.com"],
+      betterAuthUrl: "https://app.offlinegptlabs.com",
+      betterAuthCookieDomain: "offlinegptlabs.com",
+      webUrl: "https://app.offlinegptlabs.com",
+      apiPublicUrl: "https://api.offlinegptlabs.com",
+      corsOrigins: ["https://app.offlinegptlabs.com", "https://api.offlinegptlabs.com", "https://api.app.offlinegptlabs.com"],
+      betterAuthTrustedOrigins: ["https://app.offlinegptlabs.com"],
+      webAppHosts: ["app.offlinegptlabs.com"],
     })
   })
 
@@ -150,7 +150,7 @@ describe("DEN_BASE_URL environment defaults", () => {
   test("derives local API URL from BETTER_AUTH_URL and PORT without DEN_BASE_URL", () => {
     expect(probeDenUrls({
       BETTER_AUTH_URL: "http://localhost:3005",
-      OPENWORK_DEV_MODE: "1",
+      OFFLINEGPT_DEV_MODE: "1",
       PORT: "8790",
     })).toMatchObject({
       betterAuthUrl: "http://localhost:3005",

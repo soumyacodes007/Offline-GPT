@@ -1,13 +1,13 @@
-import { desc, eq } from "@openwork-ee/den-db/drizzle"
-import { WorkerTable, WorkerTokenTable } from "@openwork-ee/den-db/schema"
-import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+import { desc, eq } from "@offlinegpt-ee/den-db/drizzle"
+import { WorkerTable, WorkerTokenTable } from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
 import { db } from "../../db.js"
 import { jsonValidator, orgMemberRoute, paramValidator, queryValidator } from "../../middleware/index.js"
 import { denTypeIdSchema, emptyResponse, forbiddenSchema, invalidRequestSchema, jsonResponse, notFoundSchema, unauthorizedSchema } from "../../openapi.js"
-import { getOpenWorkWebRuntimeAccess, openWorkWebAccessRequiredPayload } from "../../openwork-web-runtime-access.js"
+import { getOfflineGPTWebRuntimeAccess, offlineGptWebAccessRequiredPayload } from "../../offlinegpt-web-runtime-access.js"
 import { getOrganizationLimitStatus } from "../../organization-limits.js"
 import { getRequiredUserEmail } from "../../user.js"
 import type { WorkerRouteVariables } from "./shared.js"
@@ -88,12 +88,12 @@ const workerTokensResponseSchema = z.object({
     client: z.string(),
   }),
   connect: z.object({
-    openworkUrl: z.string().nullable(),
+    offlinegptUrl: z.string().nullable(),
     workspaceId: z.string().nullable(),
   }).nullable(),
   directPreview: z.object({
     version: z.literal(1),
-    openworkUrl: z.string(),
+    offlinegptUrl: z.string(),
     workspaceId: z.string().nullable(),
     expiresAt: z.string().datetime(),
   }).nullable().optional(),
@@ -102,7 +102,7 @@ const workerTokensResponseSchema = z.object({
 const workerTokensRequestSchema = z.object({
   // Legacy/published clients do not understand signed-preview expiry. They
   // receive only stable tokens. New Web flows opt in and own refresh/polling.
-  includeExpiringOpenworkUrl: z.boolean().optional(),
+  includeExpiringOfflineGptUrl: z.boolean().optional(),
 }).meta({ ref: "WorkerTokensRequest" })
 
 const organizationUnavailableSchema = z.object({
@@ -126,10 +126,10 @@ const paymentRequiredSchema = z.object({
   message: z.string(),
 }).meta({ ref: "WorkerPaymentRequiredError" })
 
-const openWorkWebAccessRequiredSchema = z.object({
-  error: z.literal("openwork_web_access_required"),
+const offlineGptWebAccessRequiredSchema = z.object({
+  error: z.literal("offlinegpt_web_access_required"),
   message: z.string(),
-}).meta({ ref: "WorkerOpenWorkWebAccessRequiredError" })
+}).meta({ ref: "WorkerOfflineGPTWebAccessRequiredError" })
 
 const userEmailRequiredSchema = z.object({
   error: z.literal("user_email_required"),
@@ -200,7 +200,7 @@ export function registerWorkerCoreRoutes<T extends { Variables: WorkerRouteVaria
         400: jsonResponse("The worker creation payload was invalid.", z.union([invalidRequestSchema, organizationUnavailableSchema, workspacePathRequiredSchema, userEmailRequiredSchema])),
         401: jsonResponse("The caller must be signed in to create workers.", unauthorizedSchema),
         402: jsonResponse("The caller needs an active cloud plan before launching a cloud worker.", paymentRequiredSchema),
-        403: jsonResponse("OpenWork Web access is required to launch a cloud worker.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is required to launch a cloud worker.", offlineGptWebAccessRequiredSchema),
         409: jsonResponse("The organization has reached its worker limit.", orgLimitReachedSchema),
       },
     }),
@@ -220,9 +220,9 @@ export function registerWorkerCoreRoutes<T extends { Variables: WorkerRouteVaria
     }
 
     if (input.destination === "cloud") {
-      const webAccess = await getOpenWorkWebRuntimeAccess(orgId)
+      const webAccess = await getOfflineGPTWebRuntimeAccess(orgId)
       if (!webAccess.hasAccess) {
-        return c.json(openWorkWebAccessRequiredPayload(), 403)
+        return c.json(offlineGptWebAccessRequiredPayload(), 403)
       }
       const email = getRequiredUserEmail(user)
       if (!email) {
@@ -232,13 +232,13 @@ export function registerWorkerCoreRoutes<T extends { Variables: WorkerRouteVaria
       const access = await requireCloudAccessOrPayment({
         userId: normalizeDenTypeId("user", user.id),
         email,
-        name: user.name ?? user.email ?? "OpenWork User",
+        name: user.name ?? user.email ?? "OfflineGPT User",
       })
 
       if (!access.allowed) {
         return c.json({
           error: "cloud_worker_billing_unavailable",
-          message: "Creating new cloud workers requires an existing OpenWork Cloud plan. New self-serve purchases are no longer available.",
+          message: "Creating new cloud workers requires an existing OfflineGPT Cloud plan. New self-serve purchases are no longer available.",
         }, 402)
       }
 
@@ -452,12 +452,12 @@ export function registerWorkerCoreRoutes<T extends { Variables: WorkerRouteVaria
     describeRoute({
       tags: ["Workers"],
       summary: "Get worker connection tokens",
-      description: "Returns connection tokens and the resolved OpenWork connect URL for an existing worker.",
+      description: "Returns connection tokens and the resolved OfflineGPT connect URL for an existing worker.",
       responses: {
         200: jsonResponse("Worker connection tokens returned successfully.", workerTokensResponseSchema),
         400: jsonResponse("The worker token path parameters were invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to request worker tokens.", unauthorizedSchema),
-        403: jsonResponse("OpenWork Web access is required to use cloud worker tokens.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is required to use cloud worker tokens.", offlineGptWebAccessRequiredSchema),
         404: jsonResponse("The worker could not be found.", notFoundSchema),
         409: jsonResponse("The worker is not ready to return connection tokens yet.", workerRuntimeUnavailableSchema),
       },
@@ -486,7 +486,7 @@ export function registerWorkerCoreRoutes<T extends { Variables: WorkerRouteVaria
 
     const requestBody = workerTokensRequestSchema.safeParse(await c.req.json().catch(() => ({})))
     const resolved = await getWorkerTokensAndConnect(worker, {
-      includeExpiringOpenworkUrl: requestBody.success && requestBody.data.includeExpiringOpenworkUrl === true,
+      includeExpiringOfflineGptUrl: requestBody.success && requestBody.data.includeExpiringOfflineGptUrl === true,
     })
     if ("error" in resolved && resolved.error) {
       return new Response(JSON.stringify(resolved.error.body), {

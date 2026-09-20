@@ -249,7 +249,7 @@ function ConnectIntegrationEmptyState({ integrationsHref }: { integrationsHref: 
   return (
     <EmptyState
       title="Connect a source to discover collections"
-      description="Collections are created when OpenWork finds plugins in a connected repository. Assign them to everyone in your org or specific users and teams."
+      description="Collections are created when OfflineGPT finds plugins in a connected repository. Assign them to everyone in your org or specific users and teams."
       action={{ href: integrationsHref, label: "Open Sources", icon: Cable }}
     />
   );

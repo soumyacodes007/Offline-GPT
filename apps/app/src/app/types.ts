@@ -214,7 +214,7 @@ export type WorkspaceConnectionState = {
   checkedAt?: number | null;
 };
 
-export type ResetOpenworkMode = "onboarding" | "all";
+export type ResetOfflineGptMode = "onboarding" | "all";
 
 export type WorkspaceBlueprintStarterKind = "prompt" | "session" | "action";
 
@@ -267,7 +267,7 @@ export type WorkspaceBlueprint = {
   } | null;
 };
 
-export type WorkspaceOpenworkConfig = {
+export type WorkspaceOfflineGptConfig = {
   version: number;
   workspace?: {
     name?: string | null;
@@ -282,7 +282,7 @@ export type WorkspaceOpenworkConfig = {
   } | null;
 };
 
-export type CapabilityOrigin = "local" | "openwork-connect";
+export type CapabilityOrigin = "local" | "offlinegpt-connect";
 
 export type SkillCard = {
   name: string;

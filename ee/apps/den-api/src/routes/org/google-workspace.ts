@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto"
 import { bodyLimit } from "hono/body-limit"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
-import type { DenTypeId } from "@openwork-ee/utils/typeid"
+import type { DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { env } from "../../env.js"
 import { cloudTransportRoute, jsonValidator, orgMemberRoute, paramValidator, queryValidator } from "../../middleware/index.js"
 import { invalidRequestSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
@@ -50,7 +50,7 @@ const DIRECT_UPLOAD_MAX_FILES = 10
 const GMAIL_REPLY_SUBJECT_RE = /^\s*(re|fwd?)\s*:/i
 const GMAIL_METADATA_CONCURRENCY = 4
 
-const CONNECT_GOOGLE_ACCOUNT_MESSAGE = "Connect your Google account first: open Settings > Connect and use Connect your account on the Google Workspace row, or connect from the OpenWork Cloud dashboard."
+const CONNECT_GOOGLE_ACCOUNT_MESSAGE = "Connect your Google account first: open Settings > Connect and use Connect your account on the Google Workspace row, or connect from the OfflineGPT Cloud dashboard."
 
 const createDraftBodySchema = z.object({
   to: z.string().trim().min(3).max(320).describe("Recipient email address."),
@@ -222,8 +222,8 @@ const driveFileParamSchema = z.object({
 
 const shareDriveFileBodySchema = z.object({
   type: z.enum(["user", "domain"]).describe("Use type=user to share with one person, or type=domain to share with the entire organization."),
-  emailAddress: z.string().trim().email().max(320).optional().describe("Required when type=user; pass the person's email address, for example raghav@openworklabs.com."),
-  domain: z.string().trim().min(1).max(255).optional().describe("Required when type=domain; pass the organization's Google Workspace domain, for example openworklabs.com."),
+  emailAddress: z.string().trim().email().max(320).optional().describe("Required when type=user; pass the person's email address, for example raghav@offlinegptlabs.com."),
+  domain: z.string().trim().min(1).max(255).optional().describe("Required when type=domain; pass the organization's Google Workspace domain, for example offlinegptlabs.com."),
   role: z.enum(["reader", "commenter", "writer"]).default("reader").describe("Drive permission role to grant."),
   sendNotificationEmail: z.boolean().default(true).describe("Whether Google should email the recipient about the new access."),
 }).strict().superRefine((input, context) => {
@@ -328,17 +328,17 @@ export function missingScope(account: ConnectedAccountRow, anyOf: string[]): boo
 }
 
 function missingPermissionMessage(label: string): string {
-  return `Your connected Google account is missing the ${label} permission. An admin can enable it on the Google Workspace connector in OpenWork Cloud -> Connectors; then reconnect your account in Settings -> Extensions.`
+  return `Your connected Google account is missing the ${label} permission. An admin can enable it on the Google Workspace connector in OfflineGPT Cloud -> Connectors; then reconnect your account in Settings -> Extensions.`
 }
 
 function driveReadPermissionMessage(account: ConnectedAccountRow): string | null {
   const scopes = account.scopes
   if (!Array.isArray(scopes) || scopes.length === 0) {
-    return "OpenWork could not verify the Google Drive permissions granted to this connection. An organization admin must enable Read all Drive files, then reconnect Google Workspace and grant Drive read access."
+    return "OfflineGPT could not verify the Google Drive permissions granted to this connection. An organization admin must enable Read all Drive files, then reconnect Google Workspace and grant Drive read access."
   }
   const grantedScopes = new Set(scopes)
   if (grantedScopes.has(DRIVE_READ_SCOPE) || grantedScopes.has(DRIVE_FULL_SCOPE)) return null
-  return "Your connected Google account does not grant Read all Drive files. The selected-file Drive permission can upload or share files created through OpenWork, but it cannot search or read your general Drive. An organization admin must enable Read all Drive files, then reconnect Google Workspace and grant Drive read access."
+  return "Your connected Google account does not grant Read all Drive files. The selected-file Drive permission can upload or share files created through OfflineGPT, but it cannot search or read your general Drive. An organization admin must enable Read all Drive files, then reconnect Google Workspace and grant Drive read access."
 }
 
 function isDeclaredTextFile(mimeType: string): boolean {
@@ -562,7 +562,7 @@ function buildCalendarEventPayload(input: z.infer<typeof createCalendarEventBody
 function buildCalendarConferenceData(): CalendarConferenceData {
   return {
     createRequest: {
-      requestId: `openwork-${randomUUID()}`,
+      requestId: `offlinegpt-${randomUUID()}`,
       conferenceSolutionKey: { type: "hangoutsMeet" },
     },
   }
@@ -716,7 +716,7 @@ export function registerGoogleWorkspaceRoutes<T extends { Variables: OrgRouteVar
     describeRoute({
       tags: ["Direct uploads"],
       summary: "Upload one multipart workspace file directly to Google Drive",
-      description: "Authenticated host transport for openwork-cloud-uploads. The route immediately forwards the file to Google and does not persist it or expose its bytes to the model.",
+      description: "Authenticated host transport for offlinegpt-cloud-uploads. The route immediately forwards the file to Google and does not persist it or expose its bytes to the model.",
       responses: {
         200: jsonResponse("Google Drive file uploaded.", uploadDriveFileResponseSchema),
         400: jsonResponse("The multipart upload was invalid.", invalidRequestSchema),
@@ -757,7 +757,7 @@ export function registerGoogleWorkspaceRoutes<T extends { Variables: OrgRouteVar
       const folderId = typeof folderIdValue === "string" ? folderIdValue.trim() : ""
       const metadata: { name: string; parents?: string[] } = { name: file.name }
       if (folderId) metadata.parents = [folderId]
-      const boundary = `openwork-${randomUUID()}`
+      const boundary = `offlinegpt-${randomUUID()}`
       const url = new URL(`${driveApiBase()}/upload/drive/v3/files`)
       url.searchParams.set("uploadType", "multipart")
       url.searchParams.set("supportsAllDrives", "true")
@@ -795,7 +795,7 @@ export function registerGoogleWorkspaceRoutes<T extends { Variables: OrgRouteVar
     describeRoute({
       tags: ["Direct uploads"],
       summary: "Create a Gmail draft with direct multipart workspace attachments",
-      description: "Authenticated host transport for openwork-cloud-uploads. The route immediately creates the draft and does not persist attachment bytes or expose them to the model.",
+      description: "Authenticated host transport for offlinegpt-cloud-uploads. The route immediately creates the draft and does not persist attachment bytes or expose them to the model.",
       responses: {
         200: jsonResponse("Gmail draft created.", createDraftResponseSchema),
         400: jsonResponse("The multipart draft request was invalid.", invalidRequestSchema),
@@ -1394,7 +1394,7 @@ export function registerGoogleWorkspaceRoutes<T extends { Variables: OrgRouteVar
     describeRoute({
       tags: ["Capability Sources"],
       summary: "Share a Google Drive file with a person or the organization",
-      description: "Creates a Drive permission for one file using the calling member's Google Workspace account. To share with one person pass type=user plus emailAddress; to share with the entire organization pass type=domain plus the org's Google Workspace domain (e.g. openworklabs.com). Sharing files not created through OpenWork needs the Full Drive access feature enabled by an admin.",
+      description: "Creates a Drive permission for one file using the calling member's Google Workspace account. To share with one person pass type=user plus emailAddress; to share with the entire organization pass type=domain plus the org's Google Workspace domain (e.g. offlinegptlabs.com). Sharing files not created through OfflineGPT needs the Full Drive access feature enabled by an admin.",
       responses: {
         200: jsonResponse("Google Drive file shared.", shareDriveFileResponseSchema),
         400: jsonResponse("The share request was invalid.", invalidRequestSchema),
@@ -1464,7 +1464,7 @@ export function registerGoogleWorkspaceRoutes<T extends { Variables: OrgRouteVar
     describeRoute({
       tags: ["Capability Sources"],
       summary: "Create a Gmail draft or threaded reply draft without attachments",
-      description: "Creates a plain-text Gmail draft in the calling member own mailbox. For workspace attachments, use the openwork-cloud-uploads gmail_create_draft_with_attachments action so file bytes stay outside model context. Set threadId for replies and forwards. Always share the returned draftUrl.",
+      description: "Creates a plain-text Gmail draft in the calling member own mailbox. For workspace attachments, use the offlinegpt-cloud-uploads gmail_create_draft_with_attachments action so file bytes stay outside model context. Set threadId for replies and forwards. Always share the returned draftUrl.",
       responses: {
         200: jsonResponse("Draft created.", createDraftResponseSchema),
         400: jsonResponse("The draft request was invalid.", z.union([invalidRequestSchema, missingThreadIdSchema])),

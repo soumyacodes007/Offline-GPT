@@ -168,8 +168,8 @@ function MarkdownBlockInner({
     const root = rootRef.current;
     if (!root) return;
 
-    for (const [index, codeBlock] of root.querySelectorAll("[data-openwork-code-block]").entries()) {
-      const button = codeBlock.querySelector("[data-openwork-code-wrap]");
+    for (const [index, codeBlock] of root.querySelectorAll("[data-offlinegpt-code-block]").entries()) {
+      const button = codeBlock.querySelector("[data-offlinegpt-code-wrap]");
       if (button instanceof HTMLButtonElement) {
         setCodeWrapButtonState(button, codeWrapStates.current.get(index) ?? false);
       }
@@ -256,14 +256,14 @@ function MarkdownBlockInner({
         videoCleanups.current.delete(video);
       }
     }
-    for (const video of root.querySelectorAll("video[data-openwork-video-path]")) {
+    for (const video of root.querySelectorAll("video[data-offlinegpt-video-path]")) {
       if (!(video instanceof HTMLVideoElement)) continue;
       if (videoCleanups.current.has(video)) continue;
       let cancelled = false;
       let objectUrl: string | null = null;
-      const href = video.dataset.openworkVideoPath ?? "";
+      const href = video.dataset.offlinegptVideoPath ?? "";
       const showError = () => {
-        const notice = video.parentElement?.querySelector("[data-openwork-video-error]");
+        const notice = video.parentElement?.querySelector("[data-offlinegpt-video-error]");
         if (notice instanceof HTMLElement) notice.hidden = false;
       };
       video.addEventListener("error", showError);
@@ -310,32 +310,32 @@ function MarkdownBlockInner({
     const handleClick = (event: MouseEvent) => {
       if (!(event.target instanceof Element)) return;
 
-      const copyButton = event.target.closest("[data-openwork-code-copy]");
+      const copyButton = event.target.closest("[data-offlinegpt-code-copy]");
       if (copyButton instanceof HTMLButtonElement) {
         event.preventDefault();
         event.stopPropagation();
 
-        const codeBlock = copyButton.closest("[data-openwork-code-block]");
+        const codeBlock = copyButton.closest("[data-offlinegpt-code-block]");
         const code = codeBlock?.querySelector("code");
         void handleCodeBlockCopy(copyButton, code?.textContent ?? "");
         return;
       }
 
-      const inlineCodePath = event.target.closest("[data-openwork-inline-code-path]");
+      const inlineCodePath = event.target.closest("[data-offlinegpt-inline-code-path]");
       if (inlineCodePath instanceof HTMLElement) {
         event.preventDefault();
         event.stopPropagation();
-        openArtifactPath(inlineCodePath.dataset.openworkInlineCodePath ?? "");
+        openArtifactPath(inlineCodePath.dataset.offlinegptInlineCodePath ?? "");
         return;
       }
 
-      const wrapButton = event.target.closest("[data-openwork-code-wrap]");
+      const wrapButton = event.target.closest("[data-offlinegpt-code-wrap]");
       if (wrapButton instanceof HTMLButtonElement) {
         event.preventDefault();
         event.stopPropagation();
 
-        const codeBlock = wrapButton.closest("[data-openwork-code-block]");
-        const codeBlocks = Array.from(root.querySelectorAll("[data-openwork-code-block]"));
+        const codeBlock = wrapButton.closest("[data-offlinegpt-code-block]");
+        const codeBlocks = Array.from(root.querySelectorAll("[data-offlinegpt-code-block]"));
         const index = codeBlock ? codeBlocks.indexOf(codeBlock) : -1;
         if (index >= 0) {
           const wrapped = !(codeWrapStates.current.get(index) ?? false);
@@ -345,11 +345,11 @@ function MarkdownBlockInner({
         return;
       }
 
-      const chevron = event.target.closest("[data-openwork-link-chevron]");
+      const chevron = event.target.closest("[data-offlinegpt-link-chevron]");
       if (chevron instanceof HTMLElement) {
         event.preventDefault();
         event.stopPropagation();
-        const href = chevron.dataset.openworkLinkChevron ?? "";
+        const href = chevron.dataset.offlinegptLinkChevron ?? "";
         const target = openTargetForHref(href, openTargets);
         if (target) {
           setLinkMenu({ target, rect: chevron.getBoundingClientRect() });
@@ -357,9 +357,9 @@ function MarkdownBlockInner({
         return;
       }
 
-      const link = event.target.closest("a[data-openwork-link-href]");
+      const link = event.target.closest("a[data-offlinegpt-link-href]");
       if (link instanceof HTMLAnchorElement) {
-        const href = link.dataset.openworkLinkHref ?? link.getAttribute("href") ?? "";
+        const href = link.dataset.offlinegptLinkHref ?? link.getAttribute("href") ?? "";
         const target = openTargetForHref(href, openTargets);
 
         if (target && onOpenTarget) {
@@ -369,7 +369,7 @@ function MarkdownBlockInner({
         }
       }
 
-      const preview = event.target.closest("[data-openwork-image-preview]");
+      const preview = event.target.closest("[data-offlinegpt-image-preview]");
       if (!(preview instanceof HTMLElement)) return;
 
       event.preventDefault();
@@ -381,11 +381,11 @@ function MarkdownBlockInner({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Enter" && event.key !== " ") return;
-      if (!(event.target instanceof HTMLElement) || !event.target.matches("[data-openwork-inline-code-path]")) return;
+      if (!(event.target instanceof HTMLElement) || !event.target.matches("[data-offlinegpt-inline-code-path]")) return;
 
       event.preventDefault();
       event.stopPropagation();
-      openArtifactPath(event.target.dataset.openworkInlineCodePath ?? "");
+      openArtifactPath(event.target.dataset.offlinegptInlineCodePath ?? "");
     };
 
     root.addEventListener("load", handleLoad, true);

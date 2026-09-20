@@ -3,33 +3,33 @@ export const dynamic = "force-static"
 const linkset = {
   linkset: [
     {
-      anchor: "https://api.openworklabs.com",
+      anchor: "https://api.offlinegptlabs.com",
       "service-desc": [
         {
-          href: "https://api.openworklabs.com/openapi.json",
+          href: "https://api.offlinegptlabs.com/openapi.json",
           type: "application/vnd.oai.openapi+json;version=3.1",
-          title: "OpenWork Den API — OpenAPI 3.1 document",
+          title: "OfflineGPT Den API — OpenAPI 3.1 document",
         },
       ],
       "service-doc": [
         {
-          href: "https://openworklabs.com/docs/api-reference",
+          href: "https://offlinegptlabs.com/docs/api-reference",
           type: "text/html",
-          title: "OpenWork Den API — human documentation",
+          title: "OfflineGPT Den API — human documentation",
         },
       ],
       status: [
         {
-          href: "https://api.openworklabs.com/health",
+          href: "https://api.offlinegptlabs.com/health",
           type: "application/json",
-          title: "OpenWork Den API — health endpoint",
+          title: "OfflineGPT Den API — health endpoint",
         },
       ],
       "service-meta": [
         {
-          href: "https://openworklabs.com/llms.txt",
+          href: "https://offlinegptlabs.com/llms.txt",
           type: "text/plain",
-          title: "OpenWork llms.txt — agent-facing site guide",
+          title: "OfflineGPT llms.txt — agent-facing site guide",
         },
       ],
     },

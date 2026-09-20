@@ -1,4 +1,4 @@
-import { callFunctionOnSurface, type Surface } from "@openwork/cdp";
+import { callFunctionOnSurface, type Surface } from "@offlinegpt/cdp";
 
 /** Overflow, action-lane, and rail geometry without changing scroll position or focus. */
 export function readSidebarOverflow(surface: Surface, title = "") {
@@ -87,7 +87,7 @@ export async function observeSidebarExpansion(surface: Surface) {
         hash: location.hash,
         selected: [...document.querySelectorAll<HTMLElement>('[data-session-tab-active="true"]')]
           .map(row => row.dataset.sessionTabId ?? ""),
-        management: localStorage.getItem("openwork.react.sessionManagement"),
+        management: localStorage.getItem("offlinegpt.react.sessionManagement"),
       };
     };
     let frame = 0;

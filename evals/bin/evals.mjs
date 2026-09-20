@@ -15,7 +15,7 @@ Run E2E tests:
   --with-llm-vision  Judge vision claims inline (default: defer judging)
   --local            Force isolated local resources and clear inherited remote placement
   --daytona          Require Daytona (fails if the CLI is not authenticated)
-  --den <url>        Set OPENWORK_EVAL_DEN_API_URL=<url>
+  --den <url>        Set OFFLINEGPT_EVAL_DEN_API_URL=<url>
 
 Without a placement flag, Daytona is used when the daytona CLI is authenticated, otherwise local.
 
@@ -27,7 +27,7 @@ Publish recorded evidence (no test reruns or model calls):
   --docshot <path>  Include a DocShot .review.json receipt (repeatable)
   --title <text>    Report title (defaults to Change verification)
   --gap <text>      Declare a coverage gap (repeatable)
-  --review-url <url> Override OPENWORK_REVIEW_URL
+  --review-url <url> Override OFFLINEGPT_REVIEW_URL
   --dry-run         Render publication output without posting
   --force           Forward force to the publisher
 
@@ -53,10 +53,10 @@ Publish exit codes:
 export function consentVarsFromSource(text) {
   const variables = new Set();
   const optInPattern = /optIn\s*:\s*\[([^\]]*)\]/gs;
-  const envPattern = /process\.env\.(OPENWORK_EVAL_[A-Z0-9_]+)(?:\?\.trim\(\))?\s*===\s*"1"/g;
+  const envPattern = /process\.env\.(OFFLINEGPT_EVAL_[A-Z0-9_]+)(?:\?\.trim\(\))?\s*===\s*"1"/g;
 
   for (const match of text.matchAll(optInPattern)) {
-    for (const literal of match[1].matchAll(/["'](OPENWORK_EVAL_[A-Z0-9_]+)["']/g)) {
+    for (const literal of match[1].matchAll(/["'](OFFLINEGPT_EVAL_[A-Z0-9_]+)["']/g)) {
       variables.add(literal[1]);
     }
   }
@@ -148,16 +148,16 @@ export function parseArgs(args) {
   return options;
 }
 
-// The complete caller environment, including OPENWORK_EVAL_ENGINE, is passed
+// The complete caller environment, including OFFLINEGPT_EVAL_ENGINE, is passed
 // through below. Only these remote-placement inputs are removed by --local.
 const REMOTE_PLACEMENT_ENV = [
-  "OPENWORK_EVAL_DAYTONA",
-  "OPENWORK_EVAL_DAYTONA_SANDBOX",
-  "OPENWORK_EVAL_DAYTONA_SANDBOX_ID",
-  "OPENWORK_EVAL_DAYTONA_DEN_SANDBOX",
-  "OPENWORK_EVAL_DAYTONA_DESKTOP_SANDBOX",
-  "OPENWORK_EVAL_DEN_API_URL",
-  "OPENWORK_EVAL_DEN_WEB_URL",
+  "OFFLINEGPT_EVAL_DAYTONA",
+  "OFFLINEGPT_EVAL_DAYTONA_SANDBOX",
+  "OFFLINEGPT_EVAL_DAYTONA_SANDBOX_ID",
+  "OFFLINEGPT_EVAL_DAYTONA_DEN_SANDBOX",
+  "OFFLINEGPT_EVAL_DAYTONA_DESKTOP_SANDBOX",
+  "OFFLINEGPT_EVAL_DEN_API_URL",
+  "OFFLINEGPT_EVAL_DEN_WEB_URL",
 ];
 
 /** Resolve the child environment before any test process can provision resources. */
@@ -176,21 +176,21 @@ export function resolveRunEnvironment(options, env = process.env, probe = dayton
     return { env: childEnv, placement: "local", reason: "--local" };
   }
   if (options.den !== undefined) {
-    childEnv.OPENWORK_EVAL_DEN_API_URL = options.den;
+    childEnv.OFFLINEGPT_EVAL_DEN_API_URL = options.den;
     return { env: childEnv, placement: "attached", reason: "--den" };
   }
   if (options.daytona) {
     if (!probe()) {
       throw new Error("--daytona requested but the daytona CLI is missing or not authenticated. Install it and run `daytona login`.");
     }
-    childEnv.OPENWORK_EVAL_DAYTONA = "1";
+    childEnv.OFFLINEGPT_EVAL_DAYTONA = "1";
     return { env: childEnv, placement: "daytona", reason: "--daytona" };
   }
-  if (env.OPENWORK_EVAL_DAYTONA === "1") {
-    return { env: childEnv, placement: "daytona", reason: "OPENWORK_EVAL_DAYTONA=1 in environment" };
+  if (env.OFFLINEGPT_EVAL_DAYTONA === "1") {
+    return { env: childEnv, placement: "daytona", reason: "OFFLINEGPT_EVAL_DAYTONA=1 in environment" };
   }
   if (probe()) {
-    childEnv.OPENWORK_EVAL_DAYTONA = "1";
+    childEnv.OFFLINEGPT_EVAL_DAYTONA = "1";
     return { env: childEnv, placement: "daytona", reason: "daytona CLI authenticated" };
   }
   return { env: childEnv, placement: "local", reason: "daytona CLI missing or not authenticated" };
@@ -318,8 +318,8 @@ function run(options) {
   const runStartedAt = Date.now();
   const resolved = resolveTestNames(options.testNames);
   const { env: childEnv, placement, reason } = resolveRunEnvironment(options);
-  childEnv.OPENWORK_EVAL_E2E_TESTS = "1";
-  const consented = new Set(["OPENWORK_EVAL_E2E_TESTS"]);
+  childEnv.OFFLINEGPT_EVAL_E2E_TESTS = "1";
+  const consented = new Set(["OFFLINEGPT_EVAL_E2E_TESTS"]);
 
   for (const file of resolved) {
     for (const variable of consentVarsFromSource(readFileSync(file, "utf8"))) {
@@ -328,8 +328,8 @@ function run(options) {
       consented.add(variable);
     }
   }
-  if (options.withLlmVision) delete childEnv.OPENWORK_EVAL_VISION;
-  else childEnv.OPENWORK_EVAL_VISION = "defer";
+  if (options.withLlmVision) delete childEnv.OFFLINEGPT_EVAL_VISION;
+  else childEnv.OFFLINEGPT_EVAL_VISION = "defer";
   const outputDir = join(evalsDir, "results/.testkit");
   mkdirSync(outputDir, { recursive: true });
   const outputFile = join(outputDir, `cli-run-${Date.now()}.json`);

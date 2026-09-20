@@ -1,5 +1,5 @@
-import { and, eq } from "@openwork-ee/den-db/drizzle"
-import { WorkerTable } from "@openwork-ee/den-db/schema"
+import { and, eq } from "@offlinegpt-ee/den-db/drizzle"
+import { WorkerTable } from "@offlinegpt-ee/den-db/schema"
 import { db } from "../db.js"
 import { appLogger } from "../observability/logger.js"
 

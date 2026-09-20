@@ -648,7 +648,7 @@ import type {
   PutApiAuthScimV2GroupsByGroupIdResponses,
   PutApiAuthScimV2UsersByUserIdResponses,
   PutV1AdminOrganizationsByOrganizationIdCapabilitiesResponses,
-  PutV1AdminOrganizationsByOrganizationIdOpenworkWebAccessResponses,
+  PutV1AdminOrganizationsByOrganizationIdOfflineGptWebAccessResponses,
   PutV1CapabilitiesMicrosoft365DriveFilesErrors,
   PutV1CapabilitiesMicrosoft365DriveFilesResponses,
   PutV1DesktopPoliciesByKeyByExternalKeyErrors,
@@ -900,7 +900,7 @@ export class DenClient extends HeyApiClient {
     });
   }
 
-  public putV1AdminOrganizationsByOrganizationIdOpenworkWebAccess<ThrowOnError extends boolean = false>(
+  public putV1AdminOrganizationsByOrganizationIdOfflineGptWebAccess<ThrowOnError extends boolean = false>(
     parameters: {
       organizationId: string;
     },
@@ -908,11 +908,11 @@ export class DenClient extends HeyApiClient {
   ) {
     const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "organizationId" }] }]);
     return (options?.client ?? this.client).put<
-      PutV1AdminOrganizationsByOrganizationIdOpenworkWebAccessResponses,
+      PutV1AdminOrganizationsByOrganizationIdOfflineGptWebAccessResponses,
       unknown,
       ThrowOnError
     >({
-      url: "/v1/admin/organizations/{organizationId}/openwork-web-access",
+      url: "/v1/admin/organizations/{organizationId}/offlinegpt-web-access",
       ...options,
       ...params,
     });
@@ -1410,7 +1410,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Get the active organization's Cloud instance
    *
-   * Starts the active organization's OpenWork Cloud browser instance when needed and returns its browser URL once ready.
+   * Starts the active organization's OfflineGPT Cloud browser instance when needed and returns its browser URL once ready.
    */
   public getV1CloudInstance<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<GetV1CloudInstanceResponses, GetV1CloudInstanceErrors, ThrowOnError>({
@@ -1448,7 +1448,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Resolve the caller's Cloud instance for the browser gateway
    *
-   * Starts or wakes the caller's own OpenWork Cloud browser instance when needed and returns the collaborator token only to the trusted gateway.
+   * Starts or wakes the caller's own OfflineGPT Cloud browser instance when needed and returns the collaborator token only to the trusted gateway.
    */
   public getV1CloudGatewayResolve<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<
@@ -1744,9 +1744,9 @@ export class DenClient extends HeyApiClient {
   }
 
   /**
-   * Send current user the OpenWork desktop download link
+   * Send current user the OfflineGPT desktop download link
    *
-   * Emails the authenticated user a link to download the OpenWork desktop app.
+   * Emails the authenticated user a link to download the OfflineGPT desktop app.
    */
   public postV1MeSendDownloadLink<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).post<
@@ -2049,7 +2049,7 @@ export class DenClient extends HeyApiClient {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -2095,7 +2095,7 @@ export class DenClient extends HeyApiClient {
   /**
    * List Automations
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
    */
   public listAutomations<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2125,7 +2125,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Create an active Automation from an app surface
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress. This compatibility route serves first-party Desktop clients. Agents must use createCloudAutomation so they cannot accidentally create Desktop placement.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress. This compatibility route serves first-party Desktop clients. Agents must use createCloudAutomation so they cannot accidentally create Desktop placement.
    */
   public createAutomation<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2218,9 +2218,9 @@ export class DenClient extends HeyApiClient {
   }
 
   /**
-   * Create an active OpenWork Cloud Automation
+   * Create an active OfflineGPT Cloud Automation
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress. This is the Web and Cloud Chat creation surface. Placement is fixed to OpenWork Cloud and the Automation can wake a stopped Cloud container without a desktop. Create only when the person explicitly asks to create or schedule it; there is no draft step.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress. This is the Web and Cloud Chat creation surface. Placement is fixed to OfflineGPT Cloud and the Automation can wake a stopped Cloud container without a desktop. Create only when the person explicitly asks to create or schedule it; there is no draft step.
    */
   public createCloudAutomation<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2297,7 +2297,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Archive an Automation
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress. Durable run history is retained.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress. Durable run history is retained.
    */
   public archiveAutomation<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2316,7 +2316,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Get an Automation
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
    */
   public getAutomation<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2335,7 +2335,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Update an Automation
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress. Every behavior-changing edit creates an immutable revision and applies it to future runs immediately.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress. Every behavior-changing edit creates an immutable revision and applies it to future runs immediately.
    */
   public updateAutomation<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2422,7 +2422,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Activate an Automation
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
    */
   public activateAutomation<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2441,7 +2441,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Deactivate an Automation
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
    */
   public deactivateAutomation<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2464,7 +2464,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Run an Automation now
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
    */
   public runAutomationNow<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2483,7 +2483,7 @@ export class DenClient extends HeyApiClient {
   /**
    * List Automation runs
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
    */
   public listAutomationRuns<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2515,7 +2515,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Inspect an Automation run receipt and execution thread
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
    */
   public getAutomationRun<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2534,7 +2534,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Cancel an active Automation run
    *
-   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OpenWork Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OpenWork Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
+   * Den schedules Automations and keeps durable run history. Automations created by Desktop run on the owner's connected desktop; Automations created by Web run in OfflineGPT Cloud. If no desktop runner is connected when a desktop occurrence is due, that occurrence is recorded as missed. Creation makes an Automation active immediately and uses the owner's current OfflineGPT Connect integrations. Deactivation stops future runs but does not cancel a run already in progress.
    */
   public cancelAutomationRun<ThrowOnError extends boolean = false>(
     parameters: {
@@ -2799,7 +2799,7 @@ export class DenClient extends HeyApiClient {
   }
 
   /**
-   * Save a successful Code Mode run as a Workflow inside an OpenWork Connect Plugin
+   * Save a successful Code Mode run as a Workflow inside an OfflineGPT Connect Plugin
    */
   public saveWorkflow<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3868,7 +3868,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Get inference settings
    *
-   * Returns OpenWork Models enablement and limit context for the active organization.
+   * Returns OfflineGPT Models enablement and limit context for the active organization.
    */
   public getV1Inference<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<GetV1InferenceResponses, GetV1InferenceErrors, ThrowOnError>({
@@ -3880,7 +3880,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Update inference settings
    *
-   * Enables or disables OpenWork Models for the active organization.
+   * Enables or disables OfflineGPT Models for the active organization.
    */
   public patchV1Inference<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3913,7 +3913,7 @@ export class DenClient extends HeyApiClient {
   }
 
   /**
-   * Read the OpenWork Models task analytics choice
+   * Read the OfflineGPT Models task analytics choice
    */
   public getV1InferenceAnalyticsSettings<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<GetV1InferenceAnalyticsSettingsResponses, unknown, ThrowOnError>({
@@ -3923,7 +3923,7 @@ export class DenClient extends HeyApiClient {
   }
 
   /**
-   * Choose whether to collect task analytics included with OpenWork Models
+   * Choose whether to collect task analytics included with OfflineGPT Models
    */
   public patchV1InferenceAnalyticsSettings<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4042,7 +4042,7 @@ export class DenClient extends HeyApiClient {
   }
 
   /**
-   * Read provider-reported consumption for OpenWork Models
+   * Read provider-reported consumption for OfflineGPT Models
    */
   public getV1InferenceAnalyticsConsumption<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4446,7 +4446,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Create organization install link
    *
-   * Mints a shareable OpenWork desktop install link for a signed-in organization member. Older active links remain valid unless an owner or admin explicitly requests rotation.
+   * Mints a shareable OfflineGPT desktop install link for a signed-in organization member. Older active links remain valid unless an owner or admin explicitly requests rotation.
    */
   public postV1OrgsByOrganizationIdInstallLinks<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4496,7 +4496,7 @@ export class DenClient extends HeyApiClient {
   }
 
   /**
-   * Download current user's managed OpenWork desktop
+   * Download current user's managed OfflineGPT desktop
    *
    * Downloads the Cloud or Enterprise artifact approved for the signed-in member's active organization.
    */
@@ -4622,7 +4622,7 @@ export class DenClient extends HeyApiClient {
   }
 
   /**
-   * Download managed OpenWork desktop
+   * Download managed OfflineGPT desktop
    *
    * Redirects hosted Cloud deployments to the sign-in-required Cloud app and private single-org deployments to the activation-required Enterprise app.
    */
@@ -5358,7 +5358,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Save an org's OAuth client for a provider
    *
-   * Admin-only. Lets an org bring its own OAuth app (client id + secret) for a native provider such as google-workspace, instead of relying on an OpenWork-owned client.
+   * Admin-only. Lets an org bring its own OAuth app (client id + secret) for a native provider such as google-workspace, instead of relying on an OfflineGPT-owned client.
    */
   public postV1OauthProvidersByProviderIdClient<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5456,7 +5456,7 @@ export class DenClient extends HeyApiClient {
   /**
    * OAuth callback for a provider
    *
-   * The provider redirects here with code+state after the member consents. Identity is carried entirely by the signed state token, not a session cookie, since the redirect may arrive in a fresh browser context. Serves a small static HTML page that deep-links back to OpenWork.
+   * The provider redirects here with code+state after the member consents. Identity is carried entirely by the signed state token, not a session cookie, since the redirect may arrive in a fresh browser context. Serves a small static HTML page that deep-links back to OfflineGPT.
    */
   public getV1OauthProvidersByProviderIdConnectCallback<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5525,7 +5525,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Upload one multipart workspace file directly to Google Drive
    *
-   * Authenticated host transport for openwork-cloud-uploads. The route immediately forwards the file to Google and does not persist it or expose its bytes to the model.
+   * Authenticated host transport for offlinegpt-cloud-uploads. The route immediately forwards the file to Google and does not persist it or expose its bytes to the model.
    */
   public postV1DirectUploadsGoogleWorkspaceDriveFiles<ThrowOnError extends boolean = false>(
     options?: Options<never, ThrowOnError>,
@@ -5540,7 +5540,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Create a Gmail draft with direct multipart workspace attachments
    *
-   * Authenticated host transport for openwork-cloud-uploads. The route immediately creates the draft and does not persist attachment bytes or expose them to the model.
+   * Authenticated host transport for offlinegpt-cloud-uploads. The route immediately creates the draft and does not persist attachment bytes or expose them to the model.
    */
   public postV1DirectUploadsGoogleWorkspaceGmailDrafts<ThrowOnError extends boolean = false>(
     options?: Options<never, ThrowOnError>,
@@ -5809,7 +5809,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Share a Google Drive file with a person or the organization
    *
-   * Creates a Drive permission for one file using the calling member's Google Workspace account. To share with one person pass type=user plus emailAddress; to share with the entire organization pass type=domain plus the org's Google Workspace domain (e.g. openworklabs.com). Sharing files not created through OpenWork needs the Full Drive access feature enabled by an admin.
+   * Creates a Drive permission for one file using the calling member's Google Workspace account. To share with one person pass type=user plus emailAddress; to share with the entire organization pass type=domain plus the org's Google Workspace domain (e.g. offlinegptlabs.com). Sharing files not created through OfflineGPT needs the Full Drive access feature enabled by an admin.
    */
   public postV1CapabilitiesGoogleWorkspaceDriveFileShareByFileId<ThrowOnError extends boolean = false>(
     parameters: {
@@ -5848,7 +5848,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Create a Gmail draft or threaded reply draft without attachments
    *
-   * Creates a plain-text Gmail draft in the calling member own mailbox. For workspace attachments, use the openwork-cloud-uploads gmail_create_draft_with_attachments action so file bytes stay outside model context. Set threadId for replies and forwards. Always share the returned draftUrl.
+   * Creates a plain-text Gmail draft in the calling member own mailbox. For workspace attachments, use the offlinegpt-cloud-uploads gmail_create_draft_with_attachments action so file bytes stay outside model context. Set threadId for replies and forwards. Always share the returned draftUrl.
    */
   public postV1CapabilitiesGoogleWorkspaceGmailDrafts<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -8060,7 +8060,7 @@ export class DenClient extends HeyApiClient {
   /**
    * List my library
    *
-   * Lists the Workflows, Remote MCP Apps, plugins, and connections the caller can use, with every applicable access edge. Workflows and Remote MCP Apps remain config objects contained by their parent OpenWork Connect Plugin.
+   * Lists the Workflows, Remote MCP Apps, plugins, and connections the caller can use, with every applicable access edge. Workflows and Remote MCP Apps remain config objects contained by their parent OfflineGPT Connect Plugin.
    */
   public getV1MeLibrary<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<GetV1MeLibraryResponses, GetV1MeLibraryErrors, ThrowOnError>({
@@ -9191,7 +9191,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Apply GitHub discovery selection
    *
-   * Creates OpenWork plugins and connector mappings from selected discovery candidates.
+   * Creates OfflineGPT plugins and connector mappings from selected discovery candidates.
    */
   public postV1ConnectorInstancesByConnectorInstanceIdDiscoveryApply<ThrowOnError extends boolean = false>(
     parameters: {
@@ -10541,7 +10541,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Get worker connection tokens
    *
-   * Returns connection tokens and the resolved OpenWork connect URL for an existing worker.
+   * Returns connection tokens and the resolved OfflineGPT connect URL for an existing worker.
    */
   public postV1WorkersByIdTokens<ThrowOnError extends boolean = false>(
     parameters: {
@@ -10719,7 +10719,7 @@ export class DenClient extends HeyApiClient {
   /**
    * Ingest telemetry events
    *
-   * Receives a batch of telemetry events from the OpenWork app or workers. Auth provides org and member identity. Unknown event types and disallowed fields are dropped. Always returns 204.
+   * Receives a batch of telemetry events from the OfflineGPT app or workers. Auth provides org and member identity. Unknown event types and disallowed fields are dropped. Always returns 204.
    */
   public postV1TelemetryIngest<ThrowOnError extends boolean = false>(
     parameters?: {

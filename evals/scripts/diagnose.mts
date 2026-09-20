@@ -1,5 +1,5 @@
-import { probeTls } from "@openwork/behaviors";
-import { diagnoseTls, type TlsVersionFacts } from "@openwork/matchers";
+import { probeTls } from "@offlinegpt/behaviors";
+import { diagnoseTls, type TlsVersionFacts } from "@offlinegpt/matchers";
 
 function usage(): never {
   throw new Error("Usage: node evals/scripts/diagnose.mts <origin> [--insecure-ca <pemPath>]");

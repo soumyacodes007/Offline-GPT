@@ -1,18 +1,18 @@
-import { createHeadlessThreadClient, toTranscript, type AgentSessionClient, type HeadlessThreadModel } from "@openwork/headless-threads"
-import { and, eq, isNull } from "@openwork-ee/den-db/drizzle"
-import { MemberTable } from "@openwork-ee/den-db/schema/org"
-import { createDenTypeId, normalizeDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
+import { createHeadlessThreadClient, toTranscript, type AgentSessionClient, type HeadlessThreadModel } from "@offlinegpt/headless-threads"
+import { and, eq, isNull } from "@offlinegpt-ee/den-db/drizzle"
+import { MemberTable } from "@offlinegpt-ee/den-db/schema/org"
+import { createDenTypeId, normalizeDenTypeId, type DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { z } from "zod"
-import { desktopRunnerConnected } from "@openwork/automations"
-import { REMOTE_SESSION_DESKTOP_RUNNER_CAPABILITY } from "@openwork/types/automations"
+import { desktopRunnerConnected } from "@offlinegpt/automations"
+import { REMOTE_SESSION_DESKTOP_RUNNER_CAPABILITY } from "@offlinegpt/types/automations"
 import { db } from "../db.js"
 import { env } from "../env.js"
 import {
-  getOpenWorkWebRuntimeAccess,
-  OPENWORK_WEB_ACCESS_REQUIRED_CODE,
-  OPENWORK_WEB_ACCESS_REQUIRED_MESSAGE,
-  type OpenWorkWebRuntimeAccessResolver,
-} from "../openwork-web-runtime-access.js"
+  getOfflineGPTWebRuntimeAccess,
+  OFFLINEGPT_WEB_ACCESS_REQUIRED_CODE,
+  OFFLINEGPT_WEB_ACCESS_REQUIRED_MESSAGE,
+  type OfflineGPTWebRuntimeAccessResolver,
+} from "../offlinegpt-web-runtime-access.js"
 // The automation repository is the presence source of truth. Importing the
 // automation service instead would pull the codemode execution graph (and
 // its `effect` dependency) into every spec that imports this module, which
@@ -30,7 +30,7 @@ import { scoreText, tokenize, type CapabilityMatch } from "./search.js"
 
 /**
  * Remote sessions over the capability gateway: create and drive a native
- * OpenWork session on the member's OpenWork Cloud worker or connected
+ * OfflineGPT session on the member's OfflineGPT Cloud worker or connected
  * desktop — from any MCP client.
  */
 
@@ -107,14 +107,14 @@ const REMOTE_SESSION_DEFINITIONS: RemoteSessionDefinition[] = [
   {
     action: "create",
     summary:
-      "Start a remote session: a native OpenWork chat on your OpenWork Web instance (runs in the cloud, visible in the browser). Automatically sets up your workspace on first use; on cloud_runtime_provisioning, wait retryAfterMs before retrying with the same arguments. Give it the task to run as prompt. target \"desktop\" runs it on your connected OpenWork desktop instead.",
+      "Start a remote session: a native OfflineGPT chat on your OfflineGPT Web instance (runs in the cloud, visible in the browser). Automatically sets up your workspace on first use; on cloud_runtime_provisioning, wait retryAfterMs before retrying with the same arguments. Give it the task to run as prompt. target \"desktop\" runs it on your connected OfflineGPT desktop instead.",
     searchExtraTokens:
-      "remote session sessions chat thread cloud web instance browser openwork desktop create start new open run do task work delegate hand off handoff background continue workspace",
+      "remote session sessions chat thread cloud web instance browser offlinegpt desktop create start new open run do task work delegate hand off handoff background continue workspace",
     argumentsSchema: {
       type: "object",
       properties: {
-        target: { type: "string", enum: ["cloud", "desktop"], description: "Where the session runs. Defaults to \"cloud\" (your OpenWork Web instance)." },
-        title: { type: "string", maxLength: 120, description: "Session title shown in OpenWork." },
+        target: { type: "string", enum: ["cloud", "desktop"], description: "Where the session runs. Defaults to \"cloud\" (your OfflineGPT Web instance)." },
+        title: { type: "string", maxLength: 120, description: "Session title shown in OfflineGPT." },
         prompt: { type: "string", description: "Optional first prompt. When present the session starts working immediately." },
         model: MODEL_ARGUMENT_SCHEMA,
       },
@@ -123,7 +123,7 @@ const REMOTE_SESSION_DEFINITIONS: RemoteSessionDefinition[] = [
   {
     action: "send",
     summary:
-      "Send a follow-up prompt to an existing remote session on your OpenWork Web instance. Returns an acceptance receipt; poll remote-session:read for the reply.",
+      "Send a follow-up prompt to an existing remote session on your OfflineGPT Web instance. Returns an acceptance receipt; poll remote-session:read for the reply.",
     searchExtraTokens:
       "remote session sessions chat thread cloud web instance send prompt message turn continue follow up reply ask tell",
     argumentsSchema: {
@@ -139,7 +139,7 @@ const REMOTE_SESSION_DEFINITIONS: RemoteSessionDefinition[] = [
   {
     action: "read",
     summary:
-      "Read a remote session's recent transcript and status from your OpenWork Web instance, or the status of a queued desktop command.",
+      "Read a remote session's recent transcript and status from your OfflineGPT Web instance, or the status of a queued desktop command.",
     searchExtraTokens:
       "remote session sessions chat thread cloud web instance read transcript status reply answer poll result output check progress desktop command",
     argumentsSchema: {
@@ -211,7 +211,7 @@ export type RemoteSessionRuntimeResult =
 export type RemoteSessionThreadClient = Pick<AgentSessionClient, "createThread" | "sendTurn" | "getThreadSnapshot">
 
 export type RemoteSessionExecuteDeps = {
-  getOpenWorkWebAccess: OpenWorkWebRuntimeAccessResolver
+  getOfflineGPTWebAccess: OfflineGPTWebRuntimeAccessResolver
   resolveRuntime: (scope: { organizationId: DenTypeId<"organization">; userId: string; provisionIfMissing?: boolean }) => Promise<RemoteSessionRuntimeResult>
   createClient: (runtime: RemoteSessionRuntime) => RemoteSessionThreadClient
   commandStore: RemoteSessionCommandStore
@@ -235,27 +235,27 @@ const READ_MESSAGE_TEXT_LIMIT = 4_000
 const FINAL_TEXT_LIMIT = 20_000
 
 const NEEDS_SETUP_MESSAGE =
-  "No OpenWork Cloud workspace exists for your account yet. Use remote-session:create to start a new task and set up your workspace automatically."
+  "No OfflineGPT Cloud workspace exists for your account yet. Use remote-session:create to start a new task and set up your workspace automatically."
 
 function provisioningResult(): RemoteSessionRuntimeResult {
   return {
     ok: false,
     error: "cloud_runtime_provisioning",
-    message: "Your OpenWork Cloud workspace is being set up. No task has been submitted yet. Retry remote-session:create with the same arguments in about 30 seconds; you do not need to open the web app.",
+    message: "Your OfflineGPT Cloud workspace is being set up. No task has been submitted yet. Retry remote-session:create with the same arguments in about 30 seconds; you do not need to open the web app.",
     retryable: true,
     retryAfterMs: 30_000,
   }
 }
 
 const CLOUD_NOT_AVAILABLE_MESSAGE =
-  "OpenWork Cloud is not available on this deployment, so remote sessions are unavailable."
+  "OfflineGPT Cloud is not available on this deployment, so remote sessions are unavailable."
 
 /**
  * Whether the remote-session capabilities exist on this deployment at all.
  * When Den cannot host Cloud (self-hosted single-org mode or no Daytona
  * provisioner), the capabilities are hidden from search and execute reports
  * them as unknown. Organization entitlement is enforced at execution time by
- * the OpenWork Web access check, which returns a clear access-required error.
+ * the OfflineGPT Web access check, which returns a clear access-required error.
  */
 export function remoteSessionCapabilitiesEnabled(
   _organizationMetadata?: Record<string, unknown> | string | null | undefined,
@@ -287,7 +287,7 @@ function workerHeaders(access: CloudWorkerAccess) {
   return {
     Accept: "application/json",
     Authorization: `Bearer ${access.clientToken}`,
-    "X-OpenWork-Host-Token": access.hostToken,
+    "X-OfflineGPT-Host-Token": access.hostToken,
   }
 }
 
@@ -317,7 +317,7 @@ async function defaultResolveRuntime(
   // Defense in depth: the registry already hides these capabilities when the
   // deployment cannot host Cloud, but the runtime re-checks so the runtime
   // cannot execute against stale visibility. Organization entitlement was
-  // already confirmed by the OpenWork Web access check in executeRemoteSessionCapability.
+  // already confirmed by the OfflineGPT Web access check in executeRemoteSessionCapability.
   if (!remoteSessionCapabilitiesEnabled()) {
     return { ok: false, error: "cloud_not_available", message: CLOUD_NOT_AVAILABLE_MESSAGE, retryable: false }
   }
@@ -346,7 +346,7 @@ async function defaultResolveRuntime(
       return {
         ok: false,
         error: "cloud_runtime_unreachable",
-        message: "Your OpenWork Cloud workspace is running but cannot be reached right now. Retry after the network path recovers.",
+        message: "Your OfflineGPT Cloud workspace is running but cannot be reached right now. Retry after the network path recovers.",
         retryable: true,
       }
     }
@@ -354,7 +354,7 @@ async function defaultResolveRuntime(
       return {
         ok: false,
         error: "cloud_runtime_failed",
-        message: "Your OpenWork Cloud workspace needs repair before remote sessions can run. Open OpenWork Cloud in the browser to let it recover, then retry.",
+        message: "Your OfflineGPT Cloud workspace needs repair before remote sessions can run. Open OfflineGPT Cloud in the browser to let it recover, then retry.",
         retryable: false,
       }
     }
@@ -375,7 +375,7 @@ async function defaultResolveRuntime(
       return {
         ok: false,
         error: "cloud_runtime_unreachable",
-        message: "Your OpenWork Cloud workspace is healthy but its session API cannot be reached right now. Retry after the network path recovers.",
+        message: "Your OfflineGPT Cloud workspace is healthy but its session API cannot be reached right now. Retry after the network path recovers.",
         retryable: true,
       }
     }
@@ -386,7 +386,7 @@ async function defaultResolveRuntime(
   return {
     ok: false,
     error: "cloud_runtime_waking",
-    message: "Your OpenWork Cloud workspace is still starting. Retry the same call in about 30 seconds.",
+    message: "Your OfflineGPT Cloud workspace is still starting. Retry the same call in about 30 seconds.",
     retryable: true,
   }
 }
@@ -422,7 +422,7 @@ async function defaultDesktopPresence(scope: {
 }
 
 export const DEFAULT_REMOTE_SESSION_DEPS: RemoteSessionExecuteDeps = {
-  getOpenWorkWebAccess: getOpenWorkWebRuntimeAccess,
+  getOfflineGPTWebAccess: getOfflineGPTWebRuntimeAccess,
   resolveRuntime: defaultResolveRuntime,
   createClient: defaultCreateClient,
   commandStore: databaseRemoteSessionCommandStore,
@@ -456,7 +456,7 @@ function threadErrorResult(action: RemoteSessionAction, sessionId: string | null
     && error.path.endsWith("/opencode/session")) {
     return errorResult({
       error: "cloud_runtime_waking",
-      message: "Your OpenWork Cloud workspace is reachable, but its engine is not ready yet. Retry the same call in about 30 seconds; no session was created.",
+      message: "Your OfflineGPT Cloud workspace is reachable, but its engine is not ready yet. Retry the same call in about 30 seconds; no session was created.",
       retryable: true,
       retryAfterMs: 30_000,
     })
@@ -464,11 +464,11 @@ function threadErrorResult(action: RemoteSessionAction, sessionId: string | null
   if (status === 404 && sessionId) {
     return errorResult({
       error: "unknown_session",
-      message: `No remote session "${sessionId}" exists on your OpenWork Cloud workspace. It may have been deleted; create a new one with remote-session:create.`,
+      message: `No remote session "${sessionId}" exists on your OfflineGPT Cloud workspace. It may have been deleted; create a new one with remote-session:create.`,
       retryable: false,
     })
   }
-  const message = error instanceof Error ? error.message : "The OpenWork Cloud workspace request failed."
+  const message = error instanceof Error ? error.message : "The OfflineGPT Cloud workspace request failed."
   return errorResult({
     error: "remote_session_request_failed",
     message: `remote-session:${action} failed: ${message}`,
@@ -544,11 +544,11 @@ export async function executeRemoteSessionCapability(
   // connected desktop is remote control of that machine, so it is gated like
   // Cloud execution; only the status read of an already queued command above
   // stays available without Web access.
-  const webAccess = await deps.getOpenWorkWebAccess(input.organizationId)
+  const webAccess = await deps.getOfflineGPTWebAccess(input.organizationId)
   if (!webAccess.hasAccess) {
     return errorResult({
-      error: OPENWORK_WEB_ACCESS_REQUIRED_CODE,
-      message: OPENWORK_WEB_ACCESS_REQUIRED_MESSAGE,
+      error: OFFLINEGPT_WEB_ACCESS_REQUIRED_CODE,
+      message: OFFLINEGPT_WEB_ACCESS_REQUIRED_MESSAGE,
       retryable: false,
     })
   }
@@ -560,7 +560,7 @@ export async function executeRemoteSessionCapability(
       if (!presence.connected || !presence.ownerMemberId) {
         return errorResult({
           error: "desktop_offline",
-          message: "No desktop is connected for your account. Open the OpenWork desktop app and try again.",
+          message: "No desktop is connected for your account. Open the OfflineGPT desktop app and try again.",
         })
       }
       const command = await deps.commandStore.enqueue({
@@ -613,7 +613,7 @@ export async function executeRemoteSessionCapability(
         workerId: runtime.runtime.workerId,
         title: thread.title,
         started: thread.started,
-        note: "This is a native OpenWork session on your OpenWork Web instance; it is visible in OpenWork Web. Use remote-session:send for follow-ups and remote-session:read to read replies.",
+        note: "This is a native OfflineGPT session on your OfflineGPT Web instance; it is visible in OfflineGPT Web. Use remote-session:send for follow-ups and remote-session:read to read replies.",
       })
     } catch (error) {
       return threadErrorResult("create", null, error)

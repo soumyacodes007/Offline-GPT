@@ -1,10 +1,10 @@
-import { and, desc, eq, isNull, sql } from "@openwork-ee/den-db/drizzle"
+import { and, desc, eq, isNull, sql } from "@offlinegpt-ee/den-db/drizzle"
 import {
   TelemetryEventTable,
   TelemetrySessionDimensionTable,
   MemberTable,
   InvitationTable,
-} from "@openwork-ee/den-db/schema"
+} from "@offlinegpt-ee/den-db/schema"
 import {
   ANALYTICS_TREND_WEEKS,
   buildSessionDimensionUpsert,
@@ -25,8 +25,8 @@ import {
   type DimensionFilter,
   type TelemetryDimensionInput,
   type TelemetryOrgId,
-} from "@openwork-ee/telemetry"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/telemetry"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { db } from "../../db.js"
@@ -55,7 +55,7 @@ export function registerTelemetryRoutes<T extends { Variables: TelemetryRouteVar
     describeRoute({
       tags: ["Telemetry"],
       summary: "Ingest telemetry events",
-      description: "Receives a batch of telemetry events from the OpenWork app or workers. Auth provides org and member identity. Unknown event types and disallowed fields are dropped. Always returns 204.",
+      description: "Receives a batch of telemetry events from the OfflineGPT app or workers. Auth provides org and member identity. Unknown event types and disallowed fields are dropped. Always returns 204.",
       responses: {
         204: emptyResponse("Events accepted."),
         400: jsonResponse("Invalid event payload.", invalidRequestSchema),

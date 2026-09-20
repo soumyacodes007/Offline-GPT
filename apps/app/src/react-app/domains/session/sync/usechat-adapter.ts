@@ -2,7 +2,7 @@
 import type { UIMessage } from "ai";
 import type { FilePart, Part, TextPart, ToolPart } from "@opencode-ai/sdk/v2/client";
 
-import type { OpenworkSessionSnapshot } from "../../../../app/lib/openwork-server";
+import type { OfflineGptSessionSnapshot } from "../../../../app/lib/offlinegpt-server";
 import { SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX } from "../../../../app/types";
 import {
   parseDynamicToolUIPart,
@@ -123,7 +123,7 @@ function mapSnapshotToolParts(part: ToolPart): UIMessage["parts"] {
 /** Recover display-only attachments without sending unsupported binary parts to the model. */
 export function attachmentNoteToUIParts(part: TextPart): UIMessage["parts"] {
   if (!part.synthetic || part.ignored) return [];
-  const attachments = part.metadata?.openworkAttachments;
+  const attachments = part.metadata?.offlinegptAttachments;
   if (!Array.isArray(attachments)) return [];
   return attachments.flatMap<UIMessage["parts"][number]>((attachment: unknown, index) => {
     if (!attachment || typeof attachment !== "object"
@@ -141,7 +141,7 @@ export function attachmentNoteToUIParts(part: TextPart): UIMessage["parts"] {
   });
 }
 
-export function snapshotToUIMessages(snapshot: OpenworkSessionSnapshot): UIMessage[] {
+export function snapshotToUIMessages(snapshot: OfflineGptSessionSnapshot): UIMessage[] {
   return snapshot.messages.flatMap((message) => {
     const created = message.info.time?.created;
     const time = message.info.time;

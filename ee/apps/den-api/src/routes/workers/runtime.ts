@@ -7,10 +7,10 @@ import type { WorkerRouteVariables } from "./shared.js"
 import { fetchWorkerRuntimeJson, getWorkerByIdForOrg, parseWorkerIdParam, workerIdParamSchema } from "./shared.js"
 
 const workerRuntimeResponseSchema = z.object({}).passthrough().meta({ ref: "WorkerRuntimeResponse" })
-const openWorkWebAccessRequiredSchema = z.object({
-  error: z.literal("openwork_web_access_required"),
+const offlineGptWebAccessRequiredSchema = z.object({
+  error: z.literal("offlinegpt_web_access_required"),
   message: z.string(),
-}).meta({ ref: "WorkerRuntimeOpenWorkWebAccessRequiredError" })
+}).meta({ ref: "WorkerRuntimeOfflineGPTWebAccessRequiredError" })
 
 export function registerWorkerRuntimeRoutes<T extends { Variables: WorkerRouteVariables }>(app: Hono<T>) {
   app.get(
@@ -23,7 +23,7 @@ export function registerWorkerRuntimeRoutes<T extends { Variables: WorkerRouteVa
         200: jsonResponse("Worker runtime information returned successfully.", workerRuntimeResponseSchema),
         400: jsonResponse("The worker runtime path parameters were invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to read worker runtime information.", unauthorizedSchema),
-        403: jsonResponse("OpenWork Web access is required to use a cloud worker runtime.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is required to use a cloud worker runtime.", offlineGptWebAccessRequiredSchema),
         404: jsonResponse("The worker could not be found.", notFoundSchema),
       },
     }),
@@ -73,7 +73,7 @@ export function registerWorkerRuntimeRoutes<T extends { Variables: WorkerRouteVa
         200: jsonResponse("Worker runtime upgrade request completed successfully.", workerRuntimeResponseSchema),
         400: jsonResponse("The runtime upgrade request was invalid.", invalidRequestSchema),
         401: jsonResponse("The caller must be signed in to upgrade a worker runtime.", unauthorizedSchema),
-        403: jsonResponse("OpenWork Web access is required to upgrade a cloud worker runtime.", openWorkWebAccessRequiredSchema),
+        403: jsonResponse("OfflineGPT Web access is required to upgrade a cloud worker runtime.", offlineGptWebAccessRequiredSchema),
         404: jsonResponse("The worker could not be found.", notFoundSchema),
       },
     }),

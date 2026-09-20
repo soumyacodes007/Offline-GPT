@@ -90,7 +90,7 @@ export function SessionEmptyHero(props: SessionEmptyHeroProps) {
 
   const fillPrompt = (value: string) => {
     setPrompt(value);
-    window.dispatchEvent(new Event("openwork:focusPrompt"));
+    window.dispatchEvent(new Event("offlinegpt:focusPrompt"));
   };
 
   return (

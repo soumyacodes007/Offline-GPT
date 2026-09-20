@@ -1,12 +1,12 @@
 import { beforeAll, expect, setSystemTime, test } from "bun:test"
 
-import { eq } from "@openwork-ee/den-db/drizzle"
-import { RemoteSessionCommandTable } from "@openwork-ee/den-db/schema/remote-session-commands"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { eq } from "@offlinegpt-ee/den-db/drizzle"
+import { RemoteSessionCommandTable } from "@offlinegpt-ee/den-db/schema/remote-session-commands"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import {
   automationDesktopRunnerRegistrationSchema,
   remoteSessionCommandCompleteRequestSchema,
-} from "@openwork/types/automations"
+} from "@offlinegpt/types/automations"
 import { Hono } from "hono"
 import type {
   RemoteSessionExecuteDeps,
@@ -20,12 +20,12 @@ import type {
 import type { OrganizationContextVariables } from "../src/middleware/index.js"
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DEN_DB_ENCRYPTION_KEY = process.env.DEN_DB_ENCRYPTION_KEY ?? "x".repeat(32)
   process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "y".repeat(32)
   process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://127.0.0.1:8790"
   process.env.DEN_API_PUBLIC_URL = process.env.DEN_API_PUBLIC_URL ?? "http://127.0.0.1:8790"
-  process.env.DAYTONA_SNAPSHOT = "openwork-0.18.8"
+  process.env.DAYTONA_SNAPSHOT = "offlinegpt-0.18.8"
 }
 
 type RemoteSessionModule = typeof import("../src/mcp/remote-session-capabilities.js")
@@ -111,7 +111,7 @@ function deps(input: {
   resolveRuntime?: RemoteSessionExecuteDeps["resolveRuntime"]
 } = {}): RemoteSessionExecuteDeps {
   return {
-    getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+    getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
     commandStore: input.commandStore ?? fakeStore(),
     desktopPresence: async () => ({
       connected: input.connected ?? false,
@@ -141,7 +141,7 @@ test("desktop create reports desktop_offline when no runner is present", async (
   expect(result.isError).toBe(true)
   expect(payload(result)).toEqual({
     error: "desktop_offline",
-    message: "No desktop is connected for your account. Open the OpenWork desktop app and try again.",
+    message: "No desktop is connected for your account. Open the OfflineGPT desktop app and try again.",
   })
 })
 

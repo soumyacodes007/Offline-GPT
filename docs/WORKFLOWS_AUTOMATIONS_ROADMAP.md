@@ -9,7 +9,7 @@ Kavach should present Workflows and Automations inside one left-sidebar section,
 - A workflow is a reusable, user-started procedure with defined inputs, tools, checkpoints, and deliverables.
 - An automation is a trigger or schedule that starts one of those workflows for the user.
 
-For Round 1, do not build a visual DAG editor or a second agent runtime. OpenWork already has the agent loop, file access, skills, tool execution, artifacts, sessions, and document creation. Add a lightweight workflow manifest, a guided launcher, output validation, and a local scheduler that calls the same run path.
+For Round 1, do not build a visual DAG editor or a second agent runtime. OfflineGPT already has the agent loop, file access, skills, tool execution, artifacts, sessions, and document creation. Add a lightweight workflow manifest, a guided launcher, output validation, and a local scheduler that calls the same run path.
 
 This keeps the demo credible and leaves a clean path to richer orchestration later.
 
@@ -31,7 +31,7 @@ Useful lessons for Kavach:
 - run history should include tools, outputs, files, status, and error summaries;
 - workflow definitions should be versioned so an old result can be reproduced.
 
-## 3. What OpenWork already has
+## 3. What OfflineGPT already has
 
 The current repository already contains:
 
@@ -44,7 +44,7 @@ The current repository already contains:
 
 The current automation UI depends on signed-in Den services, and the full structured workflow implementation is under the repository's separately licensed enterprise area. Round 1 should therefore build a small local-first implementation in the MIT-licensed app/packages area instead of copying enterprise code.
 
-The existing OpenWork documentation also uses “workflow” to mean a way of grouping sessions. Kavach's UI copy should use “Task Workflow” for the reusable operational procedure to avoid confusion.
+The existing OfflineGPT documentation also uses “workflow” to mean a way of grouping sessions. Kavach's UI copy should use “Task Workflow” for the reusable operational procedure to avoid confusion.
 
 ## 4. V1 architecture
 
@@ -66,7 +66,7 @@ The existing OpenWork documentation also uses “workflow” to mean a way of gr
 
 Store workspace-local definitions at:
 
-    .opencode/openwork/workflows/<workflow-id>/workflow.json
+    .opencode/offlinegpt/workflows/<workflow-id>/workflow.json
 
 Recommended fields:
 
@@ -558,7 +558,7 @@ For the later sovereign build, rerun the same workflow fixtures against local mo
 
 1. Workflow manifest schema and five bundled definitions.
 2. Task Workflows tab and guided launcher.
-3. Shared run service using an ordinary OpenWork agent session.
+3. Shared run service using an ordinary OfflineGPT agent session.
 4. Output-contract validation and run receipt.
 5. Connect model routing and audit events.
 6. Local Automations tab, Run now, scheduling, and overlap guard.

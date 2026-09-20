@@ -67,7 +67,7 @@ test("SSO hands off to one waiting state, can refocus, and completes once", asyn
   const nonce = container.querySelector("[role=dialog]")?.getAttribute("data-reauth-nonce");
   await act(async () => window.dispatchEvent(new MessageEvent("message", {
     origin: window.location.origin,
-    data: { type: "openwork:reauth-complete", nonce, error: null },
+    data: { type: "offlinegpt:reauth-complete", nonce, error: null },
   })));
   expect(verified).toHaveBeenCalledTimes(1);
   expect(closed).toBe(true);
@@ -85,7 +85,7 @@ test("Cancel remains available during SSO and closes the popup without verifying
 test("blocked popups leave an actionable retry, not a waiting screen", async () => {
   blocked = true;
   await click("Continue with SSO");
-  expect(container.textContent).toContain("Allow popups for OpenWork");
+  expect(container.textContent).toContain("Allow popups for OfflineGPT");
   expect(container.textContent).not.toContain("Waiting for confirmation");
   blocked = false;
   await click("Continue with SSO");
@@ -111,7 +111,7 @@ test("cancelled and unrelated completion messages cannot retry the pending actio
   for (const [origin, messageNonce] of [["https://other.example.test", nonce], [window.location.origin, "wrong-nonce"]]) {
     await act(async () => window.dispatchEvent(new MessageEvent("message", {
       origin,
-      data: { type: "openwork:reauth-complete", nonce: messageNonce, error: null },
+      data: { type: "offlinegpt:reauth-complete", nonce: messageNonce, error: null },
     })));
   }
   expect(verified).not.toHaveBeenCalled();
@@ -119,7 +119,7 @@ test("cancelled and unrelated completion messages cannot retry the pending actio
   await click("Cancel");
   await act(async () => window.dispatchEvent(new MessageEvent("message", {
     origin: window.location.origin,
-    data: { type: "openwork:reauth-complete", nonce, error: null },
+    data: { type: "offlinegpt:reauth-complete", nonce, error: null },
   })));
   expect(verified).not.toHaveBeenCalled();
 });
@@ -129,7 +129,7 @@ test("provider errors restore retry without completing the pending action", asyn
   const nonce = container.querySelector("[role=dialog]")?.getAttribute("data-reauth-nonce");
   await act(async () => window.dispatchEvent(new MessageEvent("message", {
     origin: window.location.origin,
-    data: { type: "openwork:reauth-complete", nonce, error: "1" },
+    data: { type: "offlinegpt:reauth-complete", nonce, error: "1" },
   })));
   expect(container.textContent).toContain("Sign-in was cancelled or failed");
   expect(container.textContent).toContain("Continue with SSO");
@@ -147,7 +147,7 @@ test("a different authenticated user cannot approve the pending action", async (
   const nonce = container.querySelector("[role=dialog]")?.getAttribute("data-reauth-nonce");
   await act(async () => window.dispatchEvent(new MessageEvent("message", {
     origin: window.location.origin,
-    data: { type: "openwork:reauth-complete", nonce, error: null },
+    data: { type: "offlinegpt:reauth-complete", nonce, error: null },
   })));
   expect(verified).not.toHaveBeenCalled();
   expect(container.textContent).toContain(`Sign in as ${user.email} to confirm this change.`);

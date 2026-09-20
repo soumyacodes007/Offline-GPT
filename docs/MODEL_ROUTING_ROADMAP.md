@@ -4,7 +4,7 @@ Status: implementation plan for Round 1
 
 ## 1. Decision
 
-Kavach should add a small, provider-neutral routing layer in front of OpenWork's existing message send path. It should not fork or embed the whole AnythingLLM backend.
+Kavach should add a small, provider-neutral routing layer in front of OfflineGPT's existing message send path. It should not fork or embed the whole AnythingLLM backend.
 
 For Round 1, the router may select among models exposed by the user's connected ChatGPT account. The design must keep provider and model IDs configurable so a later release can add local OpenAI-compatible, Ollama, or vLLM endpoints without redesigning the router.
 
@@ -52,7 +52,7 @@ The router must also distinguish an operational fallback from a policy boundary.
 
 ## 3. Current Kavach integration point
 
-OpenWork already has provider discovery, manual model selection, session-level selection, attachments, tool execution, and the agent loop. The missing part is a route resolver.
+OfflineGPT already has provider discovery, manual model selection, session-level selection, attachments, tool execution, and the agent loop. The missing part is a route resolver.
 
 In apps/app/src/react-app/shell/session-route.tsx, both normal send paths currently choose:
 
@@ -70,7 +70,7 @@ Each discovered model should be normalized into a small capability record:
 
 | Field | Example purpose |
 | --- | --- |
-| providerID and modelID | Existing OpenWork identifiers |
+| providerID and modelID | Existing OfflineGPT identifiers |
 | displayName | Human-readable route result |
 | enabled | User can exclude a model |
 | text | Basic chat support |

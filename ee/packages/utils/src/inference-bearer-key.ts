@@ -2,7 +2,7 @@ import { randomBytes, webcrypto } from "node:crypto"
 
 export const INFERENCE_BEARER_KEY_RANDOM_BYTES = 32
 const INFERENCE_BEARER_KEY_PREFIX = "ow_inf_"
-const INFERENCE_BEARER_KEY_LOOKUP_DOMAIN = new TextEncoder().encode("openwork-inference-bearer-key-lookup-v1")
+const INFERENCE_BEARER_KEY_LOOKUP_DOMAIN = new TextEncoder().encode("offlinegpt-inference-bearer-key-lookup-v1")
 const inferenceBearerKeyLookupKey = webcrypto.subtle.importKey(
   "raw",
   INFERENCE_BEARER_KEY_LOOKUP_DOMAIN,

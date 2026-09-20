@@ -174,7 +174,7 @@ export type AuthPasswordScreeningUnavailableError = {
 export type DesktopHandoffGrantResponse = {
   grant: string;
   expiresAt: string;
-  openworkUrl: string;
+  offlinegptUrl: string;
   returnUrl?: string;
 };
 
@@ -191,11 +191,11 @@ export type DesktopHandoffGrantCreateBody = {
    */
   next?: string;
   /**
-   * The registered OpenWork desktop URL scheme.
+   * The registered OfflineGPT desktop URL scheme.
    */
-  desktopScheme?: "openwork";
+  desktopScheme?: "offlinegpt";
   /**
-   * Optional HTTPS OpenWork Cloud web return URL. Accepted only for multi-organization Cloud instances after server-side origin validation.
+   * Optional HTTPS OfflineGPT Cloud web return URL. Accepted only for multi-organization Cloud instances after server-side origin validation.
    */
   returnUrl?: string;
 };
@@ -254,8 +254,8 @@ export type CloudInstanceResponse = {
   };
 };
 
-export type OpenWorkWebAccessRequiredError = {
-  error: "openwork_web_access_required";
+export type OfflineGPTWebAccessRequiredError = {
+  error: "offlinegpt_web_access_required";
   message: string;
 };
 
@@ -409,8 +409,8 @@ export type CurrentUserDesktopConfigResponse = {
   onboardingPromptDescriptions?: Array<string>;
 };
 
-export type AutomationOpenWorkWebAccessRequiredError = {
-  error: "openwork_web_access_required";
+export type AutomationOfflineGPTWebAccessRequiredError = {
+  error: "offlinegpt_web_access_required";
   message: string;
 };
 
@@ -659,8 +659,8 @@ export type OrgStripeBillingResponse = {
   [key: string]: unknown;
 };
 
-export type OpenWorkWebUnavailableError = {
-  error: "openwork_web_not_available";
+export type OfflineGPTWebUnavailableError = {
+  error: "offlinegpt_web_not_available";
   message: string;
 };
 
@@ -1173,7 +1173,7 @@ export type InstallLinkNotFoundError = {
 
 export type ConnectLinkClaims = {
   iss: string;
-  aud: "openwork-desktop-connect";
+  aud: "offlinegpt-desktop-connect";
   iat: number;
   exp: number;
   jti: string;
@@ -1573,11 +1573,11 @@ export type GoogleWorkspaceShareDriveFileBody = {
    */
   type: "user" | "domain";
   /**
-   * Required when type=user; pass the person's email address, for example raghav@openworklabs.com.
+   * Required when type=user; pass the person's email address, for example raghav@offlinegptlabs.com.
    */
   emailAddress?: string;
   /**
-   * Required when type=domain; pass the organization's Google Workspace domain, for example openworklabs.com.
+   * Required when type=domain; pass the organization's Google Workspace domain, for example offlinegptlabs.com.
    */
   domain?: string;
   /**
@@ -1781,7 +1781,7 @@ export type Microsoft365TeamsMessageBody = {
 
 export type ExternalMcpClientMetadata = {
   client_id: string;
-  client_name: "OpenWork";
+  client_name: "OfflineGPT";
   application_type: "web";
   redirect_uris: [string];
   grant_types: ["authorization_code", "refresh_token"];
@@ -2045,7 +2045,7 @@ export type ExternalMcpDiagnostic = {
   code: string;
   highestPassed: "configured" | "reachable" | "authorized" | "protocol_ready" | "catalog_ready" | "operation_ready";
   retryable: boolean;
-  actionOwner: "openwork" | "network_admin" | "provider_admin" | "organization_admin" | "member";
+  actionOwner: "offlinegpt" | "network_admin" | "provider_admin" | "organization_admin" | "member";
   operatorAction: string;
   message: string;
   httpStatus?: number;
@@ -2138,7 +2138,7 @@ export type ExternalMcpConnectionToolInspectionResponse = {
 
 export type ExternalMcpConnectionToolInspectionDiagnosis = {
   status: "succeeded" | "failed";
-  layer: "openwork" | "network" | "mcp_connection" | "remote_http" | "mcp_tool";
+  layer: "offlinegpt" | "network" | "mcp_connection" | "remote_http" | "mcp_tool";
   summary: string;
 };
 
@@ -2550,7 +2550,7 @@ export type PluginArchAccessGrantMutationResponse = {
   item: PluginArchAccessGrant;
 };
 
-export type OpenWorkExtensionManifest = {
+export type OfflineGPTExtensionManifest = {
   schemaVersion: 1;
   id: string;
   name: string;
@@ -2558,8 +2558,8 @@ export type OpenWorkExtensionManifest = {
   source: {
     format:
       | "agent-plugin"
-      | "openwork-builtin"
-      | "openwork-extension-manifest"
+      | "offlinegpt-builtin"
+      | "offlinegpt-extension-manifest"
       | "claude-plugin"
       | "opencode-plugin"
       | "mcp-directory"
@@ -2588,8 +2588,8 @@ export type OpenWorkExtensionManifest = {
     | {
         format:
           | "agent-plugin"
-          | "openwork-builtin"
-          | "openwork-extension-manifest"
+          | "offlinegpt-builtin"
+          | "offlinegpt-extension-manifest"
           | "claude-plugin"
           | "opencode-plugin"
           | "mcp-directory"
@@ -2622,13 +2622,13 @@ export type PluginArchExtensionProjection = {
   description: string | null;
   sourceFormat:
     | "agent-plugin"
-    | "openwork-builtin"
-    | "openwork-extension-manifest"
+    | "offlinegpt-builtin"
+    | "offlinegpt-extension-manifest"
     | "claude-plugin"
     | "opencode-plugin"
     | "mcp-directory"
     | "manual";
-  manifest: OpenWorkExtensionManifest | null;
+  manifest: OfflineGPTExtensionManifest | null;
 };
 
 export type PluginArchPlugin = {
@@ -2645,8 +2645,8 @@ export type PluginArchPlugin = {
   sourceRepositoryUrl: string | null;
   sourceFormat:
     | "agent-plugin"
-    | "openwork-builtin"
-    | "openwork-extension-manifest"
+    | "offlinegpt-builtin"
+    | "offlinegpt-extension-manifest"
     | "claude-plugin"
     | "opencode-plugin"
     | "mcp-directory"
@@ -3268,8 +3268,8 @@ export type PluginArchMarketplaceResolvedResponse = {
       sourceRepositoryUrl: string | null;
       sourceFormat:
         | "agent-plugin"
-        | "openwork-builtin"
-        | "openwork-extension-manifest"
+        | "offlinegpt-builtin"
+        | "offlinegpt-extension-manifest"
         | "claude-plugin"
         | "opencode-plugin"
         | "mcp-directory"
@@ -3406,8 +3406,8 @@ export type PluginArchConnectorInstanceConfiguredPlugin = {
   sourceRepositoryUrl: string | null;
   sourceFormat:
     | "agent-plugin"
-    | "openwork-builtin"
-    | "openwork-extension-manifest"
+    | "offlinegpt-builtin"
+    | "offlinegpt-extension-manifest"
     | "claude-plugin"
     | "opencode-plugin"
     | "mcp-directory"
@@ -3919,8 +3919,8 @@ export type WorkerPaymentRequiredError = {
   message: string;
 };
 
-export type WorkerOpenWorkWebAccessRequiredError = {
-  error: "openwork_web_access_required";
+export type WorkerOfflineGPTWebAccessRequiredError = {
+  error: "offlinegpt_web_access_required";
   message: string;
 };
 
@@ -3948,12 +3948,12 @@ export type WorkerTokensResponse = {
     client: string;
   };
   connect: {
-    openworkUrl: string | null;
+    offlinegptUrl: string | null;
     workspaceId: string | null;
   } | null;
   directPreview?: {
     version: 1;
-    openworkUrl: string;
+    offlinegptUrl: string;
     workspaceId: string | null;
     expiresAt: string;
   } | null;
@@ -3973,8 +3973,8 @@ export type WorkerRuntimeResponse = {
   [key: string]: unknown;
 };
 
-export type WorkerRuntimeOpenWorkWebAccessRequiredError = {
-  error: "openwork_web_access_required";
+export type WorkerRuntimeOfflineGPTWebAccessRequiredError = {
+  error: "offlinegpt_web_access_required";
   message: string;
 };
 
@@ -4292,16 +4292,16 @@ export type PatchV1AdminOrganizationsByOrganizationIdDpaResponses = {
 export type PatchV1AdminOrganizationsByOrganizationIdDpaResponse =
   PatchV1AdminOrganizationsByOrganizationIdDpaResponses[keyof PatchV1AdminOrganizationsByOrganizationIdDpaResponses];
 
-export type PutV1AdminOrganizationsByOrganizationIdOpenworkWebAccessData = {
+export type PutV1AdminOrganizationsByOrganizationIdOfflineGptWebAccessData = {
   body?: never;
   path: {
     organizationId: string;
   };
   query?: never;
-  url: "/v1/admin/organizations/{organizationId}/openwork-web-access";
+  url: "/v1/admin/organizations/{organizationId}/offlinegpt-web-access";
 };
 
-export type PutV1AdminOrganizationsByOrganizationIdOpenworkWebAccessResponses = {
+export type PutV1AdminOrganizationsByOrganizationIdOfflineGptWebAccessResponses = {
   /**
    * OK
    */
@@ -4936,7 +4936,7 @@ export type PostV1BootstrapWorkspaceResponses = {
        */
       id: string;
       title: string;
-      output: "OPENWORK_BOOTSTRAP_SKILL_TRIGGERED";
+      output: "OFFLINEGPT_BOOTSTRAP_SKILL_TRIGGERED";
     };
     claimLinks: Array<{
       /**
@@ -5019,9 +5019,9 @@ export type GetV1CloudInstanceErrors = {
    */
   401: UnauthorizedError;
   /**
-   * OpenWork Web access is not active for the organization.
+   * OfflineGPT Web access is not active for the organization.
    */
-  403: OpenWorkWebAccessRequiredError;
+  403: OfflineGPTWebAccessRequiredError;
   /**
    * Cloud is not available for this organization.
    */
@@ -5052,9 +5052,9 @@ export type PostV1CloudInstanceRetryErrors = {
    */
   401: UnauthorizedError;
   /**
-   * OpenWork Web access is not active for the organization.
+   * OfflineGPT Web access is not active for the organization.
    */
-  403: OpenWorkWebAccessRequiredError;
+  403: OfflineGPTWebAccessRequiredError;
   /**
    * Cloud is not available for this organization.
    */
@@ -5086,9 +5086,9 @@ export type PostV1CloudInstanceUpdateErrors = {
    */
   401: UnauthorizedError;
   /**
-   * OpenWork Web access is not active for the organization.
+   * OfflineGPT Web access is not active for the organization.
    */
-  403: OpenWorkWebAccessRequiredError;
+  403: OfflineGPTWebAccessRequiredError;
   /**
    * Cloud is not available for this organization.
    */
@@ -5120,9 +5120,9 @@ export type GetV1CloudGatewayResolveErrors = {
    */
   401: UnauthorizedError;
   /**
-   * OpenWork Web access is not active for the organization.
+   * OfflineGPT Web access is not active for the organization.
    */
-  403: OpenWorkWebAccessRequiredError;
+  403: OfflineGPTWebAccessRequiredError;
   /**
    * Cloud is not available for this organization or gateway.
    */
@@ -5752,7 +5752,7 @@ export type PostV1AutomationRunsByIdCompleteData = {
         | "model_access_lost"
         | "provider_unavailable"
         | "connect_access_unavailable"
-        | "openwork_web_access_required"
+        | "offlinegpt_web_access_required"
         | "execution_runtime_unavailable"
         | "execution_failed"
         | "execution_timed_out"
@@ -5820,7 +5820,7 @@ export type ListAutomationsResponses = {
             | "model_access_lost"
             | "provider_unavailable"
             | "connect_access_unavailable"
-            | "openwork_web_access_required"
+            | "offlinegpt_web_access_required"
             | "execution_runtime_unavailable";
           message: string;
           occurredAt: number;
@@ -5917,7 +5917,7 @@ export type ListAutomationsResponses = {
             | "model_access_lost"
             | "provider_unavailable"
             | "connect_access_unavailable"
-            | "openwork_web_access_required"
+            | "offlinegpt_web_access_required"
             | "execution_runtime_unavailable"
             | "execution_failed"
             | "execution_timed_out"
@@ -6034,9 +6034,9 @@ export type CreateAutomationErrors = {
    */
   401: UnauthorizedError;
   /**
-   * OpenWork Web access is required.
+   * OfflineGPT Web access is required.
    */
-  403: AutomationOpenWorkWebAccessRequiredError;
+  403: AutomationOfflineGPTWebAccessRequiredError;
   /**
    * Cloud runtime or model access is unavailable.
    */
@@ -6067,7 +6067,7 @@ export type CreateAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable";
         message: string;
         occurredAt: number;
@@ -6164,7 +6164,7 @@ export type CreateAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -6248,9 +6248,9 @@ export type CreateCloudAutomationErrors = {
    */
   401: UnauthorizedError;
   /**
-   * OpenWork Web access is required.
+   * OfflineGPT Web access is required.
    */
-  403: AutomationOpenWorkWebAccessRequiredError;
+  403: AutomationOfflineGPTWebAccessRequiredError;
   /**
    * Cloud runtime or model access is unavailable.
    */
@@ -6281,7 +6281,7 @@ export type CreateCloudAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable";
         message: string;
         occurredAt: number;
@@ -6378,7 +6378,7 @@ export type CreateCloudAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -6445,7 +6445,7 @@ export type ArchiveAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable";
         message: string;
         occurredAt: number;
@@ -6542,7 +6542,7 @@ export type ArchiveAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -6609,7 +6609,7 @@ export type GetAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable";
         message: string;
         occurredAt: number;
@@ -6706,7 +6706,7 @@ export type GetAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -6796,9 +6796,9 @@ export type UpdateAutomationErrors = {
    */
   400: InvalidRequestError;
   /**
-   * OpenWork Web access is required for Cloud Automations.
+   * OfflineGPT Web access is required for Cloud Automations.
    */
-  403: AutomationOpenWorkWebAccessRequiredError;
+  403: AutomationOfflineGPTWebAccessRequiredError;
 };
 
 export type UpdateAutomationError = UpdateAutomationErrors[keyof UpdateAutomationErrors];
@@ -6825,7 +6825,7 @@ export type UpdateAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable";
         message: string;
         occurredAt: number;
@@ -6922,7 +6922,7 @@ export type UpdateAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -6960,9 +6960,9 @@ export type ActivateAutomationData = {
 
 export type ActivateAutomationErrors = {
   /**
-   * OpenWork Web access is required to activate a Cloud Automation.
+   * OfflineGPT Web access is required to activate a Cloud Automation.
    */
-  403: AutomationOpenWorkWebAccessRequiredError;
+  403: AutomationOfflineGPTWebAccessRequiredError;
   /**
    * Not found.
    */
@@ -6993,7 +6993,7 @@ export type ActivateAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable";
         message: string;
         occurredAt: number;
@@ -7090,7 +7090,7 @@ export type ActivateAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -7157,7 +7157,7 @@ export type DeactivateAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable";
         message: string;
         occurredAt: number;
@@ -7254,7 +7254,7 @@ export type DeactivateAutomationResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -7292,9 +7292,9 @@ export type RunAutomationNowData = {
 
 export type RunAutomationNowErrors = {
   /**
-   * OpenWork Web access is required to run a Cloud Automation.
+   * OfflineGPT Web access is required to run a Cloud Automation.
    */
-  403: AutomationOpenWorkWebAccessRequiredError;
+  403: AutomationOfflineGPTWebAccessRequiredError;
   /**
    * Not found.
    */
@@ -7342,7 +7342,7 @@ export type RunAutomationNowResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -7420,7 +7420,7 @@ export type ListAutomationRunsResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -7505,7 +7505,7 @@ export type GetAutomationRunResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -7544,7 +7544,7 @@ export type GetAutomationRunResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable";
         message: string;
         occurredAt: number;
@@ -7680,7 +7680,7 @@ export type CancelAutomationRunResponses = {
           | "model_access_lost"
           | "provider_unavailable"
           | "connect_access_unavailable"
-          | "openwork_web_access_required"
+          | "offlinegpt_web_access_required"
           | "execution_runtime_unavailable"
           | "execution_failed"
           | "execution_timed_out"
@@ -8119,7 +8119,7 @@ export type GetV1WorkflowsResponse = GetV1WorkflowsResponses[keyof GetV1Workflow
 export type SaveWorkflowData = {
   body: {
     /**
-     * Existing OpenWork Connect Plugin that will contain and share this Workflow. Omit to use the member's private My Workflows Plugin.
+     * Existing OfflineGPT Connect Plugin that will contain and share this Workflow. Omit to use the member's private My Workflows Plugin.
      */
     pluginId?: string;
     name: string;
@@ -10359,7 +10359,7 @@ export type PostV1DiagnosticsEgressResponses = {
         diagnosticIds: Array<string>;
         code: string | null;
         message: string;
-        owner: "den-operator" | "network-administrator" | "openwork-support";
+        owner: "den-operator" | "network-administrator" | "offlinegpt-support";
         action: string;
       },
       {
@@ -10374,7 +10374,7 @@ export type PostV1DiagnosticsEgressResponses = {
         diagnosticIds: Array<string>;
         code: string | null;
         message: string;
-        owner: "den-operator" | "network-administrator" | "openwork-support";
+        owner: "den-operator" | "network-administrator" | "offlinegpt-support";
         action: string;
       },
       {
@@ -10389,7 +10389,7 @@ export type PostV1DiagnosticsEgressResponses = {
         diagnosticIds: Array<string>;
         code: string | null;
         message: string;
-        owner: "den-operator" | "network-administrator" | "openwork-support";
+        owner: "den-operator" | "network-administrator" | "offlinegpt-support";
         action: string;
       },
       {
@@ -10404,7 +10404,7 @@ export type PostV1DiagnosticsEgressResponses = {
         diagnosticIds: Array<string>;
         code: string | null;
         message: string;
-        owner: "den-operator" | "network-administrator" | "openwork-support";
+        owner: "den-operator" | "network-administrator" | "offlinegpt-support";
         action: string;
       },
       {
@@ -10419,7 +10419,7 @@ export type PostV1DiagnosticsEgressResponses = {
         diagnosticIds: Array<string>;
         code: string | null;
         message: string;
-        owner: "den-operator" | "network-administrator" | "openwork-support";
+        owner: "den-operator" | "network-administrator" | "offlinegpt-support";
         action: string;
       },
       {
@@ -10434,7 +10434,7 @@ export type PostV1DiagnosticsEgressResponses = {
         diagnosticIds: Array<string>;
         code: string | null;
         message: string;
-        owner: "den-operator" | "network-administrator" | "openwork-support";
+        owner: "den-operator" | "network-administrator" | "offlinegpt-support";
         action: string;
       },
     ];
@@ -19653,9 +19653,9 @@ export type PostV1WorkersErrors = {
    */
   402: WorkerPaymentRequiredError;
   /**
-   * OpenWork Web access is required to launch a cloud worker.
+   * OfflineGPT Web access is required to launch a cloud worker.
    */
-  403: WorkerOpenWorkWebAccessRequiredError;
+  403: WorkerOfflineGPTWebAccessRequiredError;
   /**
    * The organization has reached its worker limit.
    */
@@ -19819,9 +19819,9 @@ export type PostV1WorkersByIdTokensErrors = {
    */
   401: UnauthorizedError;
   /**
-   * OpenWork Web access is required to use cloud worker tokens.
+   * OfflineGPT Web access is required to use cloud worker tokens.
    */
-  403: WorkerOpenWorkWebAccessRequiredError;
+  403: WorkerOfflineGPTWebAccessRequiredError;
   /**
    * The worker could not be found.
    */
@@ -19865,9 +19865,9 @@ export type GetV1WorkersByIdRuntimeErrors = {
    */
   401: UnauthorizedError;
   /**
-   * OpenWork Web access is required to use a cloud worker runtime.
+   * OfflineGPT Web access is required to use a cloud worker runtime.
    */
-  403: WorkerRuntimeOpenWorkWebAccessRequiredError;
+  403: WorkerRuntimeOfflineGPTWebAccessRequiredError;
   /**
    * The worker could not be found.
    */
@@ -19909,9 +19909,9 @@ export type PostV1WorkersByIdRuntimeUpgradeErrors = {
    */
   401: UnauthorizedError;
   /**
-   * OpenWork Web access is required to upgrade a cloud worker runtime.
+   * OfflineGPT Web access is required to upgrade a cloud worker runtime.
    */
-  403: WorkerRuntimeOpenWorkWebAccessRequiredError;
+  403: WorkerRuntimeOfflineGPTWebAccessRequiredError;
   /**
    * The worker could not be found.
    */

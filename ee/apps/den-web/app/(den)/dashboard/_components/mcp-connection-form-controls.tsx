@@ -9,7 +9,7 @@ import type { ExternalMcpAuthType, ExternalMcpCredentialMode } from "./mcp-conne
  * questions than a connector added directly.
  */
 
-export const MCP_OAUTH_REDIRECT_DOCS_URL = "https://openworklabs.com/docs/cloud/share-with-your-team/shared-mcp-connections#oauth-redirect-url";
+export const MCP_OAUTH_REDIRECT_DOCS_URL = "https://offlinegptlabs.com/docs/cloud/share-with-your-team/shared-mcp-connections#oauth-redirect-url";
 
 export type SegmentedControlOption<TValue extends string> = {
   value: TValue;

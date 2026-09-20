@@ -6,10 +6,10 @@ import {
   CONNECT_MCP_APP_HOST_CAPABILITY,
   CONNECT_MCP_APP_HOST_CAPABILITY_HEADER,
   connectMcpAppHostName,
-  findOpenWorkConnectMcpAppHostServer,
-  readOpenWorkConnectMcpAppHostAuthorization,
-  readOpenWorkConnectMcpAppHostCatalog,
-  refreshOpenWorkConnectMcpAppHostCatalog,
+  findOfflineGPTConnectMcpAppHostServer,
+  readOfflineGPTConnectMcpAppHostAuthorization,
+  readOfflineGPTConnectMcpAppHostCatalog,
+  refreshOfflineGPTConnectMcpAppHostCatalog,
 } from "./connect-mcp-server-catalog.js";
 import type { ServerConfig } from "./types.js";
 import {
@@ -153,7 +153,7 @@ function resourcePresentationMeta(value: unknown): { csp: McpAppCsp; prefersBord
   if (Object.keys(permissions).length > 0 || ui.domain !== undefined) {
     throw new McpAppHostError(
       "unsupported_resource_permissions",
-      "This OpenWork host slice does not grant device permissions or dedicated sandbox origins.",
+      "This OfflineGPT host slice does not grant device permissions or dedicated sandbox origins.",
     );
   }
   return {
@@ -212,7 +212,7 @@ async function withRemoteClient<T>(
   ];
   let lastError: unknown;
   for (const createTransport of attempts) {
-    const client = new Client({ name: "openwork-mcp-app-host", version: "1.0.0" }, clientOptions());
+    const client = new Client({ name: "offlinegpt-mcp-app-host", version: "1.0.0" }, clientOptions());
     let connected = false;
     try {
       await client.connect(createTransport());
@@ -287,15 +287,15 @@ async function privateConnectMcpConfig(input: {
   connectionId?: string;
   serverName?: string;
 }): Promise<{ serverName: string; config: Record<string, unknown> } | null> {
-  let descriptor = await findOpenWorkConnectMcpAppHostServer(
+  let descriptor = await findOfflineGPTConnectMcpAppHostServer(
     input.serverConfig,
     input.workspaceId,
     { connectionId: input.connectionId, serverName: input.serverName },
   );
   if (!descriptor) {
-    const refreshed = await refreshOpenWorkConnectMcpAppHostCatalog(input.serverConfig, input.workspaceId);
+    const refreshed = await refreshOfflineGPTConnectMcpAppHostCatalog(input.serverConfig, input.workspaceId);
     if (refreshed.status === "synced") {
-      descriptor = await findOpenWorkConnectMcpAppHostServer(
+      descriptor = await findOfflineGPTConnectMcpAppHostServer(
         input.serverConfig,
         input.workspaceId,
         { connectionId: input.connectionId, serverName: input.serverName },
@@ -303,7 +303,7 @@ async function privateConnectMcpConfig(input: {
     }
   }
   if (!descriptor) return null;
-  const appHostAuthorization = await readOpenWorkConnectMcpAppHostAuthorization(
+  const appHostAuthorization = await readOfflineGPTConnectMcpAppHostAuthorization(
     input.serverConfig,
     input.workspaceId,
     descriptor.url,
@@ -458,11 +458,11 @@ export async function listMcpAppCatalog(input: {
   // capability gateway. Their catalog and authorization live in the private
   // app-host store, not the workspace MCP config, and their launches resolve
   // through a connection reference (app audience only).
-  let connectCatalog = await readOpenWorkConnectMcpAppHostCatalog(input.serverConfig, input.workspaceId);
+  let connectCatalog = await readOfflineGPTConnectMcpAppHostCatalog(input.serverConfig, input.workspaceId);
   if (connectCatalog.servers.length === 0) {
-    const refreshed = await refreshOpenWorkConnectMcpAppHostCatalog(input.serverConfig, input.workspaceId);
+    const refreshed = await refreshOfflineGPTConnectMcpAppHostCatalog(input.serverConfig, input.workspaceId);
     if (refreshed.status === "synced") {
-      connectCatalog = await readOpenWorkConnectMcpAppHostCatalog(input.serverConfig, input.workspaceId);
+      connectCatalog = await readOfflineGPTConnectMcpAppHostCatalog(input.serverConfig, input.workspaceId);
     }
   }
   // A Connect host can also appear in the workspace MCP config under the same
@@ -503,7 +503,7 @@ export async function listMcpAppCatalog(input: {
       displayName: descriptor.name,
       connectionId: descriptor.connectionId,
     };
-    const authorization = await readOpenWorkConnectMcpAppHostAuthorization(
+    const authorization = await readOfflineGPTConnectMcpAppHostAuthorization(
       input.serverConfig,
       input.workspaceId,
       descriptor.url,
@@ -782,7 +782,7 @@ export async function callMcpAppTool(input: {
     if (toolRequiresApproval(tool) && !input.approved) {
       throw new McpAppHostError(
         "tool_requires_approval",
-        "This MCP App tool requires user approval before OpenWork can call it.",
+        "This MCP App tool requires user approval before OfflineGPT can call it.",
       );
     }
     // A provider that rejects the call (for example JSON-RPC -32602 for a

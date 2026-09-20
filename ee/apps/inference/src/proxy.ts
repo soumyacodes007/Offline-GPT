@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
-import { inferenceBearerKey } from "@openwork-ee/utils/inference-bearer-key"
-import { ManagedModelsPolicyError } from "@openwork/types/den/managed-models-policy"
+import { inferenceBearerKey } from "@offlinegpt-ee/utils/inference-bearer-key"
+import { ManagedModelsPolicyError } from "@offlinegpt/types/den/managed-models-policy"
 import type { Context, Hono } from "hono"
 import { env } from "./env.js"
 import type { assertOrganizationManagedModelsAllowed as assertOrganizationManagedModelsAllowedFn, findActiveInferenceKey as findActiveInferenceKeyFn, getOpenRouterProviderKey as getOpenRouterProviderKeyFn } from "./keys.js"
@@ -166,17 +166,17 @@ function validateModelSelection(json: JsonObject) {
   return null
 }
 
-function sanitizeHeaders(request: Request, apiKey: string, openworkRequestId: string) {
+function sanitizeHeaders(request: Request, apiKey: string, offlinegptRequestId: string) {
   const headers = new Headers()
   const accept = request.headers.get("accept")
   if (accept) headers.set("accept", accept)
   headers.set("authorization", `Bearer ${apiKey}`)
   headers.set("content-type", "application/json")
-  headers.set("x-openwork-request-id", openworkRequestId)
+  headers.set("x-offlinegpt-request-id", offlinegptRequestId)
   if (env.proxyBaseUrl) {
     headers.set("http-referer", env.proxyBaseUrl)
   }
-  headers.set("x-title", "OpenWork Inference")
+  headers.set("x-title", "OfflineGPT Inference")
   return headers
 }
 
@@ -191,7 +191,7 @@ function logProxyError(message: string, details: Record<string, unknown>) {
 async function logUpstreamError(input: {
   upstream: Response
   upstreamUrl: URL
-  openworkRequestId: string
+  offlinegptRequestId: string
   organizationId: string
   orgMembershipId: string
   inferenceKeyId: string
@@ -208,7 +208,7 @@ async function logUpstreamError(input: {
     organizationId: input.organizationId,
     orgMembershipId: input.orgMembershipId,
     inferenceKeyId: input.inferenceKeyId,
-    openworkRequestId: input.openworkRequestId,
+    offlinegptRequestId: input.offlinegptRequestId,
     route: input.route,
     method: input.method,
     headers: input.headers,
@@ -232,7 +232,7 @@ async function prepareBody(request: Request, input: {
   organizationId: string
   orgMembershipId: string
   inferenceKeyId: string
-  openworkRequestId: string
+  offlinegptRequestId: string
   route: string
   method: string
   headers: Record<string, string>
@@ -244,7 +244,7 @@ async function prepareBody(request: Request, input: {
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       route: input.route,
       method: input.method,
       headers: input.headers,
@@ -258,7 +258,7 @@ async function prepareBody(request: Request, input: {
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       route: input.route,
       method: input.method,
       headers: input.headers,
@@ -279,7 +279,7 @@ async function prepareBody(request: Request, input: {
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       route: input.route,
       method: input.method,
       headers: input.headers,
@@ -289,7 +289,7 @@ async function prepareBody(request: Request, input: {
       payload: payloadLog.payload,
     })
     logProxyError("Invalid JSON inference request body", {
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
@@ -300,7 +300,7 @@ async function prepareBody(request: Request, input: {
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       route: input.route,
       method: input.method,
       headers: input.headers,
@@ -318,7 +318,7 @@ async function prepareBody(request: Request, input: {
     organizationId: input.organizationId,
     orgMembershipId: input.orgMembershipId,
     inferenceKeyId: input.inferenceKeyId,
-    openworkRequestId: input.openworkRequestId,
+    offlinegptRequestId: input.offlinegptRequestId,
     route: input.route,
     method: input.method,
     headers: input.headers,
@@ -330,7 +330,7 @@ async function prepareBody(request: Request, input: {
 
   if (!isJsonObject(json)) {
     logProxyError("Missing model in JSON request body", {
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
@@ -340,7 +340,7 @@ async function prepareBody(request: Request, input: {
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       route: input.route,
       method: input.method,
       headers: input.headers,
@@ -354,7 +354,7 @@ async function prepareBody(request: Request, input: {
   const blockedSelection = validateModelSelection(json)
   if (blockedSelection) {
     logProxyError("Unsupported OpenRouter model selection feature", {
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       blockedSelection,
@@ -364,7 +364,7 @@ async function prepareBody(request: Request, input: {
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       route: input.route,
       method: input.method,
       headers: input.headers,
@@ -372,12 +372,12 @@ async function prepareBody(request: Request, input: {
       resolvedUpstreamModel: model ? model.upstreamModel : null,
       status: 400,
     })
-    return { error: openAiError(400, "unsupported_model_selection", `OpenWork inference does not allow alternate model selection (${blockedSelection}).`), incomingModel: model ? model.alias : null, upstreamModel: model ? model.upstreamModel : null }
+    return { error: openAiError(400, "unsupported_model_selection", `OfflineGPT inference does not allow alternate model selection (${blockedSelection}).`), incomingModel: model ? model.alias : null, upstreamModel: model ? model.upstreamModel : null }
   }
 
   if (requestedModel === null) {
     logProxyError("Missing model in JSON request body", {
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
@@ -387,7 +387,7 @@ async function prepareBody(request: Request, input: {
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       route: input.route,
       method: input.method,
       headers: input.headers,
@@ -400,8 +400,8 @@ async function prepareBody(request: Request, input: {
 
   const body = json
   if (!model) {
-    logProxyError("Unknown OpenWork model alias", {
-      openworkRequestId: input.openworkRequestId,
+    logProxyError("Unknown OfflineGPT model alias", {
+      offlinegptRequestId: input.offlinegptRequestId,
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
@@ -412,7 +412,7 @@ async function prepareBody(request: Request, input: {
       organizationId: input.organizationId,
       orgMembershipId: input.orgMembershipId,
       inferenceKeyId: input.inferenceKeyId,
-      openworkRequestId: input.openworkRequestId,
+      offlinegptRequestId: input.offlinegptRequestId,
       route: input.route,
       method: input.method,
       headers: input.headers,
@@ -420,19 +420,19 @@ async function prepareBody(request: Request, input: {
       resolvedUpstreamModel: null,
       status: 404,
     })
-    return { error: openAiError(404, "model_not_found", `Unknown OpenWork model alias: ${requestedModel}`), incomingModel: null, upstreamModel: null }
+    return { error: openAiError(404, "model_not_found", `Unknown OfflineGPT model alias: ${requestedModel}`), incomingModel: null, upstreamModel: null }
   }
 
   body.model = model.upstreamModel
   body.user = input.orgMembershipId
-  body.session_id = input.openworkRequestId
+  body.session_id = input.offlinegptRequestId
   const trace = {
-    trace_id: input.openworkRequestId,
-    trace_name: "OpenWork Inference",
+    trace_id: input.offlinegptRequestId,
+    trace_name: "OfflineGPT Inference",
     generation_name: model.alias,
     org_membership_id: input.orgMembershipId,
     inference_key_id: input.inferenceKeyId,
-    openwork_request_id: input.openworkRequestId,
+    offlinegpt_request_id: input.offlinegptRequestId,
   }
 
   return {
@@ -451,7 +451,7 @@ function listOpenAiModels() {
       id: model.alias,
       object: "model",
       created: 0,
-      owned_by: "openwork",
+      owned_by: "offlinegpt",
     })),
   }
 }
@@ -463,7 +463,7 @@ function localRouteRejection(path: string, method: string) {
   if (path === modelsPath) {
     return openAiError(405, "method_not_allowed", `Method ${method} is not allowed for ${path}. Use GET.`)
   }
-  return openAiError(404, "not_found", `Unsupported OpenWork inference route: ${method} ${path}.`)
+  return openAiError(404, "not_found", `Unsupported OfflineGPT inference route: ${method} ${path}.`)
 }
 
 export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies = defaultProxyDependencies) {
@@ -482,19 +482,19 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
   }
 
   async function handleApiRequest(c: Context) {
-    const openworkRequestId = buildRequestId()
-    c.header("x-openwork-request-id", openworkRequestId)
+    const offlinegptRequestId = buildRequestId()
+    c.header("x-offlinegpt-request-id", offlinegptRequestId)
     c.header("cache-control", "no-store")
     const bearerKey = readInferenceBearerKey(c.req.raw)
     if (!bearerKey) {
       logProxyError("Missing inference API key", { path: c.req.path, method: c.req.method })
-      return c.json({ error: { message: "Missing OpenWork inference API key.", type: "authentication_error", code: "missing_api_key" } }, 401)
+      return c.json({ error: { message: "Missing OfflineGPT inference API key.", type: "authentication_error", code: "missing_api_key" } }, 401)
     }
 
     const inferenceKey = await dependencies.findActiveInferenceKey(bearerKey)
     if (!inferenceKey) {
       logProxyError("Invalid inference API key", { path: c.req.path, method: c.req.method })
-      return c.json({ error: { message: "Invalid OpenWork inference API key.", type: "authentication_error", code: "invalid_api_key" } }, 401)
+      return c.json({ error: { message: "Invalid OfflineGPT inference API key.", type: "authentication_error", code: "invalid_api_key" } }, 401)
     }
 
     const policyRejection = await managedModelsRejection(inferenceKey.organization_id)
@@ -516,7 +516,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
         organizationId: inferenceKey.organization_id,
         orgMembershipId: inferenceKey.org_membership_id,
         inferenceKeyId: inferenceKey.id,
-        openworkRequestId,
+        offlinegptRequestId,
         route: c.req.path,
         method: c.req.method,
         headers: incomingHeaders,
@@ -530,7 +530,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
         organizationId: inferenceKey.organization_id,
         orgMembershipId: inferenceKey.org_membership_id,
         inferenceKeyId: inferenceKey.id,
-        openworkRequestId,
+        offlinegptRequestId,
         route: c.req.path,
         method: c.req.method,
         headers: incomingHeaders,
@@ -538,14 +538,14 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
         resolvedUpstreamModel: null,
         status: 400,
       })
-      return openAiError(400, "unsupported_query_parameters", "OpenWork chat completions does not accept query parameters.")
+      return openAiError(400, "unsupported_query_parameters", "OfflineGPT chat completions does not accept query parameters.")
     }
 
     const prepared = await prepareBody(c.req.raw, {
       organizationId: inferenceKey.organization_id,
       orgMembershipId: inferenceKey.org_membership_id,
       inferenceKeyId: inferenceKey.id,
-      openworkRequestId,
+      offlinegptRequestId,
       route: c.req.path,
       method: c.req.method,
       headers: incomingHeaders,
@@ -553,7 +553,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
     })
     if ("error" in prepared) {
       logProxyError("Invalid inference proxy request", {
-        openworkRequestId,
+        offlinegptRequestId,
         path: c.req.path,
         organizationId: inferenceKey.organization_id,
         orgMembershipId: inferenceKey.org_membership_id,
@@ -563,8 +563,8 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
 
     const limits = await dependencies.ensureUsableBuckets(inferenceKey.organization_id)
     if (!limits.ok) {
-      c.header("x-openwork-limit-bucket-id", limits.limitedBy)
-      c.header("x-openwork-limit-window-type", limits.windowType)
+      c.header("x-offlinegpt-limit-bucket-id", limits.limitedBy)
+      c.header("x-offlinegpt-limit-window-type", limits.windowType)
       const limitedBucket = "limitedBucket" in limits ? limits.limitedBucket : null
       if (limitedBucket) {
         const retryAfter = secondsUntil(limitedBucket.windowEndAt)
@@ -590,14 +590,14 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
         organizationId: inferenceKey.organization_id,
         orgMembershipId: inferenceKey.org_membership_id,
         inferenceKeyId: inferenceKey.id,
-        openworkRequestId,
+        offlinegptRequestId,
       })
       reporter.handledError({
         reason: "missing_provider_key",
         organizationId: inferenceKey.organization_id,
         orgMembershipId: inferenceKey.org_membership_id,
         inferenceKeyId: inferenceKey.id,
-        openworkRequestId,
+        offlinegptRequestId,
         route: c.req.path,
         method: c.req.method,
         headers: incomingHeaders,
@@ -618,7 +618,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
     let timer: ReturnType<typeof setTimeout> | undefined
     const analytics = await Promise.race([
       (async () => {
-        const begin = await dependencies.analytics?.({ key: inferenceKey, request: c.req.raw, requestId: openworkRequestId, model: prepared.upstreamModel, startedAt })
+        const begin = await dependencies.analytics?.({ key: inferenceKey, request: c.req.raw, requestId: offlinegptRequestId, model: prepared.upstreamModel, startedAt })
         return begin?.(prepared.stream) ?? null
       })().catch(() => null),
       new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), 250) }),
@@ -641,7 +641,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
     try {
       const upstreamInit: ProxyRequestInit = {
         method: c.req.method,
-        headers: sanitizeHeaders(c.req.raw, providerKey.encrypted_api_key, openworkRequestId),
+        headers: sanitizeHeaders(c.req.raw, providerKey.encrypted_api_key, offlinegptRequestId),
         body: JSON.stringify({ ...prepared.body, trace: { ...prepared.body.trace, usage_started_at: limits.admittedAt.toISOString() } }),
         duplex: "half",
         signal: abort.signal,
@@ -663,7 +663,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
       finishAnalytics("failed")
       const error = abortError() ?? inferenceError("upstream_unreachable", "The selected model could not be reached. Your work is preserved; retry when the provider recovers.")
       logProxyError("Failed to reach OpenRouter upstream", {
-        openworkRequestId,
+        offlinegptRequestId,
         organizationId: inferenceKey.organization_id,
         orgMembershipId: inferenceKey.org_membership_id,
         inferenceKeyId: inferenceKey.id,
@@ -677,7 +677,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
         organizationId: inferenceKey.organization_id,
         orgMembershipId: inferenceKey.org_membership_id,
         inferenceKeyId: inferenceKey.id,
-        openworkRequestId,
+        offlinegptRequestId,
         route: c.req.path,
         method: c.req.method,
         headers: incomingHeaders,
@@ -696,7 +696,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
       await logUpstreamError({
         upstream,
         upstreamUrl,
-        openworkRequestId,
+        offlinegptRequestId,
         organizationId: inferenceKey.organization_id,
         orgMembershipId: inferenceKey.org_membership_id,
         inferenceKeyId: inferenceKey.id,
@@ -710,7 +710,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
       })
     }
 
-    const headers = new Headers({ "x-openwork-request-id": openworkRequestId, "cache-control": "no-store" })
+    const headers = new Headers({ "x-offlinegpt-request-id": offlinegptRequestId, "cache-control": "no-store" })
     const retryAfter = upstream.headers.get("retry-after")
     if (retryAfter && (/^\d+$/.test(retryAfter) || Number.isFinite(Date.parse(retryAfter)))) headers.set("retry-after", retryAfter)
     if (!upstream.ok) {
@@ -751,7 +751,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
           c.req.raw.signal.removeEventListener("abort", cancel)
           finishAnalytics(result.outcome === "completed" ? "completed" : result.outcome === "cancelled" ? "cancelled" : "failed")
           try {
-            reporter.completion?.({ ...result, openworkRequestId, organizationId: inferenceKey.organization_id, orgMembershipId: inferenceKey.org_membership_id, modelAlias: prepared.modelAlias })
+            reporter.completion?.({ ...result, offlinegptRequestId, organizationId: inferenceKey.organization_id, orgMembershipId: inferenceKey.org_membership_id, modelAlias: prepared.modelAlias })
           } catch { /* Completion reporting must not interrupt stream cleanup. */ }
         },
       }), { headers })

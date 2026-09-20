@@ -1,9 +1,9 @@
-import type { OpenworkSessionRef } from "@openwork/types/openwork-context";
+import type { OfflineGptSessionRef } from "@offlinegpt/types/offlinegpt-context";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type WorkbenchPane = "primary" | "secondary";
-export type WorkbenchSessionTab = OpenworkSessionRef & {
+export type WorkbenchSessionTab = OfflineGptSessionRef & {
   workspaceTitle?: string;
 };
 
@@ -20,7 +20,7 @@ export type SyncWorkbenchInput = {
   workspaceId: string;
   workspaceTitle?: string;
   primarySessionId: string | null;
-  sessions: OpenworkSessionRef[];
+  sessions: OfflineGptSessionRef[];
   sessionsKnown: boolean;
 };
 
@@ -34,13 +34,13 @@ const initialWorkbenchSnapshot: WorkbenchSnapshot = {
 };
 
 export function isSameWorkbenchSession(
-  left: Pick<OpenworkSessionRef, "workspaceId" | "sessionId"> | null | undefined,
-  right: Pick<OpenworkSessionRef, "workspaceId" | "sessionId"> | null | undefined,
+  left: Pick<OfflineGptSessionRef, "workspaceId" | "sessionId"> | null | undefined,
+  right: Pick<OfflineGptSessionRef, "workspaceId" | "sessionId"> | null | undefined,
 ) {
   return Boolean(left && right && left.workspaceId === right.workspaceId && left.sessionId === right.sessionId);
 }
 
-export function workbenchSessionKey(session: Pick<OpenworkSessionRef, "workspaceId" | "sessionId">) {
+export function workbenchSessionKey(session: Pick<OfflineGptSessionRef, "workspaceId" | "sessionId">) {
   return JSON.stringify([session.workspaceId, session.sessionId]);
 }
 
@@ -51,7 +51,7 @@ export function sideChatSystemContext(workspaceId: string, sessionId: string): s
   const main = owner ? state.tabs.find((tab) => workbenchSessionKey(tab) === owner[0]) : null;
   if (!main) return undefined;
   return [
-    "This is a side chat associated with a main conversation in OpenWork.",
+    "This is a side chat associated with a main conversation in OfflineGPT.",
     `Main conversation reference: ${JSON.stringify({ workspaceId: main.workspaceId, sessionId: main.sessionId })}.`,
     "When relevant, use the main conversation as background for this side chat. Retrieve it through available session tools before referring to details; do not assume you have read it. Follow the user's request here and keep replies in this side chat.",
   ].join("\n");
@@ -81,7 +81,7 @@ function withRevision(current: WorkbenchSnapshot, next: Omit<WorkbenchSnapshot, 
   return { ...next, revision: current.revision + 1 };
 }
 
-function findTab(tabs: WorkbenchSessionTab[], session: Pick<OpenworkSessionRef, "workspaceId" | "sessionId">) {
+function findTab(tabs: WorkbenchSessionTab[], session: Pick<OfflineGptSessionRef, "workspaceId" | "sessionId">) {
   return tabs.find((tab) => isSameWorkbenchSession(tab, session));
 }
 
@@ -137,7 +137,7 @@ export function syncWorkbenchSnapshot(
   });
 }
 
-export function openWorkbenchTab(
+export function offlineGptbenchTab(
   current: WorkbenchSnapshot,
   tab: WorkbenchSessionTab,
 ): WorkbenchSnapshot {
@@ -152,7 +152,7 @@ export function openWorkbenchTab(
 
 export function closeWorkbenchTab(
   current: WorkbenchSnapshot,
-  tab: Pick<OpenworkSessionRef, "workspaceId" | "sessionId">,
+  tab: Pick<OfflineGptSessionRef, "workspaceId" | "sessionId">,
 ): WorkbenchSnapshot {
   const tabs = current.tabs.filter((entry) => !isSameWorkbenchSession(entry, tab));
   const closesPrimary = isSameWorkbenchSession(current.primary, tab);
@@ -171,7 +171,7 @@ export function closeWorkbenchTab(
 
 export function setWorkbenchSplit(
   current: WorkbenchSnapshot,
-  session: Pick<OpenworkSessionRef, "workspaceId" | "sessionId"> | null,
+  session: Pick<OfflineGptSessionRef, "workspaceId" | "sessionId"> | null,
 ): WorkbenchSnapshot {
   if (!current.primary) return current;
   return setWorkbenchSideChat(current, current.primary, session);
@@ -179,8 +179,8 @@ export function setWorkbenchSplit(
 
 export function setWorkbenchSideChat(
   current: WorkbenchSnapshot,
-  owner: Pick<OpenworkSessionRef, "workspaceId" | "sessionId">,
-  session: Pick<OpenworkSessionRef, "workspaceId" | "sessionId"> | null,
+  owner: Pick<OfflineGptSessionRef, "workspaceId" | "sessionId">,
+  session: Pick<OfflineGptSessionRef, "workspaceId" | "sessionId"> | null,
 ): WorkbenchSnapshot {
   if (!findTab(current.tabs, owner)) return current;
   const chat = session && !isSameWorkbenchSession(session, owner)
@@ -222,8 +222,8 @@ export function focusWorkbenchPane(
 type WorkbenchStore = WorkbenchSnapshot & {
   sync: (input: SyncWorkbenchInput) => void;
   openTab: (tab: WorkbenchSessionTab) => void;
-  closeTab: (tab: Pick<OpenworkSessionRef, "workspaceId" | "sessionId">) => void;
-  setSplit: (session: Pick<OpenworkSessionRef, "workspaceId" | "sessionId"> | null) => void;
+  closeTab: (tab: Pick<OfflineGptSessionRef, "workspaceId" | "sessionId">) => void;
+  setSplit: (session: Pick<OfflineGptSessionRef, "workspaceId" | "sessionId"> | null) => void;
   setSideChat: (owner: WorkbenchSessionTab, session: WorkbenchSessionTab) => void;
   focusPane: (pane: WorkbenchPane) => void;
 };
@@ -231,12 +231,12 @@ type WorkbenchStore = WorkbenchSnapshot & {
 export const useWorkbenchStore = create<WorkbenchStore>()(persist((set) => ({
   ...initialWorkbenchSnapshot,
   sync: (input) => set((state) => syncWorkbenchSnapshot(state, input)),
-  openTab: (tab) => set((state) => openWorkbenchTab(state, tab)),
+  openTab: (tab) => set((state) => offlineGptbenchTab(state, tab)),
   closeTab: (tab) => set((state) => closeWorkbenchTab(state, tab)),
   setSplit: (session) => set((state) => setWorkbenchSplit(state, session)),
   setSideChat: (owner, session) => set((state) => setWorkbenchSideChat(state, owner, session)),
   focusPane: (pane) => set((state) => focusWorkbenchPane(state, pane)),
 }), {
-  name: "openwork.session-splits.v1",
+  name: "offlinegpt.session-splits.v1",
   partialize: (state) => ({ tabs: state.tabs, sideChats: state.sideChats }),
 }));

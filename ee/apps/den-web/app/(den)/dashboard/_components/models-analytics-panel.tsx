@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity as ActivityIcon, ArrowLeft, CheckCircle2, Clock3, Coins, Layers, Plug, RefreshCw, ShieldCheck, Sparkles, Zap } from "lucide-react";
-import { INFERENCE_MODEL_ALIASES } from "@openwork/types/den/inference";
+import { INFERENCE_MODEL_ALIASES } from "@offlinegpt/types/den/inference";
 import { z } from "zod";
-import { modelsAnalyticsSettingsSchema, modelsAnalyticsActivitySchema, modelsConsumptionSchema, type ModelsAnalyticsSettings } from "@openwork-ee/telemetry-contracts";
+import { modelsAnalyticsSettingsSchema, modelsAnalyticsActivitySchema, modelsConsumptionSchema, type ModelsAnalyticsSettings } from "@offlinegpt-ee/telemetry-contracts";
 import { DenButton } from "../../_components/ui/button";
 import { DenInput } from "../../_components/ui/input";
 import { DenSelect } from "../../_components/ui/select";
@@ -91,7 +91,7 @@ function LangfuseSettings({ settings, refresh }: { settings: ModelsAnalyticsSett
 
 function modelName(value: string) {
   const model = Object.entries(INFERENCE_MODEL_ALIASES).find(([id, model]) => id === value || model.upstreamModel === value);
-  return model ? model[1].displayName.replace(/^OpenWork:\s*/, "") : value;
+  return model ? model[1].displayName.replace(/^OfflineGPT:\s*/, "") : value;
 }
 
 function Outcome({ events }: { events: Activity["events"] }) {
@@ -198,11 +198,11 @@ export function ModelsAnalyticsPanel() {
   return <section className="grid gap-5" data-testid="models-task-analytics" aria-label="Task analytics">
     {!settings.enabled ? <div className={`${analyticsSurfaceClass} grid gap-6 p-6 sm:grid-cols-[1fr_220px]`}>
       <div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f2ecff] px-2.5 py-1 text-xs font-medium text-[#6F3DFF]"><Sparkles className="h-3 w-3" aria-hidden="true" />Included with OpenWork Models</span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f2ecff] px-2.5 py-1 text-xs font-medium text-[#6F3DFF]"><Sparkles className="h-3 w-3" aria-hidden="true" />Included with OfflineGPT Models</span>
         <h2 className="mt-4 text-xl font-semibold tracking-tight text-[#07192C]">Unlock custom insights</h2>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-[#637291]">See model usage, costs, task activity, and the skills and tools your team uses. Would you like to turn on analytics for your team’s tasks in OpenWork?</p>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-[#637291]">See model usage, costs, task activity, and the skills and tools your team uses. Would you like to turn on analytics for your team’s tasks in OfflineGPT?</p>
         <p className="mt-2 text-xs leading-5 text-[#637291]">Prompts, responses and file contents are excluded. Workspace admins can view the analytics. Collection starts when you enable it, and you can turn it off at any time.</p>
-        {settings.consentedAt ? <p className="mt-3 text-sm text-[#637291]">Task analytics is off. You can keep using OpenWork Models as usual.</p> : null}
+        {settings.consentedAt ? <p className="mt-3 text-sm text-[#637291]">Task analytics is off. You can keep using OfflineGPT Models as usual.</p> : null}
         <div className="mt-5 flex flex-wrap gap-2"><DenButton disabled={mutating} onClick={() => void choose(true)}>Enable task analytics</DenButton>
           {!settings.consentedAt ? <DenButton variant="secondary" disabled={mutating} onClick={() => void choose(false)}>Not now</DenButton> : null}</div>
       </div>
@@ -214,7 +214,7 @@ export function ModelsAnalyticsPanel() {
     </div> : <>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><h2 className="text-lg font-semibold tracking-tight text-[#07192C]">Task analytics</h2>
-          <p className="mt-1 text-xs text-[#637291]">OpenWork Models only · Included with your subscription</p></div>
+          <p className="mt-1 text-xs text-[#637291]">OfflineGPT Models only · Included with your subscription</p></div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Analytics on</span>
           <DenButton variant="ghost" size="sm" disabled={mutating} onClick={() => void choose(false)}>Turn off analytics</DenButton>
@@ -239,7 +239,7 @@ export function ModelsAnalyticsPanel() {
           <StatCard icon={<Zap className="text-[#6F3DFF]" />} title="Model calls" value={loading ? "…" : calls.toLocaleString()} sub={`Last ${days} days`} tone="violet" />
           <StatCard icon={<Coins className="text-[#1D63FF]" />} title="Reported cost" value={loading ? "…" : formatCost(cost)} sub={incomplete ? "Partial · some calls have no accounting" : "Provider-reported, not your invoice"} tone="blue" />
           <StatCard icon={<Layers className="text-[#B7791F]" />} title="Reported tokens" value={loading ? "…" : tokens?.toLocaleString() ?? "Unknown"} sub={incomplete ? "Partial · some calls have no accounting" : "Input and output tokens"} tone="amber" />
-          <StatCard icon={<Sparkles className="text-[#18A34A]" />} title="Models used" value={loading ? "…" : new Set(usage.flatMap((row) => row.model ? [row.model] : [])).size.toLocaleString()} sub="Through OpenWork Models" tone="green" />
+          <StatCard icon={<Sparkles className="text-[#18A34A]" />} title="Models used" value={loading ? "…" : new Set(usage.flatMap((row) => row.model ? [row.model] : [])).size.toLocaleString()} sub="Through OfflineGPT Models" tone="green" />
         </div> : null}
       </> : null}
       {tab === "Activity" ? <div className={`${analyticsSurfaceClass} overflow-hidden`}>
@@ -258,17 +258,17 @@ export function ModelsAnalyticsPanel() {
           { key: "member", header: "Member", render: (events) => <span className="text-sm text-[#30405F]">{memberName(events[0].memberId)}</span> },
           { key: "status", header: "Outcome", render: (events) => <Outcome events={events} /> },
           { key: "models", header: "Models", render: (events) => <span className="text-sm text-[#637291]">{[...new Set(events.flatMap((event) => event.model ? [modelName(event.model)] : []))].join(", ") || "—"}</span> },
-        ]} /> : <AnalyticsEmptyState title="Your next OpenWork Models task appears here" action={<AnalyticsAdoptionLink orgSlug={activeOrg?.slug} />}>
-          <p>Choose a model from <strong className="font-medium text-[#30405F]">OpenWork Models</strong> in the desktop model picker, then run a new task. This page refreshes automatically.</p>
-          <p className="mt-2">Tasks using your own provider connections are covered by Usage &amp; adoption. Model costs here cover OpenWork Models only.</p>
+        ]} /> : <AnalyticsEmptyState title="Your next OfflineGPT Models task appears here" action={<AnalyticsAdoptionLink orgSlug={activeOrg?.slug} />}>
+          <p>Choose a model from <strong className="font-medium text-[#30405F]">OfflineGPT Models</strong> in the desktop model picker, then run a new task. This page refreshes automatically.</p>
+          <p className="mt-2">Tasks using your own provider connections are covered by Usage &amp; adoption. Model costs here cover OfflineGPT Models only.</p>
         </AnalyticsEmptyState>}
         {(selected ? selected.next : extra ? extra.next : activity?.next) ? <div className="border-t border-[#edf0f5] p-4"><DenButton variant="secondary" size="sm" disabled={busy} onClick={() => void more()}>{selected ? "Load more events" : "Load more activity"}</DenButton></div> : null}
       </div> : null}
       {tab === "Consumption" ? <>
-        {loading ? <p role="status" className="py-12 text-center text-sm text-[#637291]">Loading consumption…</p> : dataQuery.isError && !dataQuery.data ? null : !usage.length ? <div className={analyticsSurfaceClass}><AnalyticsEmptyState title="No model usage recorded yet">Run a new task with OpenWork Models to see its model calls and provider-reported consumption. Usage from your own provider accounts is not included here.</AnalyticsEmptyState></div> : <>
+        {loading ? <p role="status" className="py-12 text-center text-sm text-[#637291]">Loading consumption…</p> : dataQuery.isError && !dataQuery.data ? null : !usage.length ? <div className={analyticsSurfaceClass}><AnalyticsEmptyState title="No model usage recorded yet">Run a new task with OfflineGPT Models to see its model calls and provider-reported consumption. Usage from your own provider accounts is not included here.</AnalyticsEmptyState></div> : <>
           <TrendChart title="Model calls over time" subtitle={`Daily calls · Last ${days} days · UTC`} intervalLabel="" weeks={daily.map(({ day }) => ({ weekStart: day }))} series={[{ label: "Model calls", color: "#6F3DFF", values: daily.map((row) => row.calls) }]} />
           <div className={`${analyticsSurfaceClass} overflow-hidden`}>
-            <div className="border-b border-[#edf0f5] px-5 py-4"><h3 className="text-sm font-semibold text-[#07192C]">Consumption by {groupBy}</h3><p className="mt-1 text-xs text-[#637291]">Reported usage for OpenWork Models</p></div>
+            <div className="border-b border-[#edf0f5] px-5 py-4"><h3 className="text-sm font-semibold text-[#07192C]">Consumption by {groupBy}</h3><p className="mt-1 text-xs text-[#637291]">Reported usage for OfflineGPT Models</p></div>
             <DenTable headerTone="plain" rows={groups} getRowKey={(group) => group.id} emptyLabel={loading ? "Loading consumption…" : "Consumption is unavailable."} columns={[
               { key: "name", header: groupBy, render: (group) => <span className="text-sm font-medium text-[#30405F]">{group.name}</span> },
               { key: "calls", header: "Calls", align: "right", render: (group) => <span className="text-sm tabular-nums">{group.calls.toLocaleString()}</span> },

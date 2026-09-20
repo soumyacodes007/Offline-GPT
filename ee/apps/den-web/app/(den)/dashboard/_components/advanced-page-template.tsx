@@ -20,9 +20,9 @@ const ADVANCED_TABS: readonly TabItem<AdvancedTab>[] = [
 ];
 
 const ADVANCED_DESCRIPTIONS: Record<AdvancedTab, string> = {
-  collections: "Collections contain plugins. The built-in OpenWork collection and assigned collections show up inside the desktop app after sign-in.",
+  collections: "Collections contain plugins. The built-in OfflineGPT collection and assigned collections show up inside the desktop app after sign-in.",
   "desktop-policies": "Control which desktop capabilities are available to the whole org, specific members, or teams.",
-  "brand-appearance": "Customize how your workspace appears across OpenWork.",
+  "brand-appearance": "Customize how your workspace appears across OfflineGPT.",
 };
 
 export function AdvancedPageTemplate({ tab, children }: { tab: AdvancedTab; children: React.ReactNode }) {

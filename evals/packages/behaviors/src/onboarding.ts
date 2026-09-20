@@ -1,5 +1,5 @@
-import { browserScript } from "@openwork/cdp";
-import type { Surface } from "@openwork/cdp";
+import { browserScript } from "@offlinegpt/cdp";
+import type { Surface } from "@offlinegpt/cdp";
 import { clickButton, currentHash, evalIn, fill, waitFor, waitForText } from "./desktop.ts";
 
 export interface LocalWorkspaceFacts {

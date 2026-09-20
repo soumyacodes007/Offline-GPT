@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util"
-import { and, asc, desc, eq, inArray, isNull, or } from "@openwork-ee/den-db/drizzle"
+import { and, asc, desc, eq, inArray, isNull, or } from "@offlinegpt-ee/den-db/drizzle"
 import {
   ConnectedAccountTable,
   ConfigObjectAccessGrantTable,
@@ -17,8 +17,8 @@ import {
   PluginConfigObjectTable,
   PluginMcpRequirementBindingTable,
   PluginTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId, type DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { db } from "../db.js"
 import { env } from "../env.js"
 import { declaredPluginMcpAuthType, requiredPluginMcpAuthType } from "./external-mcp-auth-policy.js"

@@ -3,7 +3,7 @@ import {
   createCloudAutomation,
   createOrgConnection,
   denFetch,
-  grantOpenWorkWebAccess,
+  grantOfflineGPTWebAccess,
   listWorkflows,
   patchAutomation,
   readAutomation,
@@ -13,11 +13,11 @@ import {
   runAutomationNow,
   runWorkflow,
   saveWorkflow,
-} from "@openwork/behaviors"
-import { mcpMock, needs, server, test } from "@openwork/testkit"
+} from "@offlinegpt/behaviors"
+import { mcpMock, needs, server, test } from "@offlinegpt/testkit"
 
 const requirements = {
-  optIn: ["OPENWORK_EVAL_E2E_TESTS", "OPENWORK_EVAL_SAVED_SCRIPT_AUTOMATIONS_E2E_TEST"],
+  optIn: ["OFFLINEGPT_EVAL_E2E_TESTS", "OFFLINEGPT_EVAL_SAVED_SCRIPT_AUTOMATIONS_E2E_TEST"],
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -91,10 +91,10 @@ test("a Code Mode result becomes a cloud Automation and a durable artifact resul
   const organizationId = String(orgRows[0]?.id ?? "")
   expect(organizationId).not.toBe("")
 
-  // Cloud Automations require OpenWork Web access for the organization. The
+  // Cloud Automations require OfflineGPT Web access for the organization. The
   // launched Den seeds this admin into the platform-admin allowlist, so the
   // spec grants the audited complimentary entitlement inline.
-  await grantOpenWorkWebAccess(
+  await grantOfflineGPTWebAccess(
     den.admin,
     organizationId,
     "saved-script-automations spec exercises Cloud Automations",
@@ -129,7 +129,7 @@ test("a Code Mode result becomes a cloud Automation and a durable artifact resul
     method: "POST",
     headers: {
       authorization: `Bearer ${den.admin.token}`,
-      "x-openwork-org-id": organizationId,
+      "x-offlinegpt-org-id": organizationId,
     },
     body: JSON.stringify({ scopes: ["mcp:read", "mcp:write"] }),
   })
@@ -239,7 +239,7 @@ test("a Code Mode result becomes a cloud Automation and a durable artifact resul
   expect(view.id).toBe(emptyDraftError.artifactViewId)
   const revision = records(view.revisions)[0]
   expect(revision?.buildStatus).toBe("ready")
-  expect(requireRecord(draft._meta, "draft host metadata")["openwork/appDraft"]).toEqual({
+  expect(requireRecord(draft._meta, "draft host metadata")["offlinegpt/appDraft"]).toEqual({
     appId: view.id, revisionId: revision?.id, receiptId: manualResult.receiptId, title: "Briefing app",
   })
   const appPath = `/v1/apps/${view.id}`
@@ -335,7 +335,7 @@ test("a Code Mode result becomes a cloud Automation and a durable artifact resul
     executionLocation: "cloud",
     automationId,
     automationRunId: scheduledRunId,
-    engineKind: "openwork-cloud-codemode-v1",
+    engineKind: "offlinegpt-cloud-codemode-v1",
   })
 
   const toolList = await agentRpc(den.ref.apiUrl, mcpToken, "tools/list", {})
@@ -343,16 +343,16 @@ test("a Code Mode result becomes a cloud Automation and a durable artifact resul
   const renderTool = tools.find((candidate) => candidate.name === "render_workflow_artifact")
   const renderToolMeta = isRecord(renderTool?._meta) ? renderTool._meta : {}
   const modernUi = isRecord(renderToolMeta.ui) ? renderToolMeta.ui : {}
-  expect(modernUi.resourceUri).toBe("ui://openwork/workflow-artifact/v1/view.html")
-  expect(renderToolMeta["ui/resourceUri"]).toBe("ui://openwork/workflow-artifact/v1/view.html")
+  expect(modernUi.resourceUri).toBe("ui://offlinegpt/workflow-artifact/v1/view.html")
+  expect(renderToolMeta["ui/resourceUri"]).toBe("ui://offlinegpt/workflow-artifact/v1/view.html")
 
   const resourceList = await agentRpc(den.ref.apiUrl, mcpToken, "resources/list", {})
   const resources = records(resourceList.resources)
-  const appResource = resources.find((candidate) => candidate.uri === "ui://openwork/workflow-artifact/v1/view.html")
+  const appResource = resources.find((candidate) => candidate.uri === "ui://offlinegpt/workflow-artifact/v1/view.html")
   expect(appResource?.mimeType).toBe("text/html;profile=mcp-app")
 
   const resourceRead = await agentRpc(den.ref.apiUrl, mcpToken, "resources/read", {
-    uri: "ui://openwork/workflow-artifact/v1/view.html",
+    uri: "ui://offlinegpt/workflow-artifact/v1/view.html",
   })
   const resourceContents = records(resourceRead.contents)
   expect(resourceContents[0]?.mimeType).toBe("text/html;profile=mcp-app")

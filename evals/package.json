@@ -1,5 +1,5 @@
 {
-  "name": "@openwork/evals",
+  "name": "@offlinegpt/evals",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,19 +22,19 @@
     "check:browser": "node scripts/check-browser-code.mjs"
   },
   "dependencies": {
-    "@openwork/behaviors": "workspace:*",
-    "@openwork/cdp": "workspace:*",
-    "@openwork/env": "workspace:*",
-    "@openwork/hosts": "workspace:*",
-    "@openwork/labs": "workspace:*",
-    "@openwork/matchers": "workspace:*",
-    "@openwork/sdk": "link:../packages/sdk",
-    "@openwork/test-artifacts": "workspace:*",
-    "@openwork/test-evidence": "workspace:*",
-    "@openwork/testkit": "workspace:*",
-    "@openwork/types": "link:../packages/types",
-    "@openwork/world": "link:../packages/world",
-    "@openwork/review": "link:../packages/review"
+    "@offlinegpt/behaviors": "workspace:*",
+    "@offlinegpt/cdp": "workspace:*",
+    "@offlinegpt/env": "workspace:*",
+    "@offlinegpt/hosts": "workspace:*",
+    "@offlinegpt/labs": "workspace:*",
+    "@offlinegpt/matchers": "workspace:*",
+    "@offlinegpt/sdk": "link:../packages/sdk",
+    "@offlinegpt/test-artifacts": "workspace:*",
+    "@offlinegpt/test-evidence": "workspace:*",
+    "@offlinegpt/testkit": "workspace:*",
+    "@offlinegpt/types": "link:../packages/types",
+    "@offlinegpt/world": "link:../packages/world",
+    "@offlinegpt/review": "link:../packages/review"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",

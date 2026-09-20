@@ -31,18 +31,18 @@ import {
   readOpencodeConfig,
   revealDesktopItemInDir,
   uninstallSkill as uninstallSkillCommand,
-  workspaceOpenworkRead,
-  workspaceOpenworkWrite,
+  workspaceOfflineGptRead,
+  workspaceOfflineGptWrite,
   writeLocalSkill,
   writeOpencodeConfig,
   type OpencodeConfigFile,
 } from "../../../../app/lib/desktop";
 import type {
-  OpenworkClaudePluginPreview,
-  OpenworkServerCapabilities,
-  OpenworkServerClient,
-  OpenworkServerStatus,
-} from "../../../../app/lib/openwork-server";
+  OfflineGptClaudePluginPreview,
+  OfflineGptServerCapabilities,
+  OfflineGptServerClient,
+  OfflineGptServerStatus,
+} from "../../../../app/lib/offlinegpt-server";
 import {
   DenApiError,
   createDenClient,
@@ -65,7 +65,7 @@ import {
   type PendingCloudPluginChange,
 } from "../../../../app/cloud/desktop-cloud-sync";
 import { notifyEvent } from "../../../shell/notifications";
-import type { OpenworkServerStore } from "../../connections/openwork-server-store";
+import type { OfflineGptServerStore } from "../../connections/offlinegpt-server-store";
 import { clearCloudInventoryCache } from "../../connections/cloud-inventory-cache";
 import {
   denLibraryPluginCreateRequest,
@@ -358,11 +358,11 @@ export function createExtensionsStore(options: {
   selectedWorkspaceId: () => string;
   selectedWorkspaceRoot: () => string;
   workspaceType: () => "local" | "remote";
-  openworkServer: OpenworkServerStore;
-  openworkServerConnection?: () => {
-    openworkServerClient: OpenworkServerClient | null;
-    openworkServerStatus: OpenworkServerStatus;
-    openworkServerCapabilities: OpenworkServerCapabilities | null;
+  offlinegptServer: OfflineGptServerStore;
+  offlinegptServerConnection?: () => {
+    offlinegptServerClient: OfflineGptServerClient | null;
+    offlinegptServerStatus: OfflineGptServerStatus;
+    offlinegptServerCapabilities: OfflineGptServerCapabilities | null;
   };
   runtimeWorkspaceId: () => string | null;
   ensureRuntimeWorkspaceId?: () => Promise<string | null | undefined>;
@@ -376,7 +376,7 @@ export function createExtensionsStore(options: {
 
   let disposed = false;
   let started = false;
-  let stopOpenworkSubscription: (() => void) | null = null;
+  let stopOfflineGptSubscription: (() => void) | null = null;
   let stopDenSessionListener: (() => void) | null = null;
   let lastWorkspaceContextKey = "";
   let snapshot: ExtensionsStoreSnapshot;
@@ -429,33 +429,33 @@ export function createExtensionsStore(options: {
     return `${workspaceType}:${workspaceId}:${root}:${runtimeWorkspaceId}`;
   };
 
-  const getOpenworkServerSnapshot = () => {
-    const snapshot = options.openworkServer.getSnapshot();
-    const connection = options.openworkServerConnection?.();
-    if (!connection?.openworkServerClient) return snapshot;
+  const getOfflineGptServerSnapshot = () => {
+    const snapshot = options.offlinegptServer.getSnapshot();
+    const connection = options.offlinegptServerConnection?.();
+    if (!connection?.offlinegptServerClient) return snapshot;
     return {
       ...snapshot,
-      openworkServerClient: connection.openworkServerClient,
-      openworkServerStatus: connection.openworkServerStatus,
-      openworkServerCapabilities: connection.openworkServerCapabilities,
+      offlinegptServerClient: connection.offlinegptServerClient,
+      offlinegptServerStatus: connection.offlinegptServerStatus,
+      offlinegptServerCapabilities: connection.offlinegptServerCapabilities,
     };
   };
 
   const resolveWorkspaceServerTarget = async () => {
-    const openworkSnapshot = getOpenworkServerSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    let openworkWorkspaceId = options.runtimeWorkspaceId()?.trim() || null;
-    if (!openworkWorkspaceId && openworkSnapshot.openworkServerStatus === "connected" && openworkClient) {
-      openworkWorkspaceId = (await options.ensureRuntimeWorkspaceId?.())?.trim() || null;
+    const offlinegptSnapshot = getOfflineGptServerSnapshot();
+    const offlinegptClient = offlinegptSnapshot.offlinegptServerClient;
+    let offlinegptWorkspaceId = options.runtimeWorkspaceId()?.trim() || null;
+    if (!offlinegptWorkspaceId && offlinegptSnapshot.offlinegptServerStatus === "connected" && offlinegptClient) {
+      offlinegptWorkspaceId = (await options.ensureRuntimeWorkspaceId?.())?.trim() || null;
     }
-    const hasOpenworkTarget =
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      Boolean(openworkClient && openworkWorkspaceId);
+    const hasOfflineGptTarget =
+      offlinegptSnapshot.offlinegptServerStatus === "connected" &&
+      Boolean(offlinegptClient && offlinegptWorkspaceId);
     return {
-      openworkSnapshot,
-      openworkClient,
-      openworkWorkspaceId,
-      hasOpenworkTarget,
+      offlinegptSnapshot,
+      offlinegptClient,
+      offlinegptWorkspaceId,
+      hasOfflineGptTarget,
     };
   };
 
@@ -500,56 +500,56 @@ export function createExtensionsStore(options: {
 
   const formatSkillPath = (location: string) => location.replace(/[/\\]SKILL\.md$/i, "");
 
-  const readWorkspaceOpenworkConfigRecord = async (): Promise<Record<string, unknown>> => {
+  const readWorkspaceOfflineGptConfigRecord = async (): Promise<Record<string, unknown>> => {
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace = options.workspaceType() === "local";
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.config?.read !== false;
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.config?.read !== false;
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-      const config = await openworkClient.getConfig(openworkWorkspaceId);
-      return config.openwork ?? {};
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+      const config = await offlinegptClient.getConfig(offlinegptWorkspaceId);
+      return config.offlinegpt ?? {};
     }
 
-    if (hasOpenworkTarget) {
+    if (hasOfflineGptTarget) {
       return {};
     }
 
     if (isLocalWorkspace && isDesktopRuntime() && root) {
-      return await workspaceOpenworkRead({ workspacePath: root }) as unknown as Record<string, unknown>;
+      return await workspaceOfflineGptRead({ workspacePath: root }) as unknown as Record<string, unknown>;
     }
 
     return {};
   };
 
-  const writeWorkspaceOpenworkConfigRecord = async (config: Record<string, unknown>) => {
+  const writeWorkspaceOfflineGptConfigRecord = async (config: Record<string, unknown>) => {
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace = options.workspaceType() === "local";
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.config?.write !== false;
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.config?.write !== false;
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-      await openworkClient.patchConfig(openworkWorkspaceId, { openwork: config });
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+      await offlinegptClient.patchConfig(offlinegptWorkspaceId, { offlinegpt: config });
       return true;
     }
 
-    if (hasOpenworkTarget) {
+    if (hasOfflineGptTarget) {
       return false;
     }
 
     if (isLocalWorkspace && isDesktopRuntime() && root) {
-      const result = (await workspaceOpenworkWrite({
+      const result = (await workspaceOfflineGptWrite({
         workspacePath: root,
         config: config as never,
       })) as { ok: boolean; stderr?: string; stdout?: string };
       if (!result.ok) {
-        throw new Error(result.stderr || result.stdout || "Failed to write .opencode/openwork.json");
+        throw new Error(result.stderr || result.stdout || "Failed to write .opencode/offlinegpt.json");
       }
       return true;
     }
@@ -560,17 +560,17 @@ export function createExtensionsStore(options: {
   const refreshPendingCloudPluginChanges = async (installedPlugins?: Record<string, CloudImportedPlugin>) => {
     try {
       const target = await resolveWorkspaceServerTarget();
-      if (!target.openworkClient || !target.openworkWorkspaceId) {
+      if (!target.offlinegptClient || !target.offlinegptWorkspaceId) {
         setStateField("pendingCloudPluginChanges", {});
         return;
       }
       const syncResult = await refreshDesktopCloudSync({
-        openworkClient: target.openworkClient,
-        workspaceId: target.openworkWorkspaceId,
+        offlinegptClient: target.offlinegptClient,
+        workspaceId: target.offlinegptWorkspaceId,
       }).catch(() => null);
       const changes = syncResult
         ? syncResult.changes
-        : readPendingCloudSyncChanges(await target.openworkClient.getDesktopCloudSync(target.openworkWorkspaceId));
+        : readPendingCloudSyncChanges(await target.offlinegptClient.getDesktopCloudSync(target.offlinegptWorkspaceId));
       const pending = derivePendingCloudPluginChanges({
         changes,
         installedPlugins: installedPlugins ?? snapshot.importedCloudPlugins,
@@ -612,14 +612,14 @@ export function createExtensionsStore(options: {
   const refreshImportedCloudPlugins = async () => {
     try {
       const target = await resolveWorkspaceServerTarget();
-      if (target.openworkClient && target.openworkWorkspaceId) {
-        const result = await target.openworkClient.listCloudPlugins(target.openworkWorkspaceId);
+      if (target.offlinegptClient && target.offlinegptWorkspaceId) {
+        const result = await target.offlinegptClient.listCloudPlugins(target.offlinegptWorkspaceId);
         setStateField("importedCloudMarketplaces", result.marketplaces);
         setStateField("importedCloudPlugins", result.plugins);
         void refreshPendingCloudPluginChanges(result.plugins);
         return result.plugins;
       }
-      const config = await readWorkspaceOpenworkConfigRecord();
+      const config = await readWorkspaceOfflineGptConfigRecord();
       const cloudImports = readWorkspaceCloudImports(config);
       setStateField("importedCloudMarketplaces", cloudImports.marketplaces);
       setStateField("importedCloudPlugins", cloudImports.plugins);
@@ -633,32 +633,32 @@ export function createExtensionsStore(options: {
   };
 
   const persistImportedCloudMarketplaces = async (nextMarketplaces: Record<string, CloudImportedMarketplace>) => {
-    const config = await readWorkspaceOpenworkConfigRecord();
+    const config = await readWorkspaceOfflineGptConfigRecord();
     const cloudImports = readWorkspaceCloudImports(config);
     const nextCloudImports = {
       ...cloudImports,
       marketplaces: nextMarketplaces,
     };
     const nextConfig = withWorkspaceCloudImports(config, nextCloudImports);
-    const persisted = await writeWorkspaceOpenworkConfigRecord(nextConfig);
+    const persisted = await writeWorkspaceOfflineGptConfigRecord(nextConfig);
     if (!persisted) {
-      throw new Error("OpenWork server unavailable. Connect to manage imported cloud marketplaces.");
+      throw new Error("OfflineGPT server unavailable. Connect to manage imported cloud marketplaces.");
     }
     setStateField("importedCloudMarketplaces", nextMarketplaces);
     void refreshPendingCloudPluginChanges();
   };
 
   const persistImportedCloudPlugins = async (nextPlugins: Record<string, CloudImportedPlugin>) => {
-    const config = await readWorkspaceOpenworkConfigRecord();
+    const config = await readWorkspaceOfflineGptConfigRecord();
     const cloudImports = readWorkspaceCloudImports(config);
     const nextCloudImports = {
       ...cloudImports,
       plugins: nextPlugins,
     };
     const nextConfig = withWorkspaceCloudImports(config, nextCloudImports);
-    const persisted = await writeWorkspaceOpenworkConfigRecord(nextConfig);
+    const persisted = await writeWorkspaceOfflineGptConfigRecord(nextConfig);
     if (!persisted) {
-      throw new Error("OpenWork server unavailable. Connect to manage imported cloud plugins.");
+      throw new Error("OfflineGPT server unavailable. Connect to manage imported cloud plugins.");
     }
     setStateField("importedCloudPlugins", nextPlugins);
     void refreshPendingCloudPluginChanges(nextPlugins);
@@ -684,23 +684,23 @@ export function createExtensionsStore(options: {
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
     const root = options.selectedWorkspaceRoot().trim();
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.skills?.write !== false;
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.skills?.write !== false;
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-      await openworkClient.deleteSkill(openworkWorkspaceId, name);
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+      await offlinegptClient.deleteSkill(offlinegptWorkspaceId, name);
       return;
     }
 
-    if (hasOpenworkTarget) {
-      throw new Error("OpenWork server cannot remove skills for this workspace.");
+    if (hasOfflineGptTarget) {
+      throw new Error("OfflineGPT server cannot remove skills for this workspace.");
     }
 
     if (isRemoteWorkspace) {
-      throw new Error("OpenWork server unavailable. Connect to remove skills.");
+      throw new Error("OfflineGPT server unavailable. Connect to remove skills.");
     }
 
     if (!isDesktopRuntime()) {
@@ -883,7 +883,7 @@ export function createExtensionsStore(options: {
     const version = object.latestVersion;
     const payload = version?.normalizedPayloadJson ?? parseJsonRecord(version?.rawSourceText ?? null);
     if (!payload) return null;
-    if (payload.openworkManaged === "den_external_mcp") {
+    if (payload.offlinegptManaged === "den_external_mcp") {
       const id = readNonEmptyString(payload.externalMcpConnectionId);
       if (id) return id;
     }
@@ -893,7 +893,7 @@ export function createExtensionsStore(options: {
     ].filter((entry): entry is Record<string, unknown> => Boolean(entry));
     for (const container of containers) {
       for (const config of Object.values(container)) {
-        if (!isRecord(config) || config.openworkManaged !== "den_external_mcp") continue;
+        if (!isRecord(config) || config.offlinegptManaged !== "den_external_mcp") continue;
         const id = readNonEmptyString(config.externalMcpConnectionId);
         if (id) return id;
       }
@@ -902,35 +902,35 @@ export function createExtensionsStore(options: {
   };
 
   const upsertPluginMcpConfig = async (name: string, config: Record<string, unknown>) => {
-    const openworkSnapshot = getOpenworkServerSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId = options.runtimeWorkspaceId();
+    const offlinegptSnapshot = getOfflineGptServerSnapshot();
+    const offlinegptClient = offlinegptSnapshot.offlinegptServerClient;
+    const offlinegptWorkspaceId = options.runtimeWorkspaceId();
     if (
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkSnapshot.openworkServerCapabilities?.mcp?.write
+      offlinegptSnapshot.offlinegptServerStatus === "connected" &&
+      offlinegptClient &&
+      offlinegptWorkspaceId &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.mcp?.write
     ) {
-      await openworkClient.addMcp(openworkWorkspaceId, { name, config });
+      await offlinegptClient.addMcp(offlinegptWorkspaceId, { name, config });
       return;
     }
-    throw new Error("OpenWork server unavailable. Connect to import MCP servers into this workspace.");
+    throw new Error("OfflineGPT server unavailable. Connect to import MCP servers into this workspace.");
   };
 
   const deletePluginMcpConfig = async (name: string) => {
-    const openworkSnapshot = getOpenworkServerSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId = options.runtimeWorkspaceId();
+    const offlinegptSnapshot = getOfflineGptServerSnapshot();
+    const offlinegptClient = offlinegptSnapshot.offlinegptServerClient;
+    const offlinegptWorkspaceId = options.runtimeWorkspaceId();
     if (
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkSnapshot.openworkServerCapabilities?.mcp?.write
+      offlinegptSnapshot.offlinegptServerStatus === "connected" &&
+      offlinegptClient &&
+      offlinegptWorkspaceId &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.mcp?.write
     ) {
-      await openworkClient.removeMcp(openworkWorkspaceId, name);
+      await offlinegptClient.removeMcp(offlinegptWorkspaceId, name);
       return;
     }
-    throw new Error("OpenWork server unavailable. Connect to remove imported MCP servers from this workspace.");
+    throw new Error("OfflineGPT server unavailable. Connect to remove imported MCP servers from this workspace.");
   };
 
   const pluginReloadReason = (objectType: string): ReloadReason => {
@@ -949,33 +949,33 @@ export function createExtensionsStore(options: {
   };
 
   const writePluginWorkspaceFile = async (path: string, content: string) => {
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
     if (
-      hasOpenworkTarget &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkSnapshot.openworkServerCapabilities?.config?.write !== false &&
-      typeof openworkClient.writeWorkspaceFile === "function"
+      hasOfflineGptTarget &&
+      offlinegptClient &&
+      offlinegptWorkspaceId &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.config?.write !== false &&
+      typeof offlinegptClient.writeWorkspaceFile === "function"
     ) {
-      await openworkClient.writeWorkspaceFile(openworkWorkspaceId, { path, content, force: true });
+      await offlinegptClient.writeWorkspaceFile(offlinegptWorkspaceId, { path, content, force: true });
       return;
     }
-    throw new Error("OpenWork server unavailable. Connect to import plugin files into this workspace.");
+    throw new Error("OfflineGPT server unavailable. Connect to import plugin files into this workspace.");
   };
 
   const deletePluginWorkspaceFiles = async (files: Array<{ path: string; recursive?: boolean }>) => {
     if (files.length === 0) return;
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
     if (
-      hasOpenworkTarget &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkSnapshot.openworkServerCapabilities?.config?.write !== false &&
-      typeof openworkClient.deleteWorkspaceFiles === "function"
+      hasOfflineGptTarget &&
+      offlinegptClient &&
+      offlinegptWorkspaceId &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.config?.write !== false &&
+      typeof offlinegptClient.deleteWorkspaceFiles === "function"
     ) {
-      const results = await openworkClient.deleteWorkspaceFiles(openworkWorkspaceId, files);
+      const results = await offlinegptClient.deleteWorkspaceFiles(offlinegptWorkspaceId, files);
       const failed = results.filter((result) => !result.ok && result.code !== "file_not_found");
       if (failed.length > 0) {
         throw new Error(
@@ -984,7 +984,7 @@ export function createExtensionsStore(options: {
       }
       return;
     }
-    throw new Error("OpenWork server unavailable. Connect to remove imported plugin files from this workspace.");
+    throw new Error("OfflineGPT server unavailable. Connect to remove imported plugin files from this workspace.");
   };
 
   const applyCloudOrgPluginImport = async (
@@ -1257,13 +1257,13 @@ export function createExtensionsStore(options: {
       const settings = readDenSettings();
       const token = settings.authToken?.trim() ?? "";
       const orgId = settings.activeOrgId?.trim() ?? "";
-      if (!token || !orgId) throw new Error("Sign in to OpenWork Cloud and choose an organization first.");
+      if (!token || !orgId) throw new Error("Sign in to OfflineGPT Cloud and choose an organization first.");
       const client = createDenClient({ baseUrl: settings.baseUrl, token });
       const resolved = await client.getOrgPluginResolved(orgId, plugin);
       const target = await resolveWorkspaceServerTarget();
-      if (target.openworkClient && target.openworkWorkspaceId) {
+      if (target.offlinegptClient && target.offlinegptWorkspaceId) {
         const marketplace = marketplaceId ? findCloudMarketplace(marketplaceId) : null;
-        const result = await target.openworkClient.installCloudPlugin(target.openworkWorkspaceId, {
+        const result = await target.offlinegptClient.installCloudPlugin(target.offlinegptWorkspaceId, {
           marketplaceId,
           marketplace,
           resolved,
@@ -1296,12 +1296,12 @@ export function createExtensionsStore(options: {
     }
   }
 
-  async function previewClaudePlugin(url: string): Promise<OpenworkClaudePluginPreview> {
+  async function previewClaudePlugin(url: string): Promise<OfflineGptClaudePluginPreview> {
     const target = await resolveWorkspaceServerTarget();
-    if (!target.openworkClient || !target.openworkWorkspaceId) {
-      throw new Error("OpenWork server unavailable. Connect to install plugins from GitHub.");
+    if (!target.offlinegptClient || !target.offlinegptWorkspaceId) {
+      throw new Error("OfflineGPT server unavailable. Connect to install plugins from GitHub.");
     }
-    const result = await target.openworkClient.previewClaudePlugin(target.openworkWorkspaceId, { url });
+    const result = await target.offlinegptClient.previewClaudePlugin(target.offlinegptWorkspaceId, { url });
     return result.preview;
   }
 
@@ -1311,10 +1311,10 @@ export function createExtensionsStore(options: {
     options.setError(null);
     try {
       const target = await resolveWorkspaceServerTarget();
-      if (!target.openworkClient || !target.openworkWorkspaceId) {
-        throw new Error("OpenWork server unavailable. Connect to install plugins from GitHub.");
+      if (!target.offlinegptClient || !target.offlinegptWorkspaceId) {
+        throw new Error("OfflineGPT server unavailable. Connect to install plugins from GitHub.");
       }
-      const result = await target.openworkClient.installClaudePlugin(target.openworkWorkspaceId, { url });
+      const result = await target.offlinegptClient.installClaudePlugin(target.offlinegptWorkspaceId, { url });
       await refreshSkills({ force: true });
       await refreshImportedCloudPlugins();
       return {
@@ -1338,8 +1338,8 @@ export function createExtensionsStore(options: {
 
     try {
       const target = await resolveWorkspaceServerTarget();
-      if (target.openworkClient && target.openworkWorkspaceId) {
-        const result = await target.openworkClient.removeCloudPlugin(target.openworkWorkspaceId, pluginId);
+      if (target.offlinegptClient && target.offlinegptWorkspaceId) {
+        const result = await target.offlinegptClient.removeCloudPlugin(target.offlinegptWorkspaceId, pluginId);
         await refreshSkills({ force: true });
         await refreshCloudOrgMarketplaces({ force: true });
         void refreshPendingCloudPluginChanges();
@@ -1417,13 +1417,13 @@ export function createExtensionsStore(options: {
   async function refreshSkills(optionsOverride?: { force?: boolean }) {
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace = options.workspaceType() === "local";
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.skills?.read !== false;
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.skills?.read !== false;
 
-    if (!root && !hasOpenworkTarget) {
+    if (!root && !hasOfflineGptTarget) {
       mutateState((current) => ({
         ...current,
         skills: [],
@@ -1432,8 +1432,8 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
-      const skillCacheKey = root || openworkWorkspaceId;
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
+      const skillCacheKey = root || offlinegptWorkspaceId;
       if (skillCacheKey !== skillsRoot) skillsLoaded = false;
       if (!optionsOverride?.force && skillsLoaded) return;
       if (refreshSkillsInFlight) return;
@@ -1442,7 +1442,7 @@ export function createExtensionsStore(options: {
       refreshSkillsAborted = false;
       try {
         setStateField("skillsStatus", null);
-        const response = await openworkClient.listSkills(openworkWorkspaceId, { includeGlobal: isLocalWorkspace });
+        const response = await offlinegptClient.listSkills(offlinegptWorkspaceId, { includeGlobal: isLocalWorkspace });
         if (refreshSkillsAborted) return;
         const next: SkillCard[] = Array.isArray(response.items)
           ? response.items.map((entry) => ({
@@ -1473,11 +1473,11 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (hasOpenworkTarget) {
+    if (hasOfflineGptTarget) {
       mutateState((current) => ({
         ...current,
         skills: [],
-        skillsStatus: "OpenWork server cannot read skills for this workspace.",
+        skillsStatus: "OfflineGPT server cannot read skills for this workspace.",
       }));
       return;
     }
@@ -1527,7 +1527,7 @@ export function createExtensionsStore(options: {
       mutateState((current) => ({
         ...current,
         skills: [],
-        skillsStatus: "OpenWork server unavailable. Connect to load skills.",
+        skillsStatus: "OfflineGPT server unavailable. Connect to load skills.",
       }));
       return;
     }
@@ -1582,11 +1582,11 @@ export function createExtensionsStore(options: {
   async function refreshPlugins(scopeOverride?: PluginScope) {
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.plugins?.read !== false;
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.plugins?.read !== false;
 
     if (refreshPluginsInFlight) return;
     refreshPluginsInFlight = true;
@@ -1607,17 +1607,17 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (scope === "project" && canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
+    if (scope === "project" && canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
       mutateState((current) => ({
         ...current,
         pluginConfig: null,
-        pluginConfigPath: `opencode.json (${isRemoteWorkspace ? "remote" : "openwork"} server)`,
+        pluginConfigPath: `opencode.json (${isRemoteWorkspace ? "remote" : "offlinegpt"} server)`,
       }));
 
       try {
         mutateState((current) => ({ ...current, pluginStatus: null, sidebarPluginStatus: null }));
         if (refreshPluginsAborted) return;
-        const result = await openworkClient.listPlugins(openworkWorkspaceId, { includeGlobal: false });
+        const result = await offlinegptClient.listPlugins(offlinegptWorkspaceId, { includeGlobal: false });
         if (refreshPluginsAborted) return;
         const projectItems = result.items.filter((item) => item.scope === "project");
         const list = toProjectPluginListEntries(projectItems);
@@ -1644,12 +1644,12 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (scope === "project" && hasOpenworkTarget) {
+    if (scope === "project" && hasOfflineGptTarget) {
       mutateState((current) => ({
         ...current,
-        pluginStatus: "OpenWork server cannot read plugins for this workspace.",
+        pluginStatus: "OfflineGPT server cannot read plugins for this workspace.",
         pluginList: [],
-        sidebarPluginStatus: "OpenWork server cannot read plugins for this workspace.",
+        sidebarPluginStatus: "OfflineGPT server cannot read plugins for this workspace.",
         sidebarPluginList: [],
       }));
       refreshPluginsInFlight = false;
@@ -1668,12 +1668,12 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (!isLocalWorkspace && !canUseOpenworkServer) {
+    if (!isLocalWorkspace && !canUseOfflineGptServer) {
       mutateState((current) => ({
         ...current,
-        pluginStatus: "OpenWork server unavailable. Connect to manage plugins.",
+        pluginStatus: "OfflineGPT server unavailable. Connect to manage plugins.",
         pluginList: [],
-        sidebarPluginStatus: "Connect an OpenWork server to load plugins.",
+        sidebarPluginStatus: "Connect an OfflineGPT server to load plugins.",
         sidebarPluginList: [],
       }));
       refreshPluginsInFlight = false;
@@ -1762,11 +1762,11 @@ export function createExtensionsStore(options: {
     const triggerName = stripPluginVersion(pluginName);
 
     const isLocalWorkspace = options.workspaceType() === "local";
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.plugins?.write !== false;
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.plugins?.write !== false;
 
     if (!pluginName) {
       if (isManualInput) setStateField("pluginStatus", t("skills.enter_plugin_name"));
@@ -1778,10 +1778,10 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (snapshot.pluginScope === "project" && canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
+    if (snapshot.pluginScope === "project" && canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
       try {
         setStateField("pluginStatus", null);
-        await openworkClient.addPlugin(openworkWorkspaceId, pluginName);
+        await offlinegptClient.addPlugin(offlinegptWorkspaceId, pluginName);
         options.markReloadRequired?.("plugins", { type: "plugin", name: triggerName, action: "added" });
         if (isManualInput) setStateField("pluginInput", "");
         await refreshPlugins("project");
@@ -1791,8 +1791,8 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (snapshot.pluginScope === "project" && hasOpenworkTarget) {
-      setStateField("pluginStatus", "OpenWork server cannot write plugins for this workspace.");
+    if (snapshot.pluginScope === "project" && hasOfflineGptTarget) {
+      setStateField("pluginStatus", "OfflineGPT server cannot write plugins for this workspace.");
       return;
     }
 
@@ -1802,7 +1802,7 @@ export function createExtensionsStore(options: {
     }
 
     if (!isLocalWorkspace) {
-      setStateField("pluginStatus", "OpenWork server unavailable. Connect to manage plugins.");
+      setStateField("pluginStatus", "OfflineGPT server unavailable. Connect to manage plugins.");
       return;
     }
 
@@ -1859,21 +1859,21 @@ export function createExtensionsStore(options: {
     }
 
     const isLocalWorkspace = options.workspaceType() === "local";
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.plugins?.write !== false;
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.plugins?.write !== false;
 
     if (snapshot.pluginScope !== "project" && !isLocalWorkspace) {
       setStateField("pluginStatus", "Global plugins are only available for local workers.");
       return;
     }
 
-    if (snapshot.pluginScope === "project" && canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
+    if (snapshot.pluginScope === "project" && canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
       try {
         setStateField("pluginStatus", null);
-        await openworkClient.removePlugin(openworkWorkspaceId, name);
+        await offlinegptClient.removePlugin(offlinegptWorkspaceId, name);
         options.markReloadRequired?.("plugins", { type: "plugin", name: triggerName, action: "removed" });
         await refreshPlugins("project");
       } catch (error) {
@@ -1882,8 +1882,8 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (snapshot.pluginScope === "project" && hasOpenworkTarget) {
-      setStateField("pluginStatus", "OpenWork server cannot write plugins for this workspace.");
+    if (snapshot.pluginScope === "project" && hasOfflineGptTarget) {
+      setStateField("pluginStatus", "OfflineGPT server cannot write plugins for this workspace.");
       return;
     }
 
@@ -1893,7 +1893,7 @@ export function createExtensionsStore(options: {
     }
 
     if (!isLocalWorkspace) {
-      setStateField("pluginStatus", "OpenWork server unavailable. Connect to manage plugins.");
+      setStateField("pluginStatus", "OfflineGPT server unavailable. Connect to manage plugins.");
       return;
     }
 
@@ -1976,18 +1976,18 @@ export function createExtensionsStore(options: {
     if (extensionMutationDenied()) return { ok: false, message: desktopRestrictionNotice("allowManageExtensions") };
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.skills?.write !== false;
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.skills?.write !== false;
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
       options.setBusy(true);
       options.setError(null);
       setStateField("skillsStatus", t("skills.installing_skill_creator"));
       try {
-        await openworkClient.upsertSkill(openworkWorkspaceId, { name: "skill-creator", content: skillCreatorTemplate });
+        await offlinegptClient.upsertSkill(offlinegptWorkspaceId, { name: "skill-creator", content: skillCreatorTemplate });
         const message = t("skills.skill_creator_installed");
         setStateField("skillsStatus", message);
         options.markReloadRequired?.("skills", { type: "skill", name: "skill-creator", action: "added" });
@@ -2004,14 +2004,14 @@ export function createExtensionsStore(options: {
       }
     }
 
-    if (hasOpenworkTarget) {
-      const message = "OpenWork server cannot write skills for this workspace.";
+    if (hasOfflineGptTarget) {
+      const message = "OfflineGPT server cannot write skills for this workspace.";
       setStateField("skillsStatus", message);
       return { ok: false, message };
     }
 
     if (isRemoteWorkspace) {
-      const message = "OpenWork server unavailable. Connect to install skills.";
+      const message = "OfflineGPT server unavailable. Connect to install skills.";
       setStateField("skillsStatus", message);
       return { ok: false, message };
     }
@@ -2129,16 +2129,16 @@ export function createExtensionsStore(options: {
     const root = options.selectedWorkspaceRoot().trim();
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.skills?.read !== false;
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.skills?.read !== false;
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
       try {
         setStateField("skillsStatus", null);
-        const result = await openworkClient.getSkill(openworkWorkspaceId, trimmed, { includeGlobal: isLocalWorkspace });
+        const result = await offlinegptClient.getSkill(offlinegptWorkspaceId, trimmed, { includeGlobal: isLocalWorkspace });
         return { name: result.item.name, path: result.item.path, content: result.content };
       } catch (error) {
         setStateField("skillsStatus", error instanceof Error ? error.message : t("skills.failed_to_load"));
@@ -2146,8 +2146,8 @@ export function createExtensionsStore(options: {
       }
     }
 
-    if (hasOpenworkTarget) {
-      setStateField("skillsStatus", "OpenWork server cannot read skills for this workspace.");
+    if (hasOfflineGptTarget) {
+      setStateField("skillsStatus", "OfflineGPT server cannot read skills for this workspace.");
       return null;
     }
 
@@ -2157,7 +2157,7 @@ export function createExtensionsStore(options: {
     }
 
     if (isRemoteWorkspace) {
-      setStateField("skillsStatus", "OpenWork server unavailable. Connect to view skills.");
+      setStateField("skillsStatus", "OfflineGPT server unavailable. Connect to view skills.");
       return null;
     }
     if (!isDesktopRuntime()) {
@@ -2186,18 +2186,18 @@ export function createExtensionsStore(options: {
     const root = options.selectedWorkspaceRoot().trim();
     const isRemoteWorkspace = options.workspaceType() === "remote";
     const isLocalWorkspace = options.workspaceType() === "local";
-    const { openworkSnapshot, openworkClient, openworkWorkspaceId, hasOpenworkTarget } =
+    const { offlinegptSnapshot, offlinegptClient, offlinegptWorkspaceId, hasOfflineGptTarget } =
       await resolveWorkspaceServerTarget();
-    const canUseOpenworkServer =
-      hasOpenworkTarget &&
-      openworkSnapshot.openworkServerCapabilities?.skills?.write !== false;
+    const canUseOfflineGptServer =
+      hasOfflineGptTarget &&
+      offlinegptSnapshot.offlinegptServerCapabilities?.skills?.write !== false;
 
-    if (canUseOpenworkServer && openworkClient && openworkWorkspaceId) {
+    if (canUseOfflineGptServer && offlinegptClient && offlinegptWorkspaceId) {
       options.setBusy(true);
       options.setError(null);
       setStateField("skillsStatus", null);
       try {
-        await openworkClient.upsertSkill(openworkWorkspaceId, {
+        await offlinegptClient.upsertSkill(offlinegptWorkspaceId, {
           name: trimmed,
           content: input.content,
           description: input.description,
@@ -2214,8 +2214,8 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (hasOpenworkTarget) {
-      setStateField("skillsStatus", "OpenWork server cannot write skills for this workspace.");
+    if (hasOfflineGptTarget) {
+      setStateField("skillsStatus", "OfflineGPT server cannot write skills for this workspace.");
       return;
     }
 
@@ -2225,7 +2225,7 @@ export function createExtensionsStore(options: {
     }
 
     if (isRemoteWorkspace) {
-      setStateField("skillsStatus", "OpenWork server unavailable. Connect to edit skills.");
+      setStateField("skillsStatus", "OfflineGPT server unavailable. Connect to edit skills.");
       return;
     }
     if (!isDesktopRuntime()) {
@@ -2341,11 +2341,11 @@ export function createExtensionsStore(options: {
         cloudOrgMarketplacesLoaded = false;
         touch();
       };
-      window.addEventListener("openwork-den-session-updated", onDenSessionUpdated);
-      stopDenSessionListener = () => window.removeEventListener("openwork-den-session-updated", onDenSessionUpdated);
+      window.addEventListener("offlinegpt-den-session-updated", onDenSessionUpdated);
+      stopDenSessionListener = () => window.removeEventListener("offlinegpt-den-session-updated", onDenSessionUpdated);
     }
 
-    stopOpenworkSubscription = options.openworkServer.subscribe(() => {
+    stopOfflineGptSubscription = options.offlinegptServer.subscribe(() => {
       syncFromOptions();
     });
 
@@ -2357,8 +2357,8 @@ export function createExtensionsStore(options: {
     disposed = true;
     started = false;
     abortRefreshes();
-    stopOpenworkSubscription?.();
-    stopOpenworkSubscription = null;
+    stopOfflineGptSubscription?.();
+    stopOfflineGptSubscription = null;
     stopDenSessionListener?.();
     stopDenSessionListener = null;
     listeners.clear();

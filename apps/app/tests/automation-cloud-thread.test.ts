@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { AutomationExecutionThread } from "@openwork/types/automations"
+import type { AutomationExecutionThread } from "@offlinegpt/types/automations"
 import {
   automationExecutionThreadRoute,
   automationExecutionIdentity,
@@ -18,12 +18,12 @@ function desktopThread(engineKind: string): AutomationExecutionThread {
 }
 
 function cloudThread(): AutomationExecutionThread {
-  return { ...desktopThread("openwork-cloud-agent-v1"), executionLocation: "cloud" }
+  return { ...desktopThread("offlinegpt-cloud-agent-v1"), executionLocation: "cloud" }
 }
 
 describe("Automation execution thread UI", () => {
   test("uses Den's persisted thread identity for receipt navigation", () => {
-    expect(automationExecutionThreadRoute(desktopThread("openwork-desktop-runner-v1"))).toBe(
+    expect(automationExecutionThreadRoute(desktopThread("offlinegpt-desktop-runner-v1"))).toBe(
       "/automations?automation=aut_test&run=arun_test&thread=ath_test",
     )
   })
@@ -35,20 +35,20 @@ describe("Automation execution thread UI", () => {
     })
   })
 
-  test("labels a Web-created run as OpenWork Cloud on Desktop", () => {
+  test("labels a Web-created run as OfflineGPT Cloud on Desktop", () => {
     expect(automationExecutionIdentity(cloudThread())).toEqual({
       icon: "cloud",
-      label: "OpenWork Cloud",
+      label: "OfflineGPT Cloud",
     })
   })
 
   test("opens a linked Desktop run in its native local session", () => {
     expect(automationLocalSessionRoute({
-      ...desktopThread("openwork-desktop-runner-v1"),
+      ...desktopThread("offlinegpt-desktop-runner-v1"),
       workspaceId: "ws with spaces",
       nativeThreadId: "ses/failed",
     })).toBe("/workspace/ws%20with%20spaces/session/ses%2Ffailed")
-    expect(automationLocalSessionRoute(desktopThread("openwork-desktop-runner-v1"))).toBeNull()
+    expect(automationLocalSessionRoute(desktopThread("offlinegpt-desktop-runner-v1"))).toBeNull()
     expect(automationLocalSessionRoute({
       ...cloudThread(),
       workspaceId: "ws_cloud",

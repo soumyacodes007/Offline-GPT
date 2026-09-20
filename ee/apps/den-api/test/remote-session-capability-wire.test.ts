@@ -14,7 +14,7 @@ type RemoteSessionModule = typeof import("../src/mcp/remote-session-capabilities
  * test here injects its own runtime resolver, so no database is touched.
  */
 function seedRequiredEnv() {
-  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test";
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test";
   process.env.DEN_DB_ENCRYPTION_KEY = process.env.DEN_DB_ENCRYPTION_KEY ?? "x".repeat(32);
   process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "y".repeat(32);
   process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://127.0.0.1:8790";
@@ -26,7 +26,7 @@ let executeRemoteSessionCapability: RemoteSessionModule["executeRemoteSessionCap
 let searchRemoteSessionCapabilities: RemoteSessionModule["searchRemoteSessionCapabilities"];
 
 /**
- * A witness openwork-server: the exact native OpenCode routes the
+ * A witness offlinegpt-server: the exact native OpenCode routes the
  * headless-threads client speaks through `/workspace/:id/opencode`,
  * recording every request so assertions observe the real wire traffic the
  * `remote-session:*` capabilities produce — not a stubbed client.
@@ -105,7 +105,7 @@ async function handle(request: IncomingMessage, response: ServerResponse) {
     method,
     path,
     authorization: request.headers.authorization,
-    hostToken: typeof request.headers["x-openwork-host-token"] === "string" ? request.headers["x-openwork-host-token"] : undefined,
+    hostToken: typeof request.headers["x-offlinegpt-host-token"] === "string" ? request.headers["x-offlinegpt-host-token"] : undefined,
     body,
   });
 
@@ -189,9 +189,9 @@ beforeAll(async () => {
   };
   deps = {
     ...DEFAULT_REMOTE_SESSION_DEPS,
-    // Remote sessions require OpenWork Web access for the organization; this
+    // Remote sessions require OfflineGPT Web access for the organization; this
     // spec proves the wire and guardrails, so the entitlement is granted inline.
-    getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+    getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
     resolveRuntime: async () => ({ ok: true, runtime }),
     createClient: DEFAULT_REMOTE_SESSION_DEPS.createClient,
   };
@@ -212,7 +212,7 @@ function payload(result: RemoteSessionToolResult): Record<string, unknown> {
   return JSON.parse(result.content[0]?.text ?? "{}") as Record<string, unknown>;
 }
 
-test("remote-session capabilities drive a real openwork-server wire with scoped guardrails", async () => {
+test("remote-session capabilities drive a real offlinegpt-server wire with scoped guardrails", async () => {
   const matches = searchRemoteSessionCapabilities("send a chat to my cloud web session", 10);
   expect(matches.map((match) => match.name)).toContain("remote-session:send");
   expect(matches.every((match) => match.invocation?.argumentsField === "body")).toBe(true);
@@ -276,7 +276,7 @@ test("remote-session capabilities drive a real openwork-server wire with scoped 
     resolveRuntime: async () => ({
       ok: false,
       error: "needs_cloud_setup",
-      message: "No OpenWork Cloud workspace is available for your account yet.",
+      message: "No OfflineGPT Cloud workspace is available for your account yet.",
       retryable: false,
     }),
     createClient: DEFAULT_REMOTE_SESSION_DEPS.createClient,

@@ -1,5 +1,5 @@
 {
-  "name": "@openwork-ee/telemetry",
+  "name": "@offlinegpt-ee/telemetry",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -17,9 +17,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@openwork-ee/den-db": "workspace:*",
-    "@openwork-ee/telemetry-contracts": "workspace:*",
-    "@openwork-ee/utils": "workspace:*",
+    "@offlinegpt-ee/den-db": "workspace:*",
+    "@offlinegpt-ee/telemetry-contracts": "workspace:*",
+    "@offlinegpt-ee/utils": "workspace:*",
     "zod": "^4.3.6"
   },
   "devDependencies": {

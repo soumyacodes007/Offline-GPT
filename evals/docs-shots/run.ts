@@ -1,6 +1,6 @@
 /**
  * Docs screenshot pipeline: recomposes the eval app-driver packages
- * (@openwork/hosts, @openwork/behaviors, @openwork/cdp) into declarative
+ * (@offlinegpt/hosts, @offlinegpt/behaviors, @offlinegpt/cdp) into declarative
  * scenes that regenerate the images under packages/docs/images.
  *
  * Usage (from the repo root, Node >= 24):
@@ -14,8 +14,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { basename, dirname, resolve } from "node:path";
-import { docShotReceiptSchema } from "@openwork/review";
-import { emulateFocus, freezeMotion, paintBackdrop, setViewport } from "@openwork/cdp";
+import { docShotReceiptSchema } from "@offlinegpt/review";
+import { emulateFocus, freezeMotion, paintBackdrop, setViewport } from "@offlinegpt/cdp";
 import { Ctx } from "./ctx.ts";
 import { captureUntil } from "./loop.ts";
 import { shots } from "./shots/index.ts";
@@ -29,8 +29,8 @@ for (const key of [
   "OPENAI_API_KEY",
   "OPENROUTER_API_KEY",
   "GOOGLE_GENERATIVE_AI_API_KEY",
-  "OPENWORK_API_KEY",
-  "OPENWORK_INFERENCE_BASE_URL",
+  "OFFLINEGPT_API_KEY",
+  "OFFLINEGPT_INFERENCE_BASE_URL",
 ]) {
   process.env[key] = "";
 }

@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { spec } from "@openwork/testkit";
+import { spec } from "@offlinegpt/testkit";
 import { auditMarkdown } from "../worlds/audit.ts";
 import { streamedMarkdownMarker } from "../worlds/chat.ts";
 

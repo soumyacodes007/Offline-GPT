@@ -1,26 +1,26 @@
 export const PUBLIC_DESKTOP_DISTRIBUTION = Object.freeze({
   flavor: "public",
   appName: "OfflineGPT",
-  appIdentifier: "com.differentai.openwork",
-  protocolScheme: "openwork",
+  appIdentifier: "com.differentai.offlinegpt",
+  protocolScheme: "offlinegpt",
   requireSignin: false,
   requireActivation: false,
 });
 
 export const CLOUD_DESKTOP_DISTRIBUTION = Object.freeze({
   flavor: "cloud",
-  appName: "OpenWork Cloud",
-  appIdentifier: "com.differentai.openwork",
-  protocolScheme: "openwork",
+  appName: "OfflineGPT Cloud",
+  appIdentifier: "com.differentai.offlinegpt",
+  protocolScheme: "offlinegpt",
   requireSignin: true,
   requireActivation: false,
 });
 
 export const ENTERPRISE_DESKTOP_DISTRIBUTION = Object.freeze({
   flavor: "enterprise",
-  appName: "OpenWork Enterprise",
-  appIdentifier: "com.differentai.openwork",
-  protocolScheme: "openwork",
+  appName: "OfflineGPT Enterprise",
+  appIdentifier: "com.differentai.offlinegpt",
+  protocolScheme: "offlinegpt",
   requireSignin: true,
   requireActivation: true,
 });

@@ -6,14 +6,14 @@ import {
   SdkErrorCode,
   type ToolAnnotations,
 } from "@modelcontextprotocol/server"
-import { eq } from "@openwork-ee/den-db/drizzle"
-import { OrganizationTable } from "@openwork-ee/den-db/schema"
-import { normalizeDenTypeId } from "@openwork-ee/utils/typeid"
-import { openworkCloudMcpConnectionActionSchema } from "@openwork/types/den/mcp-connection-action"
+import { eq } from "@offlinegpt-ee/den-db/drizzle"
+import { OrganizationTable } from "@offlinegpt-ee/den-db/schema"
+import { normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
+import { offlinegptCloudMcpConnectionActionSchema } from "@offlinegpt/types/den/mcp-connection-action"
 import type { Hono } from "hono"
 import type { RequestIdVariables } from "hono/request-id"
 import { z } from "zod"
-import { connectorCatalogSchema, type ConnectorCatalog } from "@openwork/types/connection-action-app"
+import { connectorCatalogSchema, type ConnectorCatalog } from "@offlinegpt/types/connection-action-app"
 import { connectorCatalogForQuery } from "./connector-catalog.js"
 import { publicRoute, tokenRoute } from "../middleware/index.js"
 import { db } from "../db.js"
@@ -125,14 +125,14 @@ export const EXECUTE_CAPABILITY_ANNOTATIONS: ToolAnnotations = {
   openWorldHint: true,
 }
 
-const connectionStatusOutputSchema = openworkCloudMcpConnectionActionSchema.extend({
+const connectionStatusOutputSchema = offlinegptCloudMcpConnectionActionSchema.extend({
   layer: z.enum(["mcp_connection", "downstream_provider"]),
   errorCode: z.enum(["not_connected", "invalid_refresh_token", "invalid_grant", "unauthorized", "provider_error"]),
   message: z.string(),
   action: z.object({
-    type: z.enum(["connect", "reconnect", "update_credentials", "inspect_connection", "fix_provider", "fix_network", "contact_openwork"]),
+    type: z.enum(["connect", "reconnect", "update_credentials", "inspect_connection", "fix_provider", "fix_network", "contact_offlinegpt"]),
     label: z.string(),
-    surface: z.enum(["openwork_your_connections", "openwork_organization_connections", "provider_admin_console", "network_infrastructure", "openwork_support"]),
+    surface: z.enum(["offlinegpt_your_connections", "offlinegpt_organization_connections", "provider_admin_console", "network_infrastructure", "offlinegpt_support"]),
     retry: z.literal("search_capabilities"),
     url: z.string().url().optional(),
   }),
@@ -169,10 +169,10 @@ export const SEARCH_CAPABILITIES_OUTPUT_SCHEMA = z.object({
 
 export const AGENT_MCP_INSTRUCTIONS = [
   "When asked what can be connected or to browse quick adds, call search_capabilities with type connectors and any descriptive query. This returns the complete curated setup catalog, including Google Workspace and Microsoft 365. A named-service search includes setup suggestions only with intent connect, when the user explicitly requested setup. Suggestions are not executable capabilities or proof of connection; let the user choose Set up in the card. Never invent credentials or claim setup is finished. Existing connection actions take priority.",
-  "This OpenWork Cloud MCP server uses standard MCP tools, resources, structured results, and list-changed notifications.",
-  "For connection actions and saved Workflows, call search_capabilities with 2-4 keyword variants before concluding something is unavailable. Direct MCP tools are not capability search results; call them directly. Use execute_capability only with exact names returned by search_capabilities. A successful search_capabilities call proves this connection is authorized: Never tell the user to reconnect OpenWork Cloud because a downstream connector failed.",
-  "Capabilities include native Google Workspace operations (Gmail read/search, Calendar list/create, Drive search/read, and Gmail draft creation) executed with the signed-in member's organization credentials, plus any MCP connections the organization has added. Allowlisted platform admins also discover namespaced OpenWork Admin capabilities here; other members cannot.",
-  "A remote session is the member's OpenWork Web instance: a native OpenWork chat running in the cloud, visible in the browser. When asked to do something \"on the remote session\", \"in the web\", or \"in the cloud\" (e.g. \"run a Slack search for messages on the remote session\"), do not do the work here: execute remote-session:create with the whole request as prompt (or remote-session:send to an existing sessionId), then poll remote-session:read and relay the reply. target \"desktop\" runs it on the member's connected desktop instead.",
+  "This OfflineGPT Cloud MCP server uses standard MCP tools, resources, structured results, and list-changed notifications.",
+  "For connection actions and saved Workflows, call search_capabilities with 2-4 keyword variants before concluding something is unavailable. Direct MCP tools are not capability search results; call them directly. Use execute_capability only with exact names returned by search_capabilities. A successful search_capabilities call proves this connection is authorized: Never tell the user to reconnect OfflineGPT Cloud because a downstream connector failed.",
+  "Capabilities include native Google Workspace operations (Gmail read/search, Calendar list/create, Drive search/read, and Gmail draft creation) executed with the signed-in member's organization credentials, plus any MCP connections the organization has added. Allowlisted platform admins also discover namespaced OfflineGPT Admin capabilities here; other members cannot.",
+  "A remote session is the member's OfflineGPT Web instance: a native OfflineGPT chat running in the cloud, visible in the browser. When asked to do something \"on the remote session\", \"in the web\", or \"in the cloud\" (e.g. \"run a Slack search for messages on the remote session\"), do not do the work here: execute remote-session:create with the whole request as prompt (or remote-session:send to an existing sessionId), then poll remote-session:read and relay the reply. target \"desktop\" runs it on the member's connected desktop instead.",
   "Use create_skill to create one private Cloud skill in a new Plugin, and update_skill to publish a new immutable version of an existing skill. Both return a standard skill-created MCP App result plus a text fallback; do not route these flows through execute_capability, postPlugins, or postConfigObjectsVersions.",
   "Built-in remote skills create-skill, share-plugin, add-to-marketplace, and add-user-to-marketplace are always listed in the skill index. Retrieve and follow the matching one by executing its exact capability; do not invent a local copy.",
   "For an app, dashboard, or artifact view of Workflow results, call the direct MCP tool save_artifact_view and follow its prerequisites. It is a Cloud MCP tool, not a desktop-only RPC or a search_capabilities match. Its presence in the available tools confirms availability; an empty capability search does not establish a disabled feature flag. Do not substitute a local HTML file for an in-app artifact. Use one friendly name for the workflow and app; the user previews the draft and chooses Save to keep both on their dashboard. Only create an Automation when the user asks for a schedule.",
@@ -180,10 +180,10 @@ export const AGENT_MCP_INSTRUCTIONS = [
   "A match with kind mcp_app is a standard MCP App from a connected MCP server: execute that exact match through execute_capability and let compatible hosts render its ui:// resource. Never import, convert, or browse for a standalone HTML URL instead; standalone URL-imported Apps are not part of this release.",
   "To add a public GitHub plugin to an organization marketplace, search for the marketplace list, GitHub plugin import preview, GitHub plugin marketplace import, and resolved marketplace detail capabilities. Preview first; do not recreate the plugin by hand. Before importing, confirm the target marketplace, selected skill/server keys, and who can use them. Do not choose one authentication type for every server: the import route resolves known presets and plugin declarations, and the request authType is only a fallback for unknown servers.",
   "After importing, retrieve the resolved marketplace detail and report each plugin's cloudReadiness. An import or plugin binding is not proof that an MCP connection is usable: relay needs_admin_setup or needs_signin as the next human action instead of claiming the connection is ready.",
-  "Do not invent OAuth-client, credential, or local-extension setup. Organization connections are managed in the OpenWork Cloud dashboard / Settings > Connect; when a connection or marketplace readiness state requires administrator setup or member sign-in, relay that exact action.",
-  "External MCP matches include the provider-advertised argumentsSchema, schemaDigest, and invocation.argumentsField. Put an object matching argumentsSchema in execute_capability.body and copy schemaDigest into execute_capability.schemaDigest. OpenWork always attempts the downstream provider call even when local schema checks find a mismatch; schemaGuidance is advisory: if the provider succeeded, accept the result and do not retry because of the warning; if it failed, use the warning to correct the arguments or search again.",
+  "Do not invent OAuth-client, credential, or local-extension setup. Organization connections are managed in the OfflineGPT Cloud dashboard / Settings > Connect; when a connection or marketplace readiness state requires administrator setup or member sign-in, relay that exact action.",
+  "External MCP matches include the provider-advertised argumentsSchema, schemaDigest, and invocation.argumentsField. Put an object matching argumentsSchema in execute_capability.body and copy schemaDigest into execute_capability.schemaDigest. OfflineGPT always attempts the downstream provider call even when local schema checks find a mismatch; schemaGuidance is advisory: if the provider succeeded, accept the result and do not retry because of the warning; if it failed, use the warning to correct the arguments or search again.",
   "If the provider returns invalid_capability_arguments, correct the listed issues and retry once with changed arguments; never retry the same arguments unchanged. If it returns unknown_capability, call search_capabilities again before retrying.",
-  "When the user explicitly asks to connect or reconnect a service, search for that service by name with intent connect. Ordinary capability searches must omit intent connect: blocked connection matches are informational and must not trigger sign-in cards or automatic status calls. Only propose authorization when an explicitly requested operation actually depends on that connection. Explicit connection searches render a card when the result identifies one connection. Do not execute the same status again when the search response includes connectionAction. For an explicit connection request without a card, execute that exact status match once. When execute_capability fails with needs_connection or connection_not_connected, execute that connection's status capability (mcp:<connectionId>:*) once for the same card. For member-owned OAuth connections in OpenWork desktop, ask the user to click Connect or Reconnect on the inline card; desktop handles authorization directly, so do not send them to Den. For other actions, name connectionStatus.connectionName and relay connectionStatus.action exactly in text, distinguishing the member's Your Connections page, the organization Connections dashboard, and the provider's own admin console. Probes are live: after the human fixes the connector, search again in the same task; otherwise do not retry unchanged or improvise workarounds through other tools.",
+  "When the user explicitly asks to connect or reconnect a service, search for that service by name with intent connect. Ordinary capability searches must omit intent connect: blocked connection matches are informational and must not trigger sign-in cards or automatic status calls. Only propose authorization when an explicitly requested operation actually depends on that connection. Explicit connection searches render a card when the result identifies one connection. Do not execute the same status again when the search response includes connectionAction. For an explicit connection request without a card, execute that exact status match once. When execute_capability fails with needs_connection or connection_not_connected, execute that connection's status capability (mcp:<connectionId>:*) once for the same card. For member-owned OAuth connections in OfflineGPT desktop, ask the user to click Connect or Reconnect on the inline card; desktop handles authorization directly, so do not send them to Den. For other actions, name connectionStatus.connectionName and relay connectionStatus.action exactly in text, distinguishing the member's Your Connections page, the organization Connections dashboard, and the provider's own admin console. Probes are live: after the human fixes the connector, search again in the same task; otherwise do not retry unchanged or improvise workarounds through other tools.",
   "Successful postMarketplacesPlugins, postPluginsAccess, and postMarketplacesAccess calls render a confirmation card automatically in compatible hosts; report the outcome in text as well.",
 ].join("\n")
 
@@ -297,7 +297,7 @@ export async function executeCapabilityWithBudget<T extends ExecuteCapabilityToo
 
 export function createAgentMcpServer(): McpServer {
   return new McpServer({
-    name: "openwork-den-api-agent",
+    name: "offlinegpt-den-api-agent",
     version: "1.0.0",
   }, {
     capabilities: {
@@ -318,7 +318,7 @@ export function registerAgentSkillResources(input: {
 }) {
   input.server.registerResource("agent-skills-index", AGENT_SKILL_INDEX_URI, {
     title: "Available Agent Skills",
-    description: "Authorized Agent Skills discovery index for this OpenWork member.",
+    description: "Authorized Agent Skills discovery index for this OfflineGPT member.",
     mimeType: "application/json",
   }, async () => ({
     contents: [{
@@ -371,7 +371,7 @@ export function registerAgentSkillResources(input: {
  * name directly.
  *
  * `/mcp/agent` is a *different* endpoint for a *different* consumer: the
- * desktop app's "OpenWork Cloud Control" connection, which is what an
+ * desktop app's "OfflineGPT Cloud Control" connection, which is what an
  * OpenCode/Claude Code/Codex-style harness actually sees. It always registers
  * `search_capabilities`, `execute_capability`, and `create_skill`, and
  * conditionally registers Code Mode and Artifact presentation tools. Workflows
@@ -537,10 +537,10 @@ export function registerAgentMcpRoutes<T extends { Variables: RequestIdVariables
         description: [
           "Search connection actions, saved Workflows, and skills by keyword.",
           "Direct MCP tools such as create_skill and save_artifact_view are outside this search; call an available direct tool itself. For an app, dashboard, or artifact view of Workflow results, use save_artifact_view and follow its prerequisites.",
-          "Search covers native Google Workspace capabilities (Gmail, Calendar, Drive, Gmail drafts), org-connected external MCPs, and namespaced OpenWork Admin tools for allowlisted platform admins.",
+          "Search covers native Google Workspace capabilities (Gmail, Calendar, Drive, Gmail drafts), org-connected external MCPs, and namespaced OfflineGPT Admin tools for allowlisted platform admins.",
           "Accessible Workflows appear as marketplace matches with kind workflow and execute through execute_capability like every other exact search result.",
           "Try 2-4 keyword variants before deciding a capability is unavailable.",
-          "Native API matches include a connector-namespaced name, pathParams, queryParams, querySchema, hasBody, and bodySchema. External MCP matches include argumentsSchema, schemaDigest, and invocation.argumentsField. A match with kind mcp_app is a standard MCP App launch capability from a connected MCP server; execute it normally and the OpenWork host will render its advertised ui:// resource.",
+          "Native API matches include a connector-namespaced name, pathParams, queryParams, querySchema, hasBody, and bodySchema. External MCP matches include argumentsSchema, schemaDigest, and invocation.argumentsField. A match with kind mcp_app is a standard MCP App launch capability from a connected MCP server; execute it normally and the OfflineGPT host will render its advertised ui:// resource.",
           "Built-in and marketplace skill matches return SKILL.md content when executed.",
         ].join(" "),
         annotations: SEARCH_CAPABILITIES_ANNOTATIONS,
@@ -570,7 +570,7 @@ export function registerAgentMcpRoutes<T extends { Variables: RequestIdVariables
           "Call a capability found via search_capabilities, by its exact name.",
           "Pass path/query/body only as described by that match's pathParams/queryParams/hasBody.",
           "For external MCP capabilities, provider-advertised schema mismatches are returned as advisory schemaGuidance alongside the provider result; they do not block the downstream call.",
-          "When the exact capability is a standard MCP App launch tool, this call preserves its originating tool and ui:// binding so compatible OpenWork hosts render it without requiring a generated direct-tool name.",
+          "When the exact capability is a standard MCP App launch tool, this call preserves its originating tool and ui:// binding so compatible OfflineGPT hosts render it without requiring a generated direct-tool name.",
           "For skill capabilities listed in the remote skill catalog, this returns their authorized SKILL.md content.",
           "Returns unknown_capability if name doesn't match a current capability — call search_capabilities again.",
         ].join(" "),
@@ -609,7 +609,7 @@ export function registerAgentMcpRoutes<T extends { Variables: RequestIdVariables
           return {
             ok: false,
             error: "mcp_membership_revoked",
-            message: "The OpenWork Cloud membership for this connection is unavailable.",
+            message: "The OfflineGPT Cloud membership for this connection is unavailable.",
           }
         }
         try {
@@ -669,7 +669,7 @@ export function registerAgentMcpRoutes<T extends { Variables: RequestIdVariables
           return {
             ok: false,
             error: "mcp_membership_revoked",
-            message: "The OpenWork Cloud membership for this connection is unavailable.",
+            message: "The OfflineGPT Cloud membership for this connection is unavailable.",
           }
         }
         try {

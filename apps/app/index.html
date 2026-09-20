@@ -11,14 +11,14 @@
     <title>OfflineGPT</title>
 
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="icon" type="image/svg+xml" href="/openwork-mark.svg" />
+    <link rel="icon" type="image/svg+xml" href="/offlinegpt-mark.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <script>
       (function () {
         try {
-          var mode = localStorage.getItem("openwork.themePref") || "system";
+          var mode = localStorage.getItem("offlinegpt.themePref") || "system";
           var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
           var resolved = mode === "dark" || (mode === "system" && prefersDark) ? "dark" : "light";
           document.documentElement.dataset.theme = resolved;
@@ -33,13 +33,13 @@
       // Pre-boot error beacon for web deployments: reports a web instance
       // that fails to load (entry bundle error, early exception) to Sentry
       // before the app's own error monitoring can start. Inert unless the
-      // build sets VITE_OPENWORK_DEPLOYMENT=web and VITE_OPENWORK_SENTRY_DSN.
+      // build sets VITE_OFFLINEGPT_DEPLOYMENT=web and VITE_OFFLINEGPT_SENTRY_DSN.
       // Once src/app/lib/error-monitoring.ts starts, it takes over via
-      // window.__openworkWebErrorMonitorActive.
+      // window.__offlinegptWebErrorMonitorActive.
       (function () {
         try {
-          var dsn = "%VITE_OPENWORK_SENTRY_DSN%";
-          var deployment = "%VITE_OPENWORK_DEPLOYMENT%";
+          var dsn = "%VITE_OFFLINEGPT_SENTRY_DSN%";
+          var deployment = "%VITE_OFFLINEGPT_DEPLOYMENT%";
           if (deployment !== "web" || !dsn || dsn.charAt(0) === "%") return;
           var match = dsn.match(/^https:\/\/([\w.-]+)@([\w.-]+(?::\d+)?)\/(\d+)$/);
           if (!match) return;
@@ -49,7 +49,7 @@
           var sent = 0;
           function analyticsAllowed() {
             try {
-              var raw = localStorage.getItem("openwork.preferences");
+              var raw = localStorage.getItem("offlinegpt.preferences");
               if (!raw) return true;
               return JSON.parse(raw).analyticsEnabled !== false;
             } catch (e) {
@@ -57,7 +57,7 @@
             }
           }
           function send(type, message) {
-            if (sent >= 3 || window.__openworkWebErrorMonitorActive === true) return;
+            if (sent >= 3 || window.__offlinegptWebErrorMonitorActive === true) return;
             if (!analyticsAllowed()) return;
             sent += 1;
             var id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())).replace(/-/g, "");

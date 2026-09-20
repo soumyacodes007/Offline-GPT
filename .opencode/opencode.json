@@ -19,10 +19,10 @@
   },
   "plugin": ["opencode-chrome-devtools@1.0.4"],
   "mcp": {
-    "openwork": {
+    "offlinegpt": {
       "type": "remote",
       "enabled": true,
-      "url": "https://api.openworklabs.com/mcp/agent",
+      "url": "https://api.offlinegptlabs.com/mcp/agent",
       "oauth": {}
     }
   }

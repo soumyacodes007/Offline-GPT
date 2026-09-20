@@ -1,24 +1,24 @@
 services:
-  openwork-host:
+  offlinegpt-host:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         # Keep this in sync with apps/server/package.json if you want a pinned release.
-        OPENWORK_SERVER_VERSION: 0.18.4
+        OFFLINEGPT_SERVER_VERSION: 0.18.4
         OPENCODE_VERSION: 1.17.11
     ports:
       - "8787:8787"
     environment:
       # Set these explicitly for stable sharing.
-      # OPENWORK_TOKEN: "..."
-      # OPENWORK_HOST_TOKEN: "..."
-      # Optional: OPENWORK_APPROVAL_MODE: "auto"
-      # Optional: OPENWORK_APPROVAL_TIMEOUT_MS: "30000"
+      # OFFLINEGPT_TOKEN: "..."
+      # OFFLINEGPT_HOST_TOKEN: "..."
+      # Optional: OFFLINEGPT_APPROVAL_MODE: "auto"
+      # Optional: OFFLINEGPT_APPROVAL_TIMEOUT_MS: "30000"
       # Historical path retained so existing ./data volumes keep working.
       # Only a directory name; the orchestrator CLI itself is gone.
-      OPENWORK_DATA_DIR: /data/openwork-orchestrator
-      OPENWORK_SIDECAR_DIR: /data/sidecars
+      OFFLINEGPT_DATA_DIR: /data/offlinegpt-orchestrator
+      OFFLINEGPT_SIDECAR_DIR: /data/sidecars
     volumes:
       # Mount an existing project/workspace here.
       - ./workspace:/workspace

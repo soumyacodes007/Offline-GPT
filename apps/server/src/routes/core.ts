@@ -7,8 +7,8 @@ import {
   writeConnectState,
 } from "../connect-state.js";
 import type { CloudMcpLiveStatusObserver } from "../cloud-mcp-health.js";
-import { readOpenWorkConnectSkillCatalog, renderOpenWorkConnectSkillInstruction } from "../connect-skill-catalog.js";
-import { readOpenWorkAutomationCatalog, renderOpenWorkAutomationInstruction } from "../connect-automation-catalog.js";
+import { readOfflineGPTConnectSkillCatalog, renderOfflineGPTConnectSkillInstruction } from "../connect-skill-catalog.js";
+import { readOfflineGPTAutomationCatalog, renderOfflineGPTAutomationInstruction } from "../connect-automation-catalog.js";
 import { EnvStoreReadError, InvalidEnvKeyError, isValidEnvKey, type EnvService } from "../env-file.js";
 import { syncManagedProviderAuth, type ManagedProviderAuthResult } from "../managed-provider-auth.js";
 import { ApiError } from "../errors.js";
@@ -130,7 +130,7 @@ export function registerCoreRoutes(options: RegisterCoreRoutesOptions): void {
   // Dev log sink: append browser console + error events to a file that an
   // operator (or an AI driver) can tail. Unauth on purpose because this is
   // scoped to the dev host and needs to work before clients finish wiring
-  // tokens; it is also a no-op when OPENWORK_DEV_LOG_FILE is unset.
+  // tokens; it is also a no-op when OFFLINEGPT_DEV_LOG_FILE is unset.
   addRoute(routes, "POST", "/dev/log", "none", async (ctx) => {
     const target = resolveDevLogPath();
     if (!target) {
@@ -274,24 +274,24 @@ export function registerCoreRoutes(options: RegisterCoreRoutesOptions): void {
   });
 
   addRoute(routes, "GET", "/experimental/connect/skills", "client", async (_ctx) => {
-    // Connect skills are server/account-scoped (openwork-cloud on the host), not per-workspace.
-    const skills = await readOpenWorkConnectSkillCatalog(config);
+    // Connect skills are server/account-scoped (offlinegpt-cloud on the host), not per-workspace.
+    const skills = await readOfflineGPTConnectSkillCatalog(config);
     return jsonResponse({
       ok: true,
       schemaVersion: 1,
       skills,
-      instruction: renderOpenWorkConnectSkillInstruction(skills),
+      instruction: renderOfflineGPTConnectSkillInstruction(skills),
     });
   });
 
   addRoute(routes, "GET", "/experimental/connect/automations", "client", async (_ctx) => {
-    // Owner-scoped through the same openwork-cloud connection as skills.
-    const index = await readOpenWorkAutomationCatalog(config);
+    // Owner-scoped through the same offlinegpt-cloud connection as skills.
+    const index = await readOfflineGPTAutomationCatalog(config);
     return jsonResponse({
       ok: true,
       schemaVersion: 1,
       index,
-      instruction: renderOpenWorkAutomationInstruction(index),
+      instruction: renderOfflineGPTAutomationInstruction(index),
     });
   });
 
@@ -464,7 +464,7 @@ export function registerCoreRoutes(options: RegisterCoreRoutesOptions): void {
           400,
           error.code,
           error.code === "reserved_env_key"
-            ? "Environment variable name is reserved for OpenWork internals"
+            ? "Environment variable name is reserved for OfflineGPT internals"
             : "Invalid environment variable name",
         );
       }

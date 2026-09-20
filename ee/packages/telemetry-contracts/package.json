@@ -1,5 +1,5 @@
 {
-  "name": "@openwork-ee/telemetry-contracts",
+  "name": "@offlinegpt-ee/telemetry-contracts",
   "private": true,
   "type": "module",
   "types": "./src/index.ts",

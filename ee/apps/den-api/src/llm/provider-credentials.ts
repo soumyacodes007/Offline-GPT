@@ -84,7 +84,7 @@ export type RuntimeEnvProvider = {
  * built-in catalog for that vendor and shadow a key the member set themselves,
  * and two rows for the same vendor would share one credential slot. Custom
  * providers keep the exact names their author declared, and the hosted
- * OpenWork provider keeps `OPENWORK_API_KEY`.
+ * OfflineGPT provider keeps `OFFLINEGPT_API_KEY`.
  */
 export function usesRuntimeProviderEnvTag(provider: Pick<RuntimeEnvProvider, "source">): boolean {
   return provider.source === "models_dev"

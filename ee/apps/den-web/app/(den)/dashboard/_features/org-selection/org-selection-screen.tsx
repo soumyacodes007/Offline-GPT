@@ -92,7 +92,7 @@ function ScreenActions({ onSignOut }: { onSignOut: () => void }) {
 
 /**
  * Organization picker after Den sign-in.
- * Layout mirrors the desktop OpenWork forced sign-in / welcome card:
+ * Layout mirrors the desktop OfflineGPT forced sign-in / welcome card:
  * dither field + centered branded card + left-aligned headline + full-width actions.
  */
 export function OrgSelectionScreen({ orgs, pending, errorMessage, onPick, onSignOut }: OrgSelectionScreenProps) {
@@ -143,7 +143,7 @@ export function OrgSelectionScreen({ orgs, pending, errorMessage, onPick, onSign
         <div className="w-full max-w-[720px] rounded-3xl border border-[var(--dls-border)] bg-[var(--dls-surface)] px-8 pb-12 pt-10 sm:px-16 sm:pb-16 sm:pt-14">
           <div className="flex items-center gap-2.5">
             <img
-              src="/openwork-mark.svg"
+              src="/offlinegpt-mark.svg"
               alt=""
               width={26}
               height={26}
@@ -151,7 +151,7 @@ export function OrgSelectionScreen({ orgs, pending, errorMessage, onPick, onSign
               aria-hidden="true"
             />
             <span className="text-[15px] font-semibold tracking-tight text-[var(--dls-text-primary)]">
-              OpenWork
+              OfflineGPT
             </span>
           </div>
 

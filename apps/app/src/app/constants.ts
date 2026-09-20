@@ -3,20 +3,20 @@ import { t } from "../i18n";
 import { getDenMcpUrl } from "./lib/den";
 import { canonicalMcpServerName } from "./mcp";
 import {
-  BUILT_IN_OPENWORK_EXTENSION_MANIFESTS,
+  BUILT_IN_OFFLINEGPT_EXTENSION_MANIFESTS,
   extensionContribution,
   extensionResource,
   isTrustedBuiltInExtension,
-  type OpenWorkExtensionManifest,
-  type OpenWorkExtensionPlatform,
+  type OfflineGPTExtensionManifest,
+  type OfflineGPTExtensionPlatform,
 } from "./extensions";
 
-export const MODEL_PREF_KEY = "openwork.defaultModel";
-export const SESSION_MODEL_PREF_KEY = "openwork.sessionModels";
-export const THINKING_PREF_KEY = "openwork.showThinking";
-export const VARIANT_PREF_KEY = "openwork.modelVariant";
+export const MODEL_PREF_KEY = "offlinegpt.defaultModel";
+export const SESSION_MODEL_PREF_KEY = "offlinegpt.sessionModels";
+export const THINKING_PREF_KEY = "offlinegpt.showThinking";
+export const VARIANT_PREF_KEY = "offlinegpt.modelVariant";
 export { LANGUAGE_PREF_KEY } from "../i18n";
-export const HIDE_TITLEBAR_PREF_KEY = "openwork.hideTitlebar";
+export const HIDE_TITLEBAR_PREF_KEY = "offlinegpt.hideTitlebar";
 
 export const DEFAULT_MODEL: ModelRef = {
   providerID: "opencode",
@@ -38,10 +38,10 @@ export type McpDirectoryInfo = {
   type?: "remote" | "local";
   command?: string[];
   oauth: boolean;
-  /** Route OAuth through the local OpenWork gateway instead of delegating it to OpenCode. */
+  /** Route OAuth through the local OfflineGPT gateway instead of delegating it to OpenCode. */
   managedOAuth?: boolean;
-  /** Identifies MCP entries owned by OpenWork Connect instead of workspace configuration. */
-  managedBy?: "openwork-connect";
+  /** Identifies MCP entries owned by OfflineGPT Connect instead of workspace configuration. */
+  managedBy?: "offlinegpt-connect";
   oauthConfig?: {
     clientId?: string;
     clientSecret?: string;
@@ -55,17 +55,17 @@ export type McpDirectoryInfo = {
   iconSrc?: string;
   /** Prompt inserted from the composer extension picker. */
   composerPrompt?: string;
-  /** Whether OpenWork should show this extension as enabled before user setup. */
+  /** Whether OfflineGPT should show this extension as enabled before user setup. */
   defaultEnabled?: boolean;
-  /** Whether OpenWork should hide this extension from the default catalog view. */
+  /** Whether OfflineGPT should hide this extension from the default catalog view. */
   defaultHidden?: boolean;
   /** Whether this extension is still in preview. */
   preview?: boolean;
   /** Normalized extension manifest backing this catalog entry. */
-  extensionManifest?: OpenWorkExtensionManifest;
+  extensionManifest?: OfflineGPTExtensionManifest;
 };
 
-function extensionManifestToDirectoryInfo(manifest: OpenWorkExtensionManifest): McpDirectoryInfo {
+function extensionManifestToDirectoryInfo(manifest: OfflineGPTExtensionManifest): McpDirectoryInfo {
   const mcpResource = extensionResource(manifest, "mcp");
   return {
     id: manifest.id,
@@ -86,7 +86,7 @@ function extensionManifestToDirectoryInfo(manifest: OpenWorkExtensionManifest): 
   };
 }
 
-export function isBuiltInOpenWorkExtension(entry: Pick<McpDirectoryInfo, "kind" | "extensionManifest">): boolean {
+export function isBuiltInOfflineGPTExtension(entry: Pick<McpDirectoryInfo, "kind" | "extensionManifest">): boolean {
   return entry.kind === "extension" && isTrustedBuiltInExtension(entry.extensionManifest);
 }
 
@@ -153,9 +153,9 @@ export const MCP_QUICK_CONNECT: McpDirectoryInfo[] = [
     iconSrc: "/ext-context7.svg",
   },
   {
-    get name() { return t("mcp.quick_connect_openwork_cloud_title"); },
-    serverName: "openwork-cloud",
-    get description() { return t("mcp.quick_connect_openwork_cloud_desc"); },
+    get name() { return t("mcp.quick_connect_offlinegpt_cloud_title"); },
+    serverName: "offlinegpt-cloud",
+    get description() { return t("mcp.quick_connect_offlinegpt_cloud_desc"); },
     get url() {
       // The desktop app connects to the minimal, harness-facing surface
       // (/mcp/agent: search_capabilities + execute_capability only), not the
@@ -165,26 +165,26 @@ export const MCP_QUICK_CONNECT: McpDirectoryInfo[] = [
       try {
         return `${getDenMcpUrl()}/agent`;
       } catch {
-        return "https://api.app.openworklabs.com/mcp/agent";
+        return "https://api.app.offlinegptlabs.com/mcp/agent";
       }
     },
     type: "remote",
     oauth: true,
-    managedBy: "openwork-connect",
+    managedBy: "offlinegpt-connect",
     kind: "mcp",
     iconSrc: "/offlinegpt-mark.png",
     // Auto-managed by the signed-in cloud reconciler (syncCloudControlMcp):
-    // configured + enabled while signed in to OpenWork Cloud. Hidden from the
+    // configured + enabled while signed in to OfflineGPT Cloud. Hidden from the
     // default catalog; "Show hidden" reveals it.
     defaultHidden: true,
   },
   {
-    get name() { return t("mcp.quick_connect_openwork_ui_title"); },
-    serverName: "openwork-ui",
-    get description() { return t("mcp.quick_connect_openwork_ui_desc"); },
+    get name() { return t("mcp.quick_connect_offlinegpt_ui_title"); },
+    serverName: "offlinegpt-ui",
+    get description() { return t("mcp.quick_connect_offlinegpt_ui_desc"); },
     type: "local",
     // Dev builds replace this with the local checkout path before writing config.
-    command: ["npx", "-y", "openwork-ui-mcp"],
+    command: ["npx", "-y", "offlinegpt-ui-mcp"],
     oauth: false,
     kind: "ui-control",
     iconSrc: "/offlinegpt-mark.png",
@@ -192,24 +192,24 @@ export const MCP_QUICK_CONNECT: McpDirectoryInfo[] = [
     // from the default catalog; "Show hidden" reveals it.
     defaultHidden: true,
   },
-  ...BUILT_IN_OPENWORK_EXTENSION_MANIFESTS.map(extensionManifestToDirectoryInfo),
+  ...BUILT_IN_OFFLINEGPT_EXTENSION_MANIFESTS.map(extensionManifestToDirectoryInfo),
 ];
 
-export const OPENWORK_EXTENSION_CATALOG = MCP_QUICK_CONNECT.filter((entry) => entry.kind === "extension");
+export const OFFLINEGPT_EXTENSION_CATALOG = MCP_QUICK_CONNECT.filter((entry) => entry.kind === "extension");
 
-export function resolveOpenWorkExtensionCatalogPlatform(
+export function resolveOfflineGPTExtensionCatalogPlatform(
   platform: "web" | "desktop",
   os?: "macos" | "windows" | "linux",
-): OpenWorkExtensionPlatform {
+): OfflineGPTExtensionPlatform {
   if (platform === "web") return "web";
   if (os === "macos") return "darwin";
   if (os === "windows") return "windows";
   return "linux";
 }
 
-export function filterOpenWorkExtensionCatalogForPlatform<TEntry extends Pick<McpDirectoryInfo, "extensionManifest">>(
+export function filterOfflineGPTExtensionCatalogForPlatform<TEntry extends Pick<McpDirectoryInfo, "extensionManifest">>(
   entries: TEntry[],
-  platform: OpenWorkExtensionPlatform,
+  platform: OfflineGPTExtensionPlatform,
 ): TEntry[] {
   return entries.filter((entry) => {
     const platforms = entry.extensionManifest?.platform;

@@ -8,7 +8,7 @@ export type InferenceRequestReport = {
   organizationId: string
   orgMembershipId: string
   inferenceKeyId: string
-  openworkRequestId: string
+  offlinegptRequestId: string
   route: string
   method: string
   incomingModel: string | null
@@ -23,7 +23,7 @@ export type InferenceHandledErrorReport = {
   organizationId?: string
   orgMembershipId?: string
   inferenceKeyId?: string
-  openworkRequestId?: string
+  offlinegptRequestId?: string
   route: string
   method: string
   incomingModel?: string | null
@@ -39,7 +39,7 @@ export type InferenceHandledErrorReport = {
 export type InferenceReporter = {
   request(report: InferenceRequestReport): void
   handledError(report: InferenceHandledErrorReport): void
-  completion?(report: ChatCompletionReport & { openworkRequestId: string; organizationId: string; orgMembershipId: string; modelAlias: string }): void
+  completion?(report: ChatCompletionReport & { offlinegptRequestId: string; organizationId: string; orgMembershipId: string; modelAlias: string }): void
 }
 
 type PayloadLog = {
@@ -93,7 +93,7 @@ function reportAttributes(report: InferenceRequestReport | InferenceHandledError
     organizationId: report.organizationId,
     orgMembershipId: report.orgMembershipId,
     inferenceKeyId: report.inferenceKeyId,
-    openworkRequestId: report.openworkRequestId,
+    offlinegptRequestId: report.offlinegptRequestId,
     route: report.route,
     method: report.method,
     incomingModel: report.incomingModel,
@@ -106,7 +106,7 @@ function reportTags(report: InferenceRequestReport | InferenceHandledErrorReport
   return {
     organization_id: report.organizationId,
     inference_key_id: report.inferenceKeyId,
-    openwork_request_id: report.openworkRequestId,
+    offlinegpt_request_id: report.offlinegptRequestId,
     route: report.route,
     method: report.method,
   }
@@ -115,8 +115,8 @@ function reportTags(report: InferenceRequestReport | InferenceHandledErrorReport
 export const sentryInferenceReporter: InferenceReporter = {
   completion(report) {
     if (shouldEmitSentryLog(report.outcome === "completed" ? "info" : "error")) {
-      if (report.outcome === "completed") Sentry.logger.info("OpenWork inference completion", report)
-      else Sentry.logger.error("OpenWork inference completion", report)
+      if (report.outcome === "completed") Sentry.logger.info("OfflineGPT inference completion", report)
+      else Sentry.logger.error("OfflineGPT inference completion", report)
     }
   },
   request(report) {
@@ -124,7 +124,7 @@ export const sentryInferenceReporter: InferenceReporter = {
       return
     }
 
-    Sentry.logger.info("OpenWork chat completions inference request", {
+    Sentry.logger.info("OfflineGPT chat completions inference request", {
       ...reportAttributes(report),
       payloadMode: report.payloadMode,
       payload: report.payload,
@@ -140,10 +140,10 @@ export const sentryInferenceReporter: InferenceReporter = {
       error: report.error,
     }
     if (shouldEmitSentryLog("error")) {
-      Sentry.logger.error("OpenWork inference handled error", attributes)
+      Sentry.logger.error("OfflineGPT inference handled error", attributes)
     }
     if (report.exception === undefined) {
-      Sentry.captureMessage(`OpenWork inference handled error: ${report.reason}`, {
+      Sentry.captureMessage(`OfflineGPT inference handled error: ${report.reason}`, {
         level: "error",
         tags: reportTags(report),
         contexts: { inference: attributes },

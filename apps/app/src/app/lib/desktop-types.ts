@@ -3,7 +3,7 @@
 // packages/types/src/desktop-ipc.ts (shared with the Electron main process);
 // this module re-exports them as the app-side import path.
 
-import type { WorkspaceWire } from "@openwork/types/workspace";
+import type { WorkspaceWire } from "@offlinegpt/types/workspace";
 
 export type {
   AppBuildInfo,
@@ -39,22 +39,22 @@ export type {
   OpencodeConfigFile,
   OpencodeExecutionEnvEntry,
   OpencodeExecutionSnapshot,
-  OpenworkDockerCleanupResult,
-  OpenworkServerInfo,
+  OfflineGptDockerCleanupResult,
+  OfflineGptServerInfo,
   UpdaterEnvironment,
   WorkspaceCreateInput,
   WorkspaceCreateRemoteInput,
   WorkspaceExportSummary,
   WorkspaceList,
-  WorkspaceOpenworkConfig,
+  WorkspaceOfflineGptConfig,
   WorkspaceUpdateRemoteInput,
-} from "@openwork/types/desktop-ipc";
+} from "@offlinegpt/types/desktop-ipc";
 
-// Canonical wire shape shared with openwork-server and the desktop bridge.
+// Canonical wire shape shared with offlinegpt-server and the desktop bridge.
 // Single source of truth: packages/types/src/workspace.ts.
 export type WorkspaceInfo = WorkspaceWire;
 
 // Browser tab state mirrored across the desktop IPC bridge. The shape is owned
-// by @openwork/browser-tabs (shared with the Electron main process); the
+// by @offlinegpt/browser-tabs (shared with the Electron main process); the
 // session panel store re-exports it from here.
-export type { BrowserPanelTab } from "@openwork/browser-tabs";
+export type { BrowserPanelTab } from "@offlinegpt/browser-tabs";

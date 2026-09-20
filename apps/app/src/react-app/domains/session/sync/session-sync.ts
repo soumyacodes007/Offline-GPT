@@ -27,7 +27,7 @@ import {
   parseStructuredOutputUIPart,
   STRUCTURED_OUTPUT_TOOL,
 } from "./parse-tool-parts";
-import type { OpenworkSessionSnapshot } from "@/app/lib/openwork-server";
+import type { OfflineGptSessionSnapshot } from "@/app/lib/offlinegpt-server";
 import { applyRevertCursor, reconcileTranscriptMessages } from "./transcript-reconcile";
 import {
   useSessionActivityStore,
@@ -64,7 +64,7 @@ export {
 type SyncOptions = {
   workspaceId: string;
   baseUrl: string;
-  openworkToken: string;
+  offlinegptToken: string;
   visibleSessionId?: string | null;
   onSessionCreated?: (session: Session) => void;
   onSessionUpdated?: (update: { sessionId: string; info: Record<string, unknown> }) => void;
@@ -76,7 +76,7 @@ type ListenerRegistry<Listener> = Map<Listener, number>;
 
 type SyncEntry = {
   input: SyncOptions;
-  openworkToken: string;
+  offlinegptToken: string;
   // Reattachment can rotate the token after the stream already failed. This
   // hook advances the stream lifecycle's connection generation so a stream
   // parked in auth backoff restarts immediately with the new credential.
@@ -115,8 +115,8 @@ type DeltaFlushScheduler = (
 
 const idleStatus: SessionStatus = { type: "idle" };
 const syncs = new Map<string, SyncEntry>();
-const sessionSnapshotFetchStarts = new WeakMap<OpenworkSessionSnapshot, number>();
-const todoSnapshotFirstSeen = new WeakMap<OpenworkSessionSnapshot, number>();
+const sessionSnapshotFetchStarts = new WeakMap<OfflineGptSessionSnapshot, number>();
+const todoSnapshotFirstSeen = new WeakMap<OfflineGptSessionSnapshot, number>();
 const workspaceSyncDisposeGraceMs = 2_000;
 const retainedSessionTtlMs = 10 * 60_000;
 const idleRetainedSessionTtlMs = 10_000;
@@ -132,7 +132,7 @@ type SessionStatusSource = "stream" | "connect-reconcile" | "active-reconcile" |
 function developerDiagnosticsEnabled() {
   if (typeof window === "undefined") return false;
   try {
-    return window.localStorage.getItem("openwork.developerMode") === "1";
+    return window.localStorage.getItem("offlinegpt.developerMode") === "1";
   } catch {
     return false;
   }
@@ -175,30 +175,30 @@ function releaseListener<Listener>(registry: ListenerRegistry<Listener>, listene
 
 type SyncSubscriptionFactory = (
   baseUrl: string,
-  openworkToken: string,
+  offlinegptToken: string,
   signal: AbortSignal,
 ) => Promise<AsyncIterable<unknown>>;
 
 type SessionStatusFetcher = (
   baseUrl: string,
-  openworkToken: string,
+  offlinegptToken: string,
   signal: AbortSignal,
 ) => Promise<Record<string, SessionStatus>>;
 
-function createSyncClient(baseUrl: string, openworkToken: string) {
+function createSyncClient(baseUrl: string, offlinegptToken: string) {
   return isOpencodeV2BaseUrl(baseUrl)
-    ? createClientV2(baseUrl, undefined, { token: openworkToken })
-    : createClient(baseUrl, undefined, { token: openworkToken, mode: "openwork" });
+    ? createClientV2(baseUrl, undefined, { token: offlinegptToken })
+    : createClient(baseUrl, undefined, { token: offlinegptToken, mode: "offlinegpt" });
 }
 
-const defaultSyncSubscriptionFactory: SyncSubscriptionFactory = async (baseUrl, openworkToken, signal) => {
-  const client = createSyncClient(baseUrl, openworkToken);
+const defaultSyncSubscriptionFactory: SyncSubscriptionFactory = async (baseUrl, offlinegptToken, signal) => {
+  const client = createSyncClient(baseUrl, offlinegptToken);
   const subscription = await client.event.subscribe(undefined, { signal });
   return subscription.stream;
 };
 
-const defaultSessionStatusFetcher: SessionStatusFetcher = async (baseUrl, openworkToken, signal) => {
-  const client = createSyncClient(baseUrl, openworkToken);
+const defaultSessionStatusFetcher: SessionStatusFetcher = async (baseUrl, offlinegptToken, signal) => {
+  const client = createSyncClient(baseUrl, offlinegptToken);
   const result = await client.session.status(undefined, { signal });
   if (result.data !== undefined) return result.data;
   throw result.error;
@@ -235,7 +235,7 @@ const defaultDeltaFlushScheduler: DeltaFlushScheduler = (lane, run) => {
 
 let deltaFlushScheduler = defaultDeltaFlushScheduler;
 
-export function markSessionSnapshotFetchStart(snapshot: OpenworkSessionSnapshot, startedAt: number) {
+export function markSessionSnapshotFetchStart(snapshot: OfflineGptSessionSnapshot, startedAt: number) {
   sessionSnapshotFetchStarts.set(snapshot, startedAt);
 }
 
@@ -913,11 +913,11 @@ function applyEvent(entry: SyncEntry, workspaceId: string, event: OpencodeEvent)
     // renderer derives the visible transcript from this cursor, so a revert
     // (or its cleanup on the next prompt) must reach the snapshot cache or
     // the transcript stays frozen on stale history.
-    queryClient.setQueryData<OpenworkSessionSnapshot>(
+    queryClient.setQueryData<OfflineGptSessionSnapshot>(
       snapshotKey(workspaceId, update.sessionId),
       (current) => {
         if (!current) return current;
-        const revert = (update.info as { revert?: OpenworkSessionSnapshot["session"]["revert"] }).revert;
+        const revert = (update.info as { revert?: OfflineGptSessionSnapshot["session"]["revert"] }).revert;
         return { ...current, session: { ...current.session, revert } };
       },
     );
@@ -1147,7 +1147,7 @@ function applyEvent(entry: SyncEntry, workspaceId: string, event: OpencodeEvent)
     queryClient.setQueryData<UIMessage[]>(transcriptKey(workspaceId, props.sessionID), (current = []) =>
       current.filter((message) => message.id !== props.messageID),
     );
-    queryClient.setQueryData<OpenworkSessionSnapshot>(
+    queryClient.setQueryData<OfflineGptSessionSnapshot>(
       snapshotKey(workspaceId, props.sessionID),
       (current) => {
         if (!current) return current;
@@ -1344,7 +1344,7 @@ function startSync(input: SyncOptions, entry: SyncEntry) {
   const lifecycle = startSyncStreamLifecycle({
     // Read the token at connect time so every retry — including a
     // generation-triggered restart — uses the latest credential.
-    subscribe: (signal) => syncSubscriptionFactory(input.baseUrl, entry.openworkToken, signal),
+    subscribe: (signal) => syncSubscriptionFactory(input.baseUrl, entry.offlinegptToken, signal),
     onEvent: (raw) => {
       const event = normalizeEvent(raw);
       if (!event) return;
@@ -1487,7 +1487,7 @@ async function reconcileSessionPermissions(entry: SyncEntry, sessionId: string) 
   const snapshotStartedAt = Date.now();
   const snapshotRevision = getReactQueryClient().getQueryState(permissionKey(entry.input.workspaceId, sessionId))?.dataUpdateCount ?? 0;
   try {
-    const permissions = await sessionPermissionFetcher(entry.input.baseUrl, entry.openworkToken, sessionId,
+    const permissions = await sessionPermissionFetcher(entry.input.baseUrl, entry.offlinegptToken, sessionId,
       AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]));
     if (controller.signal.aborted || syncs.get(syncKey(entry.input)) !== entry) return;
     seedPermissionState(entry.input.workspaceId, sessionId, permissions, { snapshotStartedAt, snapshotRevision });
@@ -1525,7 +1525,7 @@ async function reconcileSessionRunStatuses(
   }
   let statuses: Record<string, SessionStatus>;
   try {
-    statuses = await sessionStatusFetcher(input.baseUrl, entry.openworkToken, signal);
+    statuses = await sessionStatusFetcher(input.baseUrl, entry.offlinegptToken, signal);
   } catch {
     // The run state itself is deliberately left untouched: a failed fetch is
     // not evidence that work stopped. It is evidence that the busy state can
@@ -1653,11 +1653,11 @@ export function ensureWorkspaceSessionSync(input: SyncOptions) {
   const existing = syncs.get(key);
   if (existing) {
     existing.input = input;
-    if (existing.openworkToken !== input.openworkToken) {
+    if (existing.offlinegptToken !== input.offlinegptToken) {
       // Reattachment with a rotated token (or a restarted runtime's fresh
       // credential) is a new connection generation: restart a stream parked
       // in auth backoff instead of leaving the task streaming nowhere.
-      existing.openworkToken = input.openworkToken;
+      existing.offlinegptToken = input.offlinegptToken;
       existing.notifyStreamGenerationChanged?.();
     }
     if (existing.disposeTimer) {
@@ -1675,7 +1675,7 @@ export function ensureWorkspaceSessionSync(input: SyncOptions) {
 
   const created: SyncEntry = {
     input,
-    openworkToken: input.openworkToken,
+    offlinegptToken: input.offlinegptToken,
     notifyStreamGenerationChanged: null,
     refs: 1,
     dispose: () => {},
@@ -1702,7 +1702,7 @@ export function ensureWorkspaceSessionSync(input: SyncOptions) {
   };
   created.titleRecovery = createSessionTitleRecovery({
     fetch: async (sessionId) => {
-      const client = createSyncClient(input.baseUrl, created.openworkToken);
+      const client = createSyncClient(input.baseUrl, created.offlinegptToken);
       const [session, messages] = await Promise.all([
         client.session.get({ sessionID: sessionId }).then(unwrap),
         client.session.messages({ sessionID: sessionId, limit: 20 }).then(unwrap),
@@ -1717,7 +1717,7 @@ export function ensureWorkspaceSessionSync(input: SyncOptions) {
       };
     },
     onResolved: (sessionId, title) => {
-      getReactQueryClient().setQueryData<OpenworkSessionSnapshot>(
+      getReactQueryClient().setQueryData<OfflineGptSessionSnapshot>(
         snapshotKey(input.workspaceId, sessionId),
         (current) => current
           ? { ...current, session: { ...current.session, title } }
@@ -1762,7 +1762,7 @@ function releaseWorkspaceSessionSync(input: SyncOptions) {
   }, workspaceSyncDisposeGraceMs);
 }
 
-export function seedSessionState(workspaceId: string, snapshot: OpenworkSessionSnapshot) {
+export function seedSessionState(workspaceId: string, snapshot: OfflineGptSessionSnapshot) {
   const queryClient = getReactQueryClient();
   const key = transcriptKey(workspaceId, snapshot.session.id);
   const incoming = snapshotToUIMessages(snapshot);
@@ -1852,7 +1852,7 @@ export function applySessionRevert(workspaceId: string, session: Session) {
   const queryClient = getReactQueryClient();
   const revertMessageId = session.revert?.messageID ?? null;
 
-  queryClient.setQueryData<OpenworkSessionSnapshot>(
+  queryClient.setQueryData<OfflineGptSessionSnapshot>(
     snapshotKey(workspaceId, session.id),
     (current) => (current ? { ...current, session: { ...current.session, revert: session.revert } } : current),
   );
@@ -1867,7 +1867,7 @@ export function applySessionRevert(workspaceId: string, session: Session) {
 export function applySessionUnrevert(workspaceId: string, sessionId: string) {
   const queryClient = getReactQueryClient();
   void queryClient.cancelQueries({ queryKey: snapshotKey(workspaceId, sessionId) });
-  queryClient.setQueryData<OpenworkSessionSnapshot>(
+  queryClient.setQueryData<OfflineGptSessionSnapshot>(
     snapshotKey(workspaceId, sessionId),
     (current) => (current ? { ...current, session: { ...current.session, revert: undefined } } : current),
   );
@@ -1919,7 +1919,7 @@ export function __createWorkspaceSessionSyncForTest(input: SyncOptions) {
   const key = syncKey(input);
   syncs.set(key, {
     input,
-    openworkToken: input.openworkToken,
+    offlinegptToken: input.offlinegptToken,
     notifyStreamGenerationChanged: null,
     refs: 1,
     dispose: () => {},

@@ -10,16 +10,16 @@ import {
   validateAgentPluginV1Manifest,
 } from "../src/routes/org/plugin-system/agent-plugin-v1.js"
 
-const bundleRoot = join(import.meta.dir, "../../../../integrations/agent-plugins/openwork-connect")
+const bundleRoot = join(import.meta.dir, "../../../../integrations/agent-plugins/offlinegpt-connect")
 
 describe("Agent Plugins v1", () => {
-  test("ships a published 1.0 package with a valid OpenWork Connect MCP configuration", async () => {
+  test("ships a published 1.0 package with a valid OfflineGPT Connect MCP configuration", async () => {
     const manifest = JSON.parse(await readFile(join(bundleRoot, "plugin.json"), "utf8")) as unknown
     const mcpText = await readFile(join(bundleRoot, "mcp.json"), "utf8")
 
     const manifestResult = validateAgentPluginV1Manifest(manifest)
     expect(manifestResult).toMatchObject({
-      manifest: { name: "openwork-connect" },
+      manifest: { name: "offlinegpt-connect" },
       ok: true,
       schemaVersion: "1.0.0",
       warnings: [],
@@ -28,9 +28,9 @@ describe("Agent Plugins v1", () => {
       entries: [{
         config: {
           type: "streamable-http",
-          url: "https://api.openworklabs.com/mcp/agent",
+          url: "https://api.offlinegptlabs.com/mcp/agent",
         },
-        name: "openwork",
+        name: "offlinegpt",
         valid: true,
       }],
       ok: true,

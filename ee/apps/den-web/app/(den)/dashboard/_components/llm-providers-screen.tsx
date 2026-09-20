@@ -90,7 +90,7 @@ export function LlmProvidersScreen() {
   }, [defaultPolicy, adminExceptionPolicies]);
 
   const customProviders = useMemo(
-    () => llmProviders.filter((provider) => provider.source !== "openwork"),
+    () => llmProviders.filter((provider) => provider.source !== "offlinegpt"),
     [llmProviders],
   );
 
@@ -110,11 +110,11 @@ export function LlmProvidersScreen() {
 
   const modelCount = customProviders.reduce((total, provider) => total + provider.models.length, 0);
   const providerCount = customProviders.length;
-  const hasOpenWorkModels = llmProviders.some((provider) => provider.source === "openwork");
+  const hasOfflineGPTModels = llmProviders.some((provider) => provider.source === "offlinegpt");
 
   const accessOutcome = accessMode === "managed"
     ? modelCount > 0
-      ? `Members see exactly the ${plural(modelCount, "model")} from the ${plural(providerCount, "provider")} below${hasOpenWorkModels ? ", plus OpenWork Models" : ""}.`
+      ? `Members see exactly the ${plural(modelCount, "model")} from the ${plural(providerCount, "provider")} below${hasOfflineGPTModels ? ", plus OfflineGPT Models" : ""}.`
       : "Members see no models yet — add a provider below."
     : modelCount > 0
       ? `Members may add their own providers alongside the ${plural(modelCount, "model")} below.`

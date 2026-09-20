@@ -1,8 +1,8 @@
 import { Buffer } from "node:buffer"
-import { and, count, desc, eq, inArray, isNotNull, isNull, lt, lte, or, sql } from "@openwork-ee/den-db/drizzle"
-import { AuthAccountTable, AuthUserTable, ExternalIdentityTable, MemberTable, ScimGroupMemberTable, ScimGroupTable, ScimProviderTable, ScimSyncEventTable, ScimUserTombstoneTable, TeamTable } from "@openwork-ee/den-db/schema"
+import { and, count, desc, eq, inArray, isNotNull, isNull, lt, lte, or, sql } from "@offlinegpt-ee/den-db/drizzle"
+import { AuthAccountTable, AuthUserTable, ExternalIdentityTable, MemberTable, ScimGroupMemberTable, ScimGroupTable, ScimProviderTable, ScimSyncEventTable, ScimUserTombstoneTable, TeamTable } from "@offlinegpt-ee/den-db/schema"
 import { withOrganizationTeamMutation } from "./organization-team-roles.js"
-import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { auth } from "./auth.js"
 import { cache } from "./cache.js"
 import { db } from "./db.js"
@@ -43,7 +43,7 @@ function decodeBase64Url(value: string) {
 }
 
 export function buildOrganizationScimProviderId(organizationId: OrganizationId) {
-  return `openwork-scim-${organizationId}`
+  return `offlinegpt-scim-${organizationId}`
 }
 
 function maybeString(value: unknown) {

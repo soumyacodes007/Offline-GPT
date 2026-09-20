@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createConnection } from "mysql2/promise";
-import { main as runWorldCli, parseWorldArgs, type PreflightCheck, type Reaper } from "@openwork/world";
+import { main as runWorldCli, parseWorldArgs, type PreflightCheck, type Reaper } from "@offlinegpt/world";
 import { DEFAULT_MYSQL_URL, localMysqlIsRunning, localRedisIsRunning } from "./place.ts";
 
 const REPO_ROOT = fileURLToPath(new URL("../../../..", import.meta.url));
@@ -44,7 +44,7 @@ const redisCheck: PreflightCheck = {
 export { parseWorldArgs };
 
 function isEphemeralDatabaseName(name: string): boolean {
-  const prefix = "openwork_eval_";
+  const prefix = "offlinegpt_eval_";
   if (!name.startsWith(prefix)) return false;
   const suffix = name.slice(prefix.length);
   if (suffix.length < 1 || suffix.length > 60) return false;
@@ -62,7 +62,7 @@ const dropEphemeralDatabase: Reaper = async (entry) => {
     return { status: "skipped", reason: "outside allowed names" };
   }
   try {
-    const url = new URL(process.env.OPENWORK_EVAL_MYSQL_URL?.trim() || DEFAULT_MYSQL_URL);
+    const url = new URL(process.env.OFFLINEGPT_EVAL_MYSQL_URL?.trim() || DEFAULT_MYSQL_URL);
     url.pathname = "/";
     const connection = await createConnection(url.toString());
     try {

@@ -3,10 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Play } from "lucide-react";
 
 import {
-  OpenworkServerError,
-  type OpenworkMcpAppResource,
-  type OpenworkServerClient,
-} from "@/app/lib/openwork-server";
+  OfflineGptServerError,
+  type OfflineGptMcpAppResource,
+  type OfflineGptServerClient,
+} from "@/app/lib/offlinegpt-server";
 import { McpAppSandboxView, type PreservedMcpAppResult } from "@/components/chat/mcp-app-frame";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,7 +24,7 @@ import type { DashboardMcpAppEntry } from "./granted-dashboard-store";
 
 /** A workspace MCP runtime a tile may launch through. */
 export type DashboardLaunchEndpoint = {
-  client: OpenworkServerClient;
+  client: OfflineGptServerClient;
   workspaceId: string;
 };
 
@@ -39,7 +39,7 @@ type TileState =
   | { phase: "loading" }
   | {
       phase: "ready";
-      app: OpenworkMcpAppResource;
+      app: OfflineGptMcpAppResource;
       result: PreservedMcpAppResult;
       endpoint: DashboardLaunchEndpoint;
       cachedAt: number;
@@ -105,7 +105,7 @@ export function McpAppTile({
   fallbackEndpoints?: DashboardLaunchEndpoint[];
 }) {
   const workspace = useWorkspace();
-  const { openworkServerClient, workspaceId } = workspace;
+  const { offlinegptServerClient, workspaceId } = workspace;
   // Provider annotations are not an authorization boundary. A safe-looking
   // tile runs on load only after this user has successfully run this exact
   // element once; approval-gated tools stay run-on-request forever.
@@ -117,11 +117,11 @@ export function McpAppTile({
   );
   const manualLaunch = !runsAutomatically;
   const launchEndpoints = useMemo(() => [
-    ...(openworkServerClient && workspaceId ? [{ client: openworkServerClient, workspaceId }] : []),
+    ...(offlinegptServerClient && workspaceId ? [{ client: offlinegptServerClient, workspaceId }] : []),
     ...(fallbackEndpoints ?? []),
   ].filter((endpoint, index, all) => (
     all.findIndex((other) => other.workspaceId === endpoint.workspaceId) === index
-  )), [fallbackEndpoints, openworkServerClient, workspaceId]);
+  )), [fallbackEndpoints, offlinegptServerClient, workspaceId]);
   // Cached app HTML is interactive, so it follows the same per-user launch
   // consent as a live call and never mounts on a first visit.
   const cached = runsAutomatically ? readDashboardTileCache(cacheScopeKey, entry.id) : null;
@@ -191,7 +191,7 @@ export function McpAppTile({
             arguments: launchArguments,
           }
         : undefined;
-      let resolved: { endpoint: DashboardLaunchEndpoint; app: OpenworkMcpAppResource } | null = null;
+      let resolved: { endpoint: DashboardLaunchEndpoint; app: OfflineGptMcpAppResource } | null = null;
       let resolveFailure: unknown = null;
       for (const endpoint of candidates) {
         try {
@@ -224,7 +224,7 @@ export function McpAppTile({
       try {
         result = await endpoint.client.callMcpAppTool(endpoint.workspaceId, request);
       } catch (cause) {
-        if (!(cause instanceof OpenworkServerError) || cause.code !== "tool_requires_approval") throw cause;
+        if (!(cause instanceof OfflineGptServerError) || cause.code !== "tool_requires_approval") throw cause;
         approvalWasRequired = true;
         // A stored entry can go stale: a tool that was read-only at add time
         // may need approval now. Never pop a consent prompt from an automatic
@@ -232,7 +232,7 @@ export function McpAppTile({
         if (!userInitiated) return { phase: "idle", revokeAutoLaunch: true };
         const approved = window.confirm(
           `Allow this MCP App to call ${app.toolName} on ${app.serverName}? `
-          + "OpenWork remembers your choice for this tile until you remove it.",
+          + "OfflineGPT remembers your choice for this tile until you remove it.",
         );
         if (!approved) return { phase: "error", message: "The app launch was declined." };
         result = await endpoint.client.callMcpAppTool(endpoint.workspaceId, { ...request, approved: true });
@@ -428,7 +428,7 @@ export function McpAppTile({
         interactiveEndpoint ? <WorkspaceProvider
           client={workspace.client}
           opencodeBaseUrl={workspace.opencodeBaseUrl}
-          openworkServerClient={interactiveEndpoint.client}
+          offlinegptServerClient={interactiveEndpoint.client}
           workspaceId={interactiveEndpoint.workspaceId}
           selectedWorkspaceRoot={workspace.selectedWorkspaceRoot}
         >

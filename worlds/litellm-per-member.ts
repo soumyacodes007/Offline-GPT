@@ -10,9 +10,9 @@ import type { Place } from "../evals/packages/env/src/place.ts";
 import { recipe, runRecipe } from "../evals/packages/env/src/recipe.ts";
 
 export const LITELLM_WORLD_ORG = "LiteLLM Per-Member World";
-export const LITELLM_WORLD_PROVIDER = "openwork-litellm-per-member";
-export const LITELLM_WORLD_MODEL = "openwork-litellm-per-member-model";
-export const LITELLM_WORLD_PASSWORD = "OpenWorkEval123!";
+export const LITELLM_WORLD_PROVIDER = "offlinegpt-litellm-per-member";
+export const LITELLM_WORLD_MODEL = "offlinegpt-litellm-per-member-model";
+export const LITELLM_WORLD_PASSWORD = "OfflineGPTEval123!";
 
 const REPLY = "The database-backed per-member LiteLLM world is working.";
 
@@ -57,7 +57,7 @@ export async function bootLiteLlmPerMember(
   const den = stack.use(await server({ place, provision: false, web: true }));
   const admin = await createAdmin(den, {
     name: "LiteLLM Admin",
-    email: "litellm-admin@openwork.test",
+    email: "litellm-admin@offlinegpt.test",
     password: LITELLM_WORLD_PASSWORD,
   });
   const org = stack.use(await createOrg(
@@ -66,7 +66,7 @@ export async function bootLiteLlmPerMember(
   ));
   const alice = await inviteMember(den, "alice", {
     name: "Alice LiteLLM",
-    email: "alice-litellm@openwork.test",
+    email: "alice-litellm@offlinegpt.test",
     password: LITELLM_WORLD_PASSWORD,
   });
   const provider = await liteLlmPerMemberProvider(admin, {
@@ -83,8 +83,8 @@ export async function bootLiteLlmPerMember(
     place,
     as: "admin",
     workspacePath: naming
-      ? `/tmp/openwork-litellm-per-member-world-${naming.stage}`
-      : "/tmp/openwork-litellm-per-member-world",
+      ? `/tmp/offlinegpt-litellm-per-member-world-${naming.stage}`
+      : "/tmp/offlinegpt-litellm-per-member-world",
     model: `${LITELLM_WORLD_PROVIDER}/${LITELLM_WORLD_MODEL}`,
   }));
   return { gateway, den, org, admin, alice, provider, desktop };
@@ -118,9 +118,9 @@ export const litellmPerMember = recipe("litellm-per-member", async (tools) => {
     denApi: tools.output(world.den.ref.apiUrl, { group: "URLs" }),
     litellm: tools.output(world.gateway.baseUrl, { group: "URLs" }),
     cdp: tools.output(world.desktop.handle.cdpUrl, { group: "URLs" }),
-    adminEmail: tools.output("litellm-admin@openwork.test", { group: "Accounts" }),
+    adminEmail: tools.output("litellm-admin@offlinegpt.test", { group: "Accounts" }),
     adminPassword: tools.secret(LITELLM_WORLD_PASSWORD, { group: "Accounts" }),
-    aliceEmail: tools.output("alice-litellm@openwork.test", { group: "Accounts" }),
+    aliceEmail: tools.output("alice-litellm@offlinegpt.test", { group: "Accounts" }),
     alicePassword: tools.secret(LITELLM_WORLD_PASSWORD, { group: "Accounts" }),
     litellmMasterKey: tools.secret(world.gateway.apiKey, { group: "Keys", note: "LiteLLM admin key" }),
     litellmUpstreamKey: tools.secret(world.gateway.upstreamKey, { group: "Keys", note: "witness upstream key" }),

@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, inArray, isNull } from "@openwork-ee/den-db/drizzle"
-import { AuthApiKeyTable, AuthUserTable, MemberTable } from "@openwork-ee/den-db/schema"
-import type { DenTypeId } from "@openwork-ee/utils/typeid"
+import { and, asc, desc, eq, inArray, isNull } from "@offlinegpt-ee/den-db/drizzle"
+import { AuthApiKeyTable, AuthUserTable, MemberTable } from "@offlinegpt-ee/den-db/schema"
+import type { DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { db } from "./db.js"
 
 export const DEN_API_KEY_HEADER = "x-api-key"

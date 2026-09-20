@@ -3,18 +3,18 @@ import { getGithubData } from "../../lib/github";
 import { baseOpenGraph } from "../../lib/seo";
 
 export const metadata = {
-  title: "OpenWork Roadmap | Your workspace, on every surface",
+  title: "OfflineGPT Roadmap | Your workspace, on every surface",
   description:
-    "See what OpenWork supports today and what is coming next for the desktop app, OpenWork Connect, hosted workspaces, Slack, mobile, and reliable agent workflows.",
+    "See what OfflineGPT supports today and what is coming next for the desktop app, OfflineGPT Connect, hosted workspaces, Slack, mobile, and reliable agent workflows.",
   alternates: {
     canonical: "/roadmap"
   },
   openGraph: {
     ...baseOpenGraph,
-    title: "OpenWork Roadmap | Your workspace, on every surface",
+    title: "OfflineGPT Roadmap | Your workspace, on every surface",
     description:
-      "The roadmap for the OpenWork desktop app, portable agent capabilities, hosted workspaces, and every surface where work happens.",
-    url: "https://openworklabs.com/roadmap"
+      "The roadmap for the OfflineGPT desktop app, portable agent capabilities, hosted workspaces, and every surface where work happens.",
+    url: "https://offlinegptlabs.com/roadmap"
   }
 };
 

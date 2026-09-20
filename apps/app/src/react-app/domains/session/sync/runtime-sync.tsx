@@ -9,7 +9,7 @@ type ReactSessionRuntimeProps = {
   sessionId: string | null;
   activeSessionIds?: string[];
   opencodeBaseUrl: string;
-  openworkToken: string;
+  offlinegptToken: string;
   onSessionCreated?: (session: Session) => void;
   onSessionUpdated?: (update: { sessionId: string; info: Record<string, unknown> }) => void;
   onSessionDeleted?: (sessionId: string) => void;
@@ -41,7 +41,7 @@ export function ReactSessionRuntime(props: ReactSessionRuntimeProps) {
     const input = {
       workspaceId: props.workspaceId,
       baseUrl: props.opencodeBaseUrl,
-      openworkToken: props.openworkToken,
+      offlinegptToken: props.offlinegptToken,
       visibleSessionId: props.sessionId,
       ...stableCallbacks,
     };
@@ -51,7 +51,7 @@ export function ReactSessionRuntime(props: ReactSessionRuntimeProps) {
       releaseSessions();
       releaseWorkspace();
     };
-  }, [props.workspaceId, props.sessionId, activeSessionIdsKey, props.opencodeBaseUrl, props.openworkToken, stableCallbacks]);
+  }, [props.workspaceId, props.sessionId, activeSessionIdsKey, props.opencodeBaseUrl, props.offlinegptToken, stableCallbacks]);
 
   return null;
 }

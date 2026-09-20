@@ -1,4 +1,4 @@
-import type { LocalAvailableModel, LocalModelRef } from "@openwork/types/local-workflows";
+import type { LocalAvailableModel, LocalModelRef } from "@offlinegpt/types/local-workflows";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dedupeGlmModelOptions, resolveModelDisplayName, resolveModelProviderDisplayName } from "@/app/utils";
 

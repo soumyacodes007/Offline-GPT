@@ -1,4 +1,4 @@
-import { renderEmailHtml } from "@openwork/email"
+import { renderEmailHtml } from "@offlinegpt/email"
 import { expect, test } from "bun:test"
 import { DomUtils, parseDocument } from "htmlparser2"
 
@@ -19,7 +19,7 @@ test("organization invitation HTML focuses on joining without desktop download p
   expect(text).toContain("Accept invite")
   expect(html).toContain(inviteLink)
   expect(html).not.toContain("Download the desktop app")
-  expect(html).not.toContain("OpenWork desktop app")
+  expect(html).not.toContain("OfflineGPT desktop app")
   expect(html).not.toContain(downloadUrl)
 })
 

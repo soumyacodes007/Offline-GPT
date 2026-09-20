@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto"
-import { and, asc, eq, inArray, isNull, sql } from "@openwork-ee/den-db/drizzle"
+import { and, asc, eq, inArray, isNull, sql } from "@offlinegpt-ee/den-db/drizzle"
 import {
   LlmProviderModelTable,
   LlmProviderTable,
   WorkerTable,
   WorkerTokenTable,
-} from "@openwork-ee/den-db/schema"
+} from "@offlinegpt-ee/den-db/schema"
 import { db } from "../db.js"
 import { env } from "../env.js"
 import { organizationAllowsManagedModels } from "../inference.js"
@@ -162,7 +162,7 @@ const databaseMaterializationStore: CloudProviderMaterializationStore = {
       .from(LlmProviderTable)
       .where(and(
         eq(LlmProviderTable.organizationId, organizationId),
-        managedModelsAllowed ? undefined : sql`${LlmProviderTable.source} <> 'openwork'`,
+        managedModelsAllowed ? undefined : sql`${LlmProviderTable.source} <> 'offlinegpt'`,
       ))
       .orderBy(asc(LlmProviderTable.id))
 
@@ -249,11 +249,11 @@ function readStringList(value: unknown): string[] {
 }
 
 function runtimeProviderId(provider: Pick<CloudProviderMaterializationProvider, "id" | "source">) {
-  return provider.source === "openwork" ? "openwork" : provider.id.trim()
+  return provider.source === "offlinegpt" ? "offlinegpt" : provider.id.trim()
 }
 
 function isCloudManagedProviderKey(providerId: string) {
-  return /^lpr_/i.test(providerId) || providerId.trim() === "openwork"
+  return /^lpr_/i.test(providerId) || providerId.trim() === "offlinegpt"
 }
 
 function upsertEnvEntry(entries: EnvEntry[], key: string, value: string) {
@@ -272,7 +272,7 @@ function upsertEnvEntry(entries: EnvEntry[], key: string, value: string) {
   entries.push({ key: trimmedKey, value: trimmedValue })
 }
 
-function readOpenWorkInferenceBaseUrl(providerConfig: JsonRecord) {
+function readOfflineGPTInferenceBaseUrl(providerConfig: JsonRecord) {
   const options = providerConfig.options
   if (isRecord(options)) {
     const baseUrl = readString(options.baseURL)
@@ -319,11 +319,11 @@ function providerEnvEntries(provider: CloudProviderMaterializationProvider): Env
 
   const primaryCredentialEnvName = selectPrimaryCredentialEnvName(envNames, entries.map((entry) => entry.key))
   const primaryCredential = stored.apiKey?.trim() || entries.find((entry) => entry.key === primaryCredentialEnvName)?.value || ""
-  if (provider.source === "openwork" && primaryCredential) {
-    upsertEnvEntry(entries, "OPENWORK_API_KEY", primaryCredential)
-    const baseUrl = readOpenWorkInferenceBaseUrl(provider.providerConfig)
+  if (provider.source === "offlinegpt" && primaryCredential) {
+    upsertEnvEntry(entries, "OFFLINEGPT_API_KEY", primaryCredential)
+    const baseUrl = readOfflineGPTInferenceBaseUrl(provider.providerConfig)
     if (baseUrl) {
-      upsertEnvEntry(entries, "OPENWORK_INFERENCE_BASE_URL", baseUrl)
+      upsertEnvEntry(entries, "OFFLINEGPT_INFERENCE_BASE_URL", baseUrl)
     }
   }
 
@@ -359,7 +359,7 @@ function buildProviderConfig(provider: CloudProviderMaterializationProvider) {
     env: runtimeProviderEnvNames(provider),
   }
 
-  if (Object.keys(models).length > 0 || provider.source !== "openwork") {
+  if (Object.keys(models).length > 0 || provider.source !== "offlinegpt") {
     config.models = models
   }
 
@@ -496,7 +496,7 @@ function hostTokenHeaders(hostToken: string) {
   return {
     Accept: "application/json",
     "Content-Type": "application/json",
-    "X-OpenWork-Host-Token": hostToken,
+    "X-OfflineGPT-Host-Token": hostToken,
   }
 }
 
@@ -584,7 +584,7 @@ function readRuntimeSnapshotVersion(payload: JsonRecord) {
 
     fallback = fallback ?? version
     const serviceName = readString(service.name)?.toLowerCase()
-    if (serviceName?.includes("openwork") || serviceName?.includes("server")) {
+    if (serviceName?.includes("offlinegpt") || serviceName?.includes("server")) {
       return version
     }
   }
@@ -792,7 +792,7 @@ async function patchRuntimeProviders(input: {
 
   // An instance older than this route answers 200 with the SPA index.html
   // instead of 404, because the web root is the catch-all. Observed on a real
-  // worker still running openwork-server 0.18.3: the patch "succeeded", the
+  // worker still running offlinegpt-server 0.18.3: the patch "succeeded", the
   // engine ended up with zero providers, and the org saw an opaque failure
   // instead of "this workspace needs an update". Treat a non-JSON body as an
   // unsupported route so the caller can degrade honestly.

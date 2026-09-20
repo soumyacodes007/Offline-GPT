@@ -28,13 +28,13 @@ export type SettingsUpdateStatus = {
   failedAction?: "check" | "download" | "install";
 } | null;
 
-type ElectronUpdaterBridge = NonNullable<Window["__OPENWORK_ELECTRON__"]>["updater"] & {
+type ElectronUpdaterBridge = NonNullable<Window["__OFFLINEGPT_ELECTRON__"]>["updater"] & {
   onDownloadProgress?: (callback: (data: { transferred: number; total: number; percent: number; bytesPerSecond: number }) => void) => (() => void);
 };
 
 declare global {
   interface Window {
-    __openworkUpdaterEvalBridge?: ElectronUpdaterBridge;
+    __offlinegptUpdaterEvalBridge?: ElectronUpdaterBridge;
   }
 }
 
@@ -102,10 +102,10 @@ function electronUpdaterEnvReducer(
 
 function electronUpdaterBridge(): ElectronUpdaterBridge | null {
   if (typeof window === "undefined") return null;
-  if (import.meta.env.DEV && window.__openworkUpdaterEvalBridge) {
-    return window.__openworkUpdaterEvalBridge;
+  if (import.meta.env.DEV && window.__offlinegptUpdaterEvalBridge) {
+    return window.__offlinegptUpdaterEvalBridge;
   }
-  return window.__OPENWORK_ELECTRON__?.updater ?? null;
+  return window.__OFFLINEGPT_ELECTRON__?.updater ?? null;
 }
 
 function describeError(error: unknown) {
@@ -394,7 +394,7 @@ export function useElectronUpdaterState(options: UseElectronUpdaterStateOptions)
         if (!isCurrentRequest()) return;
         const currentVersion = channelState?.currentVersion ?? appVersion;
         if (!currentVersion) {
-          throw new Error("Could not determine the installed OpenWork version.");
+          throw new Error("Could not determine the installed OfflineGPT version.");
         }
 
         const selection = await resolveFreshStableDesktopUpdate({

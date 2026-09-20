@@ -1,11 +1,11 @@
 import { env } from "../env.js"
 
-export function openworkYourConnectionsUrl(connectionId: string) {
+export function offlinegptYourConnectionsUrl(connectionId: string) {
   const url = new URL("/dashboard/your-connections", env.betterAuthUrl)
   url.searchParams.set("connectionId", connectionId)
   return url.toString()
 }
 
-export function openworkOrganizationConnectionsUrl() {
+export function offlinegptOrganizationConnectionsUrl() {
   return new URL("/dashboard/mcp-connections", env.betterAuthUrl).toString()
 }

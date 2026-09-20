@@ -169,7 +169,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
 
     const providersById = new Map(providers.map((provider) => [provider.id, provider]));
     const nextEntries = Object.keys(methods)
-      .filter((id) => id.trim().toLowerCase() !== "openwork")
+      .filter((id) => id.trim().toLowerCase() !== "offlinegpt")
       .flatMap((id) => {
         const provider = providersById.get(id);
         const entryMethods = (methods[id] ?? []).filter((method) => {
@@ -644,12 +644,12 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
         : "Use OpenAI's device flow when the local browser callback is unreliable.";
     }
     if (method.type === "oauth") {
-      return "Continue in the browser and let OpenWork finish the connection automatically.";
+      return "Continue in the browser and let OfflineGPT finish the connection automatically.";
     }
     if (isOpencodeZenProvider(entry.id)) {
       return "Sign in to OpenCode Zen with an API key to unlock paid models alongside the free tier.";
     }
-    return "Paste a secret key that OpenWork stores locally on this device.";
+    return "Paste a secret key that OfflineGPT stores locally on this device.";
   };
 
   return (

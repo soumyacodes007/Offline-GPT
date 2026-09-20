@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto"
-import { and, asc, desc, eq, inArray, isNull } from "@openwork-ee/den-db/drizzle"
+import { and, asc, desc, eq, inArray, isNull } from "@offlinegpt-ee/den-db/drizzle"
 import {
   AuditEventTable,
   AuthUserTable,
@@ -9,8 +9,8 @@ import {
   WorkerInstanceTable,
   WorkerTable,
   WorkerTokenTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId, normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { z } from "zod"
 import { requireCloudWorkerAccess } from "../../billing/polar.js"
 import { db } from "../../db.js"
@@ -33,11 +33,11 @@ import { resolveCloudRuntimeAccess } from "../../workers/worker-access.js"
 import { CLOUD_INSTANCE_BACKEND } from "../../workers/cloud-constants.js"
 import { fetchPreviewNoRedirect } from "../../workers/preview-fetch.js"
 import {
-  getOpenWorkWebRuntimeAccess,
-  openWorkWebAccessRequiredPayload,
-  requireOpenWorkWebRuntimeAccess,
-  type OpenWorkWebRuntimeAccessResolver,
-} from "../../openwork-web-runtime-access.js"
+  getOfflineGPTWebRuntimeAccess,
+  offlineGptWebAccessRequiredPayload,
+  requireOfflineGPTWebRuntimeAccess,
+  type OfflineGPTWebRuntimeAccessResolver,
+} from "../../offlinegpt-web-runtime-access.js"
 
 const logger = appLogger.child({ component: "worker_routes" })
 
@@ -97,7 +97,7 @@ type CloudProvisioningStore = {
   touchProvisioningWorker: (workerId: WorkerId) => Promise<void>
 }
 type ContinueCloudProvisioningOptions = {
-  getOpenWorkWebAccess?: OpenWorkWebRuntimeAccessResolver
+  getOfflineGPTWebAccess?: OfflineGPTWebRuntimeAccessResolver
   provisionWorker?: ProvisionWorker
   store?: CloudProvisioningStore
   materializeProviders?: typeof materializeCloudWorkerProviders
@@ -171,7 +171,7 @@ function normalizeUrl(value: string): string {
   return value.trim().replace(/\/+$/, "")
 }
 
-function parseWorkspaceSelection(payload: unknown): { workspaceId: string; openworkUrl: string } | null {
+function parseWorkspaceSelection(payload: unknown): { workspaceId: string; offlinegptUrl: string } | null {
   if (!isRecord(payload) || !Array.isArray(payload.items)) {
     return null
   }
@@ -195,7 +195,7 @@ function parseWorkspaceSelection(payload: unknown): { workspaceId: string; openw
 
   return {
     workspaceId,
-    openworkUrl: `${baseUrl}/w/${encodeURIComponent(workspaceId)}`,
+    offlinegptUrl: `${baseUrl}/w/${encodeURIComponent(workspaceId)}`,
   }
 }
 
@@ -327,20 +327,20 @@ export async function fetchWorkerRuntimeJson(input: {
   method?: "GET" | "POST"
   body?: unknown
 }, options: {
-  getOpenWorkWebAccess?: OpenWorkWebRuntimeAccessResolver
+  getOfflineGPTWebAccess?: OfflineGPTWebRuntimeAccessResolver
   resolveCloudAccess?: ResolveCloudRuntimeAccess
   fetchImpl?: typeof fetch
 } = {}) {
-  // Published desktops hold cloud worker tokens only after OpenWorkWebAccessGate
+  // Published desktops hold cloud worker tokens only after OfflineGPTWebAccessGate
   // (v0.18.42+) granted Web access; this recheck covers lapsed entitlement and
-  // callers that bypass the gate. See openwork-web-runtime-access.ts.
+  // callers that bypass the gate. See offlinegpt-web-runtime-access.ts.
   if (input.worker.destination === "cloud") {
-    const webAccess = await (options.getOpenWorkWebAccess ?? getOpenWorkWebRuntimeAccess)(input.worker.org_id)
+    const webAccess = await (options.getOfflineGPTWebAccess ?? getOfflineGPTWebRuntimeAccess)(input.worker.org_id)
     if (!webAccess.hasAccess) {
       return {
         ok: false as const,
         status: 403,
-        payload: openWorkWebAccessRequiredPayload(),
+        payload: offlineGptWebAccessRequiredPayload(),
       }
     }
   }
@@ -366,7 +366,7 @@ export async function fetchWorkerRuntimeJson(input: {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
-          "X-OpenWork-Host-Token": access.hostToken,
+          "X-OfflineGPT-Host-Token": access.hostToken,
         },
         body: input.body === undefined ? undefined : JSON.stringify(input.body),
       })
@@ -472,9 +472,9 @@ async function runCloudProvisioning(input: {
     // Entitlement can lapse between claim and provisioning; a lapse is recorded
     // as the dedicated web_access_required failure (cloud-failure.ts), which the
     // published desktop renders through its existing failed-instance state.
-    await requireOpenWorkWebRuntimeAccess(
+    await requireOfflineGPTWebRuntimeAccess(
       input.orgId,
-      options.getOpenWorkWebAccess ?? getOpenWorkWebRuntimeAccess,
+      options.getOfflineGPTWebAccess ?? getOfflineGPTWebRuntimeAccess,
     )
     await withProvisioningHeartbeat({
       workerId: input.workerId,
@@ -576,22 +576,22 @@ export async function requireCloudAccessOrPayment(input: {
 }
 
 export async function getWorkerTokensAndConnect(worker: WorkerRow, options: {
-  getOpenWorkWebAccess?: OpenWorkWebRuntimeAccessResolver
+  getOfflineGPTWebAccess?: OfflineGPTWebRuntimeAccessResolver
   resolveCloudAccess?: ResolveCloudRuntimeAccess
   loadActiveTokens?: LoadActiveWorkerTokens
   fetchImpl?: typeof fetch
-  includeExpiringOpenworkUrl?: boolean
+  includeExpiringOfflineGptUrl?: boolean
   apiPublicUrl?: string
 } = {}) {
   // Same rollout note as fetchWorkerRuntimeJson: the desktop gate already ran
   // before a published client asks for cloud worker tokens.
   if (worker.destination === "cloud") {
-    const webAccess = await (options.getOpenWorkWebAccess ?? getOpenWorkWebRuntimeAccess)(worker.org_id)
+    const webAccess = await (options.getOfflineGPTWebAccess ?? getOfflineGPTWebRuntimeAccess)(worker.org_id)
     if (!webAccess.hasAccess) {
       return {
         error: {
           status: 403,
-          body: openWorkWebAccessRequiredPayload(),
+          body: offlineGptWebAccessRequiredPayload(),
         },
       }
     }
@@ -613,10 +613,10 @@ export async function getWorkerTokensAndConnect(worker: WorkerRow, options: {
     }
 
     const stableRootUrl = cloudWorkerCompatibilityUrl(worker.id, options.apiPublicUrl ?? env.apiPublicUrl)
-    if (!options.includeExpiringOpenworkUrl) {
+    if (!options.includeExpiringOfflineGptUrl) {
       return {
         tokens: { owner: hostToken, host: hostToken, client: clientToken },
-        connect: stableRootUrl ? { openworkUrl: stableRootUrl, workspaceId: null } : null,
+        connect: stableRootUrl ? { offlinegptUrl: stableRootUrl, workspaceId: null } : null,
       }
     }
 
@@ -625,20 +625,20 @@ export async function getWorkerTokensAndConnect(worker: WorkerRow, options: {
     const previewConnect = resolved?.status === "ready"
       ? await resolveConnectUrlFromWorker(resolved.url, clientToken, options.fetchImpl)
       : null
-    const stableOpenworkUrl = cloudWorkerCompatibilityUrl(
+    const stableOfflineGptUrl = cloudWorkerCompatibilityUrl(
       worker.id,
       options.apiPublicUrl ?? env.apiPublicUrl,
       previewConnect?.workspaceId,
     )
     return {
       tokens: { owner: hostToken, host: hostToken, client: clientToken },
-      connect: stableOpenworkUrl
-        ? { openworkUrl: stableOpenworkUrl, workspaceId: previewConnect?.workspaceId ?? null }
+      connect: stableOfflineGptUrl
+        ? { offlinegptUrl: stableOfflineGptUrl, workspaceId: previewConnect?.workspaceId ?? null }
         : null,
       directPreview: resolved?.status === "ready" && previewConnect
         ? {
             version: 1 as const,
-            openworkUrl: previewConnect.openworkUrl,
+            offlinegptUrl: previewConnect.offlinegptUrl,
             workspaceId: previewConnect.workspaceId,
             expiresAt: resolved.expiresAt.toISOString(),
           }
@@ -676,7 +676,7 @@ export async function getWorkerTokensAndConnect(worker: WorkerRow, options: {
       host: hostToken,
       client: clientToken,
     },
-    connect: connect ?? (instance?.url ? { openworkUrl: instance.url, workspaceId: null } : null),
+    connect: connect ?? (instance?.url ? { offlinegptUrl: instance.url, workspaceId: null } : null),
   }
 }
 

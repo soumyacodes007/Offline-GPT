@@ -5,18 +5,18 @@ import { getGithubData } from "../../../../lib/github";
 import { baseOpenGraph } from "../../../../lib/seo";
 
 export const metadata: Metadata = {
-  title: "Migrate from Claude Cowork to OpenWork",
+  title: "Migrate from Claude Cowork to OfflineGPT",
   description:
-    "Move your files, skills, plugins, MCP servers, scheduled tasks, and team setup from Claude Cowork to OpenWork.",
+    "Move your files, skills, plugins, MCP servers, scheduled tasks, and team setup from Claude Cowork to OfflineGPT.",
   alternates: {
     canonical: "/docs/start-here/migrate-from-claude-cowork"
   },
   openGraph: {
     ...baseOpenGraph,
-    title: "Migrate from Claude Cowork to OpenWork",
+    title: "Migrate from Claude Cowork to OfflineGPT",
     description:
-      "A step-by-step guide to moving your Cowork setup to open-source OpenWork.",
-    url: "https://openworklabs.com/docs/start-here/migrate-from-claude-cowork"
+      "A step-by-step guide to moving your Cowork setup to open-source OfflineGPT.",
+    url: "https://offlinegptlabs.com/docs/start-here/migrate-from-claude-cowork"
   }
 };
 

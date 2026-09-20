@@ -1,5 +1,5 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, sql } from "@openwork-ee/den-db/drizzle"
-import type { SQL } from "@openwork-ee/den-db/drizzle"
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, sql } from "@offlinegpt-ee/den-db/drizzle"
+import type { SQL } from "@offlinegpt-ee/den-db/drizzle"
 import {
   AuthAccountTable,
   AuthApiKeyTable,
@@ -26,9 +26,9 @@ import {
   WorkerTable,
   AdminAllowlistTable,
   AuditEventTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId, isDenTypeId } from "@openwork-ee/utils/typeid"
-import { ManagedModelsPolicyError, readOrganizationMetadata } from "@openwork/types/den/managed-models-policy"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId, isDenTypeId } from "@offlinegpt-ee/utils/typeid"
+import { ManagedModelsPolicyError, readOrganizationMetadata } from "@offlinegpt/types/den/managed-models-policy"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
@@ -46,9 +46,9 @@ import { updateOrganizationMetadata } from "../../organization-metadata.js"
 import { env } from "../../env.js"
 import type { AuthContextVariables } from "../../session.js"
 import { buildOrganizationAuditEvent, logOrganizationAuditEvent, ORGANIZATION_AUDIT_ACTIONS } from "../../audit-events.js"
-import { hasOpenWorkWebComplimentaryAccess, resolveOpenWorkWebAccess, setOpenWorkWebComplimentaryAccess } from "../../openwork-web-access.js"
-import { isOpenWorkWebAvailable } from "../../openwork-web-availability.js"
-import { calculateOrganizationSeatBillingCounts, getOrganizationSeatBillingCounts, isEligibleOpenWorkWebSubscriptionStatus, isOngoingOpenWorkWebSubscriptionStatus, organizationHasOngoingOpenWorkWebSubscription, refreshOrgSubscriptionFromStripe, syncSeatSubscriptionQuantityAfterMemberChange } from "../../stripe-billing.js"
+import { hasOfflineGPTWebComplimentaryAccess, resolveOfflineGPTWebAccess, setOfflineGPTWebComplimentaryAccess } from "../../offlinegpt-web-access.js"
+import { isOfflineGPTWebAvailable } from "../../offlinegpt-web-availability.js"
+import { calculateOrganizationSeatBillingCounts, getOrganizationSeatBillingCounts, isEligibleOfflineGPTWebSubscriptionStatus, isOngoingOfflineGPTWebSubscriptionStatus, organizationHasOngoingOfflineGPTWebSubscription, refreshOrgSubscriptionFromStripe, syncSeatSubscriptionQuantityAfterMemberChange } from "../../stripe-billing.js"
 import { buildAdminPageInfo, normalizeAdminPageRequest, sanitizeAdminSearchForLike, type AdminPageRequest } from "./scale-performance.js"
 
 type UserId = typeof AuthUserTable.$inferSelect.id
@@ -90,7 +90,7 @@ const updateOrganizationFreeSeatsSchema = z.object({
   totalFreeSeats: z.number().int().min(DEFAULT_ORGANIZATION_FREE_SEAT_COUNT).max(100000),
 })
 
-const updateOrganizationOpenWorkWebAccessSchema = z.object({
+const updateOrganizationOfflineGPTWebAccessSchema = z.object({
   enabled: z.boolean(),
   reason: z.string().trim().min(3).max(500),
 })
@@ -280,27 +280,27 @@ function readAdminVisibleOrganizationCapabilities(metadata: Record<string, unkno
   }
 }
 
-function readAdminOpenWorkWebAccess(
+function readAdminOfflineGPTWebAccess(
   metadata: Record<string, unknown> | string | null | undefined,
-  subscription: AdminOpenWorkWebSubscription | null,
+  subscription: AdminOfflineGPTWebSubscription | null,
 ) {
-  const complimentaryAccess = hasOpenWorkWebComplimentaryAccess(metadata)
+  const complimentaryAccess = hasOfflineGPTWebComplimentaryAccess(metadata)
   const hasEligibleSubscription = Boolean(
     subscription
-    && isEligibleOpenWorkWebSubscriptionStatus(subscription.status)
-    && env.stripe.openworkWebPriceId
-    && subscription.stripe_price_id === env.stripe.openworkWebPriceId
+    && isEligibleOfflineGPTWebSubscriptionStatus(subscription.status)
+    && env.stripe.offlinegptWebPriceId
+    && subscription.stripe_price_id === env.stripe.offlinegptWebPriceId
     && subscription.payment_failed !== true,
   )
-  const access = resolveOpenWorkWebAccess({
-    deploymentAvailable: isOpenWorkWebAvailable(),
+  const access = resolveOfflineGPTWebAccess({
+    deploymentAvailable: isOfflineGPTWebAvailable(),
     hasEligibleSubscription,
     complimentaryAccess,
   })
   return {
     ...access,
     hasEligibleSubscription,
-    hasOngoingSubscription: Boolean(subscription && isOngoingOpenWorkWebSubscriptionStatus(subscription.status)),
+    hasOngoingSubscription: Boolean(subscription && isOngoingOfflineGPTWebSubscriptionStatus(subscription.status)),
     subscriptionStatus: subscription?.status ?? null,
   }
 }
@@ -312,7 +312,7 @@ function readUnmanagedCapabilityMetadata(metadata: Record<string, unknown>): Rec
   for (const [key, value] of Object.entries(raw)) {
     // "workflows", "codemodeScripts", "remoteMcpApps", and "cloud" are retired
     // rollout keys: those features are now always on (Cloud is entitled by
-    // OpenWork Web access instead), so stale stored overrides stay managed
+    // OfflineGPT Web access instead), so stale stored overrides stay managed
     // (dropped on the next capabilities write) instead of passing through as
     // unmanaged metadata.
     if (key !== "modelsAnalytics" && key !== "installLinks" && key !== "mcpConnections" && key !== "workflows" && key !== "codemodeScripts" && key !== "remoteMcpApps" && key !== "cloud") {
@@ -439,15 +439,15 @@ type AdminOrganizationRow = {
   seatsFreeAdditional: number
   billableSeatCount: number
   capabilities: ReturnType<typeof normalizeOrganizationCapabilities>
-  openworkWebAccess: AdminOpenWorkWebAccess
+  offlinegptWebAccess: AdminOfflineGPTWebAccess
 }
 
-type AdminOpenWorkWebSubscription = Pick<
+type AdminOfflineGPTWebSubscription = Pick<
   typeof OrgSubscriptionTable.$inferSelect,
   "status" | "stripe_price_id" | "payment_failed"
 >
 
-type AdminOpenWorkWebAccess = ReturnType<typeof readAdminOpenWorkWebAccess>
+type AdminOfflineGPTWebAccess = ReturnType<typeof readAdminOfflineGPTWebAccess>
 
 type AdminSummary = {
   totalUsers: number
@@ -958,7 +958,7 @@ async function shapeAdminOrganizationRows(rows: Array<Pick<typeof OrganizationTa
       seatsFreeAdditional: seatCounts.additionalFree,
       billableSeatCount: seatCounts.chargeable,
       capabilities: readAdminVisibleOrganizationCapabilities(metadata),
-      openworkWebAccess: readAdminOpenWorkWebAccess(metadata, webSubscriptionByOrg.get(entry.id) ?? null),
+      offlinegptWebAccess: readAdminOfflineGPTWebAccess(metadata, webSubscriptionByOrg.get(entry.id) ?? null),
     }
   })
 }
@@ -1738,12 +1738,12 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
   )
 
   app.put(
-    "/v1/admin/organizations/:organizationId/openwork-web-access",
+    "/v1/admin/organizations/:organizationId/offlinegpt-web-access",
     adminRoute(),
     async (c) => {
-      const body = updateOrganizationOpenWorkWebAccessSchema.safeParse(await c.req.json().catch(() => null))
+      const body = updateOrganizationOfflineGPTWebAccessSchema.safeParse(await c.req.json().catch(() => null))
       if (!body.success) {
-        return c.json({ error: "invalid_request", message: body.error.issues[0]?.message ?? "Invalid OpenWork Web access request." }, 400)
+        return c.json({ error: "invalid_request", message: body.error.issues[0]?.message ?? "Invalid OfflineGPT Web access request." }, 400)
       }
 
       const organizationId = c.req.param("organizationId")
@@ -1751,10 +1751,10 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
         return c.json({ error: "invalid_request", message: "Invalid organization id." }, 400)
       }
 
-      if (body.data.enabled && await organizationHasOngoingOpenWorkWebSubscription(organizationId)) {
+      if (body.data.enabled && await organizationHasOngoingOfflineGPTWebSubscription(organizationId)) {
         return c.json({
-          error: "openwork_web_subscription_exists",
-          message: "Cancel or finish the existing paid OpenWork Web subscription before granting complimentary access.",
+          error: "offlinegpt_web_subscription_exists",
+          message: "Cancel or finish the existing paid OfflineGPT Web subscription before granting complimentary access.",
         }, 409)
       }
 
@@ -1785,17 +1785,17 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
           .limit(1)
           .for("update")
         const webSubscription = webSubscriptions[0] ?? null
-        if (body.data.enabled && webSubscription && isOngoingOpenWorkWebSubscriptionStatus(webSubscription.status)) {
+        if (body.data.enabled && webSubscription && isOngoingOfflineGPTWebSubscriptionStatus(webSubscription.status)) {
           return "subscription_exists"
         }
 
-        const metadata = setOpenWorkWebComplimentaryAccess(organization.metadata, body.data.enabled)
+        const metadata = setOfflineGPTWebComplimentaryAccess(organization.metadata, body.data.enabled)
         const auditEvent = buildOrganizationAuditEvent({
           organizationId,
           actorUserId,
           action: body.data.enabled
-            ? ORGANIZATION_AUDIT_ACTIONS.openWorkWebComplimentaryAccessGranted
-            : ORGANIZATION_AUDIT_ACTIONS.openWorkWebComplimentaryAccessRevoked,
+            ? ORGANIZATION_AUDIT_ACTIONS.offlineGptWebComplimentaryAccessGranted
+            : ORGANIZATION_AUDIT_ACTIONS.offlineGptWebComplimentaryAccessRevoked,
           payload: {
             reason: body.data.reason,
             complimentaryAccess: body.data.enabled,
@@ -1816,8 +1816,8 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
       }
       if (result === "subscription_exists") {
         return c.json({
-          error: "openwork_web_subscription_exists",
-          message: "Cancel or finish the existing paid OpenWork Web subscription before granting complimentary access.",
+          error: "offlinegpt_web_subscription_exists",
+          message: "Cancel or finish the existing paid OfflineGPT Web subscription before granting complimentary access.",
         }, 409)
       }
 
@@ -1826,7 +1826,7 @@ export function registerAdminRoutes<T extends { Variables: AuthContextVariables 
         ok: true,
         organization: {
           id: organizationId,
-          openworkWebAccess: readAdminOpenWorkWebAccess(result.metadata, result.webSubscription),
+          offlinegptWebAccess: readAdminOfflineGPTWebAccess(result.metadata, result.webSubscription),
         },
       })
     },

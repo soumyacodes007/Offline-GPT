@@ -37,7 +37,7 @@ registerExtensionConfig("computer-use", (ctx) => (
 ));
 
 function hasDesktopBridge() {
-  return typeof window !== "undefined" && Boolean(window.__OPENWORK_ELECTRON__?.invokeDesktop);
+  return typeof window !== "undefined" && Boolean(window.__OFFLINEGPT_ELECTRON__?.invokeDesktop);
 }
 
 function parsePermissionResult(value: unknown): PermissionResult {

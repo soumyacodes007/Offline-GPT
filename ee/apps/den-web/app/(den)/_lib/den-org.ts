@@ -253,7 +253,7 @@ export type DenOrgCapabilities = {
   /** Always on: Workflows/Code Mode shipped for every organization. Older servers may still return false. */
   workflows: boolean;
   /** Effective Web offer; true for the global switch or this organization's complimentary admin grant. */
-  openworkWeb: boolean;
+  offlinegptWeb: boolean;
   cloud: boolean;
 };
 
@@ -290,8 +290,8 @@ export const DEN_ROLE_PERMISSION_OPTIONS = {
   security_configuration: ["manage"],
 } as const;
 
-export const PENDING_ORG_INVITATION_STORAGE_KEY = "openwork:web:pending-org-invitation";
-export const PENDING_WORKSPACE_CLAIM_STORAGE_KEY = "openwork:web:pending-workspace-claim";
+export const PENDING_ORG_INVITATION_STORAGE_KEY = "offlinegpt:web:pending-org-invitation";
+export const PENDING_WORKSPACE_CLAIM_STORAGE_KEY = "offlinegpt:web:pending-workspace-claim";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -976,7 +976,7 @@ function parseOrgAuthMethods(value: unknown): DenOrgAuthMethods {
 
 function parseOrgCapabilities(value: unknown): DenOrgCapabilities {
   if (!isRecord(value)) {
-    return { orgManagedDashboards: false, installLinks: false, mcpConnections: false, workflows: true, openworkWeb: false, cloud: false };
+    return { orgManagedDashboards: false, installLinks: false, mcpConnections: false, workflows: true, offlinegptWeb: false, cloud: false };
   }
 
   return {
@@ -986,7 +986,7 @@ function parseOrgCapabilities(value: unknown): DenOrgCapabilities {
     // Workflows are enabled everywhere on current servers; only an explicit
     // false from an older server still hides the surface.
     workflows: value.workflows !== false,
-    openworkWeb: value.openworkWeb === true,
+    offlinegptWeb: value.offlinegptWeb === true,
     cloud: value.cloud === true,
   };
 }
@@ -1041,7 +1041,7 @@ export function parseInvitationPreviewPayload(payload: unknown): DenInvitationPr
       slug: organizationSlug,
       allowedEmailDomains: asStringArray(organization.allowedEmailDomains),
       branding: {
-        appName: asString(branding?.appName) ?? "OpenWork",
+        appName: asString(branding?.appName) ?? "OfflineGPT",
         logoUrl: asString(branding?.logoUrl),
         iconUrl: asString(branding?.iconUrl),
       },

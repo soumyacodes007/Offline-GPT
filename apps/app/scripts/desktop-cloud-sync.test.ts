@@ -4,9 +4,9 @@ import {
   derivePendingCloudPluginChanges,
   readPendingCloudSyncChanges,
 } from "../src/app/cloud/desktop-cloud-sync";
-import type { OpenworkDesktopCloudSyncChange } from "../src/app/lib/openwork-server";
+import type { OfflineGptDesktopCloudSyncChange } from "../src/app/lib/offlinegpt-server";
 
-function change(input: Partial<OpenworkDesktopCloudSyncChange> & Pick<OpenworkDesktopCloudSyncChange, "id" | "kind" | "resourceKind">): OpenworkDesktopCloudSyncChange {
+function change(input: Partial<OfflineGptDesktopCloudSyncChange> & Pick<OfflineGptDesktopCloudSyncChange, "id" | "kind" | "resourceKind">): OfflineGptDesktopCloudSyncChange {
   return {
     marketplaceId: undefined,
     pluginId: undefined,

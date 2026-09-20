@@ -1,12 +1,12 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: openwork-den-allow-eval-mock-egress
+  name: offlinegpt-den-allow-eval-mock-egress
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: openwork-ee
-      app.kubernetes.io/instance: openwork-ee
+      app.kubernetes.io/name: offlinegpt-ee
+      app.kubernetes.io/instance: offlinegpt-ee
     matchExpressions:
       - key: app.kubernetes.io/component
         operator: In
@@ -18,7 +18,7 @@ spec:
   egress:
     - to:
         - ipBlock:
-            cidr: ${OPENWORK_EVAL_KUBE_ALLOWED_HOST_IP}/32
+            cidr: ${OFFLINEGPT_EVAL_KUBE_ALLOWED_HOST_IP}/32
       ports:
         - protocol: TCP
-          port: ${OPENWORK_EVAL_KUBE_ALLOWED_MOCK_PORT}
+          port: ${OFFLINEGPT_EVAL_KUBE_ALLOWED_MOCK_PORT}

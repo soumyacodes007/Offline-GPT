@@ -1,15 +1,15 @@
 # LiteLLM per-member keys
 
-This zero-dependency Node.js example reconciles OpenWork Cloud per-member LLM credential bindings with LiteLLM virtual keys. It is an example provisioner, not a native LiteLLM integration in Den.
+This zero-dependency Node.js example reconciles OfflineGPT Cloud per-member LLM credential bindings with LiteLLM virtual keys. It is an example provisioner, not a native LiteLLM integration in Den.
 
 ## Configure
 
 Set these environment variables:
 
-- `OPENWORK_DEN_API_URL`: Den API base URL
-- `OPENWORK_DEN_TOKEN`: organization owner or admin bearer token
-- `OPENWORK_ORG_ID`: organization ID sent as `x-openwork-org-id`
-- `OPENWORK_LLM_PROVIDER_ID`: the per-member LLM provider ID
+- `OFFLINEGPT_DEN_API_URL`: Den API base URL
+- `OFFLINEGPT_DEN_TOKEN`: organization owner or admin bearer token
+- `OFFLINEGPT_ORG_ID`: organization ID sent as `x-offlinegpt-org-id`
+- `OFFLINEGPT_LLM_PROVIDER_ID`: the per-member LLM provider ID
 - `LITELLM_BASE_URL`: LiteLLM base URL, with or without `/v1`
 - `LITELLM_MASTER_KEY`: LiteLLM master key
 - `LITELLM_MODELS`: comma-separated model IDs assigned to each virtual key

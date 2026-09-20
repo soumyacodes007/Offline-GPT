@@ -1,4 +1,4 @@
-import { TelemetryEventType } from "@openwork-ee/den-db/schema"
+import { TelemetryEventType } from "@offlinegpt-ee/den-db/schema"
 
 /** Server-side event-type allowlist. Lives outside contracts.ts so the
  * client-safe `./contracts` subpath never imports den-db. */

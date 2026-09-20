@@ -1,7 +1,7 @@
 import { beforeAll, expect, test } from "bun:test"
 
-import { HeadlessThreadError } from "@openwork/headless-threads"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { HeadlessThreadError } from "@offlinegpt/headless-threads"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type {
   RemoteSessionExecuteDeps,
   RemoteSessionRuntime,
@@ -12,12 +12,12 @@ import type { CloudWorkerAccess } from "../src/workers/worker-access.js"
 import type { RemoteSessionCommandStore } from "../src/remote-sessions/commands.js"
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DEN_DB_ENCRYPTION_KEY = process.env.DEN_DB_ENCRYPTION_KEY ?? "x".repeat(32)
   process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "y".repeat(32)
   process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://127.0.0.1:8790"
   process.env.DEN_API_PUBLIC_URL = process.env.DEN_API_PUBLIC_URL ?? "http://127.0.0.1:8790"
-  process.env.DAYTONA_SNAPSHOT = "openwork-0.18.8"
+  process.env.DAYTONA_SNAPSHOT = "offlinegpt-0.18.8"
 }
 
 type RemoteSessionModule = typeof import("../src/mcp/remote-session-capabilities.js")
@@ -65,7 +65,7 @@ function readyDeps(client: Partial<RemoteSessionThreadClient>): RemoteSessionExe
   }
   return {
     ...inactiveDesktopDeps,
-    getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+    getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
     resolveRuntime: async () => ({ ok: true, runtime: RUNTIME }),
     createClient: () => ({
       createThread: client.createThread ?? failing,
@@ -171,7 +171,7 @@ test("cloud thread creation requires Web access before the runtime is resolved",
     executeInput("create", { title: "Paid boundary" }),
     {
       ...inactiveDesktopDeps,
-      getOpenWorkWebAccess: async () => ({ hasAccess: false }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: false }),
       resolveRuntime: async () => {
         runtimeResolutions += 1
         return { ok: true, runtime: RUNTIME }
@@ -184,7 +184,7 @@ test("cloud thread creation requires Web access before the runtime is resolved",
 
   expect(result.isError).toBe(true)
   expect(payload(result)).toMatchObject({
-    error: "openwork_web_access_required",
+    error: "offlinegpt_web_access_required",
     retryable: false,
   })
   expect(runtimeResolutions).toBe(0)
@@ -199,7 +199,7 @@ test("desktop session queuing requires Web access before presence is probed or a
     executeInput("create", { target: "desktop", title: "Paid boundary" }),
     {
       ...readyDeps({}),
-      getOpenWorkWebAccess: async () => ({ hasAccess: false }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: false }),
       desktopPresence: async () => {
         presenceProbes += 1
         return { connected: true, ownerMemberId: "member_fixture" }
@@ -216,7 +216,7 @@ test("desktop session queuing requires Web access before presence is probed or a
 
   expect(result.isError).toBe(true)
   expect(payload(result)).toMatchObject({
-    error: "openwork_web_access_required",
+    error: "offlinegpt_web_access_required",
     retryable: false,
   })
   expect(presenceProbes).toBe(0)
@@ -366,11 +366,11 @@ test("a waking runtime is reported as retryable without touching the client", as
     executeInput("create", {}),
     {
       ...inactiveDesktopDeps,
-      getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
       resolveRuntime: async () => ({
         ok: false,
         error: "cloud_runtime_waking",
-        message: "Your OpenWork Cloud workspace is still starting.",
+        message: "Your OfflineGPT Cloud workspace is still starting.",
         retryable: true,
       }),
       createClient: () => {
@@ -397,7 +397,7 @@ test("remote sessions route workspace discovery only to the signed preview", asy
     requested.push(String(input))
     expect(init?.redirect).toBe("error")
     expect(new Headers(init?.headers).get("authorization")).toBe("Bearer client-token")
-    expect(new Headers(init?.headers).get("x-openwork-host-token")).toBe("host-token")
+    expect(new Headers(init?.headers).get("x-offlinegpt-host-token")).toBe("host-token")
     return Response.json({ activeId: "workspace-signed-preview" })
   }
 
@@ -415,7 +415,7 @@ test("an unreachable healthy runtime is retryable and is not mislabeled as wakin
     executeInput("create", {}),
     {
       ...inactiveDesktopDeps,
-      getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
       resolveRuntime: async () => ({
         ok: false,
         error: "cloud_runtime_unreachable",
@@ -438,11 +438,11 @@ test("a member without a cloud workspace gets the needs-setup action", async () 
     executeInput("create", {}),
     {
       ...inactiveDesktopDeps,
-      getOpenWorkWebAccess: async () => ({ hasAccess: true }),
+      getOfflineGPTWebAccess: async () => ({ hasAccess: true }),
       resolveRuntime: async () => ({
         ok: false,
         error: "needs_cloud_setup",
-        message: "No OpenWork Cloud workspace is available for your account yet.",
+        message: "No OfflineGPT Cloud workspace is available for your account yet.",
         retryable: false,
       }),
       createClient: () => {
@@ -482,7 +482,7 @@ test("capability names round-trip through the registry parser", async () => {
 
 async function registryContext(input: { remoteSessionsEnabled: boolean }) {
   const registry = await import("../src/mcp/capability-registry.js")
-  const { createDenTypeId: createId } = await import("@openwork-ee/utils/typeid")
+  const { createDenTypeId: createId } = await import("@offlinegpt-ee/utils/typeid")
   const { Hono } = await import("hono")
   const organizationId = createId("organization")
   type SearchContext = Parameters<(typeof registry)["CAPABILITY_SOURCES"]["remoteSession"]["search"]>[0]

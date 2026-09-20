@@ -2,7 +2,7 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import type { Part, Session } from "@opencode-ai/sdk/v2/client";
 import type { UIMessage } from "ai";
 
-import type { OpenworkSessionSnapshot } from "../src/app/lib/openwork-server";
+import type { OfflineGptSessionSnapshot } from "../src/app/lib/offlinegpt-server";
 import { getReactQueryClient } from "../src/react-app/infra/query-client";
 import {
   __applySessionSyncEventForTest,
@@ -15,7 +15,7 @@ import {
   parseDynamicToolUIPart,
   parseStructuredOutputUIPart,
 } from "../src/react-app/domains/session/sync/parse-tool-parts";
-import { parseOpenWorkSessionCreateResult } from "../src/components/tools/openwork-session-create";
+import { parseOfflineGPTSessionCreateResult } from "../src/components/tools/offlinegpt-session-create";
 import { codeModeToolCalls } from "../src/lib/code-mode-tools";
 import { useSessionActivityStore } from "../src/react-app/domains/session/status/session-activity-store";
 
@@ -91,9 +91,9 @@ function writeToolPart(
 
 describe("tool part mapper", () => {
   test("v1 execute tools keep their existing representation even with code or toolCalls metadata", () => {
-    const part = writeToolPart("completed", { code: 'tools["openwork-cloud"].search_capabilities({})' }, { tool: "execute" });
+    const part = writeToolPart("completed", { code: 'tools["offlinegpt-cloud"].search_capabilities({})' }, { tool: "execute" });
     if (part.state.status !== "completed") throw new Error("Expected completed fixture");
-    part.state.metadata = { toolCalls: [{ tool: "openwork-cloud.search_capabilities", status: "completed" }] };
+    part.state.metadata = { toolCalls: [{ tool: "offlinegpt-cloud.search_capabilities", status: "completed" }] };
     const mapped = parseDynamicToolUIPart(part);
     if (!mapped) throw new Error("Missing v1 tool");
     expect(codeModeToolCalls(mapped)).toBeNull();
@@ -103,21 +103,21 @@ describe("tool part mapper", () => {
   test("Code Mode uses recorded invocation positions for repeated calls and preserves partial failures", () => {
     const part = writeToolPart("completed", { code: "recorded code" }, { tool: "execute" });
     if (part.state.status !== "completed") throw new Error("Expected completed fixture");
-    part.metadata = { openworkV2CodeMode: true };
+    part.metadata = { offlinegptV2CodeMode: true };
     part.state.metadata = { toolCalls: [
-      { tool: "openwork-cloud.search_capabilities", status: "completed", input: { query: "Slack" } },
+      { tool: "offlinegpt-cloud.search_capabilities", status: "completed", input: { query: "Slack" } },
       null,
-      { tool: "openwork-cloud.search_capabilities", status: "running", input: { query: "Calendar" } },
-      { tool: "openwork-cloud.execute_capability", status: "error", input: { name: "mcp:connection:list_channels" } },
+      { tool: "offlinegpt-cloud.search_capabilities", status: "running", input: { query: "Calendar" } },
+      { tool: "offlinegpt-cloud.execute_capability", status: "error", input: { name: "mcp:connection:list_channels" } },
       { tool: "unexpected", status: "unrecognized" },
     ] };
     const mapped = parseDynamicToolUIPart(part);
     if (!mapped) throw new Error("Missing Code Mode tool");
     const calls = codeModeToolCalls(mapped);
     expect(calls?.map(call => [call.toolCallId, call.toolName, call.state])).toEqual([
-      ["call-write:call:0", "openwork-cloud_search_capabilities", "output-available"],
-      ["call-write:call:2", "openwork-cloud_search_capabilities", "input-streaming"],
-      ["call-write:call:3", "openwork-cloud_execute_capability", "output-error"],
+      ["call-write:call:0", "offlinegpt-cloud_search_capabilities", "output-available"],
+      ["call-write:call:2", "offlinegpt-cloud_search_capabilities", "input-streaming"],
+      ["call-write:call:3", "offlinegpt-cloud_execute_capability", "output-error"],
     ]);
     expect(calls?.[0]?.input).toEqual({ query: "Slack" });
     expect(calls?.[0]).toHaveProperty("output", undefined);
@@ -128,7 +128,7 @@ describe("tool part mapper", () => {
   test("a v2 completed wrapper with an error retains the actual execution error", () => {
     const part = writeToolPart("completed", { code: "throw new Error()" }, { tool: "execute" });
     if (part.state.status !== "completed") throw new Error("Expected completed fixture");
-    part.metadata = { openworkV2CodeMode: true };
+    part.metadata = { offlinegptV2CodeMode: true };
     part.state.metadata = { error: true, toolCalls: [] };
     part.state.output = "History lookup failed.";
     const mapped = parseDynamicToolUIPart(part);
@@ -167,7 +167,7 @@ describe("tool part mapper", () => {
     const part = writeToolPart("completed", { configObjectId: "script_1" });
     if (part.state.status !== "completed") throw new Error("Expected completed fixture");
     part.state.metadata = {
-      openworkMcpApp: {
+      offlinegptMcpApp: {
         content: [{ type: "text", text: "Fallback" }],
         structuredContent: { schemaVersion: "1", value: 42 },
         _meta: { receiptId: "receipt_1" },
@@ -176,7 +176,7 @@ describe("tool part mapper", () => {
 
     expect(parseDynamicToolUIPart(part)?.callProviderMetadata).toEqual({
       opencode: { partId: "part-write" },
-      openwork: {
+      offlinegpt: {
         mcpResult: {
           content: [{ type: "text", text: "Fallback" }],
           structuredContent: { schemaVersion: "1", value: 42 },
@@ -197,7 +197,7 @@ describe("tool part mapper", () => {
 
     expect(parseDynamicToolUIPart(running)?.callProviderMetadata).toEqual({
       opencode: { partId: "part-task" },
-      openwork: { childSessionId: "ses_child_1" },
+      offlinegpt: { childSessionId: "ses_child_1" },
     });
 
     const completed = writeToolPart(
@@ -210,7 +210,7 @@ describe("tool part mapper", () => {
 
     expect(parseDynamicToolUIPart(completed)?.callProviderMetadata).toEqual({
       opencode: { partId: "part-task" },
-      openwork: { childSessionId: "ses_child_1" },
+      offlinegpt: { childSessionId: "ses_child_1" },
     });
   });
 
@@ -237,18 +237,18 @@ describe("tool part mapper", () => {
         action: {
           type: "connect",
           label: "Connect Acme Tracker",
-          surface: "openwork_your_connections",
-          url: "https://app.openworklabs.com/dashboard/your-connections?connectionId=emc_acme",
+          surface: "offlinegpt_your_connections",
+          url: "https://app.offlinegptlabs.com/dashboard/your-connections?connectionId=emc_acme",
         },
       },
     });
 
     const parsed = parseDynamicToolUIPart(writeToolPart("error", {}, {}, error));
-    expect(parsed?.callProviderMetadata?.openwork?.mcpResult).not.toHaveProperty("_meta");
+    expect(parsed?.callProviderMetadata?.offlinegpt?.mcpResult).not.toHaveProperty("_meta");
     expect(parsed).toMatchObject({
       state: "output-error",
       callProviderMetadata: {
-        openwork: {
+        offlinegpt: {
           mcpResult: {
             structuredContent: {
               schemaVersion: "1",
@@ -282,7 +282,7 @@ describe("tool part mapper", () => {
   });
 
   test("parses session creation output for rich chat rendering", () => {
-    expect(parseOpenWorkSessionCreateResult(JSON.stringify({
+    expect(parseOfflineGPTSessionCreateResult(JSON.stringify({
       ok: true,
       workspaceId: "workspace-a",
       workspace: "Research",
@@ -323,7 +323,7 @@ describe("tool part mapper", () => {
   });
 
   test("session sync defers empty in-progress write tools until input arrives", () => {
-    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", openworkToken: "token" };
+    const syncInput = { workspaceId: "workspace-a", baseUrl: "http://127.0.0.1:1234", offlinegptToken: "token" };
     const cleanup = __createWorkspaceSessionSyncForTest(syncInput);
     const release = trackWorkspaceSessionSync(syncInput, "session-a");
     const clock = spyOn(Date, "now").mockReturnValue(1_000);
@@ -395,7 +395,7 @@ describe("tool part mapper", () => {
     const syncInput = {
       workspaceId: "workspace-a",
       baseUrl: "http://127.0.0.1:1234",
-      openworkToken: "token",
+      offlinegptToken: "token",
       onSessionCreated: (session: Session) => createdIds.push(session.id),
       onSessionUpdated: (update: { sessionId: string; info: Record<string, unknown> }) => updates.push(update),
       onSessionDeleted: (sessionId: string) => deletedIds.push(sessionId),
@@ -409,7 +409,7 @@ describe("tool part mapper", () => {
       });
 
       const queryClient = getReactQueryClient();
-      const snapshot: OpenworkSessionSnapshot = {
+      const snapshot: OfflineGptSessionSnapshot = {
         session: created,
         messages: [],
         todos: [],
@@ -449,7 +449,7 @@ describe("tool part mapper", () => {
 });
 
 test("live attachment notes render once across repeated updates", () => {
-  const syncInput = { workspaceId: "workspace-video", baseUrl: "http://127.0.0.1:1234", openworkToken: "token" };
+  const syncInput = { workspaceId: "workspace-video", baseUrl: "http://127.0.0.1:1234", offlinegptToken: "token" };
   const cleanup = __createWorkspaceSessionSyncForTest(syncInput);
   const release = trackWorkspaceSessionSync(syncInput, "session-video");
   try {
@@ -462,7 +462,7 @@ test("live attachment notes render once across repeated updates", () => {
       properties: { part: {
         id: "note-video", type: "text", synthetic: true,
         messageID: "msg-video", sessionID: "session-video", text: "Hidden workspace paths",
-        metadata: { openworkAttachments: [
+        metadata: { offlinegptAttachments: [
           { filename: "recording.mp4", mime: "video/mp4", url: "file:///workspace/recording.mp4" },
           { filename: "recording.mov", mime: "video/quicktime", url: "file:///workspace/recording.mov" },
         ] },

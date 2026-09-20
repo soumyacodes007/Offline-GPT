@@ -75,9 +75,9 @@ describe("active organization drop tripwire", () => {
     writeDenSettings({ baseUrl: "https://den.test", activeOrgId: null }, { persistBootstrap: false });
 
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(window.__openworkOrgDropWarnings).toHaveLength(1);
-    expect(window.__openworkOrgDropWarnings?.[0]).toContain("activeOrgId dropped unexpectedly from org_stored");
-    expect(window.__openworkOrgDropWarnings?.[0]).toContain("\n");
+    expect(window.__offlinegptOrgDropWarnings).toHaveLength(1);
+    expect(window.__offlinegptOrgDropWarnings?.[0]).toContain("activeOrgId dropped unexpectedly from org_stored");
+    expect(window.__offlinegptOrgDropWarnings?.[0]).toContain("\n");
     warn.mockRestore();
   });
 
@@ -95,7 +95,7 @@ describe("active organization drop tripwire", () => {
     clearDenSession();
 
     expect(warn).not.toHaveBeenCalled();
-    expect(window.__openworkOrgDropWarnings).toBeUndefined();
+    expect(window.__offlinegptOrgDropWarnings).toBeUndefined();
     warn.mockRestore();
   });
 
@@ -107,7 +107,7 @@ describe("active organization drop tripwire", () => {
     writeDenSettings({ baseUrl: "https://den.test", activeOrgId: null }, { persistBootstrap: false });
 
     expect(warn).not.toHaveBeenCalled();
-    expect(window.__openworkOrgDropWarnings).toBeUndefined();
+    expect(window.__offlinegptOrgDropWarnings).toBeUndefined();
     warn.mockRestore();
   });
 
@@ -120,7 +120,7 @@ describe("active organization drop tripwire", () => {
     writeDenSettings({ baseUrl: "https://den.test", activeOrgId: null }, { persistBootstrap: false });
 
     expect(warn).not.toHaveBeenCalled();
-    expect(window.__openworkOrgDropWarnings).toBeUndefined();
+    expect(window.__offlinegptOrgDropWarnings).toBeUndefined();
     warn.mockRestore();
   });
 });
@@ -211,10 +211,10 @@ describe("mergePassiveDenSettings", () => {
       },
     });
 
-    window.localStorage.setItem("openwork.den.authToken", "tok_stored");
-    window.localStorage.setItem("openwork.den.activeOrgId", "org_stored");
-    window.localStorage.setItem("openwork.den.activeOrgSlug", "stored-org");
-    window.localStorage.setItem("openwork.den.activeOrgName", "Stored Org");
+    window.localStorage.setItem("offlinegpt.den.authToken", "tok_stored");
+    window.localStorage.setItem("offlinegpt.den.activeOrgId", "org_stored");
+    window.localStorage.setItem("offlinegpt.den.activeOrgSlug", "stored-org");
+    window.localStorage.setItem("offlinegpt.den.activeOrgName", "Stored Org");
 
     writeDenSettings(
       mergePassiveDenSettings(readDenSettings(), {
@@ -226,10 +226,10 @@ describe("mergePassiveDenSettings", () => {
       }),
     );
 
-    expect(window.localStorage.getItem("openwork.den.authToken")).toBe("tok_stored");
-    expect(window.localStorage.getItem("openwork.den.activeOrgId")).toBe("org_stored");
-    expect(window.localStorage.getItem("openwork.den.activeOrgSlug")).toBe("stored-org");
-    expect(window.localStorage.getItem("openwork.den.activeOrgName")).toBe("Stored Org");
+    expect(window.localStorage.getItem("offlinegpt.den.authToken")).toBe("tok_stored");
+    expect(window.localStorage.getItem("offlinegpt.den.activeOrgId")).toBe("org_stored");
+    expect(window.localStorage.getItem("offlinegpt.den.activeOrgSlug")).toBe("stored-org");
+    expect(window.localStorage.getItem("offlinegpt.den.activeOrgName")).toBe("Stored Org");
   });
 });
 
@@ -367,16 +367,16 @@ describe("explicit sign-out", () => {
 
     clearDenSession();
 
-    expect(window.localStorage.getItem("openwork.den.authToken")).toBeNull();
-    expect(window.localStorage.getItem("openwork.den.activeOrgId")).toBeNull();
-    expect(window.localStorage.getItem("openwork.den.activeOrgSlug")).toBeNull();
-    expect(window.localStorage.getItem("openwork.den.activeOrgName")).toBeNull();
+    expect(window.localStorage.getItem("offlinegpt.den.authToken")).toBeNull();
+    expect(window.localStorage.getItem("offlinegpt.den.activeOrgId")).toBeNull();
+    expect(window.localStorage.getItem("offlinegpt.den.activeOrgSlug")).toBeNull();
+    expect(window.localStorage.getItem("offlinegpt.den.activeOrgName")).toBeNull();
 
     // The provider store listens for this signed_out notification to remove
     // organization and imported Cloud providers; explicit logout must keep
     // emitting it.
     const sessionUpdated = dispatched.find(
-      (event) => event.type === "openwork-den-session-updated",
+      (event) => event.type === "offlinegpt-den-session-updated",
     ) as CustomEvent<{ status?: string }> | undefined;
     expect(sessionUpdated?.detail.status).toBe("signed_out");
   });

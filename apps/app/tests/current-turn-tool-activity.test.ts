@@ -15,7 +15,7 @@ const staleHistory: MessageHistory = [
     role: "assistant",
     parts: [{
       type: "dynamic-tool",
-      toolName: "openwork_execute",
+      toolName: "offlinegpt_execute",
       toolCallId: "old-call",
       state: "input-streaming",
       input: {},

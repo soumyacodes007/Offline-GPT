@@ -1,12 +1,12 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: openwork-den-allow-core-egress
+  name: offlinegpt-den-allow-core-egress
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: openwork-ee
-      app.kubernetes.io/instance: openwork-ee
+      app.kubernetes.io/name: offlinegpt-ee
+      app.kubernetes.io/instance: offlinegpt-ee
     matchExpressions:
       - key: app.kubernetes.io/component
         operator: In
@@ -31,15 +31,15 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: openwork-mysql
+              app.kubernetes.io/name: offlinegpt-mysql
       ports:
         - protocol: TCP
           port: 3306
     - to:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: openwork-ee
-              app.kubernetes.io/instance: openwork-ee
+              app.kubernetes.io/name: offlinegpt-ee
+              app.kubernetes.io/instance: offlinegpt-ee
             matchExpressions:
               - key: app.kubernetes.io/component
                 operator: In

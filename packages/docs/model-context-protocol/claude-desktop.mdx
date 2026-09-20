@@ -1,14 +1,14 @@
 ---
-title: "OpenWork MCP for Claude Desktop"
+title: "OfflineGPT MCP for Claude Desktop"
 sidebarTitle: "Claude Desktop"
-description: "Claude Desktop MCP setup for OpenWork Connect, using custom connectors or mcp-remote to reach your org's shared capabilities."
+description: "Claude Desktop MCP setup for OfflineGPT Connect, using custom connectors or mcp-remote to reach your org's shared capabilities."
 ---
 
-The OpenWork MCP server ([OpenWork Connect](/cloud/run-in-the-cloud/cloud-mcp))
-enables Claude Desktop to use the OpenWork capabilities your organization has
+The OfflineGPT MCP server ([OfflineGPT Connect](/cloud/run-in-the-cloud/cloud-mcp))
+enables Claude Desktop to use the OfflineGPT capabilities your organization has
 made available to you: Gmail read/search, Calendar list/create, Drive
 search/read, Gmail draft creation, shared MCP connections such as Notion,
-Linear, Slack, Stripe, Exa, and Context7, shared skills, and OpenWork Cloud
+Linear, Slack, Stripe, Exa, and Context7, shared skills, and OfflineGPT Cloud
 resources like skills, plugins, Collections, workers, members, roles, teams,
 and LLM providers. The server exposes only `search_capabilities` and
 `execute_capability`, so Claude Desktop searches what you can access and runs
@@ -18,12 +18,12 @@ context.
 ## Server URL
 
 ```text
-https://api.openworklabs.com/mcp/agent
+https://api.offlinegptlabs.com/mcp/agent
 ```
 
-OAuth sign-in uses your OpenWork account, and the organization you pick is
+OAuth sign-in uses your OfflineGPT account, and the organization you pick is
 pinned into the token. If you do not have an account, create a
-[free OpenWork account](https://app.openworklabs.com?mode=sign-up).
+[free OfflineGPT account](https://app.offlinegptlabs.com?mode=sign-up).
 
 ## Connect
 
@@ -31,15 +31,15 @@ pinned into the token. If you do not have an account, create a
 
 2. Click `Add custom connector`.
 
-3. Name it `OpenWork` and set the URL to:
+3. Name it `OfflineGPT` and set the URL to:
 
    ```text
-   https://api.openworklabs.com/mcp/agent
+   https://api.offlinegptlabs.com/mcp/agent
    ```
 
 4. Click `Connect`, then finish the browser sign-in and choose your
    organization. Claude's connector OAuth uses an HTTPS callback, which
-   OpenWork accepts.
+   OfflineGPT accepts.
 
 ## Fallback config
 
@@ -49,24 +49,24 @@ For Claude Desktop builds without custom connectors, open `Settings` >
 ```json
 {
   "mcpServers": {
-    "openwork": {
+    "offlinegpt": {
       "command": "npx",
-      "args": ["-y", "mcp-remote@latest", "https://api.openworklabs.com/mcp/agent"]
+      "args": ["-y", "mcp-remote@latest", "https://api.offlinegptlabs.com/mcp/agent"]
     }
   }
 }
 ```
 
 `mcp-remote` runs the OAuth locally on an HTTP loopback callback, which
-OpenWork accepts. Restart Claude Desktop after editing the config.
+OfflineGPT accepts. Restart Claude Desktop after editing the config.
 
 ## Switch organizations
 
-Remove the stored MCP auth token for `openwork`, then connect again and choose
+Remove the stored MCP auth token for `offlinegpt`, then connect again and choose
 the organization you want during browser sign-in.
 
 <Note>
-This is a setup guide. These steps match OpenWork Connect's OAuth profile:
+This is a setup guide. These steps match OfflineGPT Connect's OAuth profile:
 HTTPS or HTTP loopback callbacks, PKCE S256, and dynamic client registration
 fallback. Claude Desktop is listed as setup only because native proof is not
 complete. See the
@@ -76,7 +76,7 @@ table.
 
 ## What you can ask
 
-- "Which OpenWork organization am I connected to?"
+- "Which OfflineGPT organization am I connected to?"
 - "Add omar@example.com to my organization."
 - "Assign Priya to the Sales team."
 - "Find the Q3 launch page in Notion and summarize it."

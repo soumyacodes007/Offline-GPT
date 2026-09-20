@@ -86,11 +86,11 @@ function createHarness() {
     providerBaseUrl: () => `http://127.0.0.1:1/${workspace.id}`,
     selectedWorkspaceRoot: () => workspace.path,
     runtimeWorkspaceId: () => null,
-    openworkServer: {
+    offlinegptServer: {
       getSnapshot: () => ({
-        openworkServerStatus: "disconnected",
-        openworkServerClient: null,
-        openworkServerCapabilities: null,
+        offlinegptServerStatus: "disconnected",
+        offlinegptServerClient: null,
+        offlinegptServerCapabilities: null,
       }),
     },
     setProviders: (value) => {

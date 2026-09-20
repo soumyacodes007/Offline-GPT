@@ -1,4 +1,4 @@
-export const DASHBOARD_TILE_CACHE_STORAGE_PREFIX = "openwork.react.dashboardTileCache.v1";
+export const DASHBOARD_TILE_CACHE_STORAGE_PREFIX = "offlinegpt.react.dashboardTileCache.v1";
 
 /** Remove every signed-in user's saved dashboard result from this browser profile. */
 export function clearDashboardTileCacheStorage(storage: Storage): void {

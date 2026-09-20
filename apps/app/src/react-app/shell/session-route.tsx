@@ -24,14 +24,14 @@ import { getNativeSessionMessages } from "@/app/lib/opencode-session-native";
 import { useSessionManagementStore as sessionManagementStore } from "@/react-app/domains/session/sidebar/session-management-store";
 import { getSessionDescendantIds } from "@/react-app/domains/session/sidebar/utils";
 import {
-  buildOpenworkWorkspaceBaseUrl,
-  readOpenworkServerSettings,
-} from "@/app/lib/openwork-server";
+  buildOfflineGptWorkspaceBaseUrl,
+  readOfflineGptServerSettings,
+} from "@/app/lib/offlinegpt-server";
 import {
   workspaceServerId,
   type ResolvedWorkspaceEndpoint,
 } from "@/app/lib/workspace-endpoint";
-import { buildOpenworkEnvRuntimeKey } from "@/app/lib/openwork-env-runtime";
+import { buildOfflineGptEnvRuntimeKey } from "@/app/lib/offlinegpt-env-runtime";
 import {
   getDesktopHomeDir,
   joinDesktopPath,
@@ -43,7 +43,7 @@ import {
   workspaceForget,
   workspaceSetRuntimeActive,
   workspaceSetSelected,
-  type OpenworkServerInfo,
+  type OfflineGptServerInfo,
   type WorkspaceInfo,
   type WorkspaceList,
 } from "@/app/lib/desktop";
@@ -119,7 +119,7 @@ import { useCheckDesktopRestriction } from "@/react-app/domains/cloud/desktop-co
 import { useRestrictionNotice } from "@/react-app/domains/cloud/restriction-notice-provider";
 import { ReactSessionRuntime } from "@/react-app/domains/session/sync/runtime-sync";
 import { useSessionActivityStore } from "@/react-app/domains/session/status/session-activity-store";
-import { buildOpenworkSessionSystemContext } from "@/react-app/domains/session/sync/env-context";
+import { buildOfflineGptSessionSystemContext } from "@/react-app/domains/session/sync/env-context";
 import {
   applySessionRevert,
   applySessionUnrevert,
@@ -177,9 +177,9 @@ import { RenameWorkspaceModal } from "@/react-app/domains/workspace/rename-works
 import { useRemoteWorkspaceConnectionEditor } from "@/react-app/domains/workspace/use-remote-workspace-connection-editor";
 import { useDenAuth } from "@/react-app/domains/cloud/den-auth-provider";
 import {
-  hasOpenWorkModelsAvailable,
-  shouldShowOpenWorkModelsSyncing,
-} from "@/react-app/domains/cloud/openwork-models-promo";
+  hasOfflineGPTModelsAvailable,
+  shouldShowOfflineGPTModelsSyncing,
+} from "@/react-app/domains/cloud/offlinegpt-models-promo";
 import {
   diagnoseRemoteWorkspaceTaskLoadFailure,
   getRemoteWorkspaceConnectionKey,
@@ -219,7 +219,7 @@ import {
   snapshotComposerSessionState,
   useComposerStateStore,
 } from "@/react-app/domains/session/surface/composer-state-store";
-import { useControlAction, type OpenworkControlAction } from "./control/control-provider";
+import { useControlAction, type OfflineGptControlAction } from "./control/control-provider";
 import { useReactRenderWatchdog } from "./react-render-watchdog";
 import { useBootOverlayVisible } from "./boot-state";
 
@@ -232,8 +232,8 @@ import {
 import { denSessionUpdatedEvent, denSettingsChangedEvent } from "@/app/lib/den-session-events";
 
 import { filterProviderList } from "@/app/utils/providers";
-import { ensureDesktopLocalOpenworkConnection } from "./desktop-local-openwork";
-import { resolveOpenworkConnection } from "./openwork-connection";
+import { ensureDesktopLocalOfflineGptConnection } from "./desktop-local-offlinegpt";
+import { resolveOfflineGptConnection } from "./offlinegpt-connection";
 import { useReloadCoordinator } from "./reload-coordinator";
 import { useShellConfig } from "./shell-config";
 import { useShellShortcuts } from "./use-shell-shortcuts";
@@ -319,7 +319,7 @@ function describeTaskCreateError(error: unknown) {
     lower.includes("internal_error") ||
     lower.includes("unexpected server error")
   ) {
-    return "OpenCode is unavailable for this workspace. Retry once it restarts, or restart OpenWork if the problem continues.";
+    return "OpenCode is unavailable for this workspace. Retry once it restarts, or restart OfflineGPT if the problem continues.";
   }
   return message;
 }
@@ -341,7 +341,7 @@ function taskCreateUnavailableToastId(workspaceId: string) {
 
 function focusPromptSoon() {
   if (typeof window === "undefined") return;
-  const focus = () => window.dispatchEvent(new Event("openwork:focusPrompt"));
+  const focus = () => window.dispatchEvent(new Event("offlinegpt:focusPrompt"));
   [0, 80, 240, 600].forEach((delay) => window.setTimeout(focus, delay));
 }
 
@@ -454,12 +454,12 @@ export function SessionRoute() {
   const checkDesktopRestriction = useCheckDesktopRestriction();
   const restrictionNotice = useRestrictionNotice();
   const [activeOrganizationRole, setActiveOrganizationRole] = useState<DenOrgRole | null>(null);
-  const [openworkServerHostInfoState, setOpenworkServerHostInfoState] = useState<OpenworkServerInfo | null>(null);
-  const [openworkServerSettingsVersion, setOpenworkServerSettingsVersion] = useState(0);
+  const [offlinegptServerHostInfoState, setOfflineGptServerHostInfoState] = useState<OfflineGptServerInfo | null>(null);
+  const [offlinegptServerSettingsVersion, setOfflineGptServerSettingsVersion] = useState(0);
 
   const [developerMode, setDeveloperMode] = useState(() => {
     if (typeof window === "undefined") return false;
-    return window.localStorage.getItem("openwork.developerMode") === "1";
+    return window.localStorage.getItem("offlinegpt.developerMode") === "1";
   });
   const {
     navigateToWorkspaceSession,
@@ -511,8 +511,8 @@ export function SessionRoute() {
   } = useWorkspaceRouteState({
     developerMode,
     workspaceRoute: appsRouteActive ? "apps" : automationsRouteActive ? "automations" : dashboardWorkspaceRoute ? "dashboard" : "session",
-    onServerSettingsChanged: () => setOpenworkServerSettingsVersion((value) => value + 1),
-    onHostInfo: setOpenworkServerHostInfoState,
+    onServerSettingsChanged: () => setOfflineGptServerSettingsVersion((value) => value + 1),
+    onHostInfo: setOfflineGptServerHostInfoState,
   });
   const routeNavigationRef = useRef({ locationKey: location.key, generation: 0 });
   if (routeNavigationRef.current.locationKey !== location.key) {
@@ -645,9 +645,9 @@ export function SessionRoute() {
   // options for whichever model is currently selected so the composer's
   // behavior pill actually shows its options (bug: was empty before).
 
-  const openworkServerSettings = useMemo(
-    () => readOpenworkServerSettings(),
-    [openworkServerSettingsVersion],
+  const offlinegptServerSettings = useMemo(
+    () => readOfflineGptServerSettings(),
+    [offlinegptServerSettingsVersion],
   );
 
   const activeReloadBlockingSessions = useMemo(
@@ -685,9 +685,9 @@ export function SessionRoute() {
     [selectedInteractionSessionIds, selectedWorkspaceId, sessionsByWorkspaceId],
   );
   const remoteAccessRestart = useRemoteAccessRestart({
-    isEnabled: () => openworkServerSettings.remoteAccessEnabled === true,
-    onHostInfo: setOpenworkServerHostInfoState,
-    onSettingsChanged: () => setOpenworkServerSettingsVersion((value) => value + 1),
+    isEnabled: () => offlinegptServerSettings.remoteAccessEnabled === true,
+    onHostInfo: setOfflineGptServerHostInfoState,
+    onSettingsChanged: () => setOfflineGptServerSettingsVersion((value) => value + 1),
   });
 
   const { engineReloadVersion, routeEngineInfo, reloadWorkspaceEngineFromUi } = useEngineReload({
@@ -701,12 +701,12 @@ export function SessionRoute() {
   });
 
   const environmentRuntimeKey = useMemo(
-    () => buildOpenworkEnvRuntimeKey({
+    () => buildOfflineGptEnvRuntimeKey({
       baseUrl: client?.baseUrl ?? null,
-      pid: openworkServerHostInfoState?.pid ?? null,
-      port: openworkServerHostInfoState?.port ?? null,
+      pid: offlinegptServerHostInfoState?.pid ?? null,
+      port: offlinegptServerHostInfoState?.port ?? null,
     }),
-    [client?.baseUrl, openworkServerHostInfoState?.pid, openworkServerHostInfoState?.port],
+    [client?.baseUrl, offlinegptServerHostInfoState?.pid, offlinegptServerHostInfoState?.port],
   );
 
   const handleApplyEnvironmentChanges = useCallback(async () => {
@@ -727,8 +727,8 @@ export function SessionRoute() {
 
   const shareWorkspaceState = useShareWorkspaceState({
     workspaces,
-    openworkServerHostInfo: openworkServerHostInfoState,
-    openworkServerSettings,
+    offlinegptServerHostInfo: offlinegptServerHostInfoState,
+    offlinegptServerSettings,
     engineInfo: routeEngineInfo,
     exportWorkspaceBusy: false,
     openLink: (url) => platform.openLink(url),
@@ -839,7 +839,7 @@ export function SessionRoute() {
     selectedWorkspaceEndpoint,
     selectedWorkspaceRoot,
     selectedWorkspaceId,
-    localServerHostToken: openworkServerHostInfoState?.hostToken?.trim() ?? "",
+    localServerHostToken: offlinegptServerHostInfoState?.hostToken?.trim() ?? "",
     setProviders,
     setProviderDefaults,
     setProviderConnectedIds,
@@ -885,18 +885,18 @@ export function SessionRoute() {
   const handleModelPickerOpen = useCallback(() => {
     void refreshCloudProviderSync("model_picker_open");
   }, [refreshCloudProviderSync]);
-  const openWorkModelsEntitled = useMemo(() => {
+  const offlineGptModelsEntitled = useMemo(() => {
     if (!denAuth.isSignedIn) return false;
     const fromOrg = sessionProviderAuthSnapshot.cloudOrgProviders.some(
       (provider) =>
         [provider.providerId, provider.source].some(
-          (value) => value?.trim().toLowerCase() === "openwork",
+          (value) => value?.trim().toLowerCase() === "offlinegpt",
         ),
     );
     const fromImport = Object.values(sessionProviderAuthSnapshot.importedCloudProviders ?? {}).some(
       (provider) =>
         [provider.providerId, provider.source, provider.sourceProviderId].some(
-          (value) => value?.trim().toLowerCase() === "openwork",
+          (value) => value?.trim().toLowerCase() === "offlinegpt",
         ),
     );
     return fromOrg || fromImport;
@@ -937,13 +937,13 @@ export function SessionRoute() {
     providerListQuery.data,
     restrictToCloudProviders,
   ]);
-  const openWorkModelsAvailable = hasOpenWorkModelsAvailable({
+  const offlineGptModelsAvailable = hasOfflineGPTModelsAvailable({
     providerConnectedIds,
     providers,
   });
-  const openWorkModelsSyncing = shouldShowOpenWorkModelsSyncing({
-    entitled: openWorkModelsEntitled,
-    available: openWorkModelsAvailable,
+  const offlineGptModelsSyncing = shouldShowOfflineGPTModelsSyncing({
+    entitled: offlineGptModelsEntitled,
+    available: offlineGptModelsAvailable,
     workspaceReady: Boolean(selectedWorkspaceId && opencodeClient),
     reloadPending: sessionProviderAuthSnapshot.cloudProviderServerSync?.reloadPending === true,
   });
@@ -1023,7 +1023,7 @@ export function SessionRoute() {
       loading,
       signedIn: denAuth.isSignedIn,
       cloudProviderSyncReady,
-      openWorkModelsSyncing,
+      offlineGptModelsSyncing,
       restrictToCloud: restrictToCloudProviders,
       checkRestriction: checkDesktopRestriction,
       cloudProviderList,
@@ -1038,7 +1038,7 @@ export function SessionRoute() {
     loading,
     modelAvailabilityGate,
     opencodeClient,
-    openWorkModelsSyncing,
+    offlineGptModelsSyncing,
     providerListQuery.data,
     restrictToCloudProviders,
     selectedWorkspaceId,
@@ -1160,7 +1160,7 @@ export function SessionRoute() {
     const applyProviderState = (value: ProviderListResponse) => {
       if (cancelled) return;
       // When not signed in, filter out every cloud-managed provider key so
-      // stale org imports and the hosted `openwork` catalog do not reappear.
+      // stale org imports and the hosted `offlinegpt` catalog do not reappear.
       const hasCloudAuth = !!readDenSettings().authToken?.trim();
       const all = hasCloudAuth
         ? ((value.all ?? []) as ProviderListItem[])
@@ -1287,7 +1287,7 @@ export function SessionRoute() {
     }
 
     // Note: do NOT include `client`, `workspaceId`, `sessionId`,
-    // `opencodeBaseUrl`, or `openworkToken` here. SessionPage forwards those
+    // `opencodeBaseUrl`, or `offlinegptToken` here. SessionPage forwards those
     // explicitly to SessionSurface from the per-workspace endpoint resolved
     // by `resolveWorkspaceEndpoint`. If we leak them in here, the spread of
     // `surfaceProps` in SessionPage overrides those correct values with the
@@ -1312,8 +1312,8 @@ export function SessionRoute() {
       resolveModelAvailability,
       organizationModelsEmpty,
       selectedModel: local.prefs.defaultModel ?? { providerID: "", modelID: "" },
-      openWorkModelsEntitled,
-      openWorkModelsSyncing,
+      offlineGptModelsEntitled,
+      offlineGptModelsSyncing,
       onRefreshOrganizationModels: refreshOrganizationModelAccess,
       onModelPickerOpenChange: (open: boolean) => {
         modelPicker.setCompactOpen(open);
@@ -1439,7 +1439,7 @@ export function SessionRoute() {
 
                 const parts = await draftToParts(draft, selectedWorkspaceRoot, targetSessionId, selectedWorkspaceEndpoint);
                 assertCurrent();
-                const system = await buildOpenworkSessionSystemContext(client, {
+                const system = await buildOfflineGptSessionSystemContext(client, {
                   workspaceId: selectedWorkspaceId,
                   cacheKey: targetSessionId,
                   runtimeKey: environmentRuntimeKey,
@@ -1600,8 +1600,8 @@ export function SessionRoute() {
     modelVariantValue,
     navigate,
     providerCatalog,
-    openWorkModelsEntitled,
-    openWorkModelsSyncing,
+    offlineGptModelsEntitled,
+    offlineGptModelsSyncing,
     refreshCloudProviderSync,
     refreshOrganizationModelAccess,
     resolveModelAvailability,
@@ -1644,7 +1644,7 @@ export function SessionRoute() {
         workspaceType: paneEndpoint.workspaceType,
         runtimeWorkspaceId: endpoint.workspaceId,
         opencodeBaseUrl: endpoint.opencodeBaseUrl,
-        openworkToken: endpoint.token,
+        offlinegptToken: endpoint.token,
         client: endpoint.client,
         environmentClient: client,
         surface: surfaceProps,
@@ -1665,7 +1665,7 @@ export function SessionRoute() {
     const workspaceOpencodeClient = createEngineClient(
       endpoint.opencodeBaseUrl,
       workspaceRoot || undefined,
-      { token: endpoint.token, mode: "openwork" },
+      { token: endpoint.token, mode: "offlinegpt" },
     );
     const scopedSurface = {
       ...surfaceProps,
@@ -1776,7 +1776,7 @@ export function SessionRoute() {
                 }
                 const parts = await draftToParts(draft, workspaceRoot, targetSessionId, endpoint);
                 assertCurrent();
-                const system = await buildOpenworkSessionSystemContext(endpoint.client, {
+                const system = await buildOfflineGptSessionSystemContext(endpoint.client, {
                   workspaceId: workspace.id,
                   cacheKey: targetSessionId,
                   runtimeKey: workspace.workspaceType === "remote" ? null : environmentRuntimeKey,
@@ -1869,7 +1869,7 @@ export function SessionRoute() {
       workspaceType: paneEndpoint.workspaceType,
       runtimeWorkspaceId: endpoint.workspaceId,
       opencodeBaseUrl: endpoint.opencodeBaseUrl,
-      openworkToken: endpoint.token,
+      offlinegptToken: endpoint.token,
       client: endpoint.client,
       environmentClient: client,
       surface: scopedSurface,
@@ -1950,8 +1950,8 @@ export function SessionRoute() {
         }));
         modelPicker.setCompactOpen(false);
       },
-      openWorkModelsEntitled,
-      openWorkModelsSyncing,
+      offlineGptModelsEntitled,
+      offlineGptModelsSyncing,
       modelVariantLabel,
       modelVariant: modelVariantValue,
       modelBehaviorOptions,
@@ -1998,8 +1998,8 @@ export function SessionRoute() {
     modelVariantLabel,
     modelVariantValue,
     opencodeClient,
-    openWorkModelsEntitled,
-    openWorkModelsSyncing,
+    offlineGptModelsEntitled,
+    offlineGptModelsSyncing,
     organizationAssignedModelOptions,
     organizationModelsEmpty,
     refreshCloudProviderSync,
@@ -2055,7 +2055,7 @@ export function SessionRoute() {
     setRenameWorkspaceBusy(true);
     try {
       if (!client) {
-        toast.error("OpenWork server is unavailable. Reconnect the server before renaming workspaces.");
+        toast.error("OfflineGPT server is unavailable. Reconnect the server before renaming workspaces.");
         return;
       }
       await client.updateWorkspaceDisplayName(renameWorkspaceId, trimmed);
@@ -2104,7 +2104,7 @@ export function SessionRoute() {
         downloadWorkspaceJson(workspaceExportFilename(workspace), payload);
         return;
       }
-      throw new Error("OpenWork server is unavailable. Reconnect the server before exporting workspace config.");
+      throw new Error("OfflineGPT server is unavailable. Reconnect the server before exporting workspace config.");
     },
     [endpointForWorkspace, workspaces],
   );
@@ -2347,7 +2347,7 @@ export function SessionRoute() {
     return options.find((option) => option.value === next)?.label ?? next;
   }, [local, modelBehaviorOptions, modelVariantValue, providerCatalog, selectedSessionId]);
 
-  const cycleThinkingModeControlAction = useMemo<OpenworkControlAction>(() => ({
+  const cycleThinkingModeControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.model_variant.cycle",
     label: "Cycle thinking mode",
     description: "Advance the focused conversation to its next available thinking or reasoning effort.",
@@ -2382,7 +2382,7 @@ export function SessionRoute() {
     return resolveModelDisplayName(next.modelID, providerModel?.name);
   }, [local, modelVariantValue, providerCatalog, selectedSessionId]);
 
-  const cycleFavoriteModelControlAction = useMemo<OpenworkControlAction>(() => ({
+  const cycleFavoriteModelControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "session.favorite_model.cycle",
     label: "Cycle favorite model",
     description: "Switch the focused conversation to its next favorite model.",
@@ -2446,7 +2446,7 @@ export function SessionRoute() {
     selectedWorkspaceRoot,
     selectedSessionId,
     canCreateTask,
-    openworkClient: client,
+    offlinegptClient: client,
     opencodeClient,
     archiveDisabledReason,
     endpointForWorkspace,
@@ -2457,7 +2457,7 @@ export function SessionRoute() {
     refreshRouteState,
   });
 
-  const seedUnavailableModelControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedUnavailableModelControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
     return {
       id: "eval.model_not_available.seed",
@@ -2526,7 +2526,7 @@ export function SessionRoute() {
   }, [checkDesktopRestriction, disabledProviderIds, local, modelPicker.setQuery, modelPicker.setRecentProviderIds, opencodeBaseUrl, opencodeClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot]);
   useControlAction(seedUnavailableModelControlAction);
 
-  const seedActiveSessionSidebarControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedActiveSessionSidebarControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
     return {
       id: "eval.session_sidebar.seed_active",
@@ -2545,7 +2545,7 @@ export function SessionRoute() {
   }, [selectedSessionId, selectedWorkspaceId]);
   useControlAction(seedActiveSessionSidebarControlAction);
 
-  const seedChildPermissionControlAction = useMemo<OpenworkControlAction | null>(() => {
+  const seedChildPermissionControlAction = useMemo<OfflineGptControlAction | null>(() => {
     if (!import.meta.env.DEV) return null;
     return {
       id: "eval.child_permission.seed",
@@ -2613,7 +2613,7 @@ export function SessionRoute() {
   }, [rememberPendingCreatedSession, selectedSessionId, selectedWorkspaceEndpoint?.workspaceId, selectedWorkspaceId, sessionsByWorkspaceId, setSessionsByWorkspaceId]);
   useControlAction(seedChildPermissionControlAction);
 
-  const commandPaletteControlAction = useMemo<OpenworkControlAction>(() => ({
+  const commandPaletteControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "command_palette.open",
     label: "Open the command palette",
     description: "Open the in-app command palette so the next choice is visible.",
@@ -2623,7 +2623,7 @@ export function SessionRoute() {
   }), []);
   useControlAction(commandPaletteControlAction);
 
-  const addProviderControlAction = useMemo<OpenworkControlAction>(() => ({
+  const addProviderControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "settings.provider.add",
     label: "Add a model provider",
     description: "Open the provider connection modal, optionally pre-filtered to a specific provider.",
@@ -2848,7 +2848,7 @@ export function SessionRoute() {
       setCommandPaletteOpen(false);
       setDeveloperMode((current) => {
         const next = !current;
-        try { window.localStorage.setItem("openwork.developerMode", next ? "1" : "0"); } catch {}
+        try { window.localStorage.setItem("offlinegpt.developerMode", next ? "1" : "0"); } catch {}
         return next;
       });
     },
@@ -2859,9 +2859,9 @@ export function SessionRoute() {
     canReloadWorkspace: reloadCoordinator.canReloadWorkspaceEngine,
     clientConnected: canCreateTask,
     developerMode,
-    hostInfo: openworkServerHostInfoState,
-    openworkServerStatus: client ? "connected" : "disconnected",
-    openworkServerUrl: baseUrl,
+    hostInfo: offlinegptServerHostInfoState,
+    offlinegptServerStatus: client ? "connected" : "disconnected",
+    offlinegptServerUrl: baseUrl,
     runtimeWorkspaceId: selectedWorkspaceEndpoint?.workspaceId ?? null,
   }), [
     activeReloadBlockingSessions.length,
@@ -2869,7 +2869,7 @@ export function SessionRoute() {
     canCreateTask,
     client,
     developerMode,
-    openworkServerHostInfoState,
+    offlinegptServerHostInfoState,
     reloadCoordinator.canReloadWorkspaceEngine,
     selectedWorkspaceEndpoint?.workspaceId,
   ]);
@@ -2901,7 +2901,7 @@ export function SessionRoute() {
       try {
         const json = await buildCommandDiagnosticsBundle();
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-        downloadTextAsFile(`openwork-diagnostics-${timestamp}.json`, json, "application/json");
+        downloadTextAsFile(`offlinegpt-diagnostics-${timestamp}.json`, json, "application/json");
         toast.success(t("session.diagnostics_exported"));
       } catch (error) {
         toast.error(t("session.diagnostics_failed"), { description: describeRouteError(error) });
@@ -3047,7 +3047,7 @@ export function SessionRoute() {
           .catch(() => null);
       }
       if (!list) {
-        throw new Error("OpenWork server is unavailable. Start or reconnect the server before creating a workspace.");
+        throw new Error("OfflineGPT server is unavailable. Start or reconnect the server before creating a workspace.");
       }
       const createdId = resolveWorkspaceListSelectedId(list) || list.workspaces[list.workspaces.length - 1]?.id || "";
       let targetWorkspaceId = createdId;
@@ -3056,21 +3056,21 @@ export function SessionRoute() {
         await workspaceSetSelected(createdId).catch(() => undefined);
         await workspaceSetRuntimeActive(createdId).catch(() => undefined);
       }
-      // First workspace on a fresh install: the OpenWork server was started
+      // First workspace on a fresh install: the OfflineGPT server was started
       // engine-less (it only spawns OpenCode at boot when a workspace already
       // exists), so sessions would hang forever. This boots the engine when
       // it isn't running, same as the old /welcome flow did.
       let sessionBaseUrl = baseUrl;
       let sessionToken = token;
       if (targetWorkspace && isDesktopRuntime()) {
-        await ensureDesktopLocalOpenworkConnection({
+        await ensureDesktopLocalOfflineGptConnection({
           route: "session",
           workspace: targetWorkspace,
           allWorkspaces: list.workspaces,
         }).catch(() => undefined);
         // The engine boot can restart the server with fresh tokens; re-resolve
         // so the first-session creation below doesn't use stale credentials.
-        const fresh = await resolveOpenworkConnection().catch(() => null);
+        const fresh = await resolveOfflineGptConnection().catch(() => null);
         if (fresh?.normalizedBaseUrl && fresh.resolvedToken) {
           sessionBaseUrl = fresh.normalizedBaseUrl;
           sessionToken = fresh.resolvedToken;
@@ -3089,9 +3089,9 @@ export function SessionRoute() {
         // its supplied prompt; ordinary creation lands on the New task state.
         const session = createdOnServer && sessionBaseUrl && sessionToken && (firstTaskPrompt || firstTaskAttachments.length > 0)
           ? await createClient(
-              `${(buildOpenworkWorkspaceBaseUrl(sessionBaseUrl, targetWorkspaceId) ?? sessionBaseUrl).replace(/\/+$/, "")}/opencode`,
+              `${(buildOfflineGptWorkspaceBaseUrl(sessionBaseUrl, targetWorkspaceId) ?? sessionBaseUrl).replace(/\/+$/, "")}/opencode`,
               workspacePath || undefined,
-              { token: sessionToken, mode: "openwork" },
+              { token: sessionToken, mode: "offlinegpt" },
             ).session.create({ directory: workspacePath || undefined })
               .then((result) => unwrap(result))
           : null;
@@ -3161,7 +3161,7 @@ export function SessionRoute() {
       handleOpenCreateWorkspace();
       throw new Error("Choose a workspace before sending this message.");
     }
-    const folder = await joinDesktopPath(home, "OpenWork Chat").catch(() => "");
+    const folder = await joinDesktopPath(home, "OfflineGPT Chat").catch(() => "");
     if (!folder) {
       handleOpenCreateWorkspace();
       throw new Error("Choose a workspace before sending this message.");
@@ -3169,7 +3169,7 @@ export function SessionRoute() {
     await handleCreateWorkspace("starter", folder, { firstTaskPrompt: prompt, firstTaskAttachments: attachments ?? [] });
   }, [handleCreateWorkspace, handleOpenCreateWorkspace]);
 
-  const createWorkspaceControlAction = useMemo<OpenworkControlAction>(() => ({
+  const createWorkspaceControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "workspace.create",
     label: "Create a local workspace",
     description: "Create a workspace at the given folder path without showing the file picker dialog, optionally labeling its project for analytics.",
@@ -3194,7 +3194,7 @@ export function SessionRoute() {
   // Sessions created outside this window (server-side session.create, other
   // clients) never reach a non-selected workspace's cached list, so callers
   // that create them ask the sidebar to refetch that one workspace.
-  const reloadWorkspaceSessionsControlAction = useMemo<OpenworkControlAction>(() => ({
+  const reloadWorkspaceSessionsControlAction = useMemo<OfflineGptControlAction>(() => ({
     id: "workspace.reload_sessions",
     label: "Reload a workspace's sessions",
     description: "Refetch the session list of one workspace so sessions created outside this window appear in the sidebar.",
@@ -3217,21 +3217,21 @@ export function SessionRoute() {
   useControlAction(reloadWorkspaceSessionsControlAction);
 
   const handleCreateRemoteWorkspace = useCallback(async (input: {
-    openworkHostUrl?: string | null;
-    openworkToken?: string | null;
+    offlinegptHostUrl?: string | null;
+    offlinegptToken?: string | null;
     directory?: string | null;
     displayName?: string | null;
   }) => {
-    const baseUrlValue = input.openworkHostUrl?.trim() ?? "";
+    const baseUrlValue = input.offlinegptHostUrl?.trim() ?? "";
     if (!baseUrlValue) return false;
     setCreateWorkspaceRemoteBusy(true);
     setCreateWorkspaceRemoteError(null);
     try {
-      const remoteType: "openwork" = "openwork";
+      const remoteType: "offlinegpt" = "offlinegpt";
       const payload = {
         baseUrl: baseUrlValue,
-        openworkHostUrl: baseUrlValue,
-        openworkToken: input.openworkToken?.trim() || null,
+        offlinegptHostUrl: baseUrlValue,
+        offlinegptToken: input.offlinegptToken?.trim() || null,
         displayName: input.displayName?.trim() || null,
         directory: input.directory?.trim() || null,
         remoteType,
@@ -3243,7 +3243,7 @@ export function SessionRoute() {
         list = await client.createRemoteWorkspace(payload).catch(() => null);
       }
       if (!list) {
-        throw new Error("OpenWork server is unavailable. Start or reconnect the server before connecting a remote workspace.");
+        throw new Error("OfflineGPT server is unavailable. Start or reconnect the server before connecting a remote workspace.");
       }
       const createdId = resolveWorkspaceListSelectedId(list) || list.workspaces[list.workspaces.length - 1]?.id || "";
       if (createdId) {
@@ -3274,7 +3274,7 @@ export function SessionRoute() {
     <WorkspaceProvider
       client={opencodeClient}
       opencodeBaseUrl={opencodeBaseUrl}
-      openworkServerClient={selectedWorkspaceEndpoint?.client ?? null}
+      offlinegptServerClient={selectedWorkspaceEndpoint?.client ?? null}
       workspaceId={selectedWorkspaceEndpoint?.workspaceId ?? ""}
       selectedWorkspaceRoot={selectedWorkspaceRoot}
     >
@@ -3288,7 +3288,7 @@ export function SessionRoute() {
         sessionId={selectedSessionId}
         activeSessionIds={activeSelectedWorkspaceSessionIds}
         opencodeBaseUrl={opencodeBaseUrl}
-        openworkToken={selectedWorkspaceServerToken}
+        offlinegptToken={selectedWorkspaceServerToken}
         onSessionCreated={handleRuntimeSessionCreated}
         onSessionUpdated={handleRuntimeSessionUpdated}
         onSessionDeleted={handleRuntimeSessionDeleted}
@@ -3310,10 +3310,10 @@ export function SessionRoute() {
       opencodeBaseUrl={opencodeBaseUrl}
       workspaces={workspaces}
       clientConnected={canCreateTask}
-      openworkServerStatus={client ? "connected" : "disconnected"}
-      openworkServerClient={selectedWorkspaceEndpoint?.client ?? client}
+      offlinegptServerStatus={client ? "connected" : "disconnected"}
+      offlinegptServerClient={selectedWorkspaceEndpoint?.client ?? client}
       environmentClient={client}
-      openworkServerToken={selectedWorkspaceServerToken}
+      offlinegptServerToken={selectedWorkspaceServerToken}
       developerMode={developerMode}
       headerStatus={
         canCreateTask || (activeComposerTargetsSession && !selectedWorkspaceError && activeComposerAvailability.status === "available")
@@ -3374,7 +3374,7 @@ export function SessionRoute() {
           workspaceId={selectedWorkspaceId}
           onClose={() => {
             try {
-              window.dispatchEvent(new CustomEvent("openwork-close-right-pane"));
+              window.dispatchEvent(new CustomEvent("offlinegpt-close-right-pane"));
             } catch {
               // ignore
             }
@@ -3390,7 +3390,7 @@ export function SessionRoute() {
         <WorkspaceProvider
           client={opencodeClient}
           opencodeBaseUrl={opencodeBaseUrl}
-          openworkServerClient={dashboardEndpoint?.client ?? null}
+          offlinegptServerClient={dashboardEndpoint?.client ?? null}
           workspaceId={dashboardEndpoint?.workspaceId ?? ""}
           selectedWorkspaceRoot={selectedWorkspaceRoot}
         >
@@ -3595,7 +3595,7 @@ export function SessionRoute() {
               remoteAccess:
                 isDesktopRuntime() && shareWorkspaceState.shareWorkspace?.workspaceType === "local"
                   ? {
-                      enabled: openworkServerSettings.remoteAccessEnabled === true,
+                      enabled: offlinegptServerSettings.remoteAccessEnabled === true,
                       busy: remoteAccessRestart.busy,
                       error: remoteAccessRestart.error,
                       status: remoteAccessRestart.status,
@@ -3658,7 +3658,7 @@ export function SessionRoute() {
         // model surfaces in the composer where the person can act on it.
         reloadBusy: reloadCoordinator.reloadBusy,
         reloadError: reloadCoordinator.reloadError,
-        openWorkConnectState: sessionMcpMaintenance,
+        offlineGptConnectState: sessionMcpMaintenance,
       }}
       notFoundMessage={gatedRouteNotFoundMessage}
       mainContentTakeover={
@@ -3763,14 +3763,14 @@ export function SessionRoute() {
       accessibleTargets={paletteAccessibleTargets}
       onOpenAccessibleTarget={(target) => {
         try {
-          window.dispatchEvent(new CustomEvent("openwork-open-accessible-target", { detail: target }));
+          window.dispatchEvent(new CustomEvent("offlinegpt-open-accessible-target", { detail: target }));
         } catch {
           // ignore event dispatch failures
         }
       }}
       onHideAccessibleTarget={(target) => {
         try {
-          window.dispatchEvent(new CustomEvent("openwork-hide-accessible-target", { detail: target }));
+          window.dispatchEvent(new CustomEvent("offlinegpt-hide-accessible-target", { detail: target }));
         } catch {
           // ignore event dispatch failures
         }
@@ -3832,7 +3832,7 @@ export function SessionRoute() {
             : [...current, providerId];
           const result = await updateManagedDisabledProviders({
             opencodeClient,
-            openworkClient: selectedWorkspaceEndpoint?.client ?? null,
+            offlinegptClient: selectedWorkspaceEndpoint?.client ?? null,
             workspaceId: selectedWorkspaceEndpoint?.workspaceId ?? null,
             workspaceType: selectedWorkspace?.workspaceType ?? "local",
             disabledProviders: next,
@@ -3853,8 +3853,8 @@ export function SessionRoute() {
         handleOpenSettings("/settings/general");
       }}
       onClose={() => { modelPicker.setOpen(false); modelPicker.setRecentProviderIds(new Set()); setModelPickerSessionId(null); }}
-      openWorkModelsEntitled={openWorkModelsEntitled}
-      openWorkModelsSyncing={openWorkModelsSyncing}
+      offlineGptModelsEntitled={offlineGptModelsEntitled}
+      offlineGptModelsSyncing={offlineGptModelsSyncing}
       onRefreshOrganizationModels={refreshOrganizationModelAccess}
       restrictToCloud={restrictToCloudProviders}
     />

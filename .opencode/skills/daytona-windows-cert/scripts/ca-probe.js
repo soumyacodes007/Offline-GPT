@@ -1,7 +1,7 @@
 const { X509Certificate } = require("node:crypto");
 const tls = require("node:tls");
 
-const needle = (process.env.OPENWORK_TLS_REPRO_CA_MATCH || "OpenWork TLS Repro").toLowerCase();
+const needle = (process.env.OFFLINEGPT_TLS_REPRO_CA_MATCH || "OfflineGPT TLS Repro").toLowerCase();
 
 function countMatchingSubjects(certificates) {
   let count = 0;

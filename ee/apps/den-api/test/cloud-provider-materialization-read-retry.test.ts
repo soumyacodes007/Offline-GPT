@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createDenTypeId } from "@openwork-ee/utils/typeid";
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid";
 import type {
   CloudProviderMaterializationProvider,
   CloudProviderMaterializationStore,
@@ -10,7 +10,7 @@ type MaterializeInput = Parameters<MaterializerModule["materializeCloudWorkerPro
 type FetchImpl = NonNullable<MaterializeInput["fetchImpl"]>;
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/openwork_test";
+  process.env.DATABASE_URL ??= "mysql://root:password@127.0.0.1:3306/offlinegpt_test";
   process.env.DEN_DB_ENCRYPTION_KEY ??= "x".repeat(32);
   process.env.BETTER_AUTH_SECRET ??= "y".repeat(32);
   process.env.BETTER_AUTH_URL ??= "http://127.0.0.1:8790";

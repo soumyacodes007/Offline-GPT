@@ -210,9 +210,9 @@ interface ModelSelectProps {
   /** When set, "All models" opens the full picker scoped to this session. */
   sessionId?: string;
   /** Managed-model entitlement state retained for callers. */
-  openWorkModelsEntitled?: boolean;
+  offlineGptModelsEntitled?: boolean;
   /** The server is waiting to reload managed models for this workspace. */
-  openWorkModelsSyncing?: boolean;
+  offlineGptModelsSyncing?: boolean;
   /** Member-scoped models available before a workspace OpenCode client exists. */
   fallbackOptions?: readonly ModelOption[];
   behaviorValue?: string | null;
@@ -247,7 +247,7 @@ export function ModelSelect({
   const modelOptions = React.useMemo(
     () => dedupeGlmModelOptions(
       overlaySelectedBehavior(
-        catalogOptions.filter((option) => option.providerID.trim().toLowerCase() !== "openwork"),
+        catalogOptions.filter((option) => option.providerID.trim().toLowerCase() !== "offlinegpt"),
         value,
         {
           value: behaviorValue,

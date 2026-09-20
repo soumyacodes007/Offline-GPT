@@ -1,4 +1,4 @@
-import { desktopConfigSchema, type DesktopConfig } from "@openwork/types/den/desktop-policies-runtime";
+import { desktopConfigSchema, type DesktopConfig } from "@offlinegpt/types/den/desktop-policies-runtime";
 import { existsSync } from "node:fs";
 import { importNodeSqlite, runtimeDbPath } from "./runtime-db.js";
 import type { ServerConfig } from "./types.js";
@@ -18,10 +18,10 @@ export type RuntimeOpencodeConfig = {
   provider?: Record<string, unknown>;
 };
 
-export const ENGINE_GLOBAL_RUNTIME_CONFIG_ID = "__openwork_engine_global__";
+export const ENGINE_GLOBAL_RUNTIME_CONFIG_ID = "__offlinegpt_engine_global__";
 
-/** Reserved Connect MCP name; kept in sync with OPENWORK_CLOUD_MCP_NAME in cloud-mcp-health.ts. */
-const OPENWORK_CLOUD_MCP_RESERVED_NAME = "openwork-cloud";
+/** Reserved Connect MCP name; kept in sync with OFFLINEGPT_CLOUD_MCP_NAME in cloud-mcp-health.ts. */
+const OFFLINEGPT_CLOUD_MCP_RESERVED_NAME = "offlinegpt-cloud";
 
 export function isEngineGlobalRuntimeConfigId(workspaceId: string): boolean {
   return workspaceId === ENGINE_GLOBAL_RUNTIME_CONFIG_ID;
@@ -238,9 +238,9 @@ export function mergeRuntimeOpencodeConfigLayers(
   };
   // The Connect MCP is account-scoped: the global row is authoritative, so a
   // stale legacy per-workspace copy must not shadow it. Mirrors
-  // OPENWORK_CLOUD_MCP_NAME in cloud-mcp-health.ts (import would be cyclic).
-  const globalCloudMcp = runtimeMcpMap(base)[OPENWORK_CLOUD_MCP_RESERVED_NAME];
-  if (globalCloudMcp) mcp[OPENWORK_CLOUD_MCP_RESERVED_NAME] = globalCloudMcp;
+  // OFFLINEGPT_CLOUD_MCP_NAME in cloud-mcp-health.ts (import would be cyclic).
+  const globalCloudMcp = runtimeMcpMap(base)[OFFLINEGPT_CLOUD_MCP_RESERVED_NAME];
+  if (globalCloudMcp) mcp[OFFLINEGPT_CLOUD_MCP_RESERVED_NAME] = globalCloudMcp;
   const basePermission = isRecord(base.permission) ? base.permission : {};
   const overlayPermission = isRecord(overlay.permission) ? overlay.permission : {};
   const externalDirectory = {

@@ -9,7 +9,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { EngineV2PreviewStatus, OpenworkCloudMcpHealth, OpenworkRuntimeConfigStatus, OpenworkServerStatus } from "@/app/lib/openwork-server";
+import type { EngineV2PreviewStatus, OfflineGptCloudMcpHealth, OfflineGptRuntimeConfigStatus, OfflineGptServerStatus } from "@/app/lib/offlinegpt-server";
 import { sanitizeCloudMcpHealthDiagnostic, sanitizeDiagnosticRecord } from "@/app/lib/diagnostic-sanitizer";
 import {
   DEFAULT_DEN_API_BASE_URL,
@@ -52,7 +52,7 @@ import {
 
 type SettingsTone = ComponentProps<typeof SettingsStatusBadge>["tone"];
 
-const DESKTOP_BOOTSTRAP_PATH_HINT = "~/.config/openwork/desktop-bootstrap.json";
+const DESKTOP_BOOTSTRAP_PATH_HINT = "~/.config/offlinegpt/desktop-bootstrap.json";
 
 function sourceBadgeLabel(source: DenEndpointSource): string {
   switch (source) {
@@ -293,9 +293,9 @@ interface AdvancedRuntimeSectionProps {
   clientStatusLabel: string;
   clientTone: SettingsTone;
   clientDetailLines: string[];
-  openworkStatusLabel: string;
-  openworkTone: SettingsTone;
-  openworkDetailLines: string[];
+  offlinegptStatusLabel: string;
+  offlinegptTone: SettingsTone;
+  offlinegptDetailLines: string[];
 }
 
 export function AdvancedRuntimeSection(props: AdvancedRuntimeSectionProps) {
@@ -317,11 +317,11 @@ export function AdvancedRuntimeSection(props: AdvancedRuntimeSectionProps) {
         />
         <RuntimeStatusCard
           icon={<Server size={18} />}
-          title={t("settings.openwork_server_label")}
-          description={t("settings.openwork_server_desc")}
-          statusLabel={props.openworkStatusLabel}
-          tone={props.openworkTone}
-          detailLines={props.openworkDetailLines}
+          title={t("settings.offlinegpt_server_label")}
+          description={t("settings.offlinegpt_server_desc")}
+          statusLabel={props.offlinegptStatusLabel}
+          tone={props.offlinegptTone}
+          detailLines={props.offlinegptDetailLines}
         />
       </div>
     </LayoutSection>
@@ -351,11 +351,11 @@ function formatMetadataRecord(value: Record<string, string | number | boolean | 
   return Object.entries(value).map(([key, nested]) => `${key}=${formatMaybe(nested)}`).join(", ");
 }
 
-function formatSupportedFeatures(features: OpenworkCloudMcpHealth["compatibility"]["supportedFeatures"]): string {
+function formatSupportedFeatures(features: OfflineGptCloudMcpHealth["compatibility"]["supportedFeatures"]): string {
   return Object.entries(features).map(([key, enabled]) => `${key}:${enabled ? "yes" : "no"}`).join(", ");
 }
 
-function formatPluginHashes(hashes: OpenworkCloudMcpHealth["compatibility"]["pluginFileHashes"]): string {
+function formatPluginHashes(hashes: OfflineGptCloudMcpHealth["compatibility"]["pluginFileHashes"]): string {
   if (hashes.length === 0) return "none";
   return hashes.map((hash) => `${hash.name}=${hash.sha256 ? hash.sha256.slice(0, 12) : `unavailable${hash.error ? ` (${hash.error})` : ""}`}`).join(", ");
 }
@@ -367,8 +367,8 @@ function formatMcpToolExposure(input: { checked: boolean; includesMcpTools: bool
 }
 
 interface AdvancedCloudMcpDiagnosticsSectionProps {
-  cloudMcpHealth: OpenworkCloudMcpHealth | null;
-  onRefresh: () => Promise<OpenworkCloudMcpHealth | null>;
+  cloudMcpHealth: OfflineGptCloudMcpHealth | null;
+  onRefresh: () => Promise<OfflineGptCloudMcpHealth | null>;
 }
 
 export function AdvancedCloudMcpDiagnosticsSection(props: AdvancedCloudMcpDiagnosticsSectionProps) {
@@ -461,7 +461,7 @@ export function AdvancedCloudMcpDiagnosticsSection(props: AdvancedCloudMcpDiagno
               <DiagnosticRow label="Safe capabilities" value={`schema v${props.cloudMcpHealth.schemaVersion}; connect catalog ${props.cloudMcpHealth.connectCatalogEnabled ? "enabled" : "disabled"}`} />
               {compatibility ? (
                 <>
-                  <DiagnosticRow label="Runtime versions" value={`server ${formatMaybe(compatibility.openwork.serverVersion)}; app ${formatMetadataRecord(compatibility.openwork.app)}`} />
+                  <DiagnosticRow label="Runtime versions" value={`server ${formatMaybe(compatibility.offlinegpt.serverVersion)}; app ${formatMetadataRecord(compatibility.offlinegpt.app)}`} />
                   <DiagnosticRow label="OpenCode compatibility" value={`expected ${formatMaybe(compatibility.opencode.expectedVersion)}; actual ${formatMaybe(compatibility.opencode.actualVersion)}; probe ${compatibility.opencode.probe}`} />
                   <DiagnosticRow label="Feature probes" value={formatSupportedFeatures(compatibility.supportedFeatures)} />
                   <DiagnosticRow label="Experimental tool IDs" value={formatMcpToolExposure(compatibility.experimentalToolIds)} />
@@ -489,7 +489,7 @@ export function AdvancedCloudMcpDiagnosticsSection(props: AdvancedCloudMcpDiagno
 interface AdvancedRuntimeConfigSourcesSectionProps {
   busy: boolean;
   canInspect: boolean;
-  configStatus: OpenworkRuntimeConfigStatus | null;
+  configStatus: OfflineGptRuntimeConfigStatus | null;
   configStatusBusy: boolean;
   configStatusError: string | null;
   onRefresh: () => Promise<void>;
@@ -533,7 +533,7 @@ function RuntimeConfigSummary(props: { config: Record<string, unknown> }) {
   const permissions = countRecord(config.permission);
   const disabledProviders = countArray(config.disabled_providers);
   const configuredDefaultAgent = typeof config.default_agent === "string" ? config.default_agent : "not set";
-  const defaultAgent = configuredDefaultAgent.trim().toLowerCase() === "openwork"
+  const defaultAgent = configuredDefaultAgent.trim().toLowerCase() === "offlinegpt"
     ? "Default"
     : configuredDefaultAgent;
 
@@ -1004,9 +1004,9 @@ interface AdvancedConnectionSectionProps {
   busy: boolean;
   headerStatus: string;
   baseUrl: string;
-  openworkServerUrl: string;
-  openworkServerStatus: OpenworkServerStatus;
-  openworkReconnectBusy: boolean;
+  offlinegptServerUrl: string;
+  offlinegptServerStatus: OfflineGptServerStatus;
+  offlinegptReconnectBusy: boolean;
   isLocalEngineRunning: boolean;
   restartBusy: boolean;
   reconnectStatus: string | null;
@@ -1034,10 +1034,10 @@ export function AdvancedConnectionSection(props: AdvancedConnectionSectionProps)
             variant="outline"
             size="sm"
             onClick={() => void props.onReconnect()}
-            disabled={props.busy || props.openworkReconnectBusy || !props.openworkServerUrl.trim()}
+            disabled={props.busy || props.offlinegptReconnectBusy || !props.offlinegptServerUrl.trim()}
           >
-            <RefreshCcw size={14} className={props.openworkReconnectBusy ? "animate-spin" : ""} />
-            {props.openworkReconnectBusy ? t("settings.reconnecting") : t("settings.reconnect_server")}
+            <RefreshCcw size={14} className={props.offlinegptReconnectBusy ? "animate-spin" : ""} />
+            {props.offlinegptReconnectBusy ? t("settings.reconnecting") : t("settings.reconnect_server")}
           </Button>
 
           {props.isLocalEngineRunning ? (
@@ -1049,7 +1049,7 @@ export function AdvancedConnectionSection(props: AdvancedConnectionSectionProps)
               disabled={props.busy || props.restartBusy}
             >
               <RefreshCcw size={14} className={props.restartBusy ? "animate-spin" : ""} />
-              {props.restartBusy ? t("settings.restarting") : t("settings.restart_openwork_server")}
+              {props.restartBusy ? t("settings.restarting") : t("settings.restart_offlinegpt_server")}
             </Button>
           ) : null}
 
@@ -1066,7 +1066,7 @@ export function AdvancedConnectionSection(props: AdvancedConnectionSectionProps)
             </Button>
           ) : null}
 
-          {!props.isLocalEngineRunning && props.openworkServerStatus === "connected" ? (
+          {!props.isLocalEngineRunning && props.offlinegptServerStatus === "connected" ? (
             <Button
               type="button"
               variant="outline"

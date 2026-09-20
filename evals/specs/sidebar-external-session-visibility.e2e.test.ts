@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { sleep, spec } from "@openwork/testkit";
+import { sleep, spec } from "@offlinegpt/testkit";
 import { externalSessionVisibility } from "../worlds/session-shell.ts";
 import type { SidebarRouteFacts } from "../worlds/session-shell.ts";
 

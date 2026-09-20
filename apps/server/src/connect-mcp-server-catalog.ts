@@ -13,29 +13,29 @@ import { externalFetch } from "./server-fetch.js";
 import type { ServerConfig, WorkspaceInfo } from "./types.js";
 import { createWorkspaceKvStore } from "./workspace-kv-store.js";
 
-export const CONNECT_MCP_SERVER_INDEX_URI = "openwork://connect/mcp-servers/index.json";
-export const CONNECT_MCP_SERVER_INDEX_SCHEMA_VERSION = "openwork.connect/mcp-servers/1";
-export const CONNECT_MCP_APP_HOST_NAME_PREFIX = "openwork-app-host-connect-";
-export const CONNECT_MCP_SERVER_NAME_PREFIX = "openwork-connect-";
+export const CONNECT_MCP_SERVER_INDEX_URI = "offlinegpt://connect/mcp-servers/index.json";
+export const CONNECT_MCP_SERVER_INDEX_SCHEMA_VERSION = "offlinegpt.connect/mcp-servers/1";
+export const CONNECT_MCP_APP_HOST_NAME_PREFIX = "offlinegpt-app-host-connect-";
+export const CONNECT_MCP_SERVER_NAME_PREFIX = "offlinegpt-connect-";
 /**
  * Model-facing OpenCode MCP entries for connections an administrator exposed
- * directly. Distinct from the legacy `openwork-connect-` prefix, which every
+ * directly. Distinct from the legacy `offlinegpt-connect-` prefix, which every
  * projection filter still strips, so a stale legacy row can never resurface.
  */
-export const CONNECT_DIRECT_MCP_SERVER_NAME_PREFIX = "openwork-direct-";
-export const CONNECT_MCP_APP_HOST_CAPABILITY_HEADER = "x-openwork-mcp-client-capabilities";
+export const CONNECT_DIRECT_MCP_SERVER_NAME_PREFIX = "offlinegpt-direct-";
+export const CONNECT_MCP_APP_HOST_CAPABILITY_HEADER = "x-offlinegpt-mcp-client-capabilities";
 export const CONNECT_MCP_APP_HOST_CAPABILITY = "mcp-app-host-v1";
 
 const BUILTIN_APP_HOST_CLOUD_ORIGINS = new Set([
-  "https://api.openworklabs.com",
-  "https://app.openworklabs.com",
-  "https://api.openwork.software",
-  "https://app.openwork.software",
+  "https://api.offlinegptlabs.com",
+  "https://app.offlinegptlabs.com",
+  "https://api.offlinegpt.software",
+  "https://app.offlinegpt.software",
 ]);
 
 const BUILTIN_APP_HOST_GATEWAY_PROXY_ORIGINS = new Map([
-  ["https://app.openworklabs.com", "https://api.openworklabs.com"],
-  ["https://app.openwork.software", "https://api.openwork.software"],
+  ["https://app.offlinegptlabs.com", "https://api.offlinegptlabs.com"],
+  ["https://app.offlinegpt.software", "https://api.offlinegpt.software"],
 ]);
 
 const indexSchema = z.object({
@@ -54,16 +54,16 @@ const appHostCredentialSchema = z.object({
   origin: z.string().url(),
 });
 
-export type OpenWorkConnectMcpServerIndex = z.output<typeof indexSchema>;
+export type OfflineGPTConnectMcpServerIndex = z.output<typeof indexSchema>;
 /** Index shape as Den publishes it; `exposeDirectly` is absent from older Den releases and defaults to false. */
-export type OpenWorkConnectMcpServerIndexInput = z.input<typeof indexSchema>;
+export type OfflineGPTConnectMcpServerIndexInput = z.input<typeof indexSchema>;
 
-const emptyIndex = (): OpenWorkConnectMcpServerIndex => ({
+const emptyIndex = (): OfflineGPTConnectMcpServerIndex => ({
   schemaVersion: CONNECT_MCP_SERVER_INDEX_SCHEMA_VERSION,
   servers: [],
 });
 
-const appHostCatalogStore = createWorkspaceKvStore<OpenWorkConnectMcpServerIndex>({
+const appHostCatalogStore = createWorkspaceKvStore<OfflineGPTConnectMcpServerIndex>({
   tableName: "connect_mcp_app_host_catalogs",
   valueColumn: "catalog_json",
   parse: (json) => {
@@ -77,9 +77,9 @@ const appHostCatalogStore = createWorkspaceKvStore<OpenWorkConnectMcpServerIndex
   serialize: (value) => JSON.stringify(value),
 });
 
-type OpenWorkConnectMcpAppHostCredential = z.infer<typeof appHostCredentialSchema>;
+type OfflineGPTConnectMcpAppHostCredential = z.infer<typeof appHostCredentialSchema>;
 
-const appHostAuthorizationStore = createWorkspaceKvStore<OpenWorkConnectMcpAppHostCredential | null>({
+const appHostAuthorizationStore = createWorkspaceKvStore<OfflineGPTConnectMcpAppHostCredential | null>({
   tableName: "connect_mcp_app_host_authorizations",
   valueColumn: "authorization_json",
   parse: (json) => {
@@ -111,7 +111,7 @@ function endpointOrigin(value: unknown): string | null {
 
 function normalizeAppHostProxyUrl(
   cloudMcpUrl: unknown,
-  server: OpenWorkConnectMcpServerIndex["servers"][number],
+  server: OfflineGPTConnectMcpServerIndex["servers"][number],
 ): string | null {
   if (typeof cloudMcpUrl !== "string") return null;
   let cloudEndpoint: URL;
@@ -157,7 +157,7 @@ async function trustedAppHostCloudEndpoint(cloudMcp: Record<string, unknown>): P
   }
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash) return false;
   if (BUILTIN_APP_HOST_CLOUD_ORIGINS.has(endpoint.origin)) return true;
-  if (process.env.OPENWORK_DEV_MODE === "1" && isLoopbackHostname(endpoint.hostname)) return true;
+  if (process.env.OFFLINEGPT_DEV_MODE === "1" && isLoopbackHostname(endpoint.hostname)) return true;
   const activatedEnterpriseOrigin = await readActivatedEnterpriseDenOrigin();
   return activatedEnterpriseOrigin !== null && endpoint.origin === activatedEnterpriseOrigin;
 }
@@ -189,15 +189,15 @@ function modelFacingHeaders(cloudMcp: Record<string, unknown>): Record<string, s
 /**
  * Model-facing runtime entries for the directly exposed connections in an
  * index. They reuse the ordinary member credential already carried by the
- * `openwork-cloud` entry; the private App-host credential never leaves the
- * App host. `oauth: false` matches the `openwork-cloud` entry so an expired
+ * `offlinegpt-cloud` entry; the private App-host credential never leaves the
+ * App host. `oauth: false` matches the `offlinegpt-cloud` entry so an expired
  * bearer token during rotation yields a plain 401 instead of the engine
  * starting an interactive OAuth flow. Without a member credential there is
  * nothing to project.
  */
 export function directConnectMcpRuntimeEntries(
   cloudMcp: Record<string, unknown>,
-  index: OpenWorkConnectMcpServerIndex,
+  index: OfflineGPTConnectMcpServerIndex,
 ): Record<string, Record<string, unknown>> {
   const headers = modelFacingHeaders(cloudMcp);
   if (!headers) return {};
@@ -212,23 +212,23 @@ export function directConnectMcpRuntimeEntries(
     }]));
 }
 
-export async function readOpenWorkConnectMcpAppHostCatalog(
+export async function readOfflineGPTConnectMcpAppHostCatalog(
   config: ServerConfig,
   workspaceId: string,
-): Promise<OpenWorkConnectMcpServerIndex> {
+): Promise<OfflineGPTConnectMcpServerIndex> {
   return await appHostCatalogStore.get(config, workspaceId) ?? emptyIndex();
 }
 
-export async function writeOpenWorkConnectMcpAppHostCatalog(
+export async function writeOfflineGPTConnectMcpAppHostCatalog(
   config: ServerConfig,
   workspaceId: string,
-  catalog: OpenWorkConnectMcpServerIndexInput,
+  catalog: OfflineGPTConnectMcpServerIndexInput,
 ): Promise<void> {
   const parsed = indexSchema.safeParse(catalog);
   await appHostCatalogStore.set(config, workspaceId, parsed.success ? parsed.data : emptyIndex());
 }
 
-export async function readOpenWorkConnectMcpAppHostAuthorization(
+export async function readOfflineGPTConnectMcpAppHostAuthorization(
   config: ServerConfig,
   workspaceId: string,
   endpointUrl: string,
@@ -239,7 +239,7 @@ export async function readOpenWorkConnectMcpAppHostAuthorization(
   return privateAppHostAuthorization(credential.authorization);
 }
 
-export async function writeOpenWorkConnectMcpAppHostAuthorization(
+export async function writeOfflineGPTConnectMcpAppHostAuthorization(
   config: ServerConfig,
   workspaceId: string,
   value: string,
@@ -254,23 +254,23 @@ export async function writeOpenWorkConnectMcpAppHostAuthorization(
   );
 }
 
-export async function findOpenWorkConnectMcpAppHostServer(
+export async function findOfflineGPTConnectMcpAppHostServer(
   config: ServerConfig,
   workspaceId: string,
   reference: { connectionId?: string; serverName?: string },
-): Promise<OpenWorkConnectMcpServerIndex["servers"][number] | null> {
-  const catalog = await readOpenWorkConnectMcpAppHostCatalog(config, workspaceId);
+): Promise<OfflineGPTConnectMcpServerIndex["servers"][number] | null> {
+  const catalog = await readOfflineGPTConnectMcpAppHostCatalog(config, workspaceId);
   return catalog.servers.find((server) => (
     (reference.connectionId !== undefined && server.connectionId === reference.connectionId)
     || (reference.serverName !== undefined && connectMcpAppHostName(server.connectionId) === reference.serverName)
   )) ?? null;
 }
 
-export async function readOpenWorkConnectMcpServerIndex(
+export async function readOfflineGPTConnectMcpServerIndex(
   cloudMcp: Record<string, unknown>,
   appHostAuthorization: string,
   fetcher: McpFetch = externalFetch,
-): Promise<OpenWorkConnectMcpServerIndex | null> {
+): Promise<OfflineGPTConnectMcpServerIndex | null> {
   if (!await trustedAppHostCloudEndpoint(cloudMcp)) return null;
   const text = await readMcpResourceText({
     config: {
@@ -282,12 +282,12 @@ export async function readOpenWorkConnectMcpServerIndex(
     },
     uri: CONNECT_MCP_SERVER_INDEX_URI,
     fetcher,
-    clientName: "openwork-server-connect-mcp-catalog",
+    clientName: "offlinegpt-server-connect-mcp-catalog",
   });
   if (text === null) return null;
   const parsed = indexSchema.safeParse(JSON.parse(text));
   if (!parsed.success) return null;
-  const servers: OpenWorkConnectMcpServerIndex["servers"] = [];
+  const servers: OfflineGPTConnectMcpServerIndex["servers"] = [];
   for (const server of parsed.data.servers) {
     const url = normalizeAppHostProxyUrl(cloudMcp.url, server);
     if (!url) return null;
@@ -301,27 +301,27 @@ export async function readOpenWorkConnectMcpServerIndex(
  * cached catalog may be stale. Unlike startup reconciliation, an unavailable
  * opportunistic refresh preserves the last known-good catalog.
  */
-export async function refreshOpenWorkConnectMcpAppHostCatalog(
+export async function refreshOfflineGPTConnectMcpAppHostCatalog(
   config: ServerConfig,
   workspaceId: string,
   fetcher?: McpFetch,
 ): Promise<{ status: "synced" | "unavailable"; appHostNames: string[] }> {
-  const cloudMcp = await readGlobalRuntimeMcpConfig(config, "openwork-cloud")
-    ?? await readRuntimeMcpConfig(config, workspaceId, "openwork-cloud");
+  const cloudMcp = await readGlobalRuntimeMcpConfig(config, "offlinegpt-cloud")
+    ?? await readRuntimeMcpConfig(config, workspaceId, "offlinegpt-cloud");
   if (!cloudMcp || !await trustedAppHostCloudEndpoint(cloudMcp)) {
     return { status: "unavailable", appHostNames: [] };
   }
-  const appHostAuthorization = await readOpenWorkConnectMcpAppHostAuthorization(
+  const appHostAuthorization = await readOfflineGPTConnectMcpAppHostAuthorization(
     config,
     workspaceId,
     String(cloudMcp.url),
   );
   if (!appHostAuthorization) return { status: "unavailable", appHostNames: [] };
 
-  const index = await readOpenWorkConnectMcpServerIndex(cloudMcp, appHostAuthorization, fetcher).catch(() => null);
+  const index = await readOfflineGPTConnectMcpServerIndex(cloudMcp, appHostAuthorization, fetcher).catch(() => null);
   if (!index) return { status: "unavailable", appHostNames: [] };
 
-  await writeOpenWorkConnectMcpAppHostCatalog(config, workspaceId, index);
+  await writeOfflineGPTConnectMcpAppHostCatalog(config, workspaceId, index);
   return {
     status: "synced",
     appHostNames: index.servers.map((server) => connectMcpAppHostName(server.connectionId)).sort(),
@@ -331,10 +331,10 @@ export async function refreshOpenWorkConnectMcpAppHostCatalog(
 /**
  * Keeps provider descriptors private to the Desktop App host, projects only the
  * connections an administrator exposed directly into the model-facing runtime,
- * and removes any legacy OpenWork-owned provider endpoints. User-authored MCP
+ * and removes any legacy OfflineGPT-owned provider endpoints. User-authored MCP
  * configurations and durable provider records are untouched.
  */
-export async function reconcileOpenWorkConnectMcpServers(input: {
+export async function reconcileOfflineGPTConnectMcpServers(input: {
   config: ServerConfig;
   workspace: WorkspaceInfo;
   cloudMcp: Record<string, unknown>;
@@ -343,7 +343,7 @@ export async function reconcileOpenWorkConnectMcpServers(input: {
 }): Promise<{ status: "synced" | "unavailable"; appHostNames: string[]; directNames: string[]; removedNames: string[] }> {
   const trustedCloudEndpoint = await trustedAppHostCloudEndpoint(input.cloudMcp);
   if (trustedCloudEndpoint && input.appHostAuthorization !== undefined) {
-    await writeOpenWorkConnectMcpAppHostAuthorization(
+    await writeOfflineGPTConnectMcpAppHostAuthorization(
       input.config,
       input.workspace.id,
       input.appHostAuthorization,
@@ -351,17 +351,17 @@ export async function reconcileOpenWorkConnectMcpServers(input: {
     );
   }
   const appHostAuthorization = trustedCloudEndpoint
-    ? await readOpenWorkConnectMcpAppHostAuthorization(
+    ? await readOfflineGPTConnectMcpAppHostAuthorization(
       input.config,
       input.workspace.id,
       String(input.cloudMcp.url),
     )
     : null;
   const index = trustedCloudEndpoint && appHostAuthorization
-    ? await readOpenWorkConnectMcpServerIndex(input.cloudMcp, appHostAuthorization, input.fetcher).catch(() => null)
+    ? await readOfflineGPTConnectMcpServerIndex(input.cloudMcp, appHostAuthorization, input.fetcher).catch(() => null)
     : null;
   const privateCatalog = index ?? emptyIndex();
-  await writeOpenWorkConnectMcpAppHostCatalog(input.config, input.workspace.id, privateCatalog);
+  await writeOfflineGPTConnectMcpAppHostCatalog(input.config, input.workspace.id, privateCatalog);
 
   // Without a fresh index, fail closed: a connection whose direct exposure was
   // revoked must not linger in the model-facing runtime on a stale catalog.

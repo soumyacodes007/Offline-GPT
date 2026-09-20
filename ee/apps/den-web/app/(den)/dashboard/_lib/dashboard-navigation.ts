@@ -89,7 +89,7 @@ export function buildDashboardNavSections({
   runtimeConfigLoaded,
 }: BuildDashboardNavSectionsInput): DashboardNavSection[] {
   const workflowsEnabled = capabilities.workflows;
-  const showWeb = runtimeConfigLoaded && capabilities.openworkWeb;
+  const showWeb = runtimeConfigLoaded && capabilities.offlinegptWeb;
   const workItems: DashboardNavItem[] = [
     {
       href: orgSlug ? getOrgDashboardRoute(orgSlug) : "#",
@@ -105,24 +105,24 @@ export function buildDashboardNavSections({
       ? [{ href: getAutomationsRoute(orgSlug), label: "My Automations", icon: CalendarClock }]
       : []),
     ...(showWeb
-      ? [{ href: orgSlug ? getWebRoute(orgSlug) : "#", label: "OpenWork Web", icon: Globe }]
+      ? [{ href: orgSlug ? getWebRoute(orgSlug) : "#", label: "OfflineGPT Web", icon: Globe }]
       : []),
   ];
 
-  // Hosted deployments expose OpenWork Models; self-hosted deployments only
+  // Hosted deployments expose OfflineGPT Models; self-hosted deployments only
   // expose their own providers. Keep hidden until runtime config is known.
-  const showOpenWorkModels = runtimeConfigLoaded && orgMode === "multi_org";
+  const showOfflineGPTModels = runtimeConfigLoaded && orgMode === "multi_org";
   const modelsGroup: DashboardNavItem | null = access.isAdmin && orgSlug
     ? {
-        href: showOpenWorkModels
+        href: showOfflineGPTModels
           ? getInferenceRoute(orgSlug)
           : getCustomLlmProvidersRoute(orgSlug),
         label: "Models",
         icon: Sparkles,
         badge: "Providers",
         children: [
-          ...(showOpenWorkModels
-            ? [{ href: getInferenceRoute(orgSlug), label: "OpenWork Models" }]
+          ...(showOfflineGPTModels
+            ? [{ href: getInferenceRoute(orgSlug), label: "OfflineGPT Models" }]
             : []),
           { href: getCustomLlmProvidersRoute(orgSlug), label: "Bring your Own Keys" },
         ],
@@ -213,8 +213,8 @@ const PAGE_KEYWORDS: Record<string, string[]> = {
   Models: ["llm", "provider", "byok", "api key"],
   "My Automations": ["schedule", "recurring", "tasks"],
   "My Library": ["skills", "plugins", "connections"],
-  "OpenWork Models": ["llm", "provider", "managed", "inference"],
-  "OpenWork Web": ["cloud", "sessions"],
+  "OfflineGPT Models": ["llm", "provider", "managed", "inference"],
+  "OfflineGPT Web": ["cloud", "sessions"],
   "Plugin Directory": ["skills", "plugins", "marketplace"],
   SCIM: ["provisioning", "directory", "users"],
   Settings: ["organization", "workspace"],

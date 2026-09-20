@@ -67,7 +67,7 @@ const notes = [
   "",
   ...body,
   "",
-  `Full changelog: https://openworklabs.com/docs/changelog · [Compare](${compareUrl})`,
+  `Full changelog: https://offlinegptlabs.com/docs/changelog · [Compare](${compareUrl})`,
 ];
 if (preserved.length > 0) notes.push("", ...preserved);
 

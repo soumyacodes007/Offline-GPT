@@ -19,8 +19,8 @@ export function DenStatusScreen({ title, description, status, error, children }:
       />
       <div className="w-full max-w-[720px] rounded-3xl border border-[var(--dls-border)] bg-[var(--dls-surface)] px-8 pb-12 pt-10 sm:px-16 sm:pb-16 sm:pt-14">
         <div className="flex items-center gap-2.5">
-          <img src="/openwork-mark.svg" alt="" width={26} height={26} aria-hidden="true" />
-          <span className="text-[15px] font-semibold tracking-tight">OpenWork</span>
+          <img src="/offlinegpt-mark.svg" alt="" width={26} height={26} aria-hidden="true" />
+          <span className="text-[15px] font-semibold tracking-tight">OfflineGPT</span>
         </div>
         <div className="mt-10 sm:mt-14">
           <h1 className="text-[30px] font-semibold leading-[38px] tracking-[-0.03em] sm:text-[38px] sm:leading-[46px]">{title}</h1>

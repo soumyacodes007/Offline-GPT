@@ -8,43 +8,43 @@ importers:
 
   .:
     dependencies:
-      '@openwork/behaviors':
+      '@offlinegpt/behaviors':
         specifier: workspace:*
         version: link:packages/behaviors
-      '@openwork/cdp':
+      '@offlinegpt/cdp':
         specifier: workspace:*
         version: link:packages/cdp
-      '@openwork/env':
+      '@offlinegpt/env':
         specifier: workspace:*
         version: link:packages/env
-      '@openwork/hosts':
+      '@offlinegpt/hosts':
         specifier: workspace:*
         version: link:packages/hosts
-      '@openwork/labs':
+      '@offlinegpt/labs':
         specifier: workspace:*
         version: link:packages/labs
-      '@openwork/matchers':
+      '@offlinegpt/matchers':
         specifier: workspace:*
         version: link:packages/matchers
-      '@openwork/review':
+      '@offlinegpt/review':
         specifier: link:../packages/review
         version: link:../packages/review
-      '@openwork/sdk':
+      '@offlinegpt/sdk':
         specifier: link:../packages/sdk
         version: link:../packages/sdk
-      '@openwork/test-artifacts':
+      '@offlinegpt/test-artifacts':
         specifier: workspace:*
         version: link:packages/test-artifacts
-      '@openwork/test-evidence':
+      '@offlinegpt/test-evidence':
         specifier: workspace:*
         version: link:packages/test-evidence
-      '@openwork/testkit':
+      '@offlinegpt/testkit':
         specifier: workspace:*
         version: link:packages/testkit
-      '@openwork/types':
+      '@offlinegpt/types':
         specifier: link:../packages/types
         version: link:../packages/types
-      '@openwork/world':
+      '@offlinegpt/world':
         specifier: link:../packages/world
         version: link:../packages/world
     devDependencies:
@@ -63,19 +63,19 @@ importers:
 
   ../scenarios:
     dependencies:
-      '@openwork/behaviors':
+      '@offlinegpt/behaviors':
         specifier: workspace:*
         version: link:../evals/packages/behaviors
-      '@openwork/cdp':
+      '@offlinegpt/cdp':
         specifier: workspace:*
         version: link:../evals/packages/cdp
-      '@openwork/env':
+      '@offlinegpt/env':
         specifier: workspace:*
         version: link:../evals/packages/env
-      '@openwork/presentation':
+      '@offlinegpt/presentation':
         specifier: link:../packages/presentation
         version: link:../packages/presentation
-      '@openwork/testkit':
+      '@offlinegpt/testkit':
         specifier: workspace:*
         version: link:../evals/packages/testkit
       '@remotion/bundler':
@@ -106,16 +106,16 @@ importers:
 
   packages/behaviors:
     dependencies:
-      '@openwork/cdp':
+      '@offlinegpt/cdp':
         specifier: workspace:*
         version: link:../cdp
-      '@openwork/labs':
+      '@offlinegpt/labs':
         specifier: workspace:*
         version: link:../labs
-      '@openwork/matchers':
+      '@offlinegpt/matchers':
         specifier: workspace:*
         version: link:../matchers
-      '@openwork/timeline':
+      '@offlinegpt/timeline':
         specifier: workspace:*
         version: link:../timeline
 
@@ -123,19 +123,19 @@ importers:
 
   packages/env:
     dependencies:
-      '@openwork/behaviors':
+      '@offlinegpt/behaviors':
         specifier: workspace:*
         version: link:../behaviors
-      '@openwork/cdp':
+      '@offlinegpt/cdp':
         specifier: workspace:*
         version: link:../cdp
-      '@openwork/hosts':
+      '@offlinegpt/hosts':
         specifier: workspace:*
         version: link:../hosts
-      '@openwork/labs':
+      '@offlinegpt/labs':
         specifier: workspace:*
         version: link:../labs
-      '@openwork/world':
+      '@offlinegpt/world':
         specifier: link:../../../packages/world
         version: link:../../../packages/world
       mysql2:
@@ -144,13 +144,13 @@ importers:
 
   packages/hosts:
     dependencies:
-      '@openwork/cdp':
+      '@offlinegpt/cdp':
         specifier: workspace:*
         version: link:../cdp
-      '@openwork/paths':
+      '@offlinegpt/paths':
         specifier: link:../../../packages/paths
         version: link:../../../packages/paths
-      '@openwork/timeline':
+      '@offlinegpt/timeline':
         specifier: workspace:*
         version: link:../timeline
 
@@ -160,43 +160,43 @@ importers:
 
   packages/test-artifacts:
     dependencies:
-      '@openwork/review':
+      '@offlinegpt/review':
         specifier: link:../../../packages/review
         version: link:../../../packages/review
 
   packages/test-evidence:
     dependencies:
-      '@openwork/cdp':
+      '@offlinegpt/cdp':
         specifier: workspace:*
         version: link:../cdp
-      '@openwork/env':
+      '@offlinegpt/env':
         specifier: workspace:*
         version: link:../env
-      '@openwork/timeline':
+      '@offlinegpt/timeline':
         specifier: workspace:*
         version: link:../timeline
 
   packages/testkit:
     dependencies:
-      '@openwork/behaviors':
+      '@offlinegpt/behaviors':
         specifier: workspace:*
         version: link:../behaviors
-      '@openwork/cdp':
+      '@offlinegpt/cdp':
         specifier: workspace:*
         version: link:../cdp
-      '@openwork/env':
+      '@offlinegpt/env':
         specifier: workspace:*
         version: link:../env
-      '@openwork/hosts':
+      '@offlinegpt/hosts':
         specifier: workspace:*
         version: link:../hosts
-      '@openwork/labs':
+      '@offlinegpt/labs':
         specifier: workspace:*
         version: link:../labs
-      '@openwork/test-artifacts':
+      '@offlinegpt/test-artifacts':
         specifier: workspace:*
         version: link:../test-artifacts
-      '@openwork/test-evidence':
+      '@offlinegpt/test-evidence':
         specifier: workspace:*
         version: link:../test-evidence
       mysql2:

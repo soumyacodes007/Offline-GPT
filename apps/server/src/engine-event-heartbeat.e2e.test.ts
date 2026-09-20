@@ -76,7 +76,7 @@ function syntheticManagedHandle(url: string): ManagedOpencodeServer {
   };
 }
 
-async function startPooledOpenworkServer(input: { root: string; engineUrl: string }) {
+async function startPooledOfflineGptServer(input: { root: string; engineUrl: string }) {
   const config: ServerConfig = {
     host: "127.0.0.1",
     port: 0,
@@ -132,16 +132,16 @@ async function startPooledOpenworkServer(input: { root: string; engineUrl: strin
 
 describe("engine event stream heartbeat", () => {
   test("emits data-bearing heartbeats on a quiet stream instead of SSE comments", async () => {
-    setEnv("OPENWORK_ENGINE_EVENT_HEARTBEAT_MS", "50");
-    const root = await mkdtemp(join(tmpdir(), "openwork-event-heartbeat-"));
+    setEnv("OFFLINEGPT_ENGINE_EVENT_HEARTBEAT_MS", "50");
+    const root = await mkdtemp(join(tmpdir(), "offlinegpt-event-heartbeat-"));
     roots.push(root);
     await mkdir(join(root, ".opencode"), { recursive: true });
     const engine = startMockEngine();
-    const openwork = await startPooledOpenworkServer({ root, engineUrl: engine.url });
+    const offlinegpt = await startPooledOfflineGptServer({ root, engineUrl: engine.url });
 
     const controller = new AbortController();
-    const response = await fetch(`${openwork.base}/workspace/ws_heartbeat/opencode/event`, {
-      headers: { Authorization: `Bearer ${openwork.token}`, Accept: "text/event-stream" },
+    const response = await fetch(`${offlinegpt.base}/workspace/ws_heartbeat/opencode/event`, {
+      headers: { Authorization: `Bearer ${offlinegpt.token}`, Accept: "text/event-stream" },
       signal: controller.signal,
     });
     expect(response.status).toBe(200);

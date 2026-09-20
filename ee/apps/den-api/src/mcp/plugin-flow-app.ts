@@ -5,16 +5,16 @@ import {
 } from "./mcp-app-v2.js"
 import type { McpUiResourceMeta } from "@modelcontextprotocol/ext-apps"
 import type { McpServer } from "@modelcontextprotocol/server"
-import { pluginFlowAppHtml } from "@openwork/mcp-apps/plugin-flow"
+import { pluginFlowAppHtml } from "@offlinegpt/mcp-apps/plugin-flow"
 import {
   pluginFlowAppSchemaVersion,
   pluginFlowPayloadSchema,
   type PluginFlowPayload,
-} from "@openwork/types/plugin-flow-app"
+} from "@offlinegpt/types/plugin-flow-app"
 
-export { pluginFlowPayloadSchema } from "@openwork/types/plugin-flow-app"
+export { pluginFlowPayloadSchema } from "@offlinegpt/types/plugin-flow-app"
 
-export const PLUGIN_FLOW_APP_RESOURCE_URI = "ui://openwork/plugin-flow/v1/view.html"
+export const PLUGIN_FLOW_APP_RESOURCE_URI = "ui://offlinegpt/plugin-flow/v1/view.html"
 export const PLUGIN_FLOW_TOOL_NAME = "plugin_flow"
 export const PLUGIN_FLOW_APP_HTML = pluginFlowAppHtml
 
@@ -91,7 +91,7 @@ function pluginFlowRecipient(body: Record<string, unknown>): PluginFlowPayload["
 /**
  * Attach the plugin-flow card to one successful library-sharing execute
  * result: the schema-valid payload becomes the structuredContent the app
- * renders, and the same-server `openwork/mcpApp` launch tells compatible
+ * renders, and the same-server `offlinegpt/mcpApp` launch tells compatible
  * hosts to mount the card. The original response JSON stays in content.
  */
 export function attachPluginFlowCard<Result extends {
@@ -116,7 +116,7 @@ export function attachPluginFlowCard<Result extends {
     structuredContent: { ...payload },
     _meta: {
       ...(input.result._meta ?? {}),
-      "openwork/mcpApp": {
+      "offlinegpt/mcpApp": {
         toolName: PLUGIN_FLOW_TOOL_NAME,
         resourceUri: PLUGIN_FLOW_APP_RESOURCE_URI,
         arguments: { mode: payload.mode },
@@ -164,7 +164,7 @@ export function registerAgentPluginFlowApp(server: McpServer) {
 export function registerAgentPluginFlowResource(server: McpServer) {
   registerAppResource(
     server,
-    "OpenWork Plugin Flow",
+    "OfflineGPT Plugin Flow",
     PLUGIN_FLOW_APP_RESOURCE_URI,
     {
       description: "A confirmation card for marketplace attach and plugin or marketplace access grants.",

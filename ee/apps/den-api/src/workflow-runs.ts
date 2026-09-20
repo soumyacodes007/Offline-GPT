@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto"
-import type { createDenDb } from "@openwork-ee/den-db"
-import { and, desc, eq } from "@openwork-ee/den-db/drizzle"
-import { WorkflowRunTable } from "@openwork-ee/den-db/schema"
-import { createDenTypeId, type DenTypeId } from "@openwork-ee/utils/typeid"
+import type { createDenDb } from "@offlinegpt-ee/den-db"
+import { and, desc, eq } from "@offlinegpt-ee/den-db/drizzle"
+import { WorkflowRunTable } from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId, type DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { CodemodeRunResult } from "./mcp/codemode-run.js"
 
 type CodemodeDb = ReturnType<typeof createDenDb>["db"]

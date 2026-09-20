@@ -1,10 +1,10 @@
-import type { WorkflowGraph, WorkflowGraphNode } from "@openwork/types/workflows";
+import type { WorkflowGraph, WorkflowGraphNode } from "@offlinegpt/types/workflows";
 
 const ACTIONS = new Set(["get", "list", "search", "read", "send", "create", "update", "delete"]);
 const SERVICE_PREFIXES = [
   ["google", "workspace"],
   ["marketplace"],
-  ["openwork"],
+  ["offlinegpt"],
   ["codemode"],
   ["calendar"],
   ["gmail"],
@@ -40,7 +40,7 @@ function displayWord(word: string): string {
   if (lower === "gmail") return "Gmail";
   if (lower === "slack") return "Slack";
   if (lower === "google") return "Google";
-  if (lower === "openwork") return "OpenWork";
+  if (lower === "offlinegpt") return "OfflineGPT";
   if (lower === "api") return "API";
   if (lower === "id") return "ID";
   if (lower === "ids") return "IDs";
@@ -77,7 +77,7 @@ export function humanizeIdentifier(name: string): string {
 export function serviceName(namespace: string): string {
   if (namespace === "google_workspace") return "Google Workspace";
   if (namespace === "slack") return "Slack";
-  if (namespace === "den") return "OpenWork";
+  if (namespace === "den") return "OfflineGPT";
   if (namespace === "marketplace") return "Marketplace";
   if (namespace === "$codemode") return "Search";
   if (namespace === "gmail") return "Gmail";

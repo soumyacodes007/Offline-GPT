@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 function CompleteContent() {
   const searchParams = useSearchParams();
   const [{ intentId, failed }] = useState(() => ({
-    intentId: searchParams.get("openworkSsoTest") ?? "",
+    intentId: searchParams.get("offlinegptSsoTest") ?? "",
     failed: searchParams.has("error") || searchParams.has("failed"),
   }));
 
@@ -15,7 +15,7 @@ function CompleteContent() {
     window.history.replaceState(null, "", "/sso/test/complete");
     if (!window.opener) return;
     window.opener.postMessage(
-      { type: "openwork:sso-test-complete", intentId, failed },
+      { type: "offlinegpt:sso-test-complete", intentId, failed },
       window.location.origin,
     );
     window.close();

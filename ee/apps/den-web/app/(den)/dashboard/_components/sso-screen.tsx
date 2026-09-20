@@ -20,7 +20,7 @@ function formatDateTime(value: string | null) {
 type FormMode = "saml" | "oidc";
 
 function readSsoTestMessage(value: unknown) {
-  if (typeof value !== "object" || value === null || !("type" in value) || value.type !== "openwork:sso-test-complete") return null;
+  if (typeof value !== "object" || value === null || !("type" in value) || value.type !== "offlinegpt:sso-test-complete") return null;
   if (!("intentId" in value) || typeof value.intentId !== "string") return null;
   return value.intentId;
 }
@@ -109,7 +109,7 @@ export function SsoScreen() {
   function getOrgScopedHeaders() {
     const headers = new Headers();
     if (orgId) {
-      headers.set("x-openwork-legacy-org-id", orgId);
+      headers.set("x-offlinegpt-legacy-org-id", orgId);
     }
     return headers;
   }
@@ -360,9 +360,9 @@ export function SsoScreen() {
 
   async function handleStartTest() {
     if (!orgId || !connection || !access.canManageSso) return;
-    const popup = window.open("", "openwork-sso-test", "popup,width=520,height=720");
+    const popup = window.open("", "offlinegpt-sso-test", "popup,width=520,height=720");
     if (!popup) {
-      setError("OpenWork could not open the SSO test window. Allow popups, then try again.");
+      setError("OfflineGPT could not open the SSO test window. Allow popups, then try again.");
       return;
     }
 
@@ -516,7 +516,7 @@ export function SsoScreen() {
                     </label>
                     <label className="block text-[14px] text-gray-700 md:col-span-2">
                       <span className="mb-2 block font-medium">Audience URL</span>
-                      <input className="w-full rounded-[18px] border border-gray-200 px-4 py-3" value={audience} onChange={(event) => setAudience(event.target.value)} placeholder="Defaults to the OpenWork auth URL" disabled={ssoFormDisabled} />
+                      <input className="w-full rounded-[18px] border border-gray-200 px-4 py-3" value={audience} onChange={(event) => setAudience(event.target.value)} placeholder="Defaults to the OfflineGPT auth URL" disabled={ssoFormDisabled} />
                     </label>
                     <label className="block text-[14px] text-gray-700 md:col-span-2">
                       <span className="mb-2 block font-medium">IdP Certificate</span>
@@ -524,7 +524,7 @@ export function SsoScreen() {
                       <span className="mt-1 block text-[12px] text-gray-500">Certificates are not returned after save; enter a replacement only when editing.</span>
                     </label>
                     <div className="rounded-[18px] border border-gray-200 px-4 py-3 text-[14px] leading-6 text-gray-600 md:col-span-2">
-                      OpenWork always requires signed SAML assertions, timestamps, and SP-initiated responses for organization SAML connections.
+                      OfflineGPT always requires signed SAML assertions, timestamps, and SP-initiated responses for organization SAML connections.
                     </div>
                   </>
                 ) : (

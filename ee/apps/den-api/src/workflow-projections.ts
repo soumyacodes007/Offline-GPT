@@ -1,4 +1,4 @@
-import type { WorkflowGraph, WorkflowGraphNode, WorkflowVersion } from "@openwork/types/workflows"
+import type { WorkflowGraph, WorkflowGraphNode, WorkflowVersion } from "@offlinegpt/types/workflows"
 
 function redactWorkflowGraphNodeLabel(node: WorkflowGraphNode): WorkflowGraphNode {
   switch (node.kind) {

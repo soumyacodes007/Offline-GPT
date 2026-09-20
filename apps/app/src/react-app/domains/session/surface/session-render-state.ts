@@ -1,13 +1,13 @@
 import type { UIMessage } from "ai";
 
-import type { OpenworkSessionSnapshot } from "../../../../app/lib/openwork-server";
+import type { OfflineGptSessionSnapshot } from "../../../../app/lib/offlinegpt-server";
 import { mergeSnapshotAndLiveMessages } from "../sync/message-merge";
 import { applyRevertCursor } from "../sync/transcript-reconcile";
 import { snapshotToUIMessages } from "../sync/usechat-adapter";
 
-const snapshotMessageCache = new WeakMap<OpenworkSessionSnapshot, UIMessage[]>();
+const snapshotMessageCache = new WeakMap<OfflineGptSessionSnapshot, UIMessage[]>();
 
-function getSnapshotMessages(snapshot: OpenworkSessionSnapshot) {
+function getSnapshotMessages(snapshot: OfflineGptSessionSnapshot) {
   const cached = snapshotMessageCache.get(snapshot);
   if (cached) return cached;
   const messages = snapshotToUIMessages(snapshot);
@@ -17,8 +17,8 @@ function getSnapshotMessages(snapshot: OpenworkSessionSnapshot) {
 
 export function resolveRenderedSessionSnapshot(input: {
   sessionId: string;
-  currentSnapshot: OpenworkSessionSnapshot | null | undefined;
-  cachedRendered: { sessionId: string; snapshot: OpenworkSessionSnapshot } | null | undefined;
+  currentSnapshot: OfflineGptSessionSnapshot | null | undefined;
+  cachedRendered: { sessionId: string; snapshot: OfflineGptSessionSnapshot } | null | undefined;
 }) {
   if (input.currentSnapshot?.session.id === input.sessionId) {
     return input.currentSnapshot;
@@ -34,7 +34,7 @@ export function resolveRenderedSessionSnapshot(input: {
 
 export function deriveRenderedSessionMessages(input: {
   transcriptState: UIMessage[] | null | undefined;
-  snapshot: OpenworkSessionSnapshot | null | undefined;
+  snapshot: OfflineGptSessionSnapshot | null | undefined;
 }) {
   const revertMessageId = (input.snapshot?.session as any)?.revert?.messageID ?? null;
   const liveMessages = input.transcriptState ?? [];

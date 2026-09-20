@@ -1,4 +1,4 @@
-import type { OpenworkSessionSnapshot } from "@/app/lib/openwork-server";
+import type { OfflineGptSessionSnapshot } from "@/app/lib/offlinegpt-server";
 import type { AuditArtifactRecord, AuditAssistantRecord, AuditErrorRecord, AuditTokenUsage, AuditToolRecord, AuditTrailRecord, AuditUserRecord } from "./audit-trail-types";
 import { redactAuditText, redactAuditValue, redactAuditValueWithMetadata } from "./redact-audit-value";
 
@@ -84,7 +84,7 @@ function displayPath(path: string, workspacePath?: string): string {
 }
 
 /** Purely projects the currently available OpenCode snapshot; it does no I/O. */
-export function projectSessionAudit(snapshot: OpenworkSessionSnapshot, options: ProjectSessionAuditOptions | string = {}): AuditTrailRecord[] {
+export function projectSessionAudit(snapshot: OfflineGptSessionSnapshot, options: ProjectSessionAuditOptions | string = {}): AuditTrailRecord[] {
   const opts = typeof options === "string" ? { workspaceId: options } : options;
   const source = asRecord(snapshot);
   const session = asRecord(source.session);

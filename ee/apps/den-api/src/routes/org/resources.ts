@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, sql } from "@openwork-ee/den-db/drizzle"
+import { and, desc, eq, inArray, isNull, sql } from "@offlinegpt-ee/den-db/drizzle"
 import {
   ConfigObjectTable,
   LlmProviderAccessTable,
@@ -7,8 +7,8 @@ import {
   MarketplaceTable,
   PluginConfigObjectTable,
   PluginTable,
-} from "@openwork-ee/den-db/schema"
-import { normalizeDenTypeId } from "@openwork-ee/utils/typeid"
+} from "@offlinegpt-ee/den-db/schema"
+import { normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
@@ -120,7 +120,7 @@ async function listAccessibleLlmProviders(input: {
     .where(and(
       eq(LlmProviderTable.organizationId, input.organizationId),
       inArray(LlmProviderTable.id, providerIds),
-      managedModelsAllowed ? undefined : sql`${LlmProviderTable.source} <> 'openwork'`,
+      managedModelsAllowed ? undefined : sql`${LlmProviderTable.source} <> 'offlinegpt'`,
     ))
     .orderBy(desc(LlmProviderTable.updatedAt), desc(LlmProviderTable.id))
 

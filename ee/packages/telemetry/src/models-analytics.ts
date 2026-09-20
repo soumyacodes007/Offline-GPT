@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto"
-import type { createDenDb } from "@openwork-ee/den-db"
-import { and, eq, sql } from "@openwork-ee/den-db/drizzle"
-import { ModelsAnalyticsEventTable, ModelsAnalyticsSettingsTable, OrganizationTable, OrgSubscriptionTable } from "@openwork-ee/den-db/schema"
-import { modelsAnalyticsEventSchema, type ModelsAnalyticsEvent } from "@openwork-ee/telemetry-contracts"
+import type { createDenDb } from "@offlinegpt-ee/den-db"
+import { and, eq, sql } from "@offlinegpt-ee/den-db/drizzle"
+import { ModelsAnalyticsEventTable, ModelsAnalyticsSettingsTable, OrganizationTable, OrgSubscriptionTable } from "@offlinegpt-ee/den-db/schema"
+import { modelsAnalyticsEventSchema, type ModelsAnalyticsEvent } from "@offlinegpt-ee/telemetry-contracts"
 
 type Db = ReturnType<typeof createDenDb>["db"]
 export type ModelsAnalyticsOrgId = typeof OrganizationTable.$inferSelect.id

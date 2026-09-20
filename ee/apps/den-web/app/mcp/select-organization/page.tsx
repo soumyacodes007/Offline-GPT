@@ -254,12 +254,12 @@ export default function McpSelectOrganizationPage() {
             <div className="relative z-10 flex h-full flex-col justify-between gap-10">
               <div className="flex items-center gap-3">
                 <img
-                  src="/openwork-logo-transparent.svg"
-                  alt="OpenWork"
+                  src="/offlinegpt-logo-transparent.svg"
+                  alt="OfflineGPT"
                   className="h-9 w-auto"
                 />
                 <span className="text-[13px] font-medium text-white/80">
-                  OpenWork Cloud
+                  OfflineGPT Cloud
                 </span>
               </div>
               <div className="grid gap-4">

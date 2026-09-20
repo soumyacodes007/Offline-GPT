@@ -1,6 +1,6 @@
 import { expect } from "vitest";
-import type { Target } from "@openwork/testkit";
-import { spec } from "@openwork/testkit";
+import type { Target } from "@offlinegpt/testkit";
+import { spec } from "@offlinegpt/testkit";
 import { browserViewportWorld, CAPTURE_VIEWPORT } from "../worlds/browser-panel.ts";
 
 const test = spec.world(browserViewportWorld);

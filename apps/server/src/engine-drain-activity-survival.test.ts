@@ -9,10 +9,10 @@ import type { ManagedOpencodeServer } from "./managed-opencode.js";
 import type { ServerConfig, WorkspaceInfo } from "./types.js";
 
 const ENV = {
-  OPENWORK_ENGINE_DRAIN_TIMEOUT_MS: "300",
-  OPENWORK_ENGINE_DRAIN_POLL_MS: "100",
-  OPENWORK_ENGINE_ABORT_SETTLE_MS: "50",
-  OPENWORK_ENGINE_MIN_SPAWN_INTERVAL_MS: "0",
+  OFFLINEGPT_ENGINE_DRAIN_TIMEOUT_MS: "300",
+  OFFLINEGPT_ENGINE_DRAIN_POLL_MS: "100",
+  OFFLINEGPT_ENGINE_ABORT_SETTLE_MS: "50",
+  OFFLINEGPT_ENGINE_MIN_SPAWN_INTERVAL_MS: "0",
 };
 
 type FakeEngine = {
@@ -208,7 +208,7 @@ test("drain grace bounds inactivity without aborting an active session", async (
     savedEnv.set(name, process.env[name]);
     process.env[name] = value;
   }
-  const root = await mkdtemp(join(tmpdir(), "openwork-drain-activity-"));
+  const root = await mkdtemp(join(tmpdir(), "offlinegpt-drain-activity-"));
   const scenarios: Scenario[] = [];
   try {
     const streaming = await startScenario(root, "streaming", 32);

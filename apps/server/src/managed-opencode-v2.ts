@@ -90,7 +90,7 @@ export async function createManagedOpencodeV2Server(
   // cloud, database, or control-plane credentials. Unknown keys stay private.
   const inherited: Record<string, string> = {};
   for (const key of [
-    "OPENWORK_SERVER_URL", "OPENWORK_POLICY_TOKEN",
+    "OFFLINEGPT_SERVER_URL", "OFFLINEGPT_POLICY_TOKEN",
     "PATH", "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "TMP", "TEMP",
     "LANG", "LC_ALL", "LC_CTYPE", "TZ", "TERM", "CI",
     "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_RUNTIME_DIR",
@@ -218,7 +218,7 @@ export async function createManagedOpencodeV2Server(
       $schema: "https://opencode.ai/config.json",
       providers: providerConfig,
       ...(options.permissions ? { permissions: await options.permissions() } : {}),
-      ...(options.env?.OPENWORK_SERVER_URL ? { plugins: [managedPolicyPluginPath(true)] } : {}),
+      ...(options.env?.OFFLINEGPT_SERVER_URL ? { plugins: [managedPolicyPluginPath(true)] } : {}),
     }, null, 2)}\n`, { mode: 0o600 });
     await rename(temporary, target);
   }

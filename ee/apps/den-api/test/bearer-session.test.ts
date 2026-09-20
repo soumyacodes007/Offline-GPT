@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, expect, mock, setSystemTime, test } from "bun:test"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { Hono } from "hono"
 import { generateSignedCookie } from "hono/cookie"
 import { getDenSessionExpiresAt, getDenSessionRefreshCutoff } from "../src/session-lifetime.js"
@@ -63,7 +63,7 @@ let mcpTokenRoutesModule: typeof import("../src/routes/mcp/index.js")
 let orgSharedModule: typeof import("../src/routes/org/shared.js")
 
 function seedRequiredEnv() {
-  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/openwork_test"
+  process.env.DATABASE_URL = process.env.DATABASE_URL ?? "mysql://root:password@127.0.0.1:3306/offlinegpt_test"
   process.env.DEN_DB_ENCRYPTION_KEY = process.env.DEN_DB_ENCRYPTION_KEY ?? "x".repeat(32)
   process.env.BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET ?? "y".repeat(32)
   process.env.BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? "http://127.0.0.1:8790"
@@ -119,7 +119,7 @@ function makeStoredSession(input: { now: Date; updatedAt: Date; expiresAt: Date 
       createdAt: input.now,
       updatedAt: input.updatedAt,
       ipAddress: null,
-      userAgent: "OpenWork desktop",
+      userAgent: "OfflineGPT desktop",
     },
     user: {
       id: userId,
@@ -249,15 +249,15 @@ beforeAll(async () => {
       handler: () => Promise.resolve(new Response(JSON.stringify({ keys: [] }), { status: 200 })),
     },
     DEN_MCP_OPAQUE_ACCESS_TOKEN_PREFIX: "ow_mcp_at_",
-    DEN_MCP_FIRST_PARTY_CLIENT_ID: "openwork-desktop",
+    DEN_MCP_FIRST_PARTY_CLIENT_ID: "offlinegpt-desktop",
     DEN_MCP_FIRST_PARTY_RESOURCES: ["http://127.0.0.1:8790/mcp"],
-    DEN_MCP_GRANT_ID_CLAIM: "https://openworklabs.com/grant_id",
-    DEN_MCP_ORG_ID_CLAIM: "https://openworklabs.com/org_id",
+    DEN_MCP_GRANT_ID_CLAIM: "https://offlinegptlabs.com/grant_id",
+    DEN_MCP_ORG_ID_CLAIM: "https://offlinegptlabs.com/org_id",
     DEN_MCP_OAUTH_RESOURCE: "http://127.0.0.1:8790/mcp",
     DEN_MCP_RESOURCE: "http://127.0.0.1:8790/mcp",
-    DEN_MCP_RESOURCE_CLAIM: "https://openworklabs.com/resource",
+    DEN_MCP_RESOURCE_CLAIM: "https://offlinegptlabs.com/resource",
     DEN_MCP_RESOURCES: ["http://127.0.0.1:8790/mcp"],
-    DEN_MCP_TOKEN_USE_CLAIM: "https://openworklabs.com/token_use",
+    DEN_MCP_TOKEN_USE_CLAIM: "https://offlinegptlabs.com/token_use",
   }))
 
   mock.module("../src/db.js", () => ({
@@ -488,7 +488,7 @@ test("x-api-key can call ordinary organization routes using its scoped org", asy
   const response = await app.request("/ordinary-org-route", {
     headers: {
       "x-api-key": apiKeySecret,
-      "x-openwork-org-id": createDenTypeId("organization"),
+      "x-offlinegpt-org-id": createDenTypeId("organization"),
     },
   })
 
@@ -702,7 +702,7 @@ test("desktop bearer session cache misses populate from the database lookup", as
   expect(cached?.session.token).toBe(token)
 })
 
-test("signed OpenWork Den auth cookie sessions resolve through the Den cache", async () => {
+test("signed OfflineGPT Den auth cookie sessions resolve through the Den cache", async () => {
   const now = new Date("2026-07-09T12:00:00.000Z")
   setSystemTime(now)
   stored = makeStoredSession({
@@ -716,14 +716,14 @@ test("signed OpenWork Den auth cookie sessions resolve through the Den cache", a
     return c.json({ id: resolved?.session.id ?? null })
   })
 
-  const cookie = await generateSignedCookie("openwork-den.session_token", token, process.env.BETTER_AUTH_SECRET ?? "")
+  const cookie = await generateSignedCookie("offlinegpt-den.session_token", token, process.env.BETTER_AUTH_SECRET ?? "")
   const response = await app.request("/session", { headers: { cookie } })
 
   await expect(response.json()).resolves.toEqual({ id: sessionId })
   expect(selects).toBe(1)
 })
 
-test("unsigned OpenWork Den auth cookies are ignored", async () => {
+test("unsigned OfflineGPT Den auth cookies are ignored", async () => {
   const now = new Date("2026-07-09T12:00:00.000Z")
   setSystemTime(now)
   stored = makeStoredSession({
@@ -737,7 +737,7 @@ test("unsigned OpenWork Den auth cookies are ignored", async () => {
     return c.json({ id: resolved?.session.id ?? null })
   })
 
-  const response = await app.request("/session", { headers: { cookie: `openwork-den.session_token=${token}` } })
+  const response = await app.request("/session", { headers: { cookie: `offlinegpt-den.session_token=${token}` } })
 
   await expect(response.json()).resolves.toEqual({ id: null })
   expect(selects).toBe(0)

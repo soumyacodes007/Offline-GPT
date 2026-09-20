@@ -5,11 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { main, isProcessAlive, readScriptWorldSnapshot } from "@openwork/world";
-import { denFetch, signIn } from "@openwork/behaviors";
-import { attachSurface, evaluateOnSurface } from "@openwork/cdp";
-import { screenshot } from "@openwork/test-evidence";
-import { eventually, needs, test } from "@openwork/testkit";
+import { main, isProcessAlive, readScriptWorldSnapshot } from "@offlinegpt/world";
+import { denFetch, signIn } from "@offlinegpt/behaviors";
+import { attachSurface, evaluateOnSurface } from "@offlinegpt/cdp";
+import { screenshot } from "@offlinegpt/test-evidence";
+import { eventually, needs, test } from "@offlinegpt/testkit";
 
 const exec = promisify(execFile);
 const root = fileURLToPath(new URL("../..", import.meta.url));
@@ -29,9 +29,9 @@ async function rfbHandshake(url: string): Promise<string> {
 
 test("preview worlds expose Den and real Electron, preserve progress on frontend update, and tear down only their own stage", { timeout: 1_500_000 }, async ({ evidence }) => {
   needs({ placement: "daytona" });
-  const snapshots = await mkdtemp(join(tmpdir(), "openwork-preview-proof-"));
-  const previous = process.env.OPENWORK_WORLD_SNAPSHOT_DIR;
-  process.env.OPENWORK_WORLD_SNAPSHOT_DIR = snapshots;
+  const snapshots = await mkdtemp(join(tmpdir(), "offlinegpt-preview-proof-"));
+  const previous = process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR;
+  process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR = snapshots;
   const stage = `proof-${Date.now()}`;
   const options = { cwd: root, worldsDirectory: join(root, "worlds"), print: (line: string) => console.error(line) };
   const up = (name: string, scenario: string, lifetime = "30") => main(["up", name, "--stage", stage, "--place", "daytona", "--detach", "--timeout", "600000", "--", "--scenario", scenario, "--lifetime", lifetime], options);
@@ -42,14 +42,14 @@ test("preview worlds expose Den and real Electron, preserve progress on frontend
     return value;
   };
   try {
-    const pinnedRef = process.env.OPENWORK_EVAL_REF;
+    const pinnedRef = process.env.OFFLINEGPT_EVAL_REF;
     assert.ok(pinnedRef);
     try {
-      process.env.OPENWORK_EVAL_REF = "dev";
+      process.env.OFFLINEGPT_EVAL_REF = "dev";
       assert.equal(await up("preview-den", "fresh"), 1);
       assert.equal(await readScriptWorldSnapshot(join(snapshots, `preview-den--${stage}.json`)), undefined);
     } finally {
-      process.env.OPENWORK_EVAL_REF = pinnedRef;
+      process.env.OFFLINEGPT_EVAL_REF = pinnedRef;
     }
     await assert.rejects(exec("python3", [join(root, ".opencode/skills/preview-my-work/scripts/update-preview.py"), "preview-den", "--stage", stage, "--ref", "dev"], { cwd: root, timeout: 10000 }), (error: unknown) => record(error) && error.code === 2 && typeof error.stderr === "string" && error.stderr.includes("full 40-character commit SHA"));
     evidence.recordAssertionEvidence("Mutable refs are rejected before preview execution", "Launch with a branch name fails without a live receipt; the updater rejects a branch name before reading a receipt or invoking Daytona.", true);
@@ -100,8 +100,8 @@ test("preview worlds expose Den and real Electron, preserve progress on frontend
     const buildId = async () => (await exec("daytona", ["exec", desktop.outputs.denSandbox, "--", "cat", "/workspace/ee/apps/den-web/.next/BUILD_ID"], { timeout: 30000 })).stdout.trim();
     const previousBuild = await buildId();
     assert.ok((await (await fetch(desktop.outputs.denWeb)).text()).includes(previousBuild));
-    assert.ok(process.env.OPENWORK_EVAL_REF);
-    await exec("python3", [join(root, ".opencode/skills/preview-my-work/scripts/update-preview.py"), "preview-desktop", "--stage", stage, "--ref", process.env.OPENWORK_EVAL_REF], { cwd: root, timeout: 300000, maxBuffer: 2_000_000 });
+    assert.ok(process.env.OFFLINEGPT_EVAL_REF);
+    await exec("python3", [join(root, ".opencode/skills/preview-my-work/scripts/update-preview.py"), "preview-desktop", "--stage", stage, "--ref", process.env.OFFLINEGPT_EVAL_REF], { cwd: root, timeout: 300000, maxBuffer: 2_000_000 });
     await eventually(async () => (await fetch(desktop.outputs.denWeb)).status === 200, { within: 60000, intervalMs: 1000, label: "updated Den web responds" });
     const nextBuild = await buildId();
     assert.notEqual(nextBuild, previousBuild);
@@ -130,8 +130,8 @@ test("preview worlds expose Den and real Electron, preserve progress on frontend
     for (const name of ["preview-desktop", "preview-den"]) {
       if (await readScriptWorldSnapshot(join(snapshots, `${name}--${stage}.json`))) await down(name);
     }
-    if (previous === undefined) delete process.env.OPENWORK_WORLD_SNAPSHOT_DIR;
-    else process.env.OPENWORK_WORLD_SNAPSHOT_DIR = previous;
+    if (previous === undefined) delete process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR;
+    else process.env.OFFLINEGPT_WORLD_SNAPSHOT_DIR = previous;
     await rm(snapshots, { recursive: true, force: true });
   }
 });

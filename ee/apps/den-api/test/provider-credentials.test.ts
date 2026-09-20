@@ -257,10 +257,10 @@ describe("runtime provider env names", () => {
 
   test("custom and hosted providers keep exactly the names they declare", () => {
     const custom = { id: rowId, source: "custom", providerConfig: { env: ["LITELLM_API_KEY"] } }
-    const hosted = { id: rowId, source: "openwork", providerConfig: { env: ["OPENWORK_API_KEY"] } }
+    const hosted = { id: rowId, source: "offlinegpt", providerConfig: { env: ["OFFLINEGPT_API_KEY"] } }
     expect(runtimeProviderEnvNames(custom)).toEqual(["LITELLM_API_KEY"])
     expect(runtimeProviderEnvName(custom, "OPENAI_API_KEY")).toBe("OPENAI_API_KEY")
-    expect(runtimeProviderEnvNames(hosted)).toEqual(["OPENWORK_API_KEY"])
+    expect(runtimeProviderEnvNames(hosted)).toEqual(["OFFLINEGPT_API_KEY"])
     expect(toRuntimeProviderEnv({ ...custom, apiKeys: { LITELLM_API_KEY: "k" } })).toEqual({
       ...custom,
       apiKeys: { LITELLM_API_KEY: "k" },

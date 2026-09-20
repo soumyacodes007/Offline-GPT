@@ -1,6 +1,6 @@
-import { browserScript } from "@openwork/cdp";
-import { clickButton, denFetch, waitFor } from "@openwork/behaviors";
-import { connect, debuggerUrlFor, evaluate, listTargets } from "@openwork/cdp";
+import { browserScript } from "@offlinegpt/cdp";
+import { clickButton, denFetch, waitFor } from "@offlinegpt/behaviors";
+import { connect, debuggerUrlFor, evaluate, listTargets } from "@offlinegpt/cdp";
 import { provider } from "../ctx.ts";
 import { inPage } from "../inpage.ts";
 import { DOCS_APP, DOCS_MEMBER, DOCS_PROMPT_CARDS, org } from "../seed.ts";
@@ -17,7 +17,7 @@ const CHAT_PLUGIN_NAME = "Call Prep";
 const CHAT_SKILL_NAME = "call-prep";
 const CHAT_SKILL_DESCRIPTION = "Prepare a call brief whenever you ask to prep a call.";
 const CHAT_CLOSING_REPLY = "The call-prep skill is saved to your Library and ready to use.";
-const resourceUri = "ui://openwork/skill-created/v1/view.html";
+const resourceUri = "ui://offlinegpt/skill-created/v1/view.html";
 const composerMessage = "Turn what we just did into a reusable skill for me";
 const ORGANIZATION_PROMPT_INTRO = "Try one of your organization's prompts:";
 
@@ -101,7 +101,7 @@ async function openEmptyTeamPromptSession(surface: DesktopShotSurface): Promise<
   const config = await denFetch(member, "/v1/me/desktop-config", {
     headers: {
       authorization: `Bearer ${member.token}`,
-      "x-openwork-org-id": surface.organization.orgId,
+      "x-offlinegpt-org-id": surface.organization.orgId,
     },
   });
   const expectedPrompts = DOCS_PROMPT_CARDS.map((card) => card.prompt);
@@ -126,7 +126,7 @@ async function openEmptyTeamPromptSession(surface: DesktopShotSurface): Promise<
     const deadline = Date.now() + 60000;
     let last = null;
     while (Date.now() < deadline) {
-      last = await window.__openworkControl.execute("session.create_task", null);
+      last = await window.__offlinegptControl.execute("session.create_task", null);
       if (last?.ok === true) return last;
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
@@ -197,7 +197,7 @@ export const libraryCreateSkillModal = shot("library-create-skill-modal", {
   at: (surface) => `/workspace/${surface.workspaceId}/extensions/skills`,
   steps: [dismissOverlays, (surface) => clickButton(surface, "Add skill", { timeoutMs: 120_000 }), skillForm],
   expect: ["Create a skill", "Name", "Description", "Create skill"],
-  never: ["Sign in to OpenWork Cloud"],
+  never: ["Sign in to OfflineGPT Cloud"],
   viewport: { width: 1440, height: 1000, deviceScaleFactor: 2 },
   out: "packages/docs/images/library-create-skill-modal.png",
 });
@@ -247,10 +247,10 @@ async function waitForMountedSkillCard(surface: DesktopShotSurface, timeoutMs: n
 
 async function createSkillFromChat(surface: DesktopShotSurface): Promise<void> {
   const reconciled = await inPage(surface, async (args) => {
-    const port = localStorage.getItem("openwork.server.port");
-    const token = localStorage.getItem("openwork.server.token");
+    const port = localStorage.getItem("offlinegpt.server.port");
+    const token = localStorage.getItem("offlinegpt.server.token");
     if (!port || !token) return "missing local server credentials";
-    const response = await fetch("http://127.0.0.1:" + port + "/workspace/" + encodeURIComponent(args.workspaceId) + "/mcp/openwork-cloud/reconcile", {
+    const response = await fetch("http://127.0.0.1:" + port + "/workspace/" + encodeURIComponent(args.workspaceId) + "/mcp/offlinegpt-cloud/reconcile", {
       method: "POST",
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -284,7 +284,7 @@ async function createSkillFromChat(surface: DesktopShotSurface): Promise<void> {
     const deadline = Date.now() + 60000;
     let last = null;
     while (Date.now() < deadline) {
-      last = await window.__openworkControl.execute("session.create_task", null);
+      last = await window.__offlinegptControl.execute("session.create_task", null);
       if (last?.ok === true) return last;
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }

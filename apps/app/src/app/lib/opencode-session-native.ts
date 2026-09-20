@@ -3,7 +3,7 @@ import type { Message, Part, Session, SessionStatus, Todo } from "@opencode-ai/s
 import { closeSessionBrowserTabs } from "./desktop";
 import { createClient, unwrap, type FieldsResult } from "./opencode";
 import { createClientV2, isOpencodeV2BaseUrl } from "./opencode-v2-adapter";
-import type { OpenworkSessionSnapshot } from "./openwork-server";
+import type { OfflineGptSessionSnapshot } from "./offlinegpt-server";
 import type { ResolvedWorkspaceEndpoint } from "./workspace-endpoint";
 
 type NativeSessionEndpoint = Pick<ResolvedWorkspaceEndpoint, "opencodeBaseUrl" | "token">;
@@ -59,7 +59,7 @@ function readOwnedSnapshotTarget(
 function createNativeOperations(endpoint: NativeSessionEndpoint): NativeSessionOperations {
   const client = isOpencodeV2BaseUrl(endpoint.opencodeBaseUrl)
     ? createClientV2(endpoint.opencodeBaseUrl, undefined, { token: endpoint.token })
-    : createClient(endpoint.opencodeBaseUrl, undefined, { mode: "openwork", token: endpoint.token });
+    : createClient(endpoint.opencodeBaseUrl, undefined, { mode: "offlinegpt", token: endpoint.token });
   return {
     get: (sessionId, options) => client.session.get({ sessionID: sessionId }, options),
     messages: (sessionId, limit, options) => client.session.messages({ sessionID: sessionId, limit }, options),
@@ -115,7 +115,7 @@ export async function composeNativeSessionSnapshot(
   sessionId: string,
   options?: RequestOptions & { limit?: number },
   dependencies?: NativeSessionDependencies,
-): Promise<OpenworkSessionSnapshot> {
+): Promise<OfflineGptSessionSnapshot> {
   const operations = sessionOperations(endpoint, dependencies);
   const [sessionResult, messagesResult, todoResult, statusResult] = await Promise.all([
     operations.get(sessionId, options),
@@ -135,7 +135,7 @@ export async function composeNativeSessionSnapshotWithRetry(
   readCurrentTarget: () => NativeSessionSnapshotTarget,
   options: RequestOptions & { limit?: number },
   dependencies?: NativeSessionDependencies,
-): Promise<OpenworkSessionSnapshot> {
+): Promise<OfflineGptSessionSnapshot> {
   const signal = options.signal ?? new AbortController().signal;
   const waitForRetry = dependencies?.waitForSnapshotRetry ?? waitForSnapshotRetry;
   let attempt = 0;

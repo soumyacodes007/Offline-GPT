@@ -4,12 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect } from "vitest";
-import { denFetch } from "@openwork/behaviors";
-import type { DenSession } from "@openwork/behaviors";
-import { localMysqlIsRunning, localRedisIsRunning, mcpMock, server, test } from "@openwork/testkit";
+import { denFetch } from "@offlinegpt/behaviors";
+import type { DenSession } from "@offlinegpt/behaviors";
+import { localMysqlIsRunning, localRedisIsRunning, mcpMock, server, test } from "@offlinegpt/testkit";
 
-const daytona = process.env.OPENWORK_EVAL_DAYTONA?.trim() === "1";
-const attached = Boolean(process.env.OPENWORK_EVAL_DEN_API_URL?.trim());
+const daytona = process.env.OFFLINEGPT_EVAL_DAYTONA?.trim() === "1";
+const attached = Boolean(process.env.OFFLINEGPT_EVAL_DEN_API_URL?.trim());
 const mysqlOpen = daytona || attached || await localMysqlIsRunning();
 const redisOpen = daytona || attached || await localRedisIsRunning();
 const title = !mysqlOpen
@@ -34,7 +34,7 @@ function stringField(record: Record<string, unknown>, field: string): string {
 }
 
 function orgHeaders(session: DenSession, orgId: string): Record<string, string> {
-  return { authorization: `Bearer ${session.token}`, "x-openwork-org-id": orgId };
+  return { authorization: `Bearer ${session.token}`, "x-offlinegpt-org-id": orgId };
 }
 
 async function organizationId(admin: DenSession, organizationName: string): Promise<string> {
@@ -441,7 +441,7 @@ test.skipIf(!mysqlOpen || !redisOpen)("the shipped manifest CLI provisions five 
   const apiKey = stringField(requireRecord(minted.body, "API key"), "key");
   const headers = { "x-api-key": apiKey };
   const secret = 'cli-witness-"quoted"\nsecond-line';
-  const directory = await mkdtemp(join(tmpdir(), "openwork-manifest-cli-"));
+  const directory = await mkdtemp(join(tmpdir(), "offlinegpt-manifest-cli-"));
   const file = join(directory, "organization.json");
   const client = fileURLToPath(new URL("../../examples/declarative-org/apply.mjs", import.meta.url));
   const manifest = {

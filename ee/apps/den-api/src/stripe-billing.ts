@@ -1,22 +1,22 @@
 import Stripe from "stripe"
-import { and, eq, isNotNull, isNull, sql } from "@openwork-ee/den-db/drizzle"
+import { and, eq, isNotNull, isNull, sql } from "@offlinegpt-ee/den-db/drizzle"
 import {
   MemberTable,
   OrgSubscriptionStatus,
   OrgSubscriptionType,
   OrgSubscriptionTable,
   OrganizationTable,
-} from "@openwork-ee/den-db/schema"
-import { createDenTypeId } from "@openwork-ee/utils/typeid"
-import { ManagedModelsPolicyError } from "@openwork/types/den/managed-models-policy"
+} from "@offlinegpt-ee/den-db/schema"
+import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
+import { ManagedModelsPolicyError } from "@offlinegpt/types/den/managed-models-policy"
 import { db } from "./db.js"
 import { env } from "./env.js"
 import type { DenOrgMode } from "./env.js"
 import { setInferenceEnabled } from "./inference.js"
 import { assertOrganizationManagedModelsAllowed } from "./organization-metadata.js"
 import { appLogger } from "./observability/logger.js"
-import { isOpenWorkWebAvailable } from "./openwork-web-availability.js"
-import { hasOpenWorkWebComplimentaryAccess, resolveOpenWorkWebAccess } from "./openwork-web-access.js"
+import { isOfflineGPTWebAvailable } from "./offlinegpt-web-availability.js"
+import { hasOfflineGPTWebComplimentaryAccess, resolveOfflineGPTWebAccess } from "./offlinegpt-web-access.js"
 
 type OrgId = typeof OrganizationTable.$inferSelect.id
 type MemberId = typeof MemberTable.$inferSelect.id
@@ -28,10 +28,10 @@ const INFERENCE_SUBSCRIPTION_TYPE = "inference" as const
 const SEAT_SUBSCRIPTION_TYPE = "seat" as const
 const WEB_SUBSCRIPTION_TYPE = "web" as const
 export const FREE_ORG_SEAT_COUNT = 5
-export const OPENWORK_WEB_UNIT_AMOUNT = 5000
-export const OPENWORK_WEB_CURRENCY = "usd" as const
-export const OPENWORK_WEB_INTERVAL = "month" as const
-export const OPENWORK_WEB_QUANTITY_DEFINITION = "joined_non_removed_members" as const
+export const OFFLINEGPT_WEB_UNIT_AMOUNT = 5000
+export const OFFLINEGPT_WEB_CURRENCY = "usd" as const
+export const OFFLINEGPT_WEB_INTERVAL = "month" as const
+export const OFFLINEGPT_WEB_QUANTITY_DEFINITION = "joined_non_removed_members" as const
 const ACTIVE_STATUSES = new Set<OrgSubscriptionStatusValue>(["active", "trialing"])
 const ONGOING_STATUSES = new Set<OrgSubscriptionStatusValue>(["active", "trialing", "incomplete", "past_due", "unpaid", "paused"])
 const EXPIRED_STATUSES = new Set<OrgSubscriptionStatusValue>(["past_due", "canceled", "unpaid", "incomplete_expired", "expired"])
@@ -67,10 +67,10 @@ function requireSeatPriceId() {
   return env.stripe.seatPriceId
 }
 
-function requireOpenWorkWebPriceId() {
-  const priceId = env.stripe.openworkWebPriceId
-  if (!isOpenWorkWebAvailable() || !priceId) {
-    throw new Error("stripe_openwork_web_not_available")
+function requireOfflineGPTWebPriceId() {
+  const priceId = env.stripe.offlinegptWebPriceId
+  if (!isOfflineGPTWebAvailable() || !priceId) {
+    throw new Error("stripe_offlinegpt_web_not_available")
   }
   return priceId
 }
@@ -82,7 +82,7 @@ function requirePriceIdForSubscriptionType(subscriptionType: StripeCheckoutSubsc
     case SEAT_SUBSCRIPTION_TYPE:
       return requireSeatPriceId()
     case WEB_SUBSCRIPTION_TYPE:
-      return requireOpenWorkWebPriceId()
+      return requireOfflineGPTWebPriceId()
   }
 }
 
@@ -122,7 +122,7 @@ function parseSubscriptionType(value: string | null | undefined): OrgSubscriptio
     case "seats":
       return SEAT_SUBSCRIPTION_TYPE
     case WEB_SUBSCRIPTION_TYPE:
-    case "openwork_web":
+    case "offlinegpt_web":
       return WEB_SUBSCRIPTION_TYPE
     default:
       return null
@@ -153,7 +153,7 @@ function subscriptionTypeFromStripeSubscription(subscription: Stripe.Subscriptio
   if (env.stripe.seatPriceId && priceId === env.stripe.seatPriceId) {
     return SEAT_SUBSCRIPTION_TYPE
   }
-  if (env.stripe.openworkWebPriceId && priceId === env.stripe.openworkWebPriceId) {
+  if (env.stripe.offlinegptWebPriceId && priceId === env.stripe.offlinegptWebPriceId) {
     return WEB_SUBSCRIPTION_TYPE
   }
 
@@ -180,37 +180,37 @@ async function joinedMemberCount(organizationId: OrgId) {
   return normalizeSeatCount(Number(row?.count ?? 0))
 }
 
-async function organizationOpenWorkWebComplimentaryAccess(organizationId: OrgId) {
+async function organizationOfflineGPTWebComplimentaryAccess(organizationId: OrgId) {
   const rows = await db
     .select({ metadata: OrganizationTable.metadata })
     .from(OrganizationTable)
     .where(eq(OrganizationTable.id, organizationId))
     .limit(1)
-  return hasOpenWorkWebComplimentaryAccess(rows[0]?.metadata)
+  return hasOfflineGPTWebComplimentaryAccess(rows[0]?.metadata)
 }
 
-export function isOpenWorkWebBillableMember(input: { joinedAt: Date | null; removedAt: Date | null }) {
+export function isOfflineGPTWebBillableMember(input: { joinedAt: Date | null; removedAt: Date | null }) {
   return input.joinedAt !== null && input.removedAt === null
 }
 
-export function calculateOpenWorkWebBilling(input: { joinedMemberCount: number }) {
+export function calculateOfflineGPTWebBilling(input: { joinedMemberCount: number }) {
   const quantity = normalizeSeatCount(input.joinedMemberCount)
   return {
     quantity,
-    unitAmount: OPENWORK_WEB_UNIT_AMOUNT,
-    expectedMonthlyTotal: quantity * OPENWORK_WEB_UNIT_AMOUNT,
+    unitAmount: OFFLINEGPT_WEB_UNIT_AMOUNT,
+    expectedMonthlyTotal: quantity * OFFLINEGPT_WEB_UNIT_AMOUNT,
   }
 }
 
-export function isEligibleOpenWorkWebSubscriptionStatus(status: string | null | undefined) {
+export function isEligibleOfflineGPTWebSubscriptionStatus(status: string | null | undefined) {
   return status === "active" || status === "trialing"
 }
 
-export function isOngoingOpenWorkWebSubscriptionStatus(status: string | null | undefined) {
+export function isOngoingOfflineGPTWebSubscriptionStatus(status: string | null | undefined) {
   return typeof status === "string" && ONGOING_STATUSES.has(subscriptionStatus(status)) && status !== "expired"
 }
 
-export function openWorkWebPaymentStatus(status: string | null | undefined, paymentFailed = false) {
+export function offlineGptWebPaymentStatus(status: string | null | undefined, paymentFailed = false) {
   if (paymentFailed) {
     return "payment_failed" as const
   }
@@ -410,35 +410,35 @@ export async function organizationHasActiveSeatSubscription(organizationId: OrgI
   return Boolean(row && ACTIVE_STATUSES.has(row.status))
 }
 
-function isEligibleOpenWorkWebSubscriptionRow(row: Awaited<ReturnType<typeof findWebSubscriptionByOrg>>) {
+function isEligibleOfflineGPTWebSubscriptionRow(row: Awaited<ReturnType<typeof findWebSubscriptionByOrg>>) {
   return Boolean(
     row
-    && isEligibleOpenWorkWebSubscriptionStatus(row.status)
-    && env.stripe.openworkWebPriceId
-    && row.stripe_price_id === env.stripe.openworkWebPriceId
+    && isEligibleOfflineGPTWebSubscriptionStatus(row.status)
+    && env.stripe.offlinegptWebPriceId
+    && row.stripe_price_id === env.stripe.offlinegptWebPriceId
     && row.payment_failed !== true,
   )
 }
 
-function isOngoingConfiguredOpenWorkWebSubscriptionRow(row: Awaited<ReturnType<typeof findWebSubscriptionByOrg>>) {
+function isOngoingConfiguredOfflineGPTWebSubscriptionRow(row: Awaited<ReturnType<typeof findWebSubscriptionByOrg>>) {
   return Boolean(
     row
-    && isOngoingOpenWorkWebSubscriptionStatus(row.status)
-    && env.stripe.openworkWebPriceId
-    && row.stripe_price_id === env.stripe.openworkWebPriceId,
+    && isOngoingOfflineGPTWebSubscriptionStatus(row.status)
+    && env.stripe.offlinegptWebPriceId
+    && row.stripe_price_id === env.stripe.offlinegptWebPriceId,
   )
 }
 
-export async function organizationHasEligibleOpenWorkWebSubscription(organizationId: OrgId) {
-  return isEligibleOpenWorkWebSubscriptionRow(await findWebSubscriptionByOrg(organizationId))
+export async function organizationHasEligibleOfflineGPTWebSubscription(organizationId: OrgId) {
+  return isEligibleOfflineGPTWebSubscriptionRow(await findWebSubscriptionByOrg(organizationId))
 }
 
-export async function organizationHasOngoingOpenWorkWebSubscription(organizationId: OrgId) {
+export async function organizationHasOngoingOfflineGPTWebSubscription(organizationId: OrgId) {
   let row = await findWebSubscriptionByOrg(organizationId)
   if (row?.stripe_subscription_id) {
     row = await refreshOrgSubscriptionFromStripe(row.stripe_subscription_id)
   }
-  return Boolean(row && isOngoingOpenWorkWebSubscriptionStatus(row.status))
+  return Boolean(row && isOngoingOfflineGPTWebSubscriptionStatus(row.status))
 }
 
 export async function getOrganizationSeatAddEligibility(organizationId: OrgId) {
@@ -625,7 +625,7 @@ export async function findOrCreateStripeCustomer(input: {
         org_id: organizationId,
       },
     }, {
-      idempotencyKey: `openwork-org-customer:${organizationId}`,
+      idempotencyKey: `offlinegpt-org-customer:${organizationId}`,
     })
     return customer.id
   }
@@ -648,41 +648,41 @@ export async function findOrCreateStripeCustomer(input: {
   return customer.id
 }
 
-export function openWorkWebCheckoutIdempotencyKey(input: {
+export function offlineGptWebCheckoutIdempotencyKey(input: {
   organizationId: string
   quantity: number
   previousSessionId?: string | null
 }) {
-  return `openwork-web-checkout:${input.organizationId}:${input.quantity}:${input.previousSessionId ?? "initial"}`
+  return `offlinegpt-web-checkout:${input.organizationId}:${input.quantity}:${input.previousSessionId ?? "initial"}`
 }
 
-function subscriptionHasConfiguredOpenWorkWebPrice(subscription: Stripe.Subscription) {
+function subscriptionHasConfiguredOfflineGPTWebPrice(subscription: Stripe.Subscription) {
   const item = firstSubscriptionItem(subscription)
   return Boolean(
-    env.stripe.openworkWebPriceId
+    env.stripe.offlinegptWebPriceId
     && typeof item?.price?.id === "string"
-    && item.price.id === env.stripe.openworkWebPriceId,
+    && item.price.id === env.stripe.offlinegptWebPriceId,
   )
 }
 
-async function validateOpenWorkWebPrice(priceId: string) {
+async function validateOfflineGPTWebPrice(priceId: string) {
   const price = await stripe().prices.retrieve(priceId)
   if (
     !price.active
     || price.type !== "recurring"
     || price.billing_scheme !== "per_unit"
     || price.transform_quantity !== null
-    || price.unit_amount !== OPENWORK_WEB_UNIT_AMOUNT
-    || price.currency.toLowerCase() !== OPENWORK_WEB_CURRENCY
-    || price.recurring?.interval !== OPENWORK_WEB_INTERVAL
+    || price.unit_amount !== OFFLINEGPT_WEB_UNIT_AMOUNT
+    || price.currency.toLowerCase() !== OFFLINEGPT_WEB_CURRENCY
+    || price.recurring?.interval !== OFFLINEGPT_WEB_INTERVAL
     || price.recurring.interval_count !== 1
     || price.recurring.usage_type !== "licensed"
   ) {
-    throw new Error("stripe_openwork_web_price_contract_invalid")
+    throw new Error("stripe_offlinegpt_web_price_contract_invalid")
   }
 }
 
-function checkoutSessionMatchesOpenWorkWeb(input: {
+function checkoutSessionMatchesOfflineGPTWeb(input: {
   session: Stripe.Checkout.Session
   organizationId: string
 }) {
@@ -693,7 +693,7 @@ function checkoutSessionMatchesOpenWorkWeb(input: {
     && metadata.subscriptionType === WEB_SUBSCRIPTION_TYPE
 }
 
-async function createOpenWorkWebCheckoutSession(input: {
+async function createOfflineGPTWebCheckoutSession(input: {
   organizationId: OrgId
   orgMemberId: MemberId
   email: string
@@ -703,17 +703,17 @@ async function createOpenWorkWebCheckoutSession(input: {
   successUrl: string
   cancelUrl: string
 }) {
-  await validateOpenWorkWebPrice(input.priceId)
+  await validateOfflineGPTWebPrice(input.priceId)
   const quantity = await joinedMemberCount(input.organizationId)
   if (quantity < 1) {
-    throw new Error("stripe_openwork_web_quantity_empty")
+    throw new Error("stripe_offlinegpt_web_quantity_empty")
   }
 
   const storedWebSubscription = await findWebSubscriptionByOrg(input.organizationId)
   if (storedWebSubscription?.stripe_subscription_id) {
     const refreshedWebSubscription = await refreshOrgSubscriptionFromStripe(storedWebSubscription.stripe_subscription_id)
-    if (isOngoingConfiguredOpenWorkWebSubscriptionRow(refreshedWebSubscription)) {
-      throw new Error("stripe_openwork_web_subscription_exists")
+    if (isOngoingConfiguredOfflineGPTWebSubscriptionRow(refreshedWebSubscription)) {
+      throw new Error("stripe_offlinegpt_web_subscription_exists")
     }
   }
 
@@ -724,7 +724,7 @@ async function createOpenWorkWebCheckoutSession(input: {
     metadata: {
       org_id: input.organizationId,
       created_by_org_member_id: input.orgMemberId,
-      openwork_product: "openwork_web",
+      offlinegpt_product: "offlinegpt_web",
     },
   })
 
@@ -737,19 +737,19 @@ async function createOpenWorkWebCheckoutSession(input: {
     const metadata = getSubscriptionMetadata(subscription)
     return metadata.organizationId === input.organizationId
       && metadata.subscriptionType === WEB_SUBSCRIPTION_TYPE
-      && isOngoingOpenWorkWebSubscriptionStatus(subscription.status)
-      && subscriptionHasConfiguredOpenWorkWebPrice(subscription)
+      && isOngoingOfflineGPTWebSubscriptionStatus(subscription.status)
+      && subscriptionHasConfiguredOfflineGPTWebPrice(subscription)
   })
   if (existingOngoingSubscription) {
     await upsertOrgSubscriptionFromStripe(existingOngoingSubscription)
-    throw new Error("stripe_openwork_web_subscription_exists")
+    throw new Error("stripe_offlinegpt_web_subscription_exists")
   }
 
   const checkoutSessions = await stripe().checkout.sessions.list({
     customer,
     limit: 100,
   })
-  const latestMatchingSession = checkoutSessions.data.find((session) => checkoutSessionMatchesOpenWorkWeb({
+  const latestMatchingSession = checkoutSessions.data.find((session) => checkoutSessionMatchesOfflineGPTWeb({
     session,
     organizationId: input.organizationId,
   }))
@@ -763,7 +763,7 @@ async function createOpenWorkWebCheckoutSession(input: {
     }
 
     await stripe().checkout.sessions.expire(latestMatchingSession.id).catch((error) => {
-      logger.warn("failed to expire stale OpenWork Web Checkout session", {
+      logger.warn("failed to expire stale OfflineGPT Web Checkout session", {
         organization_id: input.organizationId,
         stripe_checkout_session_id: latestMatchingSession.id,
         error,
@@ -784,7 +784,7 @@ async function createOpenWorkWebCheckoutSession(input: {
       metadata: input.metadata,
     },
   }, {
-    idempotencyKey: openWorkWebCheckoutIdempotencyKey({
+    idempotencyKey: offlineGptWebCheckoutIdempotencyKey({
       organizationId: input.organizationId,
       quantity,
       previousSessionId: latestMatchingSession?.id,
@@ -805,19 +805,19 @@ export async function createOrgSubscriptionCheckoutSession(input: {
     await assertOrganizationManagedModelsAllowed(input.organizationId)
   }
   const priceId = requirePriceIdForSubscriptionType(input.subscriptionType)
-  const openworkProduct = input.subscriptionType === SEAT_SUBSCRIPTION_TYPE
-    ? "openwork_seats"
+  const offlinegptProduct = input.subscriptionType === SEAT_SUBSCRIPTION_TYPE
+    ? "offlinegpt_seats"
     : input.subscriptionType === WEB_SUBSCRIPTION_TYPE
-      ? "openwork_web"
-      : "openwork_models"
+      ? "offlinegpt_web"
+      : "offlinegpt_models"
   const metadata = {
     org_id: input.organizationId,
     created_by_org_member_id: input.orgMemberId,
-    openwork_product: openworkProduct,
+    offlinegpt_product: offlinegptProduct,
     subscription_type: input.subscriptionType,
   }
   if (input.subscriptionType === WEB_SUBSCRIPTION_TYPE) {
-    return createOpenWorkWebCheckoutSession({
+    return createOfflineGPTWebCheckoutSession({
       organizationId: input.organizationId,
       orgMemberId: input.orgMemberId,
       email: input.email,
@@ -836,7 +836,7 @@ export async function createOrgSubscriptionCheckoutSession(input: {
     metadata: {
       org_id: input.organizationId,
       created_by_org_member_id: input.orgMemberId,
-      openwork_product: openworkProduct,
+      offlinegpt_product: offlinegptProduct,
     },
   })
 
@@ -878,7 +878,7 @@ export async function createSeatCheckoutSession(input: Omit<Parameters<typeof cr
   return createOrgSubscriptionCheckoutSession({ ...input, subscriptionType: SEAT_SUBSCRIPTION_TYPE })
 }
 
-export async function createOpenWorkWebCheckout(input: Omit<Parameters<typeof createOrgSubscriptionCheckoutSession>[0], "subscriptionType">) {
+export async function createOfflineGPTWebCheckout(input: Omit<Parameters<typeof createOrgSubscriptionCheckoutSession>[0], "subscriptionType">) {
   return createOrgSubscriptionCheckoutSession({ ...input, subscriptionType: WEB_SUBSCRIPTION_TYPE })
 }
 
@@ -904,7 +904,7 @@ function serializeSubscription(row: Awaited<ReturnType<typeof findOrgSubscriptio
   return row ? {
     id: row.id,
     status: row.status,
-    paymentStatus: openWorkWebPaymentStatus(row.status, row.payment_failed),
+    paymentStatus: offlineGptWebPaymentStatus(row.status, row.payment_failed),
     stripeCustomerId: row.stripe_customer_id,
     stripeSubscriptionId: row.stripe_subscription_id,
     stripePriceId: row.stripe_price_id,
@@ -917,10 +917,10 @@ function serializeSubscription(row: Awaited<ReturnType<typeof findOrgSubscriptio
   } : null
 }
 
-function serializeOpenWorkWebSubscription(row: Awaited<ReturnType<typeof findWebSubscriptionByOrg>>) {
+function serializeOfflineGPTWebSubscription(row: Awaited<ReturnType<typeof findWebSubscriptionByOrg>>) {
   return row ? {
     status: row.status,
-    paymentStatus: openWorkWebPaymentStatus(row.status, row.payment_failed),
+    paymentStatus: offlineGptWebPaymentStatus(row.status, row.payment_failed),
     quantity: row.quantity,
     currentPeriodStart: row.current_period_start?.toISOString() ?? null,
     currentPeriodEnd: row.current_period_end?.toISOString() ?? null,
@@ -930,63 +930,63 @@ function serializeOpenWorkWebSubscription(row: Awaited<ReturnType<typeof findWeb
   } : null
 }
 
-async function loadOpenWorkWebBillingSummary(organizationId: OrgId) {
+async function loadOfflineGPTWebBillingSummary(organizationId: OrgId) {
   const [row, memberCount, complimentaryAccess] = await Promise.all([
     findWebSubscriptionByOrg(organizationId),
     joinedMemberCount(organizationId),
-    organizationOpenWorkWebComplimentaryAccess(organizationId),
+    organizationOfflineGPTWebComplimentaryAccess(organizationId),
   ])
-  const billing = calculateOpenWorkWebBilling({ joinedMemberCount: memberCount })
-  const hasEligibleSubscription = isEligibleOpenWorkWebSubscriptionRow(row)
-  const access = resolveOpenWorkWebAccess({
-    deploymentAvailable: isOpenWorkWebAvailable(),
+  const billing = calculateOfflineGPTWebBilling({ joinedMemberCount: memberCount })
+  const hasEligibleSubscription = isEligibleOfflineGPTWebSubscriptionRow(row)
+  const access = resolveOfflineGPTWebAccess({
+    deploymentAvailable: isOfflineGPTWebAvailable(),
     hasEligibleSubscription,
     complimentaryAccess,
   })
   return {
     row,
     summary: {
-      configured: isOpenWorkWebAvailable()
-        && Boolean(env.stripe.secretKey && env.stripe.openworkWebPriceId),
-      unitAmount: OPENWORK_WEB_UNIT_AMOUNT,
-      currency: OPENWORK_WEB_CURRENCY,
-      interval: OPENWORK_WEB_INTERVAL,
-      quantityDefinition: OPENWORK_WEB_QUANTITY_DEFINITION,
+      configured: isOfflineGPTWebAvailable()
+        && Boolean(env.stripe.secretKey && env.stripe.offlinegptWebPriceId),
+      unitAmount: OFFLINEGPT_WEB_UNIT_AMOUNT,
+      currency: OFFLINEGPT_WEB_CURRENCY,
+      interval: OFFLINEGPT_WEB_INTERVAL,
+      quantityDefinition: OFFLINEGPT_WEB_QUANTITY_DEFINITION,
       quantityDescription: "Every joined, non-removed organization member; pending invitations are excluded.",
       quantity: billing.quantity,
       expectedMonthlyTotal: billing.expectedMonthlyTotal,
       hasEligibleSubscription,
       ...access,
-      subscription: serializeOpenWorkWebSubscription(row),
+      subscription: serializeOfflineGPTWebSubscription(row),
     },
   }
 }
 
-export async function getOpenWorkWebAccess(organizationId: OrgId) {
+export async function getOfflineGPTWebAccess(organizationId: OrgId) {
   const [row, complimentaryAccess] = await Promise.all([
     findWebSubscriptionByOrg(organizationId),
-    organizationOpenWorkWebComplimentaryAccess(organizationId),
+    organizationOfflineGPTWebComplimentaryAccess(organizationId),
   ])
-  return resolveOpenWorkWebAccess({
-    deploymentAvailable: isOpenWorkWebAvailable(),
-    hasEligibleSubscription: isEligibleOpenWorkWebSubscriptionRow(row),
+  return resolveOfflineGPTWebAccess({
+    deploymentAvailable: isOfflineGPTWebAvailable(),
+    hasEligibleSubscription: isEligibleOfflineGPTWebSubscriptionRow(row),
     complimentaryAccess,
   })
 }
 
-export async function getOpenWorkWebBillingSummary(organizationId: OrgId) {
-  return (await loadOpenWorkWebBillingSummary(organizationId)).summary
+export async function getOfflineGPTWebBillingSummary(organizationId: OrgId) {
+  return (await loadOfflineGPTWebBillingSummary(organizationId)).summary
 }
 
 export async function getOrgBillingSummary(input: { organizationId: OrgId; includePortalUrl?: boolean; returnUrl: string }) {
   const row = await findInferenceSubscriptionByOrg(input.organizationId)
   const seatRow = await findSeatSubscriptionByOrg(input.organizationId)
-  const webBillingState = await loadOpenWorkWebBillingSummary(input.organizationId)
+  const webBillingState = await loadOfflineGPTWebBillingSummary(input.organizationId)
   const webRow = webBillingState.row
   const seatCounts = await getOrganizationSeatBillingCounts({ organizationId: input.organizationId })
   const hasActiveSubscription = Boolean(row && ACTIVE_STATUSES.has(row.status))
   const hasActiveSeatSubscription = Boolean(seatRow && ACTIVE_STATUSES.has(seatRow.status))
-  const hasEligibleWebSubscription = isEligibleOpenWorkWebSubscriptionRow(webRow)
+  const hasEligibleWebSubscription = isEligibleOfflineGPTWebSubscriptionRow(webRow)
   let portalUrl: string | null = null
   if (input.includePortalUrl && (row?.stripe_customer_id || seatRow?.stripe_customer_id || webRow?.stripe_customer_id)) {
     try {
@@ -1021,7 +1021,7 @@ export async function getOrgBillingSummary(input: { organizationId: OrgId; inclu
       },
       web: {
         ...webBillingState.summary,
-        priceId: env.stripe.openworkWebPriceId ?? null,
+        priceId: env.stripe.offlinegptWebPriceId ?? null,
         hasEligibleSubscription: hasEligibleWebSubscription,
         portalUrl,
         subscription: serializeSubscription(webRow),
@@ -1075,7 +1075,7 @@ export async function syncWebSubscriptionQuantityAfterMemberChange(input: { orga
   }
 
   const row = await findWebSubscriptionByOrg(input.organizationId)
-  if (!isEligibleOpenWorkWebSubscriptionRow(row) || !row?.stripe_subscription_item_id) {
+  if (!isEligibleOfflineGPTWebSubscriptionRow(row) || !row?.stripe_subscription_item_id) {
     return
   }
 
@@ -1122,11 +1122,11 @@ async function createSeatSubscriptionFromSetupCheckoutSession(session: Stripe.Ch
       metadata: {
         org_id: metadata.organizationId,
         created_by_org_member_id: metadata.orgMemberId ?? "",
-        openwork_product: "openwork_seats",
+        offlinegpt_product: "offlinegpt_seats",
         subscription_type: SEAT_SUBSCRIPTION_TYPE,
       },
     },
-    { idempotencyKey: `openwork-seat-subscription-${session.id}` },
+    { idempotencyKey: `offlinegpt-seat-subscription-${session.id}` },
   )
 
   return upsertOrgSubscriptionFromStripe(subscription, eventId)
@@ -1171,7 +1171,7 @@ export async function syncStripeCheckoutSession(input: { organizationId: OrgId; 
   const eventId = `checkout-session-sync:${session.id}`
   let row = await syncCurrentStripeSubscription(subscription.id, eventId)
   if (row?.type === WEB_SUBSCRIPTION_TYPE) {
-    row = await syncOpenWorkWebPaymentStateFromCurrentInvoice({
+    row = await syncOfflineGPTWebPaymentStateFromCurrentInvoice({
       row,
       stripeSubscriptionId: subscription.id,
       eventId,
@@ -1204,7 +1204,7 @@ async function syncCurrentStripeSubscription(stripeSubscriptionId: string, event
     const existing = await findWebSubscriptionByOrg(metadata.organizationId as OrgId)
     if (existing?.stripe_subscription_id && existing.stripe_subscription_id !== subscription.id) {
       const refreshedExisting = await refreshOrgSubscriptionFromStripe(existing.stripe_subscription_id)
-      if (isOngoingConfiguredOpenWorkWebSubscriptionRow(refreshedExisting)) {
+      if (isOngoingConfiguredOfflineGPTWebSubscriptionRow(refreshedExisting)) {
         return refreshedExisting
       }
     }
@@ -1213,7 +1213,7 @@ async function syncCurrentStripeSubscription(stripeSubscriptionId: string, event
   return upsertOrgSubscriptionFromStripe(subscription, eventId)
 }
 
-async function syncOpenWorkWebPaymentStateFromCurrentInvoice(input: {
+async function syncOfflineGPTWebPaymentStateFromCurrentInvoice(input: {
   row: Awaited<ReturnType<typeof findOrgSubscriptionByStripeId>>
   stripeSubscriptionId: string
   eventId: string
@@ -1342,7 +1342,7 @@ export async function handleStripeWebhook(input: { payload: string; signature: s
         const subscription = await stripe().subscriptions.retrieve(session.subscription)
         let row = await syncCurrentStripeSubscription(subscription.id, event.id)
         if (row?.type === WEB_SUBSCRIPTION_TYPE) {
-          row = await syncOpenWorkWebPaymentStateFromCurrentInvoice({
+          row = await syncOfflineGPTWebPaymentStateFromCurrentInvoice({
             row,
             stripeSubscriptionId: subscription.id,
             eventId: event.id,
@@ -1362,7 +1362,7 @@ export async function handleStripeWebhook(input: { payload: string; signature: s
         const subscription = await stripe().subscriptions.retrieve(session.subscription)
         let row = await syncCurrentStripeSubscription(subscription.id, event.id)
         if (row?.type === WEB_SUBSCRIPTION_TYPE) {
-          row = await syncOpenWorkWebPaymentStateFromCurrentInvoice({
+          row = await syncOfflineGPTWebPaymentStateFromCurrentInvoice({
             row,
             stripeSubscriptionId: subscription.id,
             eventId: event.id,
@@ -1371,7 +1371,7 @@ export async function handleStripeWebhook(input: { payload: string; signature: s
         if (row?.type === INFERENCE_SUBSCRIPTION_TYPE && ACTIVE_STATUSES.has(subscriptionStatus(subscription.status))) {
           await activatePurchasedInference(row.organization_id)
         }
-        if (row?.type === WEB_SUBSCRIPTION_TYPE && isEligibleOpenWorkWebSubscriptionStatus(subscription.status)) {
+        if (row?.type === WEB_SUBSCRIPTION_TYPE && isEligibleOfflineGPTWebSubscriptionStatus(subscription.status)) {
           await syncWebSubscriptionQuantityAfterMemberChange({
             organizationId: row.organization_id,
             memberCount: row.quantity,
@@ -1384,7 +1384,7 @@ export async function handleStripeWebhook(input: { payload: string; signature: s
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       const row = await syncCurrentStripeSubscription((event.data.object as Stripe.Subscription).id, event.id)
-      if (row?.type === WEB_SUBSCRIPTION_TYPE && isEligibleOpenWorkWebSubscriptionStatus(row.status)) {
+      if (row?.type === WEB_SUBSCRIPTION_TYPE && isEligibleOfflineGPTWebSubscriptionStatus(row.status)) {
         await syncWebSubscriptionQuantityAfterMemberChange({
           organizationId: row.organization_id,
           memberCount: row.quantity,
@@ -1399,7 +1399,7 @@ export async function handleStripeWebhook(input: { payload: string; signature: s
         eventType: event.type,
         eventId: event.id,
       })
-      if (row && isEligibleOpenWorkWebSubscriptionRow(row)) {
+      if (row && isEligibleOfflineGPTWebSubscriptionRow(row)) {
         await syncWebSubscriptionQuantityAfterMemberChange({
           organizationId: row.organization_id,
           memberCount: row.quantity,

@@ -4,14 +4,14 @@ import { denUrls } from "./den-urls"
 
 describe("denUrls", () => {
   test("derives nested API URLs from a bare Den base host", () => {
-    expect(denUrls({ DEN_BASE_URL: "app.openworklabs.com" })).toEqual({
-      base: "https://app.openworklabs.com",
-      web: "https://app.openworklabs.com",
-      api: "https://api.app.openworklabs.com",
-      auth: "https://app.openworklabs.com/api/auth",
-      inference: "https://app.openworklabs.com/dashboard/inference",
-      mcp: "https://api.app.openworklabs.com/mcp",
-      mcpAgent: "https://api.app.openworklabs.com/mcp/agent",
+    expect(denUrls({ DEN_BASE_URL: "app.offlinegptlabs.com" })).toEqual({
+      base: "https://app.offlinegptlabs.com",
+      web: "https://app.offlinegptlabs.com",
+      api: "https://api.app.offlinegptlabs.com",
+      auth: "https://app.offlinegptlabs.com/api/auth",
+      inference: "https://app.offlinegptlabs.com/dashboard/inference",
+      mcp: "https://api.app.offlinegptlabs.com/mcp",
+      mcpAgent: "https://api.app.offlinegptlabs.com/mcp/agent",
     })
   })
 
@@ -29,7 +29,7 @@ describe("denUrls", () => {
 
   test("rejects missing or path-like Den base values", () => {
     expect(() => denUrls({})).toThrow("DEN_BASE_URL must be configured")
-    expect(() => denUrls({ DEN_BASE_URL: "https://app.openworklabs.com/api/den" })).toThrow(
+    expect(() => denUrls({ DEN_BASE_URL: "https://app.offlinegptlabs.com/api/den" })).toThrow(
       "DEN_BASE_URL must be an origin",
     )
   })

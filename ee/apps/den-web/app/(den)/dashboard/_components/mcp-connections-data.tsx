@@ -9,7 +9,7 @@ import {
 } from "./mcp-tool-error-attribution";
 import type { McpAuthorizationDebugDetails } from "./mcp-authorization-url";
 
-const ORG_SCOPE_HEADER = "x-openwork-org-id";
+const ORG_SCOPE_HEADER = "x-offlinegpt-org-id";
 
 function getOrgScopeHeaders(orgId: string) {
   return { [ORG_SCOPE_HEADER]: orgId };
@@ -195,7 +195,7 @@ export type ExternalMcpToolCallInspection = {
   };
   diagnosis: {
     status: "succeeded" | "failed";
-    layer: "openwork" | "network" | "mcp_connection" | "remote_http" | "mcp_tool";
+    layer: "offlinegpt" | "network" | "mcp_connection" | "remote_http" | "mcp_tool";
     summary: string;
   };
 };
@@ -421,7 +421,7 @@ export class McpOAuthConfigurationRequiredError extends McpOAuthStartError {
 }
 
 const MCP_OAUTH_START_UNREADABLE_MESSAGE =
-  "OpenWork could not read the answer from its API when starting the sign-in. The browser blocked the response or the request never completed. Try again; if it keeps happening, tell your workspace admin the time of this attempt.";
+  "OfflineGPT could not read the answer from its API when starting the sign-in. The browser blocked the response or the request never completed. Try again; if it keeps happening, tell your workspace admin the time of this attempt.";
 
 /**
  * The browser refused to hand the page a response: a network failure, or an
@@ -544,7 +544,7 @@ function parseToolCallInspection(value: unknown): ExternalMcpToolCallInspection 
   const layer = value.diagnosis.layer;
   if (
     (status !== "succeeded" && status !== "failed")
-    || (layer !== "openwork" && layer !== "network" && layer !== "mcp_connection" && layer !== "remote_http" && layer !== "mcp_tool")
+    || (layer !== "offlinegpt" && layer !== "network" && layer !== "mcp_connection" && layer !== "remote_http" && layer !== "mcp_tool")
     || typeof value.diagnosis.summary !== "string"
   ) return null;
   const request = value.request === undefined ? undefined : parseInspectionRequest(value.request);

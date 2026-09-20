@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
-import type { WorkerTable } from "@openwork-ee/den-db/schema"
-import { OpenWorkWebAccessRequiredError } from "../openwork-web-access-error.js"
+import type { WorkerTable } from "@offlinegpt-ee/den-db/schema"
+import { OfflineGPTWebAccessRequiredError } from "../offlinegpt-web-access-error.js"
 
 export type CloudStartupFailureStage = "provisioning" | "recovery" | "runtime"
 
@@ -61,7 +61,7 @@ function errorMessage(error: unknown) {
 }
 
 export function classifyCloudStartupFailure(error: unknown): CloudStartupFailureCode {
-  if (error instanceof OpenWorkWebAccessRequiredError) return "web_access_required"
+  if (error instanceof OfflineGPTWebAccessRequiredError) return "web_access_required"
   const message = errorMessage(error)
   if (/\b429\b|rate[ -]?limit|too many requests/.test(message)) return "provider_rate_limited"
   if (/quota|capacity|insufficient (cpu|memory|disk)|resource exhausted|no available/.test(message)) {
@@ -71,7 +71,7 @@ export function classifyCloudStartupFailure(error: unknown): CloudStartupFailure
     return "provisioning_timeout"
   }
   if (message.includes("timed out waiting for daytona worker health")) return "runtime_health_timeout"
-  if (message.includes("openwork session exited") || message.includes("binary missing")) return "runtime_start_failed"
+  if (message.includes("offlinegpt session exited") || message.includes("binary missing")) return "runtime_start_failed"
   if (message.includes("sandbox") && message.includes("not found")) return "sandbox_missing"
   if (message.includes("start failed") || message.includes("sandbox") && message.includes("state change")) {
     return "sandbox_start_failed"

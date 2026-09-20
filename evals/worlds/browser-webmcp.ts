@@ -1,7 +1,7 @@
-import { browserScript } from "@openwork/cdp";
-import type { Surface } from "@openwork/cdp";
-import { configureBrowserFixtureModel, startBrowserFixture } from "@openwork/env";
-import type { Den, Seed } from "@openwork/env";
+import { browserScript } from "@offlinegpt/cdp";
+import type { Surface } from "@offlinegpt/cdp";
+import { configureBrowserFixtureModel, startBrowserFixture } from "@offlinegpt/env";
+import type { Den, Seed } from "@offlinegpt/env";
 import { builtinBrowserWorld } from "./browser-panel.ts";
 
 function record(value: unknown): value is Record<string, unknown> { return !!value && typeof value === "object" && !Array.isArray(value); }
@@ -23,7 +23,7 @@ export async function browserWebMcpWorld(seed: Seed) {
     await configureBrowserFixtureModel(base.app, workspacePath, origin);
     const enginePath = `/workspace/${base.workspace.workspaceId}/opencode`;
     await seed.evalIn(base.app, browserScript(async (disposePath) => {
-      const info = await window.__OPENWORK_ELECTRON__.invokeDesktop('openworkServerInfo');
+      const info = await window.__OFFLINEGPT_ELECTRON__.invokeDesktop('offlinegptServerInfo');
       const response = await fetch(info.baseUrl + disposePath, {
         method: 'POST', headers: { Authorization: 'Bearer ' + info.clientToken },
         signal: AbortSignal.timeout(30000),
@@ -48,9 +48,9 @@ export async function setBrowserPolicy(seed: Seed, app: Surface, den: Den, origi
     method: "PATCH", body: JSON.stringify({ policyName: current.policyName, policy }),
   });
   if (!patched.response.ok) throw new Error("The organization rejected its browser policy update.");
-  await seed.evalIn(app, () => window.dispatchEvent(new Event('openwork-den-settings-changed')));
+  await seed.evalIn(app, () => window.dispatchEvent(new Event('offlinegpt-den-settings-changed')));
 }
 
 export async function setBrowserEnabled(seed: Seed, app: Surface, enabled: boolean) {
-  await seed.evalIn(app, browserScript((enabled) => window.__OPENWORK_ELECTRON__.browser.setControlEnabled(enabled), [enabled]), { awaitPromise: true });
+  await seed.evalIn(app, browserScript((enabled) => window.__OFFLINEGPT_ELECTRON__.browser.setControlEnabled(enabled), [enabled]), { awaitPromise: true });
 }
