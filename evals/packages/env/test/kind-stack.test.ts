@@ -42,8 +42,8 @@ function createExec(handler: (call: ExecCall) => KubeExecResult): { exec: KubeEx
 function imagePlan(mode: "published" | "local"): KubeImagePlan {
   return {
     mode,
-    denApiRepository: mode === "local" ? "offlinegpt-den-api" : "ghcr.io/different-ai/offlinegpt-den-api",
-    denWebRepository: mode === "local" ? "offlinegpt-den-web" : "ghcr.io/different-ai/offlinegpt-den-web",
+    denApiRepository: mode === "local" ? "offlinegpt-den-api" : "ghcr.io/soumyacodes007/offline-gpt-den-api",
+    denWebRepository: mode === "local" ? "offlinegpt-den-web" : "ghcr.io/soumyacodes007/offline-gpt-den-web",
     tag: mode === "local" ? "kube-lab" : "latest",
     pullPolicy: "IfNotPresent",
     reason: "test",

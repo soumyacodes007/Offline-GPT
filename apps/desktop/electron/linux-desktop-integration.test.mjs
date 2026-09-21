@@ -120,10 +120,10 @@ afterEach(async () => {
 
 describe("Linux AppImage desktop integration", () => {
   it("quotes AppImage paths for Desktop Entry Exec fields", () => {
-    const appImagePath = String.raw`/home/alice/Applications/Open Work "daily"$%draft\archive`;
+    const appImagePath = String.raw`/home/alice/Applications/Offline GPT "daily"$%draft\archive`;
     assert.equal(
       quoteDesktopExec(appImagePath),
-      String.raw`"/home/alice/Applications/Open Work \"daily\"\$%%draft\\archive"`,
+      String.raw`"/home/alice/Applications/Offline GPT \"daily\"\$%%draft\\archive"`,
     );
     assert.equal(quoteDesktopExec("`"), '"\\`"');
     const entry = buildOfflineGptDesktopEntry({
@@ -134,7 +134,7 @@ describe("Linux AppImage desktop integration", () => {
     });
     assert.match(entry, /^Exec=".*" %U$/m);
     assert.match(entry, /^MimeType=x-scheme-handler\/offlinegpt;$/m);
-    assert.match(entry, /^StartupWMClass=com\.differentai\.offlinegpt$/m);
+    assert.match(entry, /^StartupWMClass=com\.offlinegptlabs\.offlinegpt$/m);
   });
 
   it("is unavailable outside a packaged Linux AppImage", async () => {

@@ -15,7 +15,7 @@ RUN /usr/local/share/nvm/current/bin/npm install -g pnpm@10.27.0 bun
 
 WORKDIR /workspace
 
-RUN git clone --depth 1 --branch dev https://github.com/different-ai/offlinegpt.git . \
+RUN git clone --depth 1 --branch dev https://github.com/soumyacodes007/offline-gpt.git . \
   && mkdir -p /workspace/.offlinegpt-daytona \
   && sha256sum /workspace/pnpm-lock.yaml | cut -d ' ' -f 1 > /workspace/.offlinegpt-daytona/pnpm-lock.sha256 \
   && /usr/local/share/nvm/current/bin/npm cache clean --force \

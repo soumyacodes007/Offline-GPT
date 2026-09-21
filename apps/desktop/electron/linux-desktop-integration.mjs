@@ -17,8 +17,8 @@ import path from "node:path";
 /** @typedef {import("@offlinegpt/types/desktop-ipc").DesktopIntegrationResult} DesktopIntegrationResult */
 /** @typedef {import("@offlinegpt/types/desktop-ipc").DesktopIntegrationStatus} DesktopIntegrationStatus */
 
-export const OFFLINEGPT_DESKTOP_ID = "com.differentai.offlinegpt.desktop";
-export const OFFLINEGPT_DESKTOP_NAME = "com.differentai.offlinegpt";
+export const OFFLINEGPT_DESKTOP_ID = "com.offlinegptlabs.offlinegpt.desktop";
+export const OFFLINEGPT_DESKTOP_NAME = "com.offlinegptlabs.offlinegpt";
 export const OFFLINEGPT_PROTOCOL_MIME = "x-scheme-handler/offlinegpt";
 
 const INTEGRATION_STATE_VERSION = 1;

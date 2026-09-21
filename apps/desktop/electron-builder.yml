@@ -1,5 +1,5 @@
 extends: ./electron-builder.base.yml
-appId: com.differentai.offlinegpt
+appId: com.offlinegptlabs.offlinegpt
 productName: OfflineGPT
 protocols:
   - name: OfflineGPT

@@ -32,7 +32,7 @@ concurrency:
 jobs:
   plan:
     if: >-
-      github.repository == 'different-ai/offlinegpt' &&
+      github.repository == 'soumyacodes007/offline-gpt' &&
       (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' ||
       (github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_repository.full_name == github.repository))

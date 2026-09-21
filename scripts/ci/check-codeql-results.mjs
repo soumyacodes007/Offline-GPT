@@ -19,7 +19,7 @@ function api(path, paginate = false) {
 }
 
 async function main() {
-  const repo = process.env.GITHUB_REPOSITORY ?? "different-ai/offlinegpt";
+  const repo = process.env.GITHUB_REPOSITORY ?? "soumyacodes007/offline-gpt";
   const prefix = `repos/${repo}`;
   // Reading default-setup settings needs Administration permission, unavailable
   // to GITHUB_TOKEN. Use the successful baseline uploads that PRs must match.

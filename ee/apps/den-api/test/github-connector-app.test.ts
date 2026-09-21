@@ -59,7 +59,7 @@ describe("github connector app helpers", () => {
         }
 
         if (String(url).endsWith("/contents/.claude-plugin/marketplace.json")) {
-          if (String(url).includes("different-ai/offlinegpt")) {
+          if (String(url).includes("soumyacodes007/offline-gpt")) {
             const content = Buffer.from(JSON.stringify({ plugins: [{ name: "a" }, { name: "b" }, { name: "c" }] })).toString("base64")
             return new Response(JSON.stringify({ content, encoding: "base64" }), { status: 200 })
           }
@@ -75,7 +75,7 @@ describe("github connector app helpers", () => {
 
         return new Response(JSON.stringify({
           repositories: [
-            { default_branch: "main", full_name: "different-ai/offlinegpt", id: 42, private: true },
+            { default_branch: "main", full_name: "soumyacodes007/offline-gpt", id: 42, private: true },
             { default_branch: "dev", full_name: "different-ai/opencode", id: 99, private: false },
           ],
         }), { status: 200 })
@@ -89,7 +89,7 @@ describe("github connector app helpers", () => {
       "https://api.github.com/installation/repositories?per_page=100&page=1",
     ])
     expect(requestUrls.slice(2).sort()).toEqual([
-      "https://api.github.com/repos/different-ai/offlinegpt/contents/.claude-plugin/marketplace.json",
+      "https://api.github.com/repos/soumyacodes007/offline-gpt/contents/.claude-plugin/marketplace.json",
       "https://api.github.com/repos/different-ai/opencode/contents/.claude-plugin/marketplace.json",
       "https://api.github.com/repos/different-ai/opencode/contents/.claude-plugin/plugin.json",
     ].sort())
@@ -99,7 +99,7 @@ describe("github connector app helpers", () => {
     ])
     expect(requestUrls).not.toContain("https://api.github.com/installation/repositories?per_page=100&page=2")
     expect(repositories).toEqual([
-      { defaultBranch: "main", fullName: "different-ai/offlinegpt", hasPluginManifest: true, id: 42, manifestKind: "marketplace", marketplacePluginCount: 3, private: true },
+      { defaultBranch: "main", fullName: "soumyacodes007/offline-gpt", hasPluginManifest: true, id: 42, manifestKind: "marketplace", marketplacePluginCount: 3, private: true },
       { defaultBranch: "dev", fullName: "different-ai/opencode", hasPluginManifest: true, id: 99, manifestKind: "plugin", marketplacePluginCount: null, private: false },
     ])
   })
@@ -293,7 +293,7 @@ describe("github connector app helpers", () => {
       installationId: 777,
       path,
       ref: "main",
-      repositoryFullName: "different-ai/offlinegpt",
+      repositoryFullName: "soumyacodes007/offline-gpt",
       token: "installation-token",
     })
 
@@ -318,8 +318,8 @@ describe("github connector app helpers", () => {
       { rawSourceText: "# imported from skills/d/SKILL.md", status: "fetched" },
     ])
     expect(contentRequests).toEqual([
-      "https://api.github.com/repos/different-ai/offlinegpt/contents/skills/c/SKILL.md?ref=main",
-      "https://api.github.com/repos/different-ai/offlinegpt/contents/skills/d/SKILL.md?ref=main",
+      "https://api.github.com/repos/soumyacodes007/offline-gpt/contents/skills/c/SKILL.md?ref=main",
+      "https://api.github.com/repos/soumyacodes007/offline-gpt/contents/skills/d/SKILL.md?ref=main",
     ])
   })
 
@@ -376,15 +376,15 @@ describe("github connector app helpers", () => {
           return new Response(JSON.stringify({ token: "installation-token" }), { status: 201 })
         }
 
-        if (String(url).endsWith("/repos/different-ai/offlinegpt")) {
+        if (String(url).endsWith("/repos/soumyacodes007/offline-gpt")) {
           return new Response(JSON.stringify({
             default_branch: "main",
-            full_name: "different-ai/offlinegpt",
+            full_name: "soumyacodes007/offline-gpt",
             id: 42,
           }), { status: 200 })
         }
 
-        if (String(url).endsWith("/repos/different-ai/offlinegpt/branches/main")) {
+        if (String(url).endsWith("/repos/soumyacodes007/offline-gpt/branches/main")) {
           return new Response(JSON.stringify({ name: "main" }), { status: 200 })
         }
 
@@ -392,7 +392,7 @@ describe("github connector app helpers", () => {
       },
       installationId: 777,
       ref: "refs/heads/main",
-      repositoryFullName: "different-ai/offlinegpt",
+      repositoryFullName: "soumyacodes007/offline-gpt",
       repositoryId: 42,
     })
 

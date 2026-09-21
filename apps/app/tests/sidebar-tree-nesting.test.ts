@@ -13,7 +13,7 @@ import {
 describe("workspaceAvatarInitials", () => {
   test("uses two letters from multi-word labels", () => {
     expect(workspaceAvatarInitials("new-folder")).toBe("NF");
-    expect(workspaceAvatarInitials("Open Work")).toBe("OW");
+    expect(workspaceAvatarInitials("Sample Workspace")).toBe("SW");
   });
 
   test("uses up to two characters from a single token", () => {

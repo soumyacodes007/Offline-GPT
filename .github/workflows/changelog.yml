@@ -4,7 +4,7 @@ name: Changelog
 # starts workflows from events created by that token, so `release: published`
 # only fires when a human publishes by hand. The primary entry point is the
 # `gh workflow run changelog.yml -f tag=...` dispatch issued by
-# release-macos-aarch64.yml right after it flips the draft.
+# release-desktop.yml after it publishes the draft release.
 on:
   release:
     types: [published]
@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   changelog:
-    if: github.repository == 'different-ai/offlinegpt'
+    if: github.repository == 'soumyacodes007/offline-gpt'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 30
     env:
@@ -56,7 +56,7 @@ jobs:
         if: steps.guard.outputs.stable == 'true'
         id: dedupe
         run: |
-          if grep -Fq "[$TAG](https://github.com/different-ai/offlinegpt/compare/" packages/docs/changelog.mdx; then
+          if grep -Fq "[$TAG](https://github.com/soumyacodes007/offline-gpt/compare/" packages/docs/changelog.mdx; then
             echo "documented=true" >> "$GITHUB_OUTPUT"
             echo "$TAG is already documented; skipping docs generation and only refreshing the release notes."
           else
@@ -123,7 +123,7 @@ jobs:
           - docs date label: $DATE_LABEL
           - tracker file: $TRACKER_FILE
           - loc line (copy verbatim into the tracker): $LOC_LINE
-          - compare url: https://github.com/different-ai/offlinegpt/compare/$PREV...$TAG
+          - compare url: https://github.com/soumyacodes007/offline-gpt/compare/$PREV...$TAG
 
           Commits between $PREV and $TAG (hash subject):
           PROMPT_EOF

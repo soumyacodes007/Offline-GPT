@@ -16,7 +16,7 @@ describe("resolveDesktopDistribution", () => {
     assert.deepEqual(PUBLIC_DESKTOP_DISTRIBUTION, {
       flavor: "public",
       appName: "OfflineGPT",
-      appIdentifier: "com.differentai.offlinegpt",
+      appIdentifier: "com.offlinegptlabs.offlinegpt",
       protocolScheme: "offlinegpt",
       requireSignin: false,
       requireActivation: false,
@@ -33,7 +33,7 @@ describe("resolveDesktopDistribution", () => {
       {
         flavor: "cloud",
         appName: "OfflineGPT Cloud",
-        appIdentifier: "com.differentai.offlinegpt",
+        appIdentifier: "com.offlinegptlabs.offlinegpt",
         protocolScheme: "offlinegpt",
         requireSignin: true,
         requireActivation: false,
@@ -51,7 +51,7 @@ describe("resolveDesktopDistribution", () => {
     assert.deepEqual(distribution, {
       flavor: "enterprise",
       appName: "OfflineGPT Enterprise",
-      appIdentifier: "com.differentai.offlinegpt",
+      appIdentifier: "com.offlinegptlabs.offlinegpt",
       protocolScheme: "offlinegpt",
       requireSignin: true,
       requireActivation: true,

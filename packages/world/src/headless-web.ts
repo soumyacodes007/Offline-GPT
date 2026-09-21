@@ -409,7 +409,7 @@ export async function resolveInstalledProductionHeadlessState(options: {
   }
   const env = options.env ?? process.env;
   const homeDir = options.homeDir ?? homedir();
-  const userDataDir = join(homeDir, "Library", "Application Support", "com.differentai.offlinegpt");
+  const userDataDir = join(homeDir, "Library", "Application Support", "com.offlinegptlabs.offlinegpt");
   const pathOptions = { env, homeDir, platform };
   const dataDir = offlinegptServerDataDir(pathOptions);
   const serverConfigPath = offlinegptServerConfigPath(pathOptions);

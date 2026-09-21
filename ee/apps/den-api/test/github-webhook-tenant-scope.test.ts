@@ -43,8 +43,8 @@ const vulnerableCrossInstallationMatch = {
     organizationId: "organization_foreign",
     connectorInstanceId: "connectorInstance_foreign",
     connectorType: "github",
-    remoteId: "different-ai/offlinegpt",
-    targetConfigJson: { repositoryFullName: "different-ai/offlinegpt", repositoryId: 42 },
+    remoteId: "soumyacodes007/offline-gpt",
+    targetConfigJson: { repositoryFullName: "soumyacodes007/offline-gpt", repositoryId: 42 },
   },
 }
 
@@ -150,7 +150,7 @@ test("GitHub push webhooks only match targets for the payload installation", asy
     installationId: 12345,
     payload: {},
     ref: "refs/heads/main",
-    repositoryFullName: "different-ai/offlinegpt",
+    repositoryFullName: "soumyacodes007/offline-gpt",
     repositoryId: 42,
   })
 
@@ -179,7 +179,7 @@ test("GitHub push ingress persists queued work without calling GitHub", async ()
       installationId: 12345,
       payload: {},
       ref: "refs/heads/main",
-      repositoryFullName: "different-ai/offlinegpt",
+      repositoryFullName: "soumyacodes007/offline-gpt",
       repositoryId: 42,
     })
 
@@ -213,16 +213,16 @@ test("repository rename updates connector identity, records continuity, queues r
       action: "renamed",
       changes: { repository: { name: { from: "offlinegpt" } } },
       installation: { id: 12345 },
-      repository: { full_name: "different-ai/offlinegpt-renamed", id: 42 },
+      repository: { full_name: "soumyacodes007/offline-gpt-renamed", id: 42 },
     })
 
     expect(response.status).toBe(202)
     expect(updatedValues).toEqual([
       expect.objectContaining({
-        remoteId: "different-ai/offlinegpt-renamed",
-        targetConfigJson: expect.objectContaining({ repositoryFullName: "different-ai/offlinegpt-renamed", repositoryId: 42 }),
+        remoteId: "soumyacodes007/offline-gpt-renamed",
+        targetConfigJson: expect.objectContaining({ repositoryFullName: "soumyacodes007/offline-gpt-renamed", repositoryId: 42 }),
       }),
-      expect.objectContaining({ remoteId: "different-ai/offlinegpt-renamed" }),
+      expect.objectContaining({ remoteId: "soumyacodes007/offline-gpt-renamed" }),
     ])
     expect(insertedValues).toEqual([
       expect.objectContaining({
@@ -231,8 +231,8 @@ test("repository rename updates connector identity, records continuity, queues r
         summaryJson: {
           action: "renamed",
           deliveryId: "delivery-repository",
-          from: "different-ai/offlinegpt",
-          to: "different-ai/offlinegpt-renamed",
+          from: "soumyacodes007/offline-gpt",
+          to: "soumyacodes007/offline-gpt-renamed",
           trigger: "webhook",
         },
       }),
@@ -260,7 +260,7 @@ test("removed installation repository disables its target and instance and acks 
     const response = await deliverWebhook("installation_repositories", {
       action: "removed",
       installation: { id: 12345 },
-      repositories_removed: [{ full_name: "different-ai/offlinegpt", id: 42 }],
+      repositories_removed: [{ full_name: "soumyacodes007/offline-gpt", id: 42 }],
     })
 
     expect(response.status).toBe(202)

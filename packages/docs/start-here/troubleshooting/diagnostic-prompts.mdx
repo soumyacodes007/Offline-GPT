@@ -36,7 +36,7 @@ My expected cloud web URL: https://app.offlinegptlabs.com (replace with your sel
    - your own runtime config if you have an export tool
 2. Inspect these files if they exist (they can silently override server URLs beneath the Settings UI), but report only `baseUrl`, `apiBaseUrl`, `requireSignin`, and `writtenAt`. Never print `handoff`, `claimLinks`, grants, tokens, or other credential-bearing fields:
    - `~/.config/offlinegpt/desktop-bootstrap.json`
-   - `~/Library/Application Support/com.differentai.offlinegpt/desktop-bootstrap.json`
+   - `~/Library/Application Support/com.offlinegptlabs.offlinegpt/desktop-bootstrap.json`
 3. If the url from step 1 is a localhost address, find what serves that port:
    - `lsof -nP -iTCP:<port> -sTCP:LISTEN`
    - for each PID: `ps -p <PID> -o pid=,command=` and `lsof -a -p <PID> -d cwd -Fn | tail -1`
@@ -82,7 +82,7 @@ State which world you are in:
 - `search_capabilities` reflects your server's current catalog.
 - `execute_capability` on a known capability returns data or an actionable connection message — never `unknown_capability`.
 
-If the agent completes all phases and verification still fails, [open an issue](https://github.com/different-ai/offlinegpt/issues) and paste the agent's final report (it is already redacted).
+If the agent completes all phases and verification still fails, [open an issue](https://github.com/soumyacodes007/offline-gpt/issues) and paste the agent's final report (it is already redacted).
 
 ## 2. Cloud MCP is configured, but its tools are missing
 

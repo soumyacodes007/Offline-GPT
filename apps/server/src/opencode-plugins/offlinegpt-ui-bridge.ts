@@ -17,8 +17,8 @@ function uiControlDiscoveryPaths(): string[] {
   const explicit = process.env.OFFLINEGPT_UI_CONTROL_DISCOVERY?.trim();
   if (explicit) return [explicit];
   return [
-    join(userAppDataDir(), "com.differentai.offlinegpt", "offlinegpt-ui-control.json"),
-    join(userAppDataDir(), "com.differentai.offlinegpt.dev", "offlinegpt-ui-control.json"),
+    join(userAppDataDir(), "com.offlinegptlabs.offlinegpt", "offlinegpt-ui-control.json"),
+    join(userAppDataDir(), "com.offlinegptlabs.offlinegpt.dev", "offlinegpt-ui-control.json"),
   ].filter((p): p is string => Boolean(p));
 }
 

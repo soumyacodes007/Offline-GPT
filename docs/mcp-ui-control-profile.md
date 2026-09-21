@@ -233,7 +233,7 @@ The exact list depends on the current OfflineGPT route and state. Common actions
 ## Requirements
 
 - **OfflineGPT desktop** must be running. The MCP server connects to OfflineGPT's local bridge which starts automatically when the desktop app launches.
-- **macOS** is the primary supported platform. The bridge uses Electron IPC and writes a discovery file to `~/Library/Application Support/com.differentai.offlinegpt/`.
+- **macOS** is the primary supported platform. The bridge uses Electron IPC and writes a discovery file to `~/Library/Application Support/com.offlinegptlabs.offlinegpt/`.
 - The MCP server runs as a **stdio** process — your MCP client spawns it and communicates over stdin/stdout.
 
 ## How it works under the hood

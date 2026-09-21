@@ -690,7 +690,7 @@ export function readDesktopDistributionInfo(): DesktopDistributionInfo {
   return distribution ?? {
     flavor: "public",
     appName: "OfflineGPT",
-    appIdentifier: "com.differentai.offlinegpt",
+    appIdentifier: "com.offlinegptlabs.offlinegpt",
     protocolScheme: "offlinegpt",
     requireSignin: false,
     requireActivation: false,

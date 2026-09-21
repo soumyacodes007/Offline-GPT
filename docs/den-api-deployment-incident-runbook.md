@@ -21,7 +21,7 @@ cold-starts `dist/main.js` without development conditions in
 `evals/specs/den-api-production-package.test.ts`.
 
 Render must use the commands above or deploy the CI-validated
-`ghcr.io/different-ai/offlinegpt-den-api` image. Promotion must require both the
+`ghcr.io/soumyacodes007/offline-gpt-den-api` image. Promotion must require both the
 production-package spec and the `Publish EE Artifacts / Build offlinegpt-den-api`
 image smoke check.
 

@@ -897,7 +897,7 @@ Optional installer artifact values:
 config:
   public:
     installerReleaseTag: "v0.17.9"
-    installerReleaseRepo: "different-ai/offlinegpt"
+    installerReleaseRepo: "soumyacodes007/offline-gpt"
 
 installerArtifacts:
   enabled: true

@@ -36,7 +36,7 @@ brew link --overwrite daytona
 daytona version
 ```
 
-- `gh` must be authenticated to `different-ai/offlinegpt` and able to create/delete
+- `gh` must be authenticated to `soumyacodes007/offline-gpt` and able to create/delete
   temporary public prereleases.
 - Have a Windows OfflineGPT build or installer ready. Keep secrets and customer
   materials out of the temporary release asset.
@@ -114,19 +114,19 @@ ZIP="/tmp/${TAG}.zip"
 # Include .opencode/skills/daytona-windows-cert/scripts/ca-probe.js as
 # offlinegpt/ca-probe.js.
 ditto -c -k --keepParent /tmp/offlinegpt-win-cert-upload/offlinegpt "$ZIP"
-gh release create "$TAG" "$ZIP" --repo different-ai/offlinegpt --prerelease
+gh release create "$TAG" "$ZIP" --repo soumyacodes007/offline-gpt --prerelease
 ```
 
 The release command shape from the verified session was:
 
 ```bash
-gh release create <tag> <zip> --repo different-ai/offlinegpt --prerelease
+gh release create <tag> <zip> --repo soumyacodes007/offline-gpt --prerelease
 ```
 
 Download and extract inside Windows:
 
 ```bash
-DOWNLOAD_URL="https://github.com/different-ai/offlinegpt/releases/download/${TAG}/$(basename "$ZIP")"
+DOWNLOAD_URL="https://github.com/soumyacodes007/offline-gpt/releases/download/${TAG}/$(basename "$ZIP")"
 daytona exec "$SANDBOX_ID" -- cmd /c 'mkdir C:\ow 2>NUL'
 daytona exec "$SANDBOX_ID" -- cmd /c "curl.exe -L -o C:\ow\app.zip $DOWNLOAD_URL"
 daytona exec "$SANDBOX_ID" -- cmd /c 'tar -xf C:\ow\app.zip -C C:\ow'
@@ -144,8 +144,8 @@ instead of rewriting them:
 
 ```bash
 daytona exec "$SANDBOX_ID" -- cmd /c 'mkdir C:\ow\offlinegpt\scripts\support 2>NUL'
-daytona exec "$SANDBOX_ID" -- cmd /c 'curl.exe -L -o C:\ow\offlinegpt\scripts\support\setup-offlinegpt-tls-repro.ps1 https://raw.githubusercontent.com/different-ai/offlinegpt/dev/scripts/support/setup-offlinegpt-tls-repro.ps1'
-daytona exec "$SANDBOX_ID" -- cmd /c 'curl.exe -L -o C:\ow\offlinegpt\scripts\support\offlinegpt-doctor.ps1 https://raw.githubusercontent.com/different-ai/offlinegpt/dev/scripts/support/offlinegpt-doctor.ps1'
+daytona exec "$SANDBOX_ID" -- cmd /c 'curl.exe -L -o C:\ow\offlinegpt\scripts\support\setup-offlinegpt-tls-repro.ps1 https://raw.githubusercontent.com/soumyacodes007/offline-gpt/dev/scripts/support/setup-offlinegpt-tls-repro.ps1'
+daytona exec "$SANDBOX_ID" -- cmd /c 'curl.exe -L -o C:\ow\offlinegpt\scripts\support\offlinegpt-doctor.ps1 https://raw.githubusercontent.com/soumyacodes007/offline-gpt/dev/scripts/support/offlinegpt-doctor.ps1'
 ```
 
 ## 4. Stand up the enterprise-TLS repro
@@ -282,15 +282,15 @@ captures above remain supplementary setup and debugging evidence.
 The real Windows userData folder is:
 
 ```text
-C:\Users\<User>\AppData\Roaming\com.differentai.offlinegpt
+C:\Users\<User>\AppData\Roaming\com.offlinegptlabs.offlinegpt
 ```
 
 It is **not** `C:\Users\<User>\AppData\Roaming\OfflineGPT`. Because `exec` runs as
 SYSTEM, inspect the interactive user path explicitly:
 
 ```bash
-daytona exec "$SANDBOX_ID" -- cmd /c 'dir "C:\Users\Administrator\AppData\Roaming\com.differentai.offlinegpt\system-ca-bundle.pem"'
-daytona exec "$SANDBOX_ID" -- cmd /c 'findstr /c:"OfflineGPT TLS Repro" "C:\Users\Administrator\AppData\Roaming\com.differentai.offlinegpt\system-ca-bundle.pem"'
+daytona exec "$SANDBOX_ID" -- cmd /c 'dir "C:\Users\Administrator\AppData\Roaming\com.offlinegptlabs.offlinegpt\system-ca-bundle.pem"'
+daytona exec "$SANDBOX_ID" -- cmd /c 'findstr /c:"OfflineGPT TLS Repro" "C:\Users\Administrator\AppData\Roaming\com.offlinegptlabs.offlinegpt\system-ca-bundle.pem"'
 ```
 
 Known gotcha: `system-ca-bundle.pem` is written once at first launch and then
@@ -304,7 +304,7 @@ usually does not bite customers.
   payload:
 
 ```bash
-daytona exec "$SANDBOX_ID" -- cmd /c 'dir "C:\Users\Administrator\AppData\Roaming\com.differentai.offlinegpt"'
+daytona exec "$SANDBOX_ID" -- cmd /c 'dir "C:\Users\Administrator\AppData\Roaming\com.offlinegptlabs.offlinegpt"'
 ```
 
 - Pipes and `|` inside `daytona exec ... -- powershell -Command '...'` can be

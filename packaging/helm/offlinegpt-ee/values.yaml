@@ -211,7 +211,7 @@ installerArtifacts:
 denApi:
   replicaCount: 1
   image:
-    repository: ghcr.io/different-ai/offlinegpt-den-api
+    repository: ghcr.io/soumyacodes007/offline-gpt-den-api
     tag: ""
   service:
     type: ClusterIP
@@ -239,7 +239,7 @@ denApi:
 denWeb:
   replicaCount: 1
   image:
-    repository: ghcr.io/different-ai/offlinegpt-den-web
+    repository: ghcr.io/soumyacodes007/offline-gpt-den-web
     tag: ""
   service:
     type: ClusterIP
@@ -268,7 +268,7 @@ inference:
   enabled: false
   replicaCount: 1
   image:
-    repository: ghcr.io/different-ai/offlinegpt-inference
+    repository: ghcr.io/soumyacodes007/offline-gpt-inference
     tag: ""
   service:
     type: ClusterIP

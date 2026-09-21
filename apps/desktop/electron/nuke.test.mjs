@@ -112,7 +112,7 @@ async function tinyDelay(ms = 140) {
 
 test("buildNukeManifest includes default macOS state roots and preserves bootstrap", () => {
   const home = "/Users/alice";
-  const userDataPath = "/Users/alice/Library/Application Support/com.differentai.offlinegpt";
+  const userDataPath = "/Users/alice/Library/Application Support/com.offlinegptlabs.offlinegpt";
   const manifest = buildNukeManifest({ env: {}, homedir: home, platform: "darwin", userDataPath });
 
   assert.equal(manifest.bootstrapPath, "/Users/alice/.config/offlinegpt/desktop-bootstrap.json");
@@ -138,7 +138,7 @@ test("buildNukeManifest includes default macOS state roots and preserves bootstr
 
 test("buildNukeManifest wipes session state, server audit data, and workspace registries", () => {
   const home = "/Users/alice";
-  const userDataPath = "/Users/alice/Library/Application Support/com.differentai.offlinegpt";
+  const userDataPath = "/Users/alice/Library/Application Support/com.offlinegptlabs.offlinegpt";
   const manifest = buildNukeManifest({
     env: {},
     homedir: home,
@@ -166,7 +166,7 @@ test("buildNukeManifest can include the bootstrap file in the wipe", () => {
     homedir: "/Users/alice",
     platform: "darwin",
     preserveBootstrap: false,
-    userDataPath: "/Users/alice/Library/Application Support/com.differentai.offlinegpt",
+    userDataPath: "/Users/alice/Library/Application Support/com.offlinegptlabs.offlinegpt",
   });
 
   assert.equal(manifest.bootstrapPath, bootstrapPath);
@@ -179,11 +179,11 @@ test("buildNukeManifest includes default Linux state roots", () => {
     env: {},
     homedir: "/home/alice",
     platform: "linux",
-    userDataPath: "/home/alice/.config/com.differentai.offlinegpt",
+    userDataPath: "/home/alice/.config/com.offlinegptlabs.offlinegpt",
   });
 
   assert.equal(manifest.preserveBootstrapPath, "/home/alice/.config/offlinegpt/desktop-bootstrap.json");
-  assert.ok(manifest.deletePaths.includes("/home/alice/.config/com.differentai.offlinegpt"));
+  assert.ok(manifest.deletePaths.includes("/home/alice/.config/com.offlinegptlabs.offlinegpt"));
   assert.ok(manifest.deletePaths.includes("/home/alice/.local/share/opencode"));
   assert.ok(manifest.deletePaths.includes("/home/alice/.config/opencode"));
   assert.ok(manifest.deletePaths.includes("/home/alice/.cache/opencode"));
@@ -199,11 +199,11 @@ test("buildNukeManifest includes Windows path shapes", () => {
     env,
     homedir: "C:\\Users\\Alice",
     platform: "win32",
-    userDataPath: "C:\\Users\\Alice\\AppData\\Roaming\\com.differentai.offlinegpt",
+    userDataPath: "C:\\Users\\Alice\\AppData\\Roaming\\com.offlinegptlabs.offlinegpt",
   });
 
   assert.equal(manifest.preserveBootstrapPath, "C:\\Users\\Alice\\AppData\\Local\\offlinegpt\\desktop-bootstrap.json");
-  assert.ok(manifest.deletePaths.includes("C:\\Users\\Alice\\AppData\\Roaming\\com.differentai.offlinegpt"));
+  assert.ok(manifest.deletePaths.includes("C:\\Users\\Alice\\AppData\\Roaming\\com.offlinegptlabs.offlinegpt"));
   assert.ok(manifest.deletePaths.includes("C:\\Users\\Alice\\AppData\\Roaming\\offlinegpt\\server.json"));
   assert.ok(manifest.deletePaths.includes("C:\\Users\\Alice\\AppData\\Roaming\\offlinegpt\\runtime.sqlite"));
   assert.ok(manifest.deletePaths.includes("C:\\Users\\Alice\\AppData\\Roaming\\offlinegpt\\tokens.json"));
@@ -219,11 +219,11 @@ test("buildNukeManifest honors OFFLINEGPT_ELECTRON_USERDATA override", () => {
     env: { OFFLINEGPT_ELECTRON_USERDATA: "/tmp/offlinegpt-userdata" },
     homedir: "/Users/alice",
     platform: "darwin",
-    userDataPath: "/Users/alice/Library/Application Support/com.differentai.offlinegpt",
+    userDataPath: "/Users/alice/Library/Application Support/com.offlinegptlabs.offlinegpt",
   });
 
   assert.ok(manifest.deletePaths.includes("/tmp/offlinegpt-userdata"));
-  assert.ok(!manifest.deletePaths.includes("/Users/alice/Library/Application Support/com.differentai.offlinegpt"));
+  assert.ok(!manifest.deletePaths.includes("/Users/alice/Library/Application Support/com.offlinegptlabs.offlinegpt"));
 });
 
 test("buildNukeManifest redirects HOME/XDG paths in dev mode", () => {
@@ -246,9 +246,9 @@ test("buildNukeManifest redirects HOME/XDG paths in dev mode", () => {
 });
 
 test("buildNukeManifest never reaches production state from a non-dev isolated profile", () => {
-  const userDataPath = "/Users/alice/Library/Application Support/com.differentai.offlinegpt.dev.wt2";
+  const userDataPath = "/Users/alice/Library/Application Support/com.offlinegptlabs.offlinegpt.dev.wt2";
   const manifest = buildNukeManifest({
-    env: { OFFLINEGPT_ELECTRON_APP_IDENTIFIER: "com.differentai.offlinegpt.dev.wt2" },
+    env: { OFFLINEGPT_ELECTRON_APP_IDENTIFIER: "com.offlinegptlabs.offlinegpt.dev.wt2" },
     homedir: "/Users/alice",
     platform: "darwin",
     userDataPath,
@@ -264,7 +264,7 @@ test("buildNukeManifest never reaches production state from a non-dev isolated p
     "/Users/alice/.local/share/opencode",
     "/Users/alice/Library/Application Support/opencode",
     legacyOrchestratorPath("/Users/alice"),
-    "/Users/alice/Library/Caches/com.differentai.offlinegpt.ShipIt",
+    "/Users/alice/Library/Caches/com.offlinegptlabs.offlinegpt.ShipIt",
   ]) {
     assert.ok(!manifest.deletePaths.includes(productionPath), `must not delete ${productionPath}`);
   }
@@ -487,7 +487,7 @@ test("runPendingNukeCleanup refuses replayed paths outside an isolated profile",
     await writeFile(pendingPath, `${JSON.stringify({ paths: [productionPath, profilePath] })}\n`, "utf8");
 
     const result = await runPendingNukeCleanup({
-      env: { OFFLINEGPT_ELECTRON_APP_IDENTIFIER: "com.differentai.offlinegpt.dev.wt2" },
+      env: { OFFLINEGPT_ELECTRON_APP_IDENTIFIER: "com.offlinegptlabs.offlinegpt.dev.wt2" },
       homedir: path.join(root, "home"),
       platform: process.platform === "win32" ? "win32" : "darwin",
       userDataPath,

@@ -47,8 +47,8 @@ function userAppDataDir() {
 function discoveryPaths() {
   return [
     process.env.OFFLINEGPT_UI_CONTROL_DISCOVERY?.trim(),
-    join(userAppDataDir(), "com.differentai.offlinegpt", DISCOVERY_FILE),
-    join(userAppDataDir(), "com.differentai.offlinegpt.dev", DISCOVERY_FILE),
+    join(userAppDataDir(), "com.offlinegptlabs.offlinegpt", DISCOVERY_FILE),
+    join(userAppDataDir(), "com.offlinegptlabs.offlinegpt.dev", DISCOVERY_FILE),
   ].filter(Boolean);
 }
 

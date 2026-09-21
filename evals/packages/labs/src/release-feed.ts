@@ -112,7 +112,7 @@ type ComparableVersion = {
   prerelease: string[];
 };
 
-const DEFAULT_REPO = "different-ai/offlinegpt";
+const DEFAULT_REPO = "soumyacodes007/offline-gpt";
 const DEFAULT_PLATFORMS: ReleasePlatform[] = ["mac-arm64", "mac-x64", "win-x64", "linux-x64", "linux-arm64"];
 const DEFAULT_DISTRIBUTION: ReleaseDistribution = "enterprise";
 const textEncoder = new TextEncoder();

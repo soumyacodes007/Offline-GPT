@@ -32,7 +32,7 @@ const connectConfirmDialogSource = readFileSync(
 const publicDistribution = {
   flavor: "public" as const,
   appName: "OfflineGPT",
-  appIdentifier: "com.differentai.offlinegpt",
+  appIdentifier: "com.offlinegptlabs.offlinegpt",
   protocolScheme: "offlinegpt",
   requireSignin: false,
   requireActivation: false,
@@ -41,7 +41,7 @@ const publicDistribution = {
 const enterpriseDistribution = {
   flavor: "enterprise" as const,
   appName: "OfflineGPT Enterprise",
-  appIdentifier: "com.differentai.offlinegpt",
+  appIdentifier: "com.offlinegptlabs.offlinegpt",
   protocolScheme: "offlinegpt",
   requireSignin: true,
   requireActivation: true,

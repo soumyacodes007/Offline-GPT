@@ -29,12 +29,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/different-ai/offlinegpt.git",
+    "url": "git+https://github.com/soumyacodes007/offline-gpt.git",
     "directory": "apps/server"
   },
-  "homepage": "https://github.com/different-ai/offlinegpt/tree/dev/apps/server",
+  "homepage": "https://github.com/soumyacodes007/offline-gpt/tree/dev/apps/server",
   "bugs": {
-    "url": "https://github.com/different-ai/offlinegpt/issues"
+    "url": "https://github.com/soumyacodes007/offline-gpt/issues"
   },
   "keywords": [
     "offlinegpt",

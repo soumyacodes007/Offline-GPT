@@ -22,8 +22,8 @@ const organizationId = createDenTypeId("organization")
 const installLinkId = createDenTypeId("installLink")
 const insertedRows: unknown[] = []
 const revokedRows: unknown[] = []
-const officialWindowsDesktopUrl = "https://github.com/different-ai/offlinegpt/releases/download/v9.9.9/offlinegpt-enterprise-win-x64-9.9.9.exe"
-const officialWindowsCloudDesktopUrl = "https://github.com/different-ai/offlinegpt/releases/download/v9.9.9/offlinegpt-cloud-win-x64-9.9.9.exe"
+const officialWindowsDesktopUrl = "https://github.com/soumyacodes007/offline-gpt/releases/download/v9.9.9/offlinegpt-enterprise-win-x64-9.9.9.exe"
+const officialWindowsCloudDesktopUrl = "https://github.com/soumyacodes007/offline-gpt/releases/download/v9.9.9/offlinegpt-cloud-win-x64-9.9.9.exe"
 const connectKeyPair = generateConnectLinkKeyPair()
 const connectKeyId = "owc-route-test"
 
@@ -205,7 +205,7 @@ beforeEach(() => {
   envModule.env.connectLink = null
   envModule.env.devMode = true
   envModule.env.installerArtifactsDir = undefined
-  envModule.env.installerReleaseRepo = "different-ai/offlinegpt"
+  envModule.env.installerReleaseRepo = "soumyacodes007/offline-gpt"
   envModule.env.installerReleaseTag = "v9.9.9"
   envModule.env.installerReleaseTagExplicit = true
   envModule.env.orgMode = "single_org"
@@ -437,7 +437,7 @@ test("authenticated installer download uses active-organization version and dist
 
   expect(response.status).toBe(302)
   expect(response.headers.get("location")).toBe(
-    "https://github.com/different-ai/offlinegpt/releases/download/v0.18.6/offlinegpt-cloud-win-x64-0.18.6.exe",
+    "https://github.com/soumyacodes007/offline-gpt/releases/download/v0.18.6/offlinegpt-cloud-win-x64-0.18.6.exe",
   )
   expect(response.headers.get("location")).not.toContain("token=")
   expect(insertedInstallLinks()).toHaveLength(0)
@@ -518,7 +518,7 @@ test("unordered organization allowed desktop versions select the maximum direct 
   })
 
   expect(response.status).toBe(302)
-  expect(response.headers.get("location")).toBe("https://github.com/different-ai/offlinegpt/releases/download/v0.18.6/offlinegpt-enterprise-win-x64-0.18.6.exe")
+  expect(response.headers.get("location")).toBe("https://github.com/soumyacodes007/offline-gpt/releases/download/v0.18.6/offlinegpt-enterprise-win-x64-0.18.6.exe")
   expect(response.headers.get("location")).not.toContain("v9.9.9")
   expect(response.headers.get("location")).not.toContain("opaque-token")
 })
@@ -534,7 +534,7 @@ test("older allowed desktop versions keep their matching release tag", async () 
   })
 
   expect(response.status).toBe(302)
-  expect(response.headers.get("location")).toBe("https://github.com/different-ai/offlinegpt/releases/download/v0.17.27/offlinegpt-enterprise-win-x64-0.17.27.exe")
+  expect(response.headers.get("location")).toBe("https://github.com/soumyacodes007/offline-gpt/releases/download/v0.17.27/offlinegpt-enterprise-win-x64-0.17.27.exe")
   expect(response.headers.get("location")).not.toContain("opaque-token")
 })
 
@@ -581,7 +581,7 @@ test("organization version pins stay tag-pinned even without an explicit install
   })
 
   expect(response.status).toBe(302)
-  expect(response.headers.get("location")).toBe("https://github.com/different-ai/offlinegpt/releases/download/v0.18.6/offlinegpt-enterprise-win-x64-0.18.6.exe")
+  expect(response.headers.get("location")).toBe("https://github.com/soumyacodes007/offline-gpt/releases/download/v0.18.6/offlinegpt-enterprise-win-x64-0.18.6.exe")
   expect(response.headers.get("location")).not.toContain("/releases/latest/")
   expect(response.headers.get("location")).not.toContain("opaque-token")
 })
@@ -609,7 +609,7 @@ test("install token organization policy applies to member and admin downloads", 
     ...defaultOrganizationMetadata(),
     allowedDesktopVersions: ["0.18.4", "0.18.6"],
   }
-  const expectedUrl = "https://github.com/different-ai/offlinegpt/releases/download/v0.18.6/offlinegpt-enterprise-win-x64-0.18.6.exe"
+  const expectedUrl = "https://github.com/soumyacodes007/offline-gpt/releases/download/v0.18.6/offlinegpt-enterprise-win-x64-0.18.6.exe"
 
   for (const nextRole of ["member", "admin"]) {
     role = nextRole
@@ -635,7 +635,7 @@ test("explicit configured desktop release tags are used verbatim", async () => {
   })
 
   expect(response.status).toBe(302)
-  expect(response.headers.get("location")).toBe("https://github.com/different-ai/offlinegpt/releases/download/v0.17.27/offlinegpt-enterprise-win-x64-0.17.27.exe")
+  expect(response.headers.get("location")).toBe("https://github.com/soumyacodes007/offline-gpt/releases/download/v0.17.27/offlinegpt-enterprise-win-x64-0.17.27.exe")
   expect(response.headers.get("location")).not.toContain("opaque-token")
 })
 
@@ -664,7 +664,7 @@ test.each([
 ])(
   "zero-config $platform downloads redirect to the enterprise desktop asset without forwarding the token",
   async ({ platform, assetName }) => {
-    const directUrl = `https://github.com/different-ai/offlinegpt/releases/download/v9.9.9/${assetName}`
+    const directUrl = `https://github.com/soumyacodes007/offline-gpt/releases/download/v9.9.9/${assetName}`
     const response = await createApp().request(
       `http://den.local/v1/install/${platform}?token=opaque-token`,
       { redirect: "manual" },

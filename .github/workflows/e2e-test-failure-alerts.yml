@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   notify:
-    if: github.repository == 'different-ai/offlinegpt' && github.event.workflow_run.event == 'schedule'
+    if: github.repository == 'soumyacodes007/offline-gpt' && github.event.workflow_run.event == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

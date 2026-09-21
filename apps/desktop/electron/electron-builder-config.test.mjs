@@ -17,7 +17,7 @@ describe("Electron distribution configs", () => {
       await readFile(path.resolve(dirname, "..", "package.json"), "utf8"),
     );
     const config = await readConfig("electron-builder.base.yml");
-    assert.equal(packageMetadata.desktopName, "com.differentai.offlinegpt");
+    assert.equal(packageMetadata.desktopName, "com.offlinegptlabs.offlinegpt");
     assert.equal(config.npmRebuild, false);
     assert.deepEqual(config.files.at(-1), {
       from: ".electron-runtime/node_modules",
@@ -35,7 +35,7 @@ describe("Electron distribution configs", () => {
   it("keeps the public artifact and protocol unchanged", async () => {
     const config = await readConfig("electron-builder.yml");
     assert.equal(config.extends, "./electron-builder.base.yml");
-    assert.equal(config.appId, "com.differentai.offlinegpt");
+    assert.equal(config.appId, "com.offlinegptlabs.offlinegpt");
     assert.equal(config.productName, "OfflineGPT");
     assert.equal(config.protocols[0].schemes[0], "offlinegpt");
     assert.equal(config.artifactName, "offlinegpt-${os}-${arch}-${version}.${ext}");
@@ -44,13 +44,13 @@ describe("Electron distribution configs", () => {
   it("defines an enterprise flavor with the standard app identity and release provider", async () => {
     const config = await readConfig("electron-builder.enterprise.yml");
     assert.equal(config.extends, "./electron-builder.base.yml");
-    assert.equal(config.appId, "com.differentai.offlinegpt");
+    assert.equal(config.appId, "com.offlinegptlabs.offlinegpt");
     assert.equal(config.productName, "OfflineGPT Enterprise");
     assert.equal(config.extraMetadata.offlinegptDistribution, "enterprise");
     assert.equal(config.protocols[0].schemes[0], "offlinegpt");
     assert.equal(config.publish[0].provider, "github");
-    assert.equal(config.publish[0].owner, "different-ai");
-    assert.equal(config.publish[0].repo, "offlinegpt");
+    assert.equal(config.publish[0].owner, "soumyacodes007");
+    assert.equal(config.publish[0].repo, "Offline-GPT");
     assert.equal(config.publish[0].channel, "enterprise");
     assert.equal(
       config.artifactName,
@@ -61,7 +61,7 @@ describe("Electron distribution configs", () => {
   it("defines a Cloud flavor with its own artifacts and updater channel", async () => {
     const config = await readConfig("electron-builder.cloud.yml");
     assert.equal(config.extends, "./electron-builder.base.yml");
-    assert.equal(config.appId, "com.differentai.offlinegpt");
+    assert.equal(config.appId, "com.offlinegptlabs.offlinegpt");
     assert.equal(config.productName, "OfflineGPT Cloud");
     assert.equal(config.extraMetadata.offlinegptDistribution, "cloud");
     assert.equal(config.protocols[0].schemes[0], "offlinegpt");

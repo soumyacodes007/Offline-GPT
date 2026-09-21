@@ -11,7 +11,7 @@ const iconPath = resolve(desktopRoot, "resources", "icons", "icon.icns");
 const productName = "ComputerUse";
 const helperExecutableName = "ComputerUse";
 const helperAppName = "OfflineGPT Computer Use.app";
-const bundleIdentifier = "com.differentai.offlinegpt.computer-use";
+const bundleIdentifier = "com.offlinegptlabs.offlinegpt.computer-use";
 
 const readArg = (name) => {
   const raw = process.argv.slice(2);

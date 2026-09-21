@@ -44,8 +44,8 @@ function resolveAppVersion(app) {
   return _cachedAppVersion;
 }
 const ELECTRON_UPDATER_FEEDS = Object.freeze({
-  stable: "https://github.com/different-ai/offlinegpt/releases/latest/download",
-  alpha: "https://github.com/different-ai/offlinegpt/releases/download/alpha-macos-latest",
+  stable: "https://github.com/soumyacodes007/offline-gpt/releases/latest/download",
+  alpha: "https://github.com/soumyacodes007/offline-gpt/releases/download/alpha-macos-latest",
 });
 
 function normalizeElectronUpdaterChannel(value, manifestChannel = "latest") {
@@ -176,7 +176,7 @@ export function targetedStableUpdaterFeed(currentVersion, targetVersion, allowOl
       ? "Recovery target version must differ from the installed version."
       : "Target update version must be newer than the installed version.");
   }
-  return `https://github.com/different-ai/offlinegpt/releases/download/v${normalizedTarget}`;
+  return `https://github.com/soumyacodes007/offline-gpt/releases/download/v${normalizedTarget}`;
 }
 
 function updaterChannelState(app, channel, targetVersion = null, manifestChannel = "latest") {
@@ -245,7 +245,7 @@ function runDefaults(args) {
 
 // Squirrel.Mac's `ShipIt` helper (which swaps the .app on macOS) reads its
 // options from this NSUserDefaults domain.
-const SHIP_IT_DEFAULTS_DOMAIN = "com.differentai.offlinegpt.ShipIt";
+const SHIP_IT_DEFAULTS_DOMAIN = "com.offlinegptlabs.offlinegpt.ShipIt";
 
 // Squirrel.Mac defaults to moving the *entire* app bundle through a temp
 // directory. On repeat installs that move can leave the staged bundle missing,
@@ -385,7 +385,7 @@ export function registerUpdaterIpc({
   async function resolveRecoveryArtifact(version) {
     if (!electronNet?.fetch) return null;
     try {
-      const manifestUrl = `https://github.com/different-ai/offlinegpt/releases/download/v${version}/${recoveryManifestName(platform, arch, distribution)}`;
+      const manifestUrl = `https://github.com/soumyacodes007/offline-gpt/releases/download/v${version}/${recoveryManifestName(platform, arch, distribution)}`;
       const response = await electronNet.fetch(manifestUrl, { headers: { Accept: "text/yaml, text/plain, */*" } });
       if (!response.ok) return null;
       return selectRecoveryArtifact(parseRecoveryManifest(await response.text()), {

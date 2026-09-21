@@ -32,15 +32,15 @@ beforeAll(async () => {
 test("builds the installer asset URL for the configured release", () => {
   expect(installerReleaseAssetUrl("offlinegpt-enterprise-mac-arm64-9.9.9.dmg", {
     releaseTag: "v9.9.9+build 2",
-    releaseRepo: "different-ai/offlinegpt",
-  })).toBe("https://github.com/different-ai/offlinegpt/releases/download/v9.9.9%2Bbuild%202/offlinegpt-enterprise-mac-arm64-9.9.9.dmg")
+    releaseRepo: "soumyacodes007/offline-gpt",
+  })).toBe("https://github.com/soumyacodes007/offline-gpt/releases/download/v9.9.9%2Bbuild%202/offlinegpt-enterprise-mac-arm64-9.9.9.dmg")
 })
 
 test("builds the installer asset URL from the resolved default release", async () => {
   envModule.env.installerReleaseTag = "v9.9.9"
   envModule.env.installerReleaseTagExplicit = true
   await expect(installerReleaseAssetUrl("offlinegpt-enterprise-win-x64-9.9.9.exe")).resolves.toBe(
-    "https://github.com/different-ai/offlinegpt/releases/download/v9.9.9/offlinegpt-enterprise-win-x64-9.9.9.exe",
+    "https://github.com/soumyacodes007/offline-gpt/releases/download/v9.9.9/offlinegpt-enterprise-win-x64-9.9.9.exe",
   )
 })
 

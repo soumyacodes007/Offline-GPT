@@ -15,7 +15,7 @@ type Repo = {
   stargazers_count?: number;
 };
 
-const FALLBACK_RELEASE = "https://github.com/different-ai/offlinegpt/releases";
+const FALLBACK_RELEASE = "https://github.com/soumyacodes007/offline-gpt/releases";
 
 const formatCompact = (value: number) => {
   try {
@@ -75,12 +75,12 @@ export const getGithubData = async () => {
   // the paginated list being flooded by alpha tags pushing stable releases out
   // of the per_page window.
   const [repo, latestRelease, releases] = await Promise.all([
-    fetchJson<Repo>("https://api.github.com/repos/different-ai/offlinegpt"),
+    fetchJson<Repo>("https://api.github.com/repos/soumyacodes007/offline-gpt"),
     fetchJson<Release>(
-      "https://api.github.com/repos/different-ai/offlinegpt/releases/latest"
+      "https://api.github.com/repos/soumyacodes007/offline-gpt/releases/latest"
     ),
     fetchJson<Release[]>(
-      "https://api.github.com/repos/different-ai/offlinegpt/releases?per_page=50"
+      "https://api.github.com/repos/soumyacodes007/offline-gpt/releases?per_page=50"
     )
   ]);
 

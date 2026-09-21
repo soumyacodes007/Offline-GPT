@@ -386,7 +386,7 @@ const MOCK_PLUGINS: DenPlugin[] = [
     author: "OfflineGPT",
     category: "workflows",
     installed: true,
-    source: { type: "github", repo: "different-ai/offlinegpt-plugins" },
+    source: { type: "github", repo: "soumyacodes007/offline-gpt-plugins" },
     skills: [
       { id: "sk_ow_release_prep", name: "Release Prep", description: "Bump versions across app, desktop, and offlinegpt-server in lockstep." },
       { id: "sk_ow_changelog", name: "Changelog Drafter", description: "Generate markdown release notes from merged PRs." },

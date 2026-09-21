@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   flake-report:
-    if: github.repository == 'different-ai/offlinegpt'
+    if: github.repository == 'soumyacodes007/offline-gpt'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 120
 

@@ -67,7 +67,7 @@ test("webhook route accepts a valid signature and ignores unbound deliveries cle
     after: "abc123",
     ref: "refs/heads/main",
     repository: {
-      full_name: "different-ai/offlinegpt",
+      full_name: "soumyacodes007/offline-gpt",
       id: 42,
     },
   })

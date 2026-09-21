@@ -53,7 +53,7 @@ URL. Screenshots write png files to `/daytona-artifacts/screenshots` for quick
 AI/human validation checkpoints. Stop recording with
 `.devcontainer/stop-daytona-recording.sh` so ffmpeg finalizes the file cleanly.
 
-Do not use the generic `daytona create https://github.com/different-ai/offlinegpt`
+Do not use the generic `daytona create https://github.com/soumyacodes007/offline-gpt`
 flow for Electron/noVNC tests. The default resource size is too small and the
 generic image path does not guarantee the desktop stack we need.
 

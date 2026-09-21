@@ -5,7 +5,7 @@ set -euo pipefail
 # the prebuilt GHCR image. The image is built by GitHub Actions on dev pushes.
 
 SNAPSHOT_NAME="${DAYTONA_EVAL_SNAPSHOT:-offlinegpt-eval-vnc}"
-IMAGE="${DAYTONA_EVAL_IMAGE:-ghcr.io/different-ai/offlinegpt-eval-vnc:dev}"
+IMAGE="${DAYTONA_EVAL_IMAGE:-ghcr.io/soumyacodes007/offline-gpt-eval-vnc:dev}"
 REGION="${DAYTONA_TARGET:-us}"
 
 existing_snapshot_id="$(daytona snapshot list -f json | node -e 'const name = process.argv[1]; let input = ""; process.stdin.on("data", (chunk) => input += chunk); process.stdin.on("end", () => { const snapshot = JSON.parse(input).find((item) => item.name === name); if (snapshot) process.stdout.write(snapshot.id || snapshot.name); });' "$SNAPSHOT_NAME")"

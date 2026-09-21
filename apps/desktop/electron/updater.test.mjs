@@ -87,7 +87,7 @@ async function registerFakeUpdaterIpc({ version }) {
 describe("staleUpdaterStatePaths", () => {
   it("targets the ShipIt cache on macOS", { skip: process.platform !== "darwin" }, () => {
     assert.deepEqual(staleUpdaterStatePaths(fakeApp), [
-      "/Users/test/Library/Caches/com.differentai.offlinegpt.ShipIt",
+      "/Users/test/Library/Caches/com.offlinegptlabs.offlinegpt.ShipIt",
     ]);
   });
 
@@ -100,7 +100,7 @@ describe("targetedStableUpdaterFeed", () => {
   it("builds a fixed GitHub release feed from a strict stable version", () => {
     assert.equal(
       targetedStableUpdaterFeed("0.17.22", "0.17.23"),
-      "https://github.com/different-ai/offlinegpt/releases/download/v0.17.23",
+      "https://github.com/soumyacodes007/offline-gpt/releases/download/v0.17.23",
     );
   });
 
@@ -129,7 +129,7 @@ describe("targetedStableUpdaterFeed", () => {
   it("allows only an explicit exact recovery downgrade", () => {
     assert.equal(
       targetedStableUpdaterFeed("0.17.23", "0.17.22", true),
-      "https://github.com/different-ai/offlinegpt/releases/download/v0.17.22",
+      "https://github.com/soumyacodes007/offline-gpt/releases/download/v0.17.22",
     );
     assert.throws(
       () => targetedStableUpdaterFeed("0.17.23", "0.17.23", true),
@@ -218,7 +218,7 @@ describe("recovery metadata and candidates", () => {
       platform: "darwin",
       arch: "arm64",
       distribution: "public",
-      url: "https://github.com/different-ai/offlinegpt/releases/download/v1.2.3/offlinegpt-mac-arm64-1.2.3.dmg",
+      url: "https://github.com/soumyacodes007/offline-gpt/releases/download/v1.2.3/offlinegpt-mac-arm64-1.2.3.dmg",
       sha512: "verified",
     });
     assert.equal(selectRecoveryArtifact(files, {
@@ -239,7 +239,7 @@ describe("recovery metadata and candidates", () => {
       const files = [{ url: fileName, sha512: `${distribution}-checksum` }];
       assert.equal(selectRecoveryArtifact(files, {
         version: "1.2.3", platform: "darwin", arch: "arm64", distribution,
-      })?.url, `https://github.com/different-ai/offlinegpt/releases/download/v1.2.3/${fileName}`);
+      })?.url, `https://github.com/soumyacodes007/offline-gpt/releases/download/v1.2.3/${fileName}`);
       for (const otherDistribution of Object.keys(artifacts).filter((flavor) => flavor !== distribution)) {
         assert.equal(selectRecoveryArtifact(files, {
           version: "1.2.3", platform: "darwin", arch: "arm64", distribution: otherDistribution,
@@ -282,7 +282,7 @@ releaseDate: '2026-08-11T00:00:00.000Z'
       await assert.rejects(
         cacheVerifiedRecoveryArtifact({
           app: { getPath: () => userData },
-          artifact: { url: "https://github.com/different-ai/offlinegpt/releases/download/v1.2.3/offlinegpt.dmg", sha512: "invalid" },
+          artifact: { url: "https://github.com/soumyacodes007/offline-gpt/releases/download/v1.2.3/offlinegpt.dmg", sha512: "invalid" },
           fetchArtifact: async () => new Response("tampered"),
         }),
         /checksum did not match/,
@@ -301,7 +301,7 @@ releaseDate: '2026-08-11T00:00:00.000Z'
       platform: "darwin",
       arch: "arm64",
       distribution: "public",
-      url: "https://github.com/different-ai/offlinegpt/releases/download/v1.2.3/offlinegpt-mac-arm64-1.2.3.dmg",
+      url: "https://github.com/soumyacodes007/offline-gpt/releases/download/v1.2.3/offlinegpt-mac-arm64-1.2.3.dmg",
       sha512: createHash("sha512").update(bytes).digest("base64"),
     };
     try {
@@ -337,7 +337,7 @@ releaseDate: '2026-08-11T00:00:00.000Z'
       platform: "darwin",
       arch: "arm64",
       distribution: "public",
-      url: "https://github.com/different-ai/offlinegpt/releases/download/v0.18.18/offlinegpt-mac-arm64-0.18.18.dmg",
+      url: "https://github.com/soumyacodes007/offline-gpt/releases/download/v0.18.18/offlinegpt-mac-arm64-0.18.18.dmg",
       sha512: createHash("sha512").update(bytes).digest("base64"),
     };
     const expected = { platform: "darwin", arch: "arm64", distribution: "public" };
@@ -369,7 +369,7 @@ releaseDate: '2026-08-11T00:00:00.000Z'
       platform: "darwin",
       arch: "arm64",
       distribution: "public",
-      url: "https://github.com/different-ai/offlinegpt/releases/download/v1.9.0/offlinegpt-mac-arm64-1.9.0.dmg",
+      url: "https://github.com/soumyacodes007/offline-gpt/releases/download/v1.9.0/offlinegpt-mac-arm64-1.9.0.dmg",
       sha512: createHash("sha512").update(bytes).digest("base64"),
     };
     const handlers = new Map();
@@ -614,7 +614,7 @@ describe("release channel changes", () => {
       assert.equal(typeof setChannel, "function");
       assert.deepEqual(await setChannel(null, "alpha"), {
         channel: "stable",
-        feedUrl: "https://github.com/different-ai/offlinegpt/releases/latest/download",
+        feedUrl: "https://github.com/soumyacodes007/offline-gpt/releases/latest/download",
         currentVersion: desktopVersion,
       });
     } finally {
@@ -655,7 +655,7 @@ describe("release channel changes", () => {
       assert.deepEqual(await download(), { ok: true });
       assert.equal(
         downloadFeeds.at(-1)?.url,
-        "https://github.com/different-ai/offlinegpt/releases/download/alpha-macos-latest",
+        "https://github.com/soumyacodes007/offline-gpt/releases/download/alpha-macos-latest",
       );
     } finally {
       await rm(tempDir, { recursive: true, force: true });
@@ -703,7 +703,7 @@ describe("release channel changes", () => {
       );
       assert.equal(
         feeds.at(-1)?.url,
-        "https://github.com/different-ai/offlinegpt/releases/download/alpha-macos-latest",
+        "https://github.com/soumyacodes007/offline-gpt/releases/download/alpha-macos-latest",
       );
     } finally {
       await rm(tempDir, { recursive: true, force: true });

@@ -21,7 +21,7 @@ export type DownloadPlatformGroup = {
   options: DownloadPlatformOption[]
 }
 
-const FALLBACK_RELEASE = "https://github.com/different-ai/offlinegpt/releases"
+const FALLBACK_RELEASE = "https://github.com/soumyacodes007/offline-gpt/releases"
 
 const FALLBACK_INSTALLERS: DownloadCardInstallers = {
   macos: { appleSilicon: FALLBACK_RELEASE, intel: FALLBACK_RELEASE },

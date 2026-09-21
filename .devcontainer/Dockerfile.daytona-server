@@ -33,7 +33,7 @@ ENV PATH="/usr/local/share/nvm/current/bin:$PATH"
 # snapshot limit.
 USER daytona
 
-RUN git clone --depth 1 --branch dev https://github.com/different-ai/offlinegpt.git . \
+RUN git clone --depth 1 --branch dev https://github.com/soumyacodes007/offline-gpt.git . \
   && mkdir -p /workspace/.offlinegpt-daytona \
   && sha256sum /workspace/pnpm-lock.yaml | cut -d ' ' -f 1 > /workspace/.offlinegpt-daytona/pnpm-lock.sha256 \
   && git rev-parse HEAD > /workspace/.offlinegpt-daytona/base-commit \

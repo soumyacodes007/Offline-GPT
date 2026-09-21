@@ -157,8 +157,8 @@ if (BLANK_SLATE_LAUNCH.enabled || process.env.OFFLINEGPT_ELECTRON_USE_MOCK_KEYCH
   // system keychain normally.
   app.commandLine.appendSwitch("use-mock-keychain");
 }
-const RELEASE_DOWNLOAD_BASE_URL = "https://github.com/different-ai/offlinegpt/releases/latest/download";
-const RELEASE_PAGE_URL = "https://github.com/different-ai/offlinegpt/releases/latest";
+const RELEASE_DOWNLOAD_BASE_URL = "https://github.com/soumyacodes007/offline-gpt/releases/latest/download";
+const RELEASE_PAGE_URL = "https://github.com/soumyacodes007/offline-gpt/releases/latest";
 const DOCS_PAGE_URL = "https://offlinegptlabs.com/docs";
 const applicationMenu = createApplicationMenu({
   appName: APP_NAME,

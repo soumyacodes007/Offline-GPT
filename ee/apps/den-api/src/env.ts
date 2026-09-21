@@ -756,7 +756,7 @@ export const env = {
   // defaulting to the pinned app release this den-api build shipped with.
   installerReleaseTag: optionalString(parsed.OFFLINEGPT_INSTALLER_RELEASE_TAG) ?? `v${denApiAppVersion.latestAppVersion}`,
   installerReleaseTagExplicit: optionalString(parsed.OFFLINEGPT_INSTALLER_RELEASE_TAG) !== undefined,
-  installerReleaseRepo: optionalString(parsed.OFFLINEGPT_INSTALLER_RELEASE_REPO) ?? "different-ai/offlinegpt",
+  installerReleaseRepo: optionalString(parsed.OFFLINEGPT_INSTALLER_RELEASE_REPO) ?? "soumyacodes007/offline-gpt",
   installerCacheDir: optionalString(parsed.OFFLINEGPT_INSTALLER_CACHE_DIR) ?? path.join(os.tmpdir(), "offlinegpt-desktop-artifacts"),
   // Desktop-release endpoint overrides for evals/self-host testing. Static mode
   // keeps air-gapped deployments on the committed release snapshot.
@@ -828,7 +828,7 @@ export const env = {
     ownerId: parsed.RENDER_OWNER_ID,
     workerRepo:
       // TODO(ent): require RENDER_WORKER_REPO for hosted/customer Render deployments instead of using OfflineGPT's public repo default.
-      parsed.RENDER_WORKER_REPO ?? "https://github.com/different-ai/offlinegpt",
+      parsed.RENDER_WORKER_REPO ?? "https://github.com/soumyacodes007/offline-gpt",
     workerBranch: parsed.RENDER_WORKER_BRANCH ?? "dev",
     workerRootDir:
       parsed.RENDER_WORKER_ROOT_DIR ?? "ee/apps/den-worker-runtime",

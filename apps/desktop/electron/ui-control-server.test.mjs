@@ -27,7 +27,7 @@ test("UI control failures are logged locally without exposing exception details"
   const server = createUiControlServer({
     app: { getPath: () => userData },
     appName: "OfflineGPT",
-    appIdentifier: "com.differentai.offlinegpt",
+    appIdentifier: "com.offlinegptlabs.offlinegpt",
     getWindow: async () => { throw failure; },
     browserTask: async () => { throw new Error("private website content"); },
     listWebMcpTools: () => ({ ok: false, error: "The built-in browser is not ready." }),

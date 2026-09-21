@@ -31,7 +31,7 @@
 #   - dev log sink file (truncated, not deleted)
 #
 # Explicitly NOT touched by `reset`:
-#   - ~/Library/Application Support/com.differentai.offlinegpt.dev/** (tokens,
+#   - ~/Library/Application Support/com.offlinegptlabs.offlinegpt.dev/** (tokens,
 #     workspaces registry, prefs). Use `reset-webview` for WebKit state.
 #   - /Applications/OfflineGPT.app (prod build never targeted).
 #
@@ -105,7 +105,7 @@ discover_offlinegpt_server_port() {
 
 electron_renderer_stats() {
   ps -axo pid,ppid,pcpu,pmem,rss,command \
-    | awk '/Electron Helper \(Renderer\)/ && /com\.differentai\.offlinegpt/ && !/awk/ && !/grep/ {print; found=1} END {exit found ? 0 : 1}' \
+    | awk '/Electron Helper \(Renderer\)/ && /com\.offlinegptlabs\.offlinegpt/ && !/awk/ && !/grep/ {print; found=1} END {exit found ? 0 : 1}' \
     || true
 }
 
@@ -490,7 +490,7 @@ reset_webview_state() {
   # Destructive: clears the desktop dev app's WebKit LocalStorage so stale
   # URL overrides / tokens don't leak across code changes. Does NOT touch
   # the offlinegpt-workspaces.json registry or server-side tokens.
-  local webkit_dir="$HOME/Library/WebKit/com.differentai.offlinegpt.dev"
+  local webkit_dir="$HOME/Library/WebKit/com.offlinegptlabs.offlinegpt.dev"
   if [[ ! -d "$webkit_dir" ]]; then
     log "no dev WebKit dir found at $webkit_dir"
     return 0

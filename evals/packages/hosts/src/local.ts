@@ -556,7 +556,7 @@ export async function resolveInstalledProductionDesktopState(
   const homeDir = options.homeDir ?? homedir();
   const dataDir = offlinegptServerDataDir({ env, homeDir, platform });
   await requireInstalledPath(dataDir, "directory", "Installed production OfflineGPT data directory");
-  const userDataDir = join(homeDir, "Library", "Application Support", "com.differentai.offlinegpt");
+  const userDataDir = join(homeDir, "Library", "Application Support", "com.offlinegptlabs.offlinegpt");
   const workspaceStatePath = join(userDataDir, "offlinegpt-workspaces.json");
   const serverTokenStorePath = join(userDataDir, "offlinegpt-server-tokens.json");
   const serverStatePath = join(userDataDir, "offlinegpt-server-state.json");
@@ -844,7 +844,7 @@ async function ensureDisplay(repoRoot: string, env: NodeJS.ProcessEnv, log: (mes
       const [port, cdpPort] = await allocateFreePorts(2);
       if (port === undefined || cdpPort === undefined) throw new Error("Could not allocate Electron Vite/CDP ports.");
       const appName = `OfflineGPT Eval ${name}`;
-      const appIdentifier = `com.differentai.offlinegpt.eval.${sanitizeSlug(name)}`;
+      const appIdentifier = `com.offlinegptlabs.offlinegpt.eval.${sanitizeSlug(name)}`;
       const isolationEnv = electronSurfaceEnv(paths, { appName, appIdentifier, port, cdpPort }, opts.env);
       const env: NodeJS.ProcessEnv = { ...process.env, ...isolationEnv };
       const launchArgs = containerLaunchArgs(env.ELECTRON_EXTRA_LAUNCH_ARGS);

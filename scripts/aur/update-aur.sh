@@ -31,8 +31,8 @@ fi
 VERSION="${TAG#v}"
 ASSET_NAME_AMD64="${AUR_ASSET_NAME:-offlinegpt-linux-x64-${VERSION}.tar.gz}"
 ASSET_NAME_ARM64="offlinegpt-linux-arm64-${VERSION}.tar.gz"
-ASSET_URL_AMD64="https://github.com/different-ai/offlinegpt/releases/download/${TAG}/${ASSET_NAME_AMD64}"
-ASSET_URL_ARM64="https://github.com/different-ai/offlinegpt/releases/download/${TAG}/${ASSET_NAME_ARM64}"
+ASSET_URL_AMD64="https://github.com/soumyacodes007/offline-gpt/releases/download/${TAG}/${ASSET_NAME_AMD64}"
+ASSET_URL_ARM64="https://github.com/soumyacodes007/offline-gpt/releases/download/${TAG}/${ASSET_NAME_ARM64}"
 
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT

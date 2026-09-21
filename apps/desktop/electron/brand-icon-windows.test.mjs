@@ -84,7 +84,7 @@ test("updates both the live window icon and Windows taskbar identity", async () 
 
   await applyWindowsTaskbarIcon(window, {
     image,
-    appId: "com.differentai.offlinegpt",
+    appId: "com.offlinegptlabs.offlinegpt",
     appIconPath: "C:\\Users\\Admin\\brand-icon.ico",
     relaunchCommand: "C:\\Program Files\\OfflineGPT\\OfflineGPT.exe",
     relaunchDisplayName: "OfflineGPT",
@@ -99,7 +99,7 @@ test("updates both the live window icon and Windows taskbar identity", async () 
       relaunchCommand: "C:\\Program Files\\OfflineGPT\\OfflineGPT.exe",
       relaunchDisplayName: "OfflineGPT",
     }],
-    ["setAppDetails", { appId: "com.differentai.offlinegpt" }],
+    ["setAppDetails", { appId: "com.offlinegptlabs.offlinegpt" }],
     ["setIcon", image],
     ["waitForRefresh"],
     ["setSkipTaskbar", false],
@@ -107,12 +107,12 @@ test("updates both the live window icon and Windows taskbar identity", async () 
 });
 
 test("uses a stable per-brand AppUserModelID to avoid the installed shortcut icon", () => {
-  const base = "com.differentai.offlinegpt";
+  const base = "com.offlinegptlabs.offlinegpt";
   const first = windowsBrandAppUserModelId(base, "https://den.internal/assets/acme.png");
   const repeated = windowsBrandAppUserModelId(base, "https://den.internal/assets/acme.png");
   const second = windowsBrandAppUserModelId(base, "https://den.internal/assets/other.png");
 
-  assert.match(first, /^com\.differentai\.offlinegpt\.brand\.[a-f0-9]{16}$/);
+  assert.match(first, /^com\.offlinegptlabs\.offlinegpt\.brand\.[a-f0-9]{16}$/);
   assert.equal(first, repeated);
   assert.notEqual(first, second);
   assert.equal(windowsBrandAppUserModelId(base, null), base);
@@ -128,7 +128,7 @@ test("does not refresh the taskbar button before the boot window is shown", asyn
     setSkipTaskbar: () => calls.push("skip"),
   }, {
     image: { id: "company-icon" },
-    appId: "com.differentai.offlinegpt.brand.1234",
+    appId: "com.offlinegptlabs.offlinegpt.brand.1234",
     appIconPath: "C:\\brand.ico",
     relaunchCommand: "C:\\OfflineGPT.exe",
     relaunchDisplayName: "OfflineGPT",
@@ -146,7 +146,7 @@ test("restores a visible taskbar button when refresh staging fails", async () =>
     setSkipTaskbar: (value) => calls.push(["skip", value]),
   }, {
     image: { id: "company-icon" },
-    appId: "com.differentai.offlinegpt.brand.1234",
+    appId: "com.offlinegptlabs.offlinegpt.brand.1234",
     appIconPath: "C:\\brand.ico",
     relaunchCommand: "C:\\OfflineGPT.exe",
     relaunchDisplayName: "OfflineGPT",
@@ -163,7 +163,7 @@ test("builds a per-user Start Menu shortcut with the branded Windows identity", 
   assert.equal(windowsInstalledShortcutFileName("OfflineGPT"), "OfflineGPT.lnk");
   assert.deepEqual(windowsBrandShortcutDetails({
     target: "C:\\Program Files\\OfflineGPT\\OfflineGPT.exe",
-    appId: "com.differentai.offlinegpt.brand.1234",
+    appId: "com.offlinegptlabs.offlinegpt.brand.1234",
     appIconPath: "C:\\Users\\Admin\\brand-icon.ico",
     appName: "OfflineGPT",
   }), {
@@ -172,7 +172,7 @@ test("builds a per-user Start Menu shortcut with the branded Windows identity", 
     description: "OfflineGPT organization desktop",
     icon: "C:\\Users\\Admin\\brand-icon.ico",
     iconIndex: 0,
-    appUserModelId: "com.differentai.offlinegpt.brand.1234",
+    appUserModelId: "com.offlinegptlabs.offlinegpt.brand.1234",
   });
 });
 
@@ -187,7 +187,7 @@ test("anchors a packaged shortcut target to the active Windows user profile", ()
 
 test("creates a branded shortcut after callers remove stale Windows metadata", () => {
   const calls = [];
-  const details = { appUserModelId: "com.differentai.offlinegpt.brand.1234" };
+  const details = { appUserModelId: "com.offlinegptlabs.offlinegpt.brand.1234" };
   const shellApi = {
     writeShortcutLink: (...args) => {
       calls.push(args);

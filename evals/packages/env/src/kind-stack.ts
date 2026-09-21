@@ -45,8 +45,8 @@ const DEMO_EMAIL = process.env.DEN_DEMO_OWNER_EMAIL ?? "alex@acme.test";
 export const DEMO_PASSWORD = process.env.DEN_DEMO_OWNER_PASSWORD ?? "OfflineGPTDemo123!";
 const LOCAL_IMAGE_TAG = process.env.OFFLINEGPT_EVAL_KUBE_LOCAL_IMAGE_TAG?.trim() || "kube-lab";
 const PUBLISHED_IMAGE_TAG = process.env.OFFLINEGPT_EVAL_KUBE_IMAGE_TAG?.trim() || "latest";
-const PUBLISHED_DEN_API_REPOSITORY = "ghcr.io/different-ai/offlinegpt-den-api";
-const PUBLISHED_DEN_WEB_REPOSITORY = "ghcr.io/different-ai/offlinegpt-den-web";
+const PUBLISHED_DEN_API_REPOSITORY = "ghcr.io/soumyacodes007/offline-gpt-den-api";
+const PUBLISHED_DEN_WEB_REPOSITORY = "ghcr.io/soumyacodes007/offline-gpt-den-web";
 const LOCAL_DEN_API_REPOSITORY = "offlinegpt-den-api";
 const LOCAL_DEN_WEB_REPOSITORY = "offlinegpt-den-web";
 

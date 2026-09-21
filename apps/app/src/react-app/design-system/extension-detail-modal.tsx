@@ -825,7 +825,7 @@ function UiControlConnectionDetails(props: UiControlConnectionDetailsProps) {
                     Production discovery file
                   </TableCell>
                   <TableCell className="py-2 whitespace-normal">
-                    <span className="font-mono text-xs break-all">~/Library/Application Support/com.differentai.offlinegpt/offlinegpt-ui-control.json</span>
+                    <span className="font-mono text-xs break-all">~/Library/Application Support/com.offlinegptlabs.offlinegpt/offlinegpt-ui-control.json</span>
                   </TableCell>
                 </TableRow>
                 <TableRow className="*:border-border hover:bg-transparent [&>:not(:last-child)]:border-r">
@@ -833,7 +833,7 @@ function UiControlConnectionDetails(props: UiControlConnectionDetailsProps) {
                     Dev discovery file
                   </TableCell>
                   <TableCell className="py-2 whitespace-normal">
-                    <span className="font-mono text-xs break-all">~/Library/Application Support/com.differentai.offlinegpt.dev/offlinegpt-ui-control.json</span>
+                    <span className="font-mono text-xs break-all">~/Library/Application Support/com.offlinegptlabs.offlinegpt.dev/offlinegpt-ui-control.json</span>
                   </TableCell>
                 </TableRow>
                 <TableRow className="*:border-border hover:bg-transparent [&>:not(:last-child)]:border-r">

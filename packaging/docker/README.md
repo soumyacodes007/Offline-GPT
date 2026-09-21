@@ -6,7 +6,7 @@ Run Den API, Den web, and MySQL from published images without cloning or buildin
 
 ```bash
 curl -fsSLo docker-compose.eval.yml \
-  https://raw.githubusercontent.com/different-ai/offlinegpt/9f8645ebc482c15ab99c0cf155aabaa411e1ca6a/packaging/docker/docker-compose.eval.yml
+  https://raw.githubusercontent.com/soumyacodes007/offline-gpt/9f8645ebc482c15ab99c0cf155aabaa411e1ca6a/packaging/docker/docker-compose.eval.yml
 printf '%s  %s\n' \
   '69cc7f2666157b7697ebf69b31b0c83887dd99e796c7d956f9ccaab8fa8bf2fc' \
   'docker-compose.eval.yml' | shasum -a 256 --check
@@ -45,9 +45,9 @@ What it does:
 - Prints randomized host URLs so multiple stacks can run side by side
 
 Production-oriented EE images:
-- `Dockerfile.den` -> `ghcr.io/different-ai/offlinegpt-den-api`
-- `Dockerfile.den-web` -> `ghcr.io/different-ai/offlinegpt-den-web`
-- `Dockerfile.inference` -> `ghcr.io/different-ai/offlinegpt-inference`
+- `Dockerfile.den` -> `ghcr.io/soumyacodes007/offline-gpt-den-api`
+- `Dockerfile.den-web` -> `ghcr.io/soumyacodes007/offline-gpt-den-web`
+- `Dockerfile.inference` -> `ghcr.io/soumyacodes007/offline-gpt-inference`
 
 These images are intended for Terraform, Helm, ECS, EKS, and customer-cloud deployments. Prefer immutable tags or digests in production.
 

@@ -89,7 +89,7 @@ struct AppIdentity {
             "com.mitchellh.ghostty", "com.apple.ScriptEditor2", "com.apple.systempreferences",
             "com.apple.SecurityAgent", "com.apple.loginwindow", "com.apple.keychainaccess",
             "com.apple.Passwords", "com.1password.1password", "com.agilebits.onepassword7"]
-        return !protected.contains(id) && !id.hasPrefix("com.differentai.offlinegpt")
+        return !protected.contains(id) && !id.hasPrefix("com.offlinegptlabs.offlinegpt")
             && !id.hasPrefix("com.offlinegpt") && !id.hasPrefix("com.openai")
     }
 }

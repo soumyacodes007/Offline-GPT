@@ -1,5 +1,5 @@
 extends: electron-builder.yml
-appId: com.differentai.offlinegpt.demo.admin
+appId: com.offlinegptlabs.offlinegpt.demo.admin
 productName: OfflineGPT Demo A
 protocols: []
 directories:

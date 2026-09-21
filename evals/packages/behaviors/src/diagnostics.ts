@@ -788,7 +788,7 @@ export interface DeniedHostFacts {
 
 export async function readDeniedHostFacts(
   lab: EgressLabHandle,
-  targetUrl = "https://github.com/different-ai/offlinegpt/releases/latest",
+  targetUrl = "https://github.com/soumyacodes007/offline-gpt/releases/latest",
 ): Promise<DeniedHostFacts> {
   const url = new URL("/fetch", lab.url);
   url.searchParams.set("url", targetUrl);
@@ -811,7 +811,7 @@ export async function readDeniedHostFacts(
 async function diagnoseDenyLab(lab: EgressLabHandle): Promise<DiagnosticVerdict> {
   // Exact-match lookup (not a substring test) so the denied host is unambiguous.
   const host = lab.deniedHosts.find((entry) => entry === "github.com") ?? lab.deniedHosts[0] ?? "github.com";
-  const facts = await readDeniedHostFacts(lab, `https://${host}/different-ai/offlinegpt/releases/latest`);
+  const facts = await readDeniedHostFacts(lab, `https://${host}/soumyacodes007/offline-gpt/releases/latest`);
   const text = facts.status === 451
     ? `BLOCKED HOST / PROXY DENY: ${host} is blocked by the selective-deny profile; docs/enterprise/outbound-access.json names the required host and its blocked effect.`
     : `DENY VERDICT INCONCLUSIVE: expected ${host} to be blocked, got HTTP ${facts.status}.`;

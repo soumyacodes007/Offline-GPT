@@ -11,7 +11,7 @@ permissions:
 jobs:
   check-snapshot-pin:
     name: Compare production pin with latest release
-    if: github.repository == 'different-ai/offlinegpt'
+    if: github.repository == 'soumyacodes007/offline-gpt'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     env:
       DAYTONA_CLOUD_ENV_GROUP_ID: ${{ vars.DAYTONA_CLOUD_ENV_GROUP_ID }}

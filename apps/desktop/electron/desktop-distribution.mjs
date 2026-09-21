@@ -1,7 +1,7 @@
 export const PUBLIC_DESKTOP_DISTRIBUTION = Object.freeze({
   flavor: "public",
   appName: "OfflineGPT",
-  appIdentifier: "com.differentai.offlinegpt",
+  appIdentifier: "com.offlinegptlabs.offlinegpt",
   protocolScheme: "offlinegpt",
   requireSignin: false,
   requireActivation: false,
@@ -10,7 +10,7 @@ export const PUBLIC_DESKTOP_DISTRIBUTION = Object.freeze({
 export const CLOUD_DESKTOP_DISTRIBUTION = Object.freeze({
   flavor: "cloud",
   appName: "OfflineGPT Cloud",
-  appIdentifier: "com.differentai.offlinegpt",
+  appIdentifier: "com.offlinegptlabs.offlinegpt",
   protocolScheme: "offlinegpt",
   requireSignin: true,
   requireActivation: false,
@@ -19,7 +19,7 @@ export const CLOUD_DESKTOP_DISTRIBUTION = Object.freeze({
 export const ENTERPRISE_DESKTOP_DISTRIBUTION = Object.freeze({
   flavor: "enterprise",
   appName: "OfflineGPT Enterprise",
-  appIdentifier: "com.differentai.offlinegpt",
+  appIdentifier: "com.offlinegptlabs.offlinegpt",
   protocolScheme: "offlinegpt",
   requireSignin: true,
   requireActivation: true,

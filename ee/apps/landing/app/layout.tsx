@@ -20,7 +20,7 @@ const organizationSchema = {
   legalName: "Different AI",
   url: "https://offlinegptlabs.com",
   logo: "https://offlinegptlabs.com/offlinegpt-mark.svg",
-  sameAs: ["https://github.com/different-ai/offlinegpt"]
+  sameAs: ["https://github.com/soumyacodes007/offline-gpt"]
 };
 
 const inter = Inter({

@@ -1,6 +1,6 @@
 export const OfflineGPTDownloads = () => {
-  const STABLE_RELEASES_URL = "https://api.github.com/repos/different-ai/offlinegpt/releases?per_page=30";
-  const ALPHA_RELEASE_URL = "https://api.github.com/repos/different-ai/offlinegpt/releases/tags/alpha-macos-latest";
+  const STABLE_RELEASES_URL = "https://api.github.com/repos/soumyacodes007/offline-gpt/releases?per_page=30";
+  const ALPHA_RELEASE_URL = "https://api.github.com/repos/soumyacodes007/offline-gpt/releases/tags/alpha-macos-latest";
   const GITHUB_HEADERS = { Accept: "application/vnd.github+json" };
   const dateFormatter = new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -220,7 +220,7 @@ export const OfflineGPTDownloads = () => {
                   </div>
 
                   <div className="mt-5 border-t border-gray-100 pt-4 dark:border-white/10">
-                    <a href={`https://github.com/different-ai/offlinegpt/releases/tag/${release.tag_name}`} className="text-sm font-medium text-gray-600 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white">Release notes →</a>
+                    <a href={`https://github.com/soumyacodes007/offline-gpt/releases/tag/${release.tag_name}`} className="text-sm font-medium text-gray-600 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white">Release notes →</a>
                   </div>
                 </div>
               );

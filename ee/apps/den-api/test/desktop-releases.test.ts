@@ -54,7 +54,7 @@ beforeEach(() => {
   successRequestUrl = null
   envModule.env.desktopReleasesMode = "github"
   envModule.env.desktopReleasesBaseUrl = server.url.origin
-  envModule.env.installerReleaseRepo = "different-ai/offlinegpt"
+  envModule.env.installerReleaseRepo = "soumyacodes007/offline-gpt"
   envModule.env.installerReleaseTag = `v${PUBLISHED_DESKTOP_VERSIONS[0]}`
   envModule.env.installerReleaseTagExplicit = false
 })
@@ -73,7 +73,7 @@ describe("desktop release discovery", () => {
       latestAppVersion: "1.0.0",
       publishedDesktopVersions: ["1.0.0", "0.18.10", "0.18.9", MIN_SUPPORTED_DESKTOP_VERSION],
     })
-    expect(successRequestUrl).toBe(`${server.url.origin}/repos/different-ai/offlinegpt/releases?per_page=100`)
+    expect(successRequestUrl).toBe(`${server.url.origin}/repos/soumyacodes007/offline-gpt/releases?per_page=100`)
   })
 
   test("excludes draft and prerelease rollback releases", async () => {

@@ -164,7 +164,7 @@ test("download CTAs request the detected installer once and retain the alternati
       enabling.set(id, { sessionId, primary: targetInfo.targetId === browser.client.targetId });
       // Include cross-origin frames and alternate links opened in a new tab.
       socket.send(JSON.stringify({ id, sessionId, method: "Fetch.enable", params: {
-        patterns: [{ urlPattern: "https://github.com/different-ai/offlinegpt/releases*", requestStage: "Request" }]
+        patterns: [{ urlPattern: "https://github.com/soumyacodes007/offline-gpt/releases*", requestStage: "Request" }]
       } }));
       return;
     }

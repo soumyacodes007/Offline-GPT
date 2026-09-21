@@ -17,7 +17,7 @@ test("headless production state resolves installed stores and credentials withou
     const dataDir = join(root, ".offlinegpt", "offlinegpt-server");
     const configDir = join(root, ".config", "offlinegpt");
     const opencodeConfigDir = join(root, ".config", "opencode");
-    const userDataDir = join(root, "Library", "Application Support", "com.differentai.offlinegpt");
+    const userDataDir = join(root, "Library", "Application Support", "com.offlinegptlabs.offlinegpt");
     const opencodeDb = join(root, "Library", "Application Support", "opencode", "opencode.db");
     await mkdir(dataDir, { recursive: true });
     await mkdir(configDir, { recursive: true });

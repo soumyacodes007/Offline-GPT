@@ -21,10 +21,10 @@ type GithubFetchFixtures = {
   releases: GithubFixtureRelease[];
 };
 
-const repoUrl = "https://api.github.com/repos/different-ai/offlinegpt";
-const latestReleaseUrl = "https://api.github.com/repos/different-ai/offlinegpt/releases/latest";
-const releasesUrl = "https://api.github.com/repos/different-ai/offlinegpt/releases?per_page=50";
-const fallbackReleaseUrl = "https://github.com/different-ai/offlinegpt/releases";
+const repoUrl = "https://api.github.com/repos/soumyacodes007/offline-gpt";
+const latestReleaseUrl = "https://api.github.com/repos/soumyacodes007/offline-gpt/releases/latest";
+const releasesUrl = "https://api.github.com/repos/soumyacodes007/offline-gpt/releases?per_page=50";
+const fallbackReleaseUrl = "https://github.com/soumyacodes007/offline-gpt/releases";
 const releaseTag = "v0.17.38";
 const releasePageUrl = `${fallbackReleaseUrl}/tag/${releaseTag}`;
 const downloadBaseUrl = `${fallbackReleaseUrl}/download/${releaseTag}`;

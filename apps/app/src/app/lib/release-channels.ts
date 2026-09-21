@@ -5,7 +5,7 @@
  *
  * - "stable": the default. The desktop app auto-updates from the rolling
  *   "latest" GitHub release attached to whichever semver tag most recently
- *   finished the Release App workflow. macOS, Linux, Windows.
+ *   finished the Desktop Release workflow. macOS, Linux, Windows.
  *
  * - "alpha": a macOS-only rolling channel that auto-updates on every merge
  *   to `dev`. Alpha builds are published to a fixed GitHub release tag
@@ -20,11 +20,11 @@ import type { ReleaseChannel } from "../types";
 
 /** Stable channel's Tauri updater manifest URL. */
 export const STABLE_UPDATER_ENDPOINT =
-  "https://github.com/different-ai/offlinegpt/releases/latest/download/latest.json";
+  "https://github.com/soumyacodes007/offline-gpt/releases/latest/download/latest.json";
 
 /** Alpha channel's Tauri updater manifest URL (macOS-only, rolling). */
 export const ALPHA_UPDATER_ENDPOINT =
-  "https://github.com/different-ai/offlinegpt/releases/download/alpha-macos-latest/latest.json";
+  "https://github.com/soumyacodes007/offline-gpt/releases/download/alpha-macos-latest/latest.json";
 
 /** Rolling GitHub release tag that alpha macOS artifacts are published to. */
 export const ALPHA_MACOS_RELEASE_TAG = "alpha-macos-latest";

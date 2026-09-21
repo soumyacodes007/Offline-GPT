@@ -1,6 +1,6 @@
 import type { DownloadCardInstallers } from "@offlinegpt/ui/react";
 
-const FALLBACK_RELEASE = "https://github.com/different-ai/offlinegpt/releases";
+const FALLBACK_RELEASE = "https://github.com/soumyacodes007/offline-gpt/releases";
 
 type ReleaseAsset = {
   name?: string;
@@ -49,7 +49,7 @@ export async function getPublicInstallers(): Promise<{
   releaseTag: string;
 }> {
   try {
-    const response = await fetch("https://api.github.com/repos/different-ai/offlinegpt/releases/latest", {
+    const response = await fetch("https://api.github.com/repos/soumyacodes007/offline-gpt/releases/latest", {
       next: { revalidate: 3600 },
       headers: { Accept: "application/vnd.github+json" },
     });

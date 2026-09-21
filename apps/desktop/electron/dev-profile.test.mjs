@@ -8,8 +8,8 @@ import {
   resolveUserDataPath,
 } from "./dev-profile.mjs";
 
-const PROD_APP_IDENTIFIER = "com.differentai.offlinegpt";
-const DEV_APP_IDENTIFIER = "com.differentai.offlinegpt.dev";
+const PROD_APP_IDENTIFIER = "com.offlinegptlabs.offlinegpt";
+const DEV_APP_IDENTIFIER = "com.offlinegptlabs.offlinegpt.dev";
 const APP_DATA_PATH = path.join("tmp", "appData");
 
 function resolveProfile({

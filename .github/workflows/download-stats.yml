@@ -9,7 +9,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   stats:
-    if: github.repository == 'different-ai/offlinegpt'
+    if: github.repository == 'soumyacodes007/offline-gpt'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
@@ -31,7 +31,7 @@ jobs:
           POSTHOG_LEGACY_EVENT: download
           POSTHOG_V2_EVENT: release_asset_snapshot
           POSTHOG_DISTINCT_ID: offlinegpt-download
-          GITHUB_REPO: different-ai/offlinegpt
+          GITHUB_REPO: soumyacodes007/offline-gpt
         run: node scripts/stats.mjs
 
       - name: Commit stats

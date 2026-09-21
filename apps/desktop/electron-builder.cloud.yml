@@ -1,5 +1,5 @@
 extends: ./electron-builder.base.yml
-appId: com.differentai.offlinegpt
+appId: com.offlinegptlabs.offlinegpt
 productName: OfflineGPT Cloud
 extraMetadata:
   offlinegptDistribution: cloud
@@ -9,8 +9,8 @@ protocols:
       - offlinegpt
 publish:
   - provider: github
-    owner: different-ai
-    repo: offlinegpt
+    owner: soumyacodes007
+    repo: Offline-GPT
     releaseType: release
     channel: cloud
 linux:
