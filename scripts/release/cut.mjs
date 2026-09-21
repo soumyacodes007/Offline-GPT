@@ -29,11 +29,12 @@ function run(command, commandArgs, options = {}) {
     console.log(`[dry-run] ${command} ${commandArgs.join(" ")}`);
     return "";
   }
-  return execFileSync(command, commandArgs, {
+  const output = execFileSync(command, commandArgs, {
     cwd: root,
     encoding: "utf8",
     stdio: options.inherit ? "inherit" : "pipe",
-  }).trim();
+  });
+  return typeof output === "string" ? output.trim() : "";
 }
 
 run("gh", ["auth", "status"], { inherit: true });
