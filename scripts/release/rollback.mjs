@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const REPO = "different-ai/offlinegpt";
+export const REPO = "soumyacodes007/offline-gpt";
 const MAX_BUFFER = 128 * 1024 * 1024;
 
 const log = (message) => console.log(`  ${message}`);
@@ -225,7 +225,7 @@ function printGuidance(badTag, targetTag) {
   log("Versions live in tags only — tag the last-good commit with the higher version (no commits needed):");
   console.log("");
   console.log(`    git tag v${nextVersion} ${targetTag}   # or any version higher than ${badTag}`);
-  console.log(`    git push origin v${nextVersion}        # admins only; triggers Release App`);
+  console.log(`    git push origin v${nextVersion}        # triggers Desktop Release`);
   console.log("");
   log(`After npm publish: npm deprecate offlinegpt-server@${badVersion} "rolled back — use ${nextVersion}"`);
   log("The org install door follows published GitHub releases at runtime: demoting the bad release to");

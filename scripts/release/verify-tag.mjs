@@ -5,7 +5,7 @@
  * Versions are no longer committed to package.json (the repo holds a
  * "0.0.0-dev" placeholder), so this no longer compares the tag against files.
  * It verifies the tag itself:
- *   - strict stable format (vX.Y.Z — prereleases never ship through Release App)
+ *   - strict stable format (vX.Y.Z — prereleases never ship through Desktop Release)
  *   - the tag exists in the clone
  *   - fresh releases are monotonic: strictly greater than every other stable
  *     tag (recovery reruns of an existing tag skip monotonicity)

@@ -1,85 +1,96 @@
 #!/usr/bin/env node
 /**
- * release:cut [patch|minor|major] [--version X.Y.Z] [--watch] [--dry-run]
- *
- * Cuts a release with zero local mutations: dispatches the Release App
- * workflow, which resolves the next version from existing v* tags, creates
- * the tag on origin/dev HEAD, stamps versions into the CI workspace, builds,
- * and publishes. Nothing is committed to the repo — anywhere.
+ * Create and push a semantic-version release tag from main. The tag triggers
+ * the Desktop Release workflow; source package versions remain untouched.
  */
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  bumpStableVersion,
+  highestStableVersion,
+  parseStableVersion,
+  readStableTagVersions,
+} from "./versions.mjs";
+
 const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const args = process.argv.slice(2);
-
-const REPO = "different-ai/offlinegpt";
-const WORKFLOW = "Release App";
-
 const dryRun = args.includes("--dry-run");
 const watch = args.includes("--watch");
 const versionIndex = args.indexOf("--version");
 const explicitVersion = versionIndex >= 0 ? args[versionIndex + 1] : null;
 const bumpType = args.find((arg) => ["patch", "minor", "major"].includes(arg)) ?? "patch";
+const repo = "soumyacodes007/offline-gpt";
+const workflow = "Desktop Release";
 
-const log = (msg) => console.log(`  ${msg}`);
-const heading = (msg) => console.log(`\n▸ ${msg}`);
-const success = (msg) => console.log(`  ✓ ${msg}`);
-const fail = (msg) => {
-  console.error(`  ✗ ${msg}`);
-  process.exit(1);
-};
-
-const run = (cmd, opts = {}) => {
-  if (dryRun && !opts.readOnly) {
-    log(`[dry-run] ${cmd}`);
+function run(command, commandArgs, options = {}) {
+  if (dryRun && options.write) {
+    console.log(`[dry-run] ${command} ${commandArgs.join(" ")}`);
     return "";
   }
-  try {
-    return execSync(cmd, {
-      cwd: root,
-      encoding: "utf8",
-      stdio: opts.inherit ? "inherit" : "pipe",
-    }).trim();
-  } catch (err) {
-    if (opts.allowFail) return "";
-    fail(`Command failed: ${cmd}\n${err.stderr || err.message}`);
-  }
-};
-
-heading("Checking gh auth");
-const authed = run("gh auth status", { readOnly: true, allowFail: true });
-if (!authed) fail("gh is not authenticated (run: gh auth login)");
-success("gh authenticated");
-
-heading("Dispatching Release App");
-if (explicitVersion) {
-  if (!/^\d+\.\d+\.\d+$/.test(explicitVersion)) fail(`Invalid --version: ${explicitVersion} (expected X.Y.Z)`);
-  run(`gh workflow run "${WORKFLOW}" --repo ${REPO} -f version=${explicitVersion}`);
-  success(`Dispatched with version=${explicitVersion}`);
-} else {
-  run(`gh workflow run "${WORKFLOW}" --repo ${REPO} -f bump=${bumpType}`);
-  success(`Dispatched with bump=${bumpType}`);
+  return execFileSync(command, commandArgs, {
+    cwd: root,
+    encoding: "utf8",
+    stdio: options.inherit ? "inherit" : "pipe",
+  }).trim();
 }
 
-log(`Runs: https://github.com/${REPO}/actions/workflows/release-macos-aarch64.yml`);
-log("The run resolves the version from v* tags and creates the tag on origin/dev HEAD.");
+run("gh", ["auth", "status"], { inherit: true });
+run("git", ["fetch", "origin", "main", "--tags"]);
+
+const branch = run("git", ["branch", "--show-current"]);
+if (branch !== "main") {
+  throw new Error(`Releases must be cut from main, not ${branch || "detached HEAD"}.`);
+}
+
+const status = run("git", ["status", "--porcelain"]);
+if (status) {
+  throw new Error("The working tree must be clean before cutting a release.");
+}
+
+const localHead = run("git", ["rev-parse", "HEAD"]);
+const remoteHead = run("git", ["rev-parse", "origin/main"]);
+if (localHead !== remoteHead) {
+  throw new Error("main must be fully pushed and match origin/main before releasing.");
+}
+
+let version;
+if (explicitVersion) {
+  if (!parseStableVersion(explicitVersion)) {
+    throw new Error(`Invalid --version ${explicitVersion}; expected X.Y.Z.`);
+  }
+  version = explicitVersion;
+} else {
+  const latest = highestStableVersion(readStableTagVersions(root));
+  version = latest ? bumpStableVersion(latest, bumpType) : "1.0.0";
+}
+
+const tag = `v${version}`;
+let tagExists = true;
+try {
+  run("git", ["rev-parse", "--verify", `refs/tags/${tag}`]);
+} catch {
+  tagExists = false;
+}
+if (tagExists) throw new Error(`Tag ${tag} already exists.`);
+
+run("git", ["tag", "-a", tag, "-m", `OfflineGPT ${tag}`], { write: true });
+run("git", ["push", "origin", `refs/tags/${tag}`], { write: true, inherit: true });
+console.log(`${dryRun ? "Would create" : "Created"} ${tag} at ${localHead}.`);
+console.log(`Release: https://github.com/${repo}/releases/tag/${tag}`);
 
 if (watch && !dryRun) {
-  heading("Watching workflow run");
-  execSync("sleep 10", { cwd: root });
-  const runId = run(
-    `gh run list --repo ${REPO} --workflow "${WORKFLOW}" --limit 1 --json databaseId -q ".[0].databaseId"`,
-    { readOnly: true, allowFail: true },
-  );
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, 5000));
+  const runId = run("gh", [
+    "run", "list",
+    "--repo", repo,
+    "--workflow", workflow,
+    "--limit", "1",
+    "--json", "databaseId",
+    "--jq", ".[0].databaseId",
+  ]);
   if (runId) {
-    run(`gh run watch ${runId} --repo ${REPO} --exit-status`, { inherit: true, allowFail: true });
-  } else {
-    log("Could not find the workflow run. Check the Actions tab manually.");
+    run("gh", ["run", "watch", runId, "--repo", repo, "--exit-status"], { inherit: true });
   }
 }
-
-console.log("\n" + "─".repeat(50));
-console.log(`  Release dispatched${dryRun ? " (DRY RUN — nothing sent)" : ""}.`);
-console.log("─".repeat(50) + "\n");
