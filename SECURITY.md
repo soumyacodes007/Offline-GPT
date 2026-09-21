@@ -3,7 +3,7 @@
 ## Supported versions
 
 OfflineGPT is under active development and we prioritize fixes on the latest release and
-the current `dev` branch.
+the current `main` branch.
 
 ## Reporting a vulnerability
 
