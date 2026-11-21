@@ -1,71 +1,63 @@
 ---
 title: "Work in desktop apps"
-description: "Approve a Mac app window and choose how OfflineGPT can help"
+description: "Let OfflineGPT operate native apps on macOS, Windows, and Linux with Cua Driver"
 ---
 
-Computer Use is a preview for macOS 14 or later. It can read a window, use
-accessible app controls, or work with mouse and keyboard in the foreground.
-Use the built-in browser for websites and a dedicated connection when an app
-provides one.
+Computer Use is a preview that runs [Cua Driver](https://github.com/trycua/cua),
+an open-source driver for native apps on macOS, Windows, and Linux. The agent
+reads one exact window through its accessibility tree, acts on its controls, and
+checks the result. Use the built-in browser for websites and a dedicated
+connection when an app provides one.
 
 ## Set up
 
-1. Open **Settings → Library → Computer Use** and enable it.
-2. Open **Permissions and session controls**.
-3. Grant **Accessibility** and **Screen Recording** to **OfflineGPT Computer Use**
-   in macOS settings. OfflineGPT cannot grant these permissions for you.
-4. Return to OfflineGPT and check readiness. Reconnect Computer Use if macOS asks
-   you to restart the helper or if you are upgrading from the previous version.
-5. Open the app you want to use and mention it in your message.
+1. Open **Settings → Library → Computer Use**.
+2. If Cua Driver is missing, choose **Install Cua Driver**. OfflineGPT runs Cua's
+   official installer and shows the exact command first:
+   - macOS and Linux: `/bin/bash -c "$(curl -fsSL https://cua.ai/driver/install.sh)"`
+   - Windows (PowerShell): `irm https://cua.ai/driver/install.ps1 | iex`
 
-For example: “In @TextEdit, review the document in the open window and suggest
-clearer wording.”
+   You can also run that command in a terminal yourself, then refresh the page.
+3. Choose **Enable Computer Use**. OfflineGPT adds the Cua Driver MCP server
+   (named `computer-use`, running `cua-driver mcp`) and Cua's `cua-driver`
+   skill to the workspace.
+4. On macOS, grant **Accessibility** and **Screen Recording** to **CuaDriver**
+   when macOS asks. The settings page shows `cua-driver permissions status`.
+   OfflineGPT cannot grant these permissions for you.
+5. Use **Run cua-driver doctor** if something does not work.
 
-## Approve the session
+Then mention a running app in your message, for example: “In @TextEdit, review
+the document in the open window and suggest clearer wording.”
 
-When OfflineGPT needs an app, a native approval window names the app and requested
-task. You choose a window and approve one of three scopes:
+## How the agent works
 
-- **Read a window:** text and screenshots; no clicks or typing.
-- **Use app controls:** read and operate controls exposed by the app's
-  accessibility support. Your pointer remains available.
-- **Use mouse and keyboard:** operate the approved window while it is in
-  front. Bring it forward and click **Resume** in the floating panel to start.
+The `cua-driver` skill tells the agent to:
 
-App approvals are separate from macOS permissions. Each approval lasts for one
-session, up to 15 minutes. OfflineGPT must ask again to change the app or scope.
+- choose one exact app window for every action;
+- start with a narrow read of that window instead of a full screenshot;
+- act through element tokens from that read, batching known steps;
+- work in the background where the app allows it, and ask before taking over
+  the foreground or your pointer;
+- verify the result from a fresh read instead of trusting that an action ran.
 
-## Stay in control
+While the agent works, Cua Driver shows an **agent cursor**: a colored second
+cursor that glides to where the agent clicks or types. It never moves your own
+mouse. Under **Agent cursor** on the Computer Use page you can hide it, change
+its motion style, speed, and pointing, turn the halo, float, trail, and speed
+glow on or off, and choose **Preview the cursor** to watch it move. Changes
+apply to the next task.
 
-The floating **Computer Use** panel shows the app, scope and selected window.
-Use **Pause**, **Resume**, or **Stop** at any time. In mouse and keyboard mode,
-your input or switching to another app pauses the session. In app-controls
-mode, input in the target app pauses it. Idle sessions pause after two minutes.
-Only you can resume from the panel.
-
-The helper's setup window also offers **Stop all Computer Use sessions**.
-Windows remain open when a session stops; stopping does not undo completed
-changes.
-
-If a window moves, changes, becomes unavailable or no longer matches the last
-observation, OfflineGPT must look again before sending input. An app without
-usable accessibility information may require visual control or your help.
-Animations can cause visual input to pause for another observation.
+Cua Driver chooses its own permission profile at startup. OfflineGPT starts it
+in its default `standard` profile.
 
 ## Privacy and availability
 
-OfflineGPT reads and captures the selected window. That content is processed by
-your selected model provider and follows your host's conversation-retention
-settings. Standard password fields are omitted and masked when the app marks
-them correctly; custom controls may not do so. Enter passwords and handle
-security prompts yourself.
+Window content and screenshots are processed by your selected model provider
+and follow your conversation-retention settings. Enter passwords and handle
+security prompts yourself; the agent must not approve system permission prompts
+for you.
 
-Computer Use does not operate terminal apps, system permission settings or
-OfflineGPT itself. App access can still allow meaningful changes within that
-app, including saved files or sent messages, so describe your intended task
-clearly and remain present for sensitive work.
-
-Desktop control on Windows and Linux, locked-desktop use, background mouse and
-keyboard input, arbitrary keyboard shortcuts, and persistent app approvals are
-not available in this preview. The OfflineGPT Browser remains available for
-website tasks on supported desktop platforms.
+Cua Driver acts inside the apps it operates, so those apps can still save files,
+send messages, or make other changes. Describe your intended task clearly and
+stay present for sensitive work. To stop using it in a workspace, remove the
+`computer-use` server from **Settings → Library**.
