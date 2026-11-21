@@ -52,7 +52,6 @@ async function prepareLocal(): Promise<StackPreparation> {
     run("pnpm", ["--filter", "@offlinegpt/ui", "build"]),
     run("pnpm", ["--filter", "@offlinegpt-ee/utils", "build"]),
     run(process.execPath, [join(REPO_ROOT, "apps/desktop/scripts/prepare-sidecar.mjs"), "--force", "--outdir", join(REPO_ROOT, "apps/desktop/resources/sidecars")], join(REPO_ROOT, "apps/desktop")),
-    run(process.execPath, [join(REPO_ROOT, "apps/desktop/scripts/prepare-computer-use-helper.mjs"), "--force", "--outdir", join(REPO_ROOT, "apps/desktop/resources/helpers")], join(REPO_ROOT, "apps/desktop")),
   ]);
 
   const nextEnvPath = join(REPO_ROOT, "ee/apps/den-web/next-env.d.ts");
