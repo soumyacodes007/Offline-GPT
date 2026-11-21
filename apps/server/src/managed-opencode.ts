@@ -157,7 +157,10 @@ async function startManagedOpencodeServer(
   // That audit POST depends on npm's advisories endpoint, which has been observed
   // to hang for the full five-minute registry timeout, so first-run must not wait.
   // @npmcli/config reads npm_config_* settings from the environment.
-  const engineEnvDefaults = { npm_config_audit: "false" };
+  // OfflineGPT pins and ships the engine version (constants.json), so the engine
+  // must never update itself; from 1.19.6 it would otherwise pre-download
+  // OpenCode 2 in the background to offer an upgrade.
+  const engineEnvDefaults = { npm_config_audit: "false", OPENCODE_DISABLE_AUTOUPDATE: "1" };
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     ...engineEnvDefaults,
