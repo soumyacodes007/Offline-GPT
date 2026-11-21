@@ -42,7 +42,7 @@ function PageBackground({ className, ...props }: ComponentProps<"div">) {
 function PageTitlebarRegion({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
-      className={cn("fixed inset-x-0 top-0 z-20 h-10 mac:titlebar-drag", className)}
+      className={cn("fixed inset-x-0 top-0 z-20 h-10 glass:titlebar-drag", className)}
       {...props}
     />
   );
