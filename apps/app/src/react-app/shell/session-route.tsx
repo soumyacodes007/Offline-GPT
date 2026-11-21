@@ -3365,6 +3365,7 @@ export function SessionRoute() {
         },
         onSubmitOAuth: sessionProviderAuthStore.completeProviderAuthOAuth,
         onRefreshProviders: sessionProviderAuthStore.refreshProviders,
+        onCheckClaudeCliAuth: sessionProviderAuthStore.checkClaudeCliAuth,
         onClose: () => sessionProviderAuthStore.closeProviderAuthModal(),
       } : null}
       settingsSlot={

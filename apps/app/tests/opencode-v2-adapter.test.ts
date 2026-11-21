@@ -1585,7 +1585,7 @@ describe("OpenCode v2 client compatibility", () => {
       });
       expect(reply.error).toBeUndefined();
       expect(reply.response.status).toBe(204);
-      expect(replyBodies).toEqual([{ reply: "always" }, { reply: "once" }]);
+      expect(replyBodies).toEqual([{ decision: "always" }, { decision: "once" }]);
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -1647,22 +1647,22 @@ describe("v2 question forms", () => {
 
   test("an interaction client can answer a live form it never listed, preserving values and custom text", async () => {
     const originalFetch = globalThis.fetch;
-    const writes: { path: string; body: unknown }[] = [];
+    const writes: { method: string; path: string; body: unknown }[] = [];
     globalThis.fetch = async (input, init) => {
       const request = input instanceof Request ? input : new Request(input, init);
       const path = new URL(request.url).pathname;
-      if (request.method === "GET" && path.endsWith("/api/form/request")) return Response.json({ data: [form] });
-      writes.push({ path, body: request.body ? await request.json() : null });
+      if (request.method === "GET" && path.endsWith("/api/form")) return Response.json({ data: [form] });
+      writes.push({ method: request.method, path, body: request.body ? await request.json() : null });
       return new Response(null, { status: 204 });
     };
     try {
       const client = createClientV2("http://owner.test/opencode2", "/workspace", {});
       expect((await client.question.reply({ requestID: form.id, answers: [["Summary"], ["Facts", "Custom section"]] })).data).toBe(true);
-      expect(writes).toEqual([{ path: "/opencode2/api/session/ses_side/form/frm_choice/reply", body: {
+      expect(writes).toEqual([{ method: "POST", path: "/opencode2/api/session/ses_side/form/frm_choice/reply", body: {
         answer: { q0: "summary_value", q1: ["facts_value", "Custom section"] },
       } }]);
       expect((await client.question.reject({ requestID: form.id })).data).toBe(true);
-      expect(writes.at(-1)?.path).toBe("/opencode2/api/session/ses_side/form/frm_choice/cancel");
+      expect(writes.at(-1)).toMatchObject({ method: "DELETE", path: "/opencode2/api/session/ses_side/form/frm_choice" });
     } finally { globalThis.fetch = originalFetch; }
   });
 
@@ -1704,7 +1704,7 @@ describe("v2 question forms", () => {
         system: "Main conversation reference: ses_main", parts: [{ type: "text", text: "What is happening?" }] };
       expect((await client.session.promptAsync(parameters)).response.status).toBe(204);
       expect(requests.map((item) => item.method)).toEqual(["POST", "PUT", "POST"]);
-      expect(requests[1]).toMatchObject({ path: "/opencode2/api/session/ses_side/instructions/entries/offlinegpt-context", body: { value: parameters.system } });
+      expect(requests[1]).toMatchObject({ path: "/opencode2/api/experimental/session/ses_side/instructions/entries/offlinegpt-context", body: { value: parameters.system } });
       expect(requests[2]?.body).toEqual({ text: "What is happening?" });
       requests.length = 0; status = 503;
       expect((await client.session.promptAsync(parameters)).response.status).toBe(503);
