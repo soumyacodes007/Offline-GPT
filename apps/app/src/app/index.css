@@ -38,6 +38,20 @@
     @slot;
   }
 }
+/* A native translucent backdrop is behind the window: macOS vibrancy, or
+   Windows 11 Mica. Translucent surfaces and drag regions use this. */
+@custom-variant glass {
+  html.offlinegpt-electron.offlinegpt-platform-mac &,
+  html.offlinegpt-electron.offlinegpt-material-mica & {
+    @slot;
+  }
+}
+/* Windows 11 with its caption buttons drawn over the top-right of the app. */
+@custom-variant wco {
+  html.offlinegpt-electron.offlinegpt-material-mica & {
+    @slot;
+  }
+}
 
 @utility titlebar-drag {
   app-region: drag;
@@ -190,6 +204,7 @@ body {
   font-family:
     -apple-system,
     BlinkMacSystemFont,
+    "Geist Variable",
     system-ui,
     ui-sans-serif,
     "Segoe UI",
@@ -746,8 +761,8 @@ select:disabled {
 }
 
 @theme inline {
-  --font-sans: -apple-system, BlinkMacSystemFont, system-ui, ui-sans-serif, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-heading: -apple-system, BlinkMacSystemFont, system-ui, ui-sans-serif, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Geist Variable", system-ui, ui-sans-serif, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-heading: -apple-system, BlinkMacSystemFont, "Geist Variable", system-ui, ui-sans-serif, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --text-sm: 0.8125rem;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);

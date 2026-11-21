@@ -934,6 +934,12 @@ export type OfflineGptInboxUploadResult = {
   bytes: number;
 };
 
+export type ClaudeCliAuthStatus =
+  | { state: "not-installed" }
+  | { state: "unknown"; detail: string }
+  | { state: "signed-out" }
+  | { state: "signed-in"; authMethod?: string; email?: string; subscriptionType?: string };
+
 export type OfflineGptUserEnvItem = {
   key: string;
   updatedAt: number;
@@ -1960,7 +1966,7 @@ export function createOfflineGptServerClient(options: { baseUrl: string; token?:
         { token, hostToken },
       );
     },
-    upsertSkill: (workspaceId: string, payload: { name: string; content: string; description?: string }) =>
+    upsertSkill: (workspaceId: string, payload: { name: string; content: string; description?: string; files?: Array<{ path: string; content: string }> }) =>
       requestJson<OfflineGptSkillItem>(baseUrl, `/workspace/${workspaceId}/skills`, {
         token,
         hostToken,
@@ -2473,6 +2479,13 @@ export function createOfflineGptServerClient(options: { baseUrl: string; token?:
         "/env/keys",
         { token, hostToken, timeoutMs: timeouts.config },
       ),
+
+    getClaudeCliAuthStatus: () =>
+      requestJson<ClaudeCliAuthStatus>(baseUrl, "/claude/auth/status", {
+        token,
+        hostToken,
+        timeoutMs: timeouts.status,
+      }),
 
     getUserEnvStatus: (runtimeKey?: string | null) => {
       const params = new URLSearchParams();

@@ -44,7 +44,7 @@ export type OfflineGPTExtensionResource = {
   packageName?: string;
   providerId?: string;
   mcpServerName?: string;
-  localCommandRef?: "offlinegpt.computerUseMcp" | "offlinegpt.uiMcp";
+  localCommandRef?: "offlinegpt.cuaDriverMcp" | "offlinegpt.uiMcp";
   required?: boolean;
 };
 
@@ -90,7 +90,6 @@ export type EnablementConditionType =
   | "plugin-loaded"
   | "provider-connected"
   | "env-set"
-  | "permission-granted"
   | "toggle-enabled";
 
 export type EnablementCondition = {
@@ -188,49 +187,43 @@ export const BUILT_IN_OFFLINEGPT_EXTENSION_MANIFESTS: OfflineGPTExtensionManifes
     schemaVersion: 1,
     id: "computer-use",
     name: "Computer Use",
-    description: "Work in the Mac app and window you approve. Read, use accessible controls, or allow mouse and keyboard control with a small window preview.",
+    description: "Operate native apps on macOS, Windows, and Linux through Cua Driver: read a window's accessibility tree, act on its controls, and verify the result.",
     preview: true,
-    source: { format: "offlinegpt-builtin", origin: "builtin", trusted: true },
+    source: { format: "offlinegpt-builtin", origin: "builtin", trusted: true, reference: "https://github.com/trycua/cua" },
     icon: { src: "/offlinegpt-mark.png" },
     composer: { prompt: "Use Computer Use to " },
     setup: {
-      instructions: "Computer Use is available on macOS 14 or later. Grant Accessibility and Screen Recording in the helper. For each session, choose an app window and allow reading, app controls, or mouse and keyboard. Choose Allow and start in OfflineGPT. Your input interrupts control; Stop in the preview ends access.",
+      instructions: "Computer Use runs Cua Driver (open source, by Cua) on this computer. Install Cua Driver, then enable it for the workspace: OfflineGPT adds the Cua Driver MCP server and the cua-driver skill. On macOS, grant Cua Driver Accessibility and Screen Recording when it asks.",
       primaryCta: "Enable Computer Use",
-      secondaryCta: "Check macOS permissions",
-      testActionRef: "offlinegpt.computerUse.healthCheck",
+      secondaryCta: "Install Cua Driver",
+      testActionRef: "offlinegpt.computerUse.doctor",
     },
     resources: [
       {
         type: "mcp",
-        id: "computer-use-mcp",
-        label: "Computer Use MCP",
+        id: "cua-driver-mcp",
+        label: "Cua Driver MCP",
+        // Built-in extensions save their MCP under the extension id.
         mcpServerName: "computer-use",
         command: [],
-        localCommandRef: "offlinegpt.computerUseMcp",
+        localCommandRef: "offlinegpt.cuaDriverMcp",
         required: true,
       },
-      {
-        type: "native-binary",
-        id: "computer-use-native",
-        label: "Computer Use session runtime",
-        packageName: "@offlinegpt/computer-use",
-        required: true,
-      },
+      { type: "skill", id: "cua-driver", label: "cua-driver skill", required: true },
+      { type: "native-binary", id: "cua-driver", label: "Cua Driver", description: "https://cua.ai/docs/cua-driver", required: true },
     ],
     contributions: [
+      { type: "settings-panel", ref: "offlinegpt.computerUse.settings", location: "settings-detail" },
       { type: "setup-instructions", ref: "offlinegpt.computerUse.setup", label: "Setup instructions", location: "settings-detail" },
-      { type: "native-capability", ref: "offlinegpt.computerUse.axPermissions", label: "Accessibility and Screen Recording" },
-      { type: "test-action", ref: "offlinegpt.computerUse.healthCheck", label: "Verify Computer Use MCP" },
+      { type: "test-action", ref: "offlinegpt.computerUse.doctor", label: "Run cua-driver doctor" },
       { type: "composer-prompt", prompt: "Use Computer Use to ", location: "composer" },
     ],
     enablement: [
-      { type: "mcp-connected", ref: "computer-use", label: "MCP server connected" },
-      { type: "permission-granted", ref: "accessibility", label: "Accessibility permission" },
-      { type: "permission-granted", ref: "screenRecording", label: "Screen Recording permission" },
+      { type: "mcp-connected", ref: "computer-use", label: "Cua Driver MCP connected" },
     ],
-    lifecycle: { reload: ["mcp"], detection: ["mcp:computer-use"] },
+    lifecycle: { reload: ["mcp", "skills"], detection: ["mcp:computer-use"] },
     defaultEnabled: true,
-    platform: ["darwin"],
+    platform: ["darwin", "linux", "windows"],
   },
   {
     schemaVersion: 1,
