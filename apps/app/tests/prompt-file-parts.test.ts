@@ -248,7 +248,7 @@ describe("computer task mentions", () => {
 describe("generated mention instructions", () => {
   const connected = { type: "connect-skill", slug: "summarize", name: "Summarize", marketplace: "Team tools", capability: "skill:summarize" } satisfies ComposerPart;
   const cases: { part: ComposerPart; token: string; label: string; instruction: string }[] = [
-    { part: { type: "app", name: "Notes" }, token: "@Notes", label: "@Notes", instruction: "computer-use tools" },
+    { part: { type: "app", name: "Notes" }, token: "@Notes", label: "@Notes", instruction: "list_apps and list_windows" },
     { part: { type: "skill", name: "summarize" }, token: "[skill summarize]", label: "[skill summarize]", instruction: "follow its instructions" },
     { part: connected, token: encodeConnectSkillToken(connected), label: "/summarize", instruction: "skill:summarize" },
   ];
