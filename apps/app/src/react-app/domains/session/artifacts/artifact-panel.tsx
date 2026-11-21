@@ -306,7 +306,7 @@ function ArtifactPanelView({ sessionId, client, workspaceId, workspaceRoot, isRe
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="shrink-0 border-b border-border bg-background mac:bg-background/80 mac:backdrop-blur-2xl mac:backdrop-saturate-150">
+      <div className="shrink-0 border-b border-border bg-background glass:bg-background/80 glass:backdrop-blur-2xl glass:backdrop-saturate-150">
         <div className="flex h-10 items-center gap-2 pe-2 ps-2">
           <Tooltip>
             <TooltipTrigger

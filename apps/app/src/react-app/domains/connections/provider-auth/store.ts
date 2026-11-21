@@ -23,7 +23,7 @@ import {
   workspaceOfflineGptRead,
   workspaceOfflineGptWrite,
 } from "../../../../app/lib/desktop";
-import { OfflineGptServerError } from "../../../../app/lib/offlinegpt-server";
+import { OfflineGptServerError, type ClaudeCliAuthStatus } from "../../../../app/lib/offlinegpt-server";
 import type {
   Client,
   ProviderListItem,
@@ -1446,6 +1446,19 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     }
   }
 
+  async function checkClaudeCliAuth(): Promise<ClaudeCliAuthStatus> {
+    const client = options.offlinegptServer.getSnapshot().offlinegptServerClient;
+    if (!client) return { state: "unknown", detail: "OfflineGPT server is not connected." };
+    try {
+      return await client.getClaudeCliAuthStatus();
+    } catch (error) {
+      if (error instanceof OfflineGptServerError && error.status === 404) {
+        return { state: "unknown", detail: "This OfflineGPT server is out of date. Restart OfflineGPT to enable Claude sign-in." };
+      }
+      throw error;
+    }
+  }
+
   async function refreshProviders(optionsArg?: { dispose?: boolean; force?: boolean }) {
     const c = options.client();
     if (!c) return null;
@@ -2529,6 +2542,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     runCloudProviderSync,
     startProviderAuth,
     refreshProviders,
+    checkClaudeCliAuth,
     completeProviderAuthOAuth,
     submitProviderApiKey,
     connectCloudProvider,

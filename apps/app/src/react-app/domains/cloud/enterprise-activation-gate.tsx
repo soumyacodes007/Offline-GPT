@@ -174,7 +174,7 @@ function EnterpriseActivationPage() {
         />
       </div>
 
-      <div className="absolute inset-x-0 top-0 z-20 h-10 mac:titlebar-drag" />
+      <div className="absolute inset-x-0 top-0 z-20 h-10 glass:titlebar-drag" />
 
       <div
         className="relative z-10 flex min-h-dvh items-center justify-center px-6 py-16"

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
 import { openDesktopUrl } from "@/app/lib/desktop";
+import type { ClaudeCliAuthStatus } from "@/app/lib/offlinegpt-server";
 import { isDesktopRuntime } from "@/app/utils";
 import { compareProviders } from "@/app/utils/providers";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,7 @@ export type ProviderAuthModalProps = {
     code?: string,
   ) => Promise<{ connected: boolean; pending?: boolean; message?: string }>;
   onRefreshProviders?: () => Promise<unknown>;
+  onCheckClaudeCliAuth?: () => Promise<ClaudeCliAuthStatus>;
   onClose: () => void;
 };
 
@@ -83,8 +85,11 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   const isRemoteWorker = workerType === "remote";
 
   const [view, setView] = useState<
-    "list" | "method" | "api" | "oauth-code" | "oauth-auto"
+    "list" | "method" | "api" | "oauth-code" | "oauth-auto" | "claude-cli"
   >("list");
+  const [claudeStatus, setClaudeStatus] = useState<ClaudeCliAuthStatus | null>(null);
+  const [claudeChecking, setClaudeChecking] = useState(false);
+  const [claudeCommandCopied, setClaudeCommandCopied] = useState(false);
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [oauthCodeInput, setOauthCodeInput] = useState("");
@@ -147,6 +152,8 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   const isOpencodeZenProvider = (id: string) => id.trim().toLowerCase() === "opencode";
 
   const OPENCODE_ZEN_KEY_URL = "https://opencode.ai/auth";
+  const CLAUDE_LOGIN_COMMAND = "claude auth login";
+  const CLAUDE_INSTALL_URL = "https://claude.ai/install";
 
   const openExternalUrl = async (url: string) => {
     if (!url) return;
@@ -515,12 +522,14 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     setLocalError(null);
     setSelectedProviderId(entry.id);
 
-    if (entry.methods.length === 1) {
+    const hasClaudeSignIn = Boolean(props.onCheckClaudeCliAuth) && isAnthropicProvider(entry.id, entry.name);
+
+    if (entry.methods.length === 1 && !hasClaudeSignIn) {
       void handleMethodSelect(entry.methods[0]);
       return;
     }
 
-    if (entry.methods.length > 1) {
+    if (entry.methods.length > 1 || hasClaudeSignIn) {
       setView("method");
       return;
     }
@@ -563,7 +572,45 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     await submitOauth(selectedEntry.id, oauthSession.methodIndex, trimmed);
   };
 
+  const checkClaudeSignIn = async () => {
+    if (!props.onCheckClaudeCliAuth || claudeChecking) return;
+    setClaudeChecking(true);
+    try {
+      setClaudeStatus(await props.onCheckClaudeCliAuth());
+    } catch (error) {
+      setClaudeStatus({
+        state: "unknown",
+        detail: error instanceof Error ? error.message : "Could not check Claude sign-in.",
+      });
+    } finally {
+      setClaudeChecking(false);
+    }
+  };
+
+  const openClaudeSignIn = () => {
+    setLocalError(null);
+    setClaudeStatus(null);
+    setClaudeCommandCopied(false);
+    setView("claude-cli");
+    void checkClaudeSignIn();
+  };
+
+  const copyClaudeLoginCommand = async () => {
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      setLocalError("Clipboard is unavailable in this environment.");
+      return;
+    }
+    await navigator.clipboard.writeText(CLAUDE_LOGIN_COMMAND);
+    setClaudeCommandCopied(true);
+  };
+
   const handleBack = () => {
+    if (resolvedView === "claude-cli") {
+      setView("method");
+      setClaudeStatus(null);
+      setLocalError(null);
+      return;
+    }
     if (resolvedView === "oauth-code" || resolvedView === "oauth-auto") {
       if ((selectedEntry?.methods.length ?? 0) > 1) {
         setView("method");
@@ -794,6 +841,19 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                     </Button>
                   </div>
                   <div className="grid gap-2">
+                    {props.onCheckClaudeCliAuth && isAnthropicProvider(selectedEntry.id, selectedEntry.name) ? (
+                      <button
+                        type="button"
+                        className="w-full rounded-xl border border-indigo-5/40 bg-indigo-3/20 px-4 py-3.5 text-left shadow-sm transition-all duration-200 hover:bg-indigo-4/30 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={openClaudeSignIn}
+                        disabled={actionDisabled}
+                      >
+                        <div className="text-sm font-medium text-gray-12">Sign in with Claude</div>
+                        <div className="mt-1 text-xs text-gray-10">
+                          Use your Claude account through the official Claude CLI installed on this device.
+                        </div>
+                      </button>
+                    ) : null}
                     {selectedEntry.methods.map((method) => (
                       <button
                         key={`${selectedEntry.id}-${method.type}-${method.methodIndex ?? method.label}`}
@@ -810,6 +870,76 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                         <div className="mt-1 text-xs text-gray-10">{methodDescription(selectedEntry, method)}</div>
                       </button>
                     ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {resolvedView === "claude-cli" && selectedEntry ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-sm font-medium text-gray-12">Sign in with Claude</div>
+                      <div className="mt-1 text-xs text-gray-10">
+                        OfflineGPT uses the official Claude CLI for sign-in and never handles your Claude credentials.
+                      </div>
+                    </div>
+                    <Button variant="outline" onClick={handleBack}>
+                      Back
+                    </Button>
+                  </div>
+                  {claudeChecking && !claudeStatus ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-10">
+                      <Loader2 size={14} className="animate-spin" /> Checking Claude CLI…
+                    </div>
+                  ) : null}
+                  {claudeStatus?.state === "signed-in" ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-green-6/40 bg-green-2/40 px-3 py-2.5 text-xs text-green-11">
+                      <CheckCircle2 size={14} />
+                      <span>
+                        Signed in
+                        {claudeStatus.email ? ` as ${claudeStatus.email}` : ""}
+                        {claudeStatus.subscriptionType ? ` (${claudeStatus.subscriptionType})` : ""}
+                      </span>
+                    </div>
+                  ) : null}
+                  {claudeStatus?.state === "not-installed" ? (
+                    <div className="space-y-1.5 rounded-lg border border-gray-6/40 bg-gray-2/50 px-3 py-2.5 text-xs text-gray-11">
+                      <div>The Claude CLI is not installed on this device.</div>
+                      <button
+                        type="button"
+                        className="font-medium text-indigo-11 underline underline-offset-2 hover:text-indigo-12"
+                        onClick={() => void openExternalUrl(CLAUDE_INSTALL_URL)}
+                      >
+                        Install Claude Code →
+                      </button>
+                    </div>
+                  ) : null}
+                  {claudeStatus?.state === "unknown" ? (
+                    <div className="rounded-lg border border-red-7/30 bg-red-1/40 px-3 py-2 text-xs text-red-11">
+                      {claudeStatus.detail}
+                    </div>
+                  ) : null}
+                  {claudeStatus?.state === "signed-out" || claudeStatus?.state === "not-installed" ? (
+                    <div className="space-y-2 text-xs text-gray-10">
+                      <div>
+                        {claudeStatus.state === "signed-out"
+                          ? "Not signed in. Run this command in a terminal, finish signing in, then check again."
+                          : "After installing, run this command in a terminal, then check again."}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 rounded-lg border border-gray-6/50 bg-gray-2 px-3 py-2 font-mono text-[12px] text-gray-12">
+                          {CLAUDE_LOGIN_COMMAND}
+                        </code>
+                        <Button variant="outline" onClick={() => void copyClaudeLoginCommand()}>
+                          {claudeCommandCopied ? "Copied" : "Copy"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="flex justify-end">
+                    <Button variant="outline" onClick={() => void checkClaudeSignIn()} disabled={claudeChecking}>
+                      {claudeChecking ? "Checking…" : "Check again"}
+                    </Button>
                   </div>
                 </div>
               ) : null}
