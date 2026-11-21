@@ -308,8 +308,8 @@ export function SettingsSidebar(props: SettingsSidebarProps) {
   const groups = useSettingsNavGroups(props.developerMode);
 
   return (
-    <Sidebar collapsible="icon" className="mac:**:data-[sidebar=sidebar]:bg-transparent">
-      <div className="hidden h-10 mac:block mac:titlebar-drag" />
+    <Sidebar collapsible="icon" className="glass:**:data-[sidebar=sidebar]:bg-transparent">
+      <div className="hidden h-10 mac:block glass:titlebar-drag" />
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>

@@ -448,7 +448,7 @@ export function McpView(props: McpViewProps) {
   const [detailSkillContent, setDetailSkillContent] = useState<string | null>(null);
   const [offlinegptUiMcpCommand, setOfflineGptUiMcpCommand] = useState<string[] | null>(null);
   const [offlinegptUiMcpEnvironment, setOfflineGptUiMcpEnvironment] = useState<Record<string, string> | null>(null);
-  const [computerUseMcpCommand, setComputerUseMcpCommand] = useState<string[] | null>(null);
+  const [cuaDriverMcpCommand, setCuaDriverMcpCommand] = useState<string[] | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ExtensionInventoryFilter>(props.initialFilter ?? "all");
   const [inventoryState, setInventoryState] = useState<ExtensionInventoryState>(props.initialState ?? "all");
@@ -772,14 +772,18 @@ export function McpView(props: McpViewProps) {
             ),
           ));
         }
-        const computerUseCommand = await window.__OFFLINEGPT_ELECTRON__?.invokeDesktop?.("getComputerUseMcpCommand");
-        if (Array.isArray(computerUseCommand) && computerUseCommand.every((part) => typeof part === "string")) {
-          setComputerUseMcpCommand(computerUseCommand);
-        }
       } catch {
         setOfflineGptUiMcpCommand(null);
         setOfflineGptUiMcpEnvironment(null);
-        setComputerUseMcpCommand(null);
+      }
+      try {
+        // Throws until Cua Driver is installed; that must not hide the UI MCP command.
+        const cuaCommand = await window.__OFFLINEGPT_ELECTRON__?.invokeDesktop?.("getCuaDriverMcpCommand");
+        if (Array.isArray(cuaCommand) && cuaCommand.every((part) => typeof part === "string")) {
+          setCuaDriverMcpCommand(cuaCommand);
+        }
+      } catch {
+        setCuaDriverMcpCommand(null);
       }
     })();
   }, []);
@@ -909,7 +913,7 @@ export function McpView(props: McpViewProps) {
 
   const launchCommandForEntry = (entry: McpDirectoryInfo) => {
     if (entry.serverName === "offlinegpt-ui") return offlinegptUiMcpCommand ?? undefined;
-    if (entry.serverName === "computer-use") return computerUseMcpCommand ?? entry.command;
+    if (entry.serverName === "computer-use") return cuaDriverMcpCommand ?? entry.command;
     return entry.command;
   };
 

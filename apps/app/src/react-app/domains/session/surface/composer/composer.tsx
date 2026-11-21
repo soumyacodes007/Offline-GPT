@@ -535,7 +535,7 @@ export const ReactSessionComposer = memo(function ReactSessionComposer(props: Co
         ...COMPUTER_MENTIONS,
         ...agentList.map((agent) => ({ id: `agent:${agent.name}`, kind: "agent" as const, value: agent.name, label: agent.name })),
         ...recent.map((file) => ({ id: `file:${file}`, kind: "file" as const, value: file, label: file })),
-        // Running macOS apps (Computer Use targets). Listed after recent files
+        // Running apps from Cua Driver (Computer Use targets). Listed after recent files
         // so an empty "@" stays file-first; fuzzy search surfaces them as the
         // user types (e.g. "@mus" → Music).
         ...apps.map((appName) => ({ id: `app:${appName}`, kind: "app" as const, value: appName, label: appName })),
