@@ -379,14 +379,46 @@ export type UiControlBridgeInfo = {
   token?: string;
 };
 
-export type ComputerUsePermissions = {
-  ok: boolean;
-  accessibility: boolean;
-  screenRecording: boolean;
-  supported?: boolean;
-  protocolVersion?: string;
-  error?: string;
+/** Installed Cua Driver (https://github.com/trycua/cua) as seen by the desktop host. */
+export type CuaDriverCheck = {
+  installed: boolean;
+  platform: string;
+  installCommand: string;
+  path?: string;
+  version?: string | null;
+  /** `cua-driver status` output. */
+  status?: string;
+  statusOk?: boolean;
+  /** `cua-driver permissions status` output (macOS only). */
+  permissions?: string;
+  permissionsOk?: boolean;
 };
+
+export type CuaDriverCommandOutput = { ok: boolean; output: string };
+
+/** Cua Driver agent-cursor defaults (persistent `cua-driver config` keys). */
+export type CuaCursorSettings = {
+  enabled: boolean;
+  style: "signature_arc" | "spring_settle" | "magnetic" | "comet_swoop" | "adaptive" | "classic" | (string & {});
+  timing: "default" | "native" | "fitts" | "fixed" | (string & {});
+  trail: boolean;
+  glow: boolean;
+  halo: boolean;
+  float: boolean;
+  rotate: "heading" | "lean" | "off" | (string & {});
+  badges: "minimal" | "verbose" | "off" | (string & {});
+};
+
+export type CuaCursorSettingKey =
+  | "agent_cursor.enabled"
+  | "cursor.motion.style"
+  | "cursor.motion.timing"
+  | "cursor.motion.effects.trail"
+  | "cursor.motion.effects.glow"
+  | "cursor.halo"
+  | "cursor.float"
+  | "cursor.rotate"
+  | "cursor.badges";
 
 export type RunningAppsResult = {
   ok: boolean;
@@ -475,16 +507,17 @@ export type DesktopCommandMap = {
   desktopIntegrationRemove: { args: []; result: DesktopIntegrationResult };
   getUiControlBridgeInfo: { args: []; result: UiControlBridgeInfo | null };
   getOfflineGptUiMcpCommand: { args: []; result: string[] };
-  getComputerUseMcpCommand: { args: []; result: string[] };
-  getComputerUseState: { args: []; result: unknown };
-  computerUseAction: { args: [value: { connectionId: string; id: string; action: string; windowId?: number }]; result: void };
   getOfflineGptUiMcpEnvironment: { args: []; result: Record<string, string> };
 
-  // Computer use
-  checkComputerUsePermissions: { args: []; result: ComputerUsePermissions };
+  // Computer use (Cua Driver)
+  getCuaDriverMcpCommand: { args: []; result: string[] };
+  checkCuaDriver: { args: []; result: CuaDriverCheck };
+  runCuaDriverDoctor: { args: []; result: CuaDriverCommandOutput };
+  installCuaDriver: { args: []; result: CuaDriverCommandOutput };
   listRunningApps: { args: []; result: RunningAppsResult };
-  openComputerUsePermissionSetup: { args: []; result: ComputerUsePermissions };
-  openComputerUsePermissionSettings: { args: []; result: unknown };
+  getCuaCursorSettings: { args: []; result: CuaCursorSettings };
+  setCuaCursorSetting: { args: [key: CuaCursorSettingKey, value: string]; result: CuaCursorSettings };
+  previewCuaCursor: { args: []; result: { ok: boolean } };
 
   // Bootstrap config
   getDesktopBootstrapConfig: { args: []; result: DesktopBootstrapConfig };

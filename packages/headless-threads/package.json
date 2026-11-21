@@ -22,7 +22,7 @@
     "test": "bun test src"
   },
   "dependencies": {
-    "@opencode-ai/sdk": "^1.18.15",
+    "@opencode-ai/sdk": "^1.19.6",
     "zod": "^4.3.6"
   },
   "devDependencies": {
