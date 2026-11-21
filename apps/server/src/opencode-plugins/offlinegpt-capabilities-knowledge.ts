@@ -62,9 +62,10 @@ Here is what you can help users with:
 - The agent can navigate there: use the UI control action \`settings.panel.open\` with \`{panel: "permissions"}\`.
 
 ## Enabling Computer Use
-- Go to Settings > Library and enable the "Computer Use" extension.
-- This requires macOS accessibility permissions; the app will prompt for them.
-- Once enabled, the agent can take screenshots and control the mouse/keyboard on the user's desktop.
+- Computer Use runs Cua Driver (open source, https://github.com/trycua/cua) on macOS, Windows, and Linux.
+- Go to Settings > Library > Computer Use: install Cua Driver if it is missing, then choose Enable Computer Use. This adds the Cua Driver MCP server (named \`computer-use\`, running \`cua-driver mcp\`) and the \`cua-driver\` skill to the workspace.
+- On macOS, Cua Driver itself needs Accessibility and Screen Recording; it asks for them, and \`cua-driver permissions status\` reports them.
+- Once enabled, follow the cua-driver skill: read one exact window with a targeted \`get_window_state\`, act with \`run_steps\` and fresh element tokens, and verify the outcome. Foreground control needs the user's authorization.
 
 ## Connect and MCP servers
 - If the runtime steering says OfflineGPT Cloud is not ready, do not substitute documentation, browser, or UI tools for the connected-service action; direct the user to \`Settings > Library\` for inventory and \`Settings > Debug\` (developer mode) to repair and test agent access.

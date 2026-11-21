@@ -217,11 +217,37 @@ export async function listSkills(workspaceRoot: string, includeGlobal: boolean):
   });
 }
 
+/** A reference document written next to SKILL.md (for example `WORKFLOW.md`). */
+export type SkillSupportingFile = { path: string; content: string };
+
 export type UpsertSkillPayload = {
   name: string;
   content: string;
   description?: string;
+  files?: SkillSupportingFile[];
 };
+
+const SUPPORTING_FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\.md$/;
+const MAX_SUPPORTING_FILES = 32;
+const MAX_SUPPORTING_FILE_BYTES = 256 * 1024;
+
+/** Flat markdown siblings only: no directories, traversal, or SKILL.md replacement. */
+export function validateSkillSupportingFiles(files: readonly SkillSupportingFile[]): void {
+  if (files.length > MAX_SUPPORTING_FILES) {
+    throw new ApiError(400, "invalid_skill_files", `A skill can include at most ${MAX_SUPPORTING_FILES} supporting files`);
+  }
+  const seen = new Set<string>();
+  for (const file of files) {
+    const key = file.path.toLowerCase();
+    if (!SUPPORTING_FILE_NAME.test(file.path) || key === "skill.md" || seen.has(key)) {
+      throw new ApiError(400, "invalid_skill_files", `Invalid supporting file name: ${file.path}`);
+    }
+    if (Buffer.byteLength(file.content, "utf8") > MAX_SUPPORTING_FILE_BYTES) {
+      throw new ApiError(400, "invalid_skill_files", `Supporting file is too large: ${file.path}`);
+    }
+    seen.add(key);
+  }
+}
 
 export function buildSkillContent(payload: UpsertSkillPayload): { name: string; content: string } {
   const name = payload.name.trim();
@@ -263,12 +289,15 @@ export async function upsertSkill(
   payload: UpsertSkillPayload,
 ): Promise<{ path: string; action: "added" | "updated" }> {
   const skill = buildSkillContent(payload);
+  const files = payload.files ?? [];
+  validateSkillSupportingFiles(files);
 
   const baseDir = projectSkillsDir(workspaceRoot);
   const skillDir = join(baseDir, skill.name);
   await mkdir(skillDir, { recursive: true });
   const skillPath = join(skillDir, "SKILL.md");
   const existed = await exists(skillPath);
+  for (const file of files) await writeFile(join(skillDir, file.path), file.content, "utf8");
   await writeFile(skillPath, skill.content, "utf8");
   return { path: skillPath, action: existed ? "updated" : "added" };
 }
