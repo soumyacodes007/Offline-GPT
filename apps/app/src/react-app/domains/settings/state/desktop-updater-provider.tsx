@@ -79,7 +79,7 @@ export function DesktopUpdateButton() {
             size="sm"
             data-update-button
             onClick={() => setConfirmRestart(true)}
-            className="mac:titlebar-no-drag h-7 gap-1.5 rounded-lg border border-foreground/[0.06] bg-foreground/[0.04] px-2.5 text-xs font-medium text-foreground/80 shadow-none transition-colors hover:bg-foreground/[0.08] hover:text-foreground"
+            className="glass:titlebar-no-drag h-7 gap-1.5 rounded-lg border border-foreground/[0.06] bg-foreground/[0.04] px-2.5 text-xs font-medium text-foreground/80 shadow-none transition-colors hover:bg-foreground/[0.08] hover:text-foreground"
           >
             <RotateCw className="size-3.5 opacity-70" strokeWidth={1.75} aria-hidden="true" />
             {t("settings.update_restart_button")}

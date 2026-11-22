@@ -834,7 +834,7 @@ export function OfflineGptRouteControlActions() {
           { id: "extensions", label: "Library", description: "Skills, connections, and tools your agent can use." },
           { id: "files", label: "File management", description: "Read, write, and organize files in your workspace." },
           { id: "code", label: "Write and run code", description: "Generate, edit, and execute code with full tool access." },
-          { id: "computer-use", label: "Computer use", description: "Control your computer with screenshots and mouse/keyboard actions." },
+          { id: "computer-use", label: "Computer use", description: "Operate native apps on macOS, Windows, and Linux through Cua Driver." },
           { id: "skills", label: "Skills", description: "Install specialized skill packs for specific workflows." },
           { id: "automations", label: "Automations", description: "Schedule recurring tasks and background agents." },
           { id: "sharing", label: "Share sessions", description: "Share workspace sessions with collaborators via OfflineGPT Cloud." },

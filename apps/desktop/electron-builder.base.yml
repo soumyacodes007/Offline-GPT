@@ -57,10 +57,6 @@ mac:
         - versions.json
         - versions.json-aarch64-apple-darwin
         - versions.json-x86_64-apple-darwin
-    - from: resources/helpers
-      to: helpers
-      filter:
-        - "OfflineGPT Computer Use.app/**"
   target:
     - dmg
     - zip

@@ -235,7 +235,7 @@ export function DenSignInSurface(props: DenSignInSurfaceProps) {
         </div>
 
         {/* Titlebar drag region */}
-        <div className="absolute inset-x-0 top-0 z-20 h-10 mac:titlebar-drag" />
+        <div className="absolute inset-x-0 top-0 z-20 h-10 glass:titlebar-drag" />
 
         <div className="relative z-10 flex min-h-dvh items-center justify-center px-6 py-16">
           <div className="w-full max-w-[720px] rounded-3xl border border-border bg-background px-8 pb-12 pt-10 sm:px-16 sm:pb-16 sm:pt-14">

@@ -12,6 +12,6 @@
     "skipLibCheck": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["docs-shots/**/*.ts", "drivers/**/*.mts", "../packages/handsfree/test/e2e/browser.ts", "runner/**/*.ts", "packages/**/*.ts", "scripts/**/*.ts", "specs/**/*.ts", "worlds/**/*.ts", "vitest.config.ts"],
+  "include": ["docs-shots/**/*.ts", "drivers/**/*.mts", "runner/**/*.ts", "packages/**/*.ts", "scripts/**/*.ts", "specs/**/*.ts", "worlds/**/*.ts", "vitest.config.ts"],
   "exclude": ["results"]
 }

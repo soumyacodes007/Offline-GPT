@@ -20,7 +20,6 @@ import {
   PanelRightOpen,
   Plus,
   Search,
-  ShieldCheck,
   Share2,
   Trash2,
   RefreshCw,
@@ -159,8 +158,6 @@ import { WorkspaceAvatarPicker } from "./workspace-avatar-picker";
 import { isSameWorkbenchSession, useWorkbenchStore, workbenchSessionKey } from "../chat/workbench-store";
 import { SidebarDestination } from "./sidebar-destination";
 import { SessionTitle } from "./session-title";
-import { AuditTrailMiniPanel } from "../../audit/audit-trail-mini-panel";
-import { useAuditTrailController } from "../../audit/use-audit-trail-controller";
 import type { OfflineGptServerClient } from "../../../../app/lib/offlinegpt-server";
 import { LocalWorkflowsPanel } from "../../local-workflows/local-workflows-panel";
 
@@ -939,7 +936,7 @@ export type AppSidebarProps = {
   onOpenDashboard?: () => void;
   /** Opens the cross-session message search dialog (Cmd/Ctrl+Shift+F). */
   onOpenSessionSearch?: () => void;
-  auditClient?: OfflineGptServerClient | null;
+  offlinegptServerClient?: OfflineGptServerClient | null;
   /** Back/forward across recently viewed conversations, rendered at the top of the sidebar. */
   conversationHistory?: {
     canGoBack: boolean;
@@ -961,15 +958,7 @@ function isSessionActivityStatus(status: string | undefined): status is SessionA
 
 export function AppSidebar(props: AppSidebarProps) {
   const { config: shellConfig } = useShellConfig();
-  const [auditOpen, setAuditOpen] = React.useState(false);
   const [localWorkflowsOpen, setLocalWorkflowsOpen] = React.useState(false);
-  const auditSummary = useAuditTrailController({
-    open: false,
-    client: props.auditClient,
-    workspaceId: props.selectedWorkspaceId,
-    sessionId: props.selectedSessionId,
-    workspacePath: props.workspaceSessionGroups.find((group) => group.workspace.id === props.selectedWorkspaceId)?.workspace.path,
-  });
   // Lives in the UI store (not component state) so the open/closed state of
   // each workspace group survives this sidebar unmounting, e.g. while the
   // user is in Settings.
@@ -1120,9 +1109,9 @@ export function AppSidebar(props: AppSidebarProps) {
     <SidebarContext.Provider value={contextValue}>
       <Sidebar
         collapsible="offcanvas"
-        className="border-e-0 group-data-[side=left]:border-e-0 mac:**:data-[sidebar=sidebar]:bg-transparent"
+        className="border-e-0 group-data-[side=left]:border-e-0 glass:**:data-[sidebar=sidebar]:bg-transparent"
       >
-        <div className="hidden h-12 mac:block mac:titlebar-drag"/>
+        <div className="hidden h-12 mac:block glass:titlebar-drag"/>
         {brandLogoUrl ? (
           <div
             data-testid="brand-logo"
@@ -1135,14 +1124,14 @@ export function AppSidebar(props: AppSidebarProps) {
             />
           </div>
         ) : (
-          <div data-sidebar-brand className="flex h-11 shrink-0 items-center gap-2 px-4 mac:titlebar-drag">
+          <div data-sidebar-brand className="flex h-11 shrink-0 items-center gap-2 px-4 glass:titlebar-drag">
             <img src={resolveExtensionIconSrc("/offlinegpt-mark.png")} alt="" className="size-5 shrink-0 object-contain dark:invert" />
             <span className="truncate text-[15px] font-medium tracking-[-0.4px]" title={brandAppName}>{brandAppName}</span>
           </div>
         )}
         {props.conversationHistory ? (
           <div
-            className="flex shrink-0 items-center justify-end gap-0.5 px-2 pb-1 max-lg:hidden mac:absolute mac:right-1.5 mac:top-[7px] mac:z-50 mac:p-0 mac:titlebar-no-drag"
+            className="flex shrink-0 items-center justify-end gap-0.5 px-2 pb-1 max-lg:hidden mac:absolute mac:right-1.5 mac:top-[7px] mac:z-50 mac:p-0 glass:titlebar-no-drag"
             role="group"
             aria-label="Conversation history controls"
           >
@@ -1206,34 +1195,6 @@ export function AppSidebar(props: AppSidebarProps) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 type="button"
-                data-testid="audit-trail-toggle"
-                aria-expanded={auditOpen}
-                aria-label="Audit trail"
-                title="A local activity record reconstructed from this task and workspace. Integrity verification is not enabled in this version."
-                onClick={() => setAuditOpen((value) => !value)}
-                className="text-sidebar-foreground/70"
-              >
-                <ShieldCheck className="size-4" />
-                <span className="flex-1 truncate">Audit trail</span>
-                {props.selectedWorkspaceId && auditSummary.records.length > 0 ? <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">{auditSummary.records.length}</span> : null}
-                {auditSummary.records.some((record) => record.status === "failed") ? <span className="size-1.5 rounded-full bg-destructive" aria-label="Audit trail has a failure" /> : auditSummary.records.some((record) => record.status === "waiting") ? <span className="size-1.5 rounded-full bg-warning" aria-label="Audit trail is waiting for approval" /> : null}
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            {auditOpen ? (
-              <SidebarMenuItem>
-                <AuditTrailMiniPanel
-                  open={auditOpen}
-                  onClose={() => setAuditOpen(false)}
-                  client={props.auditClient}
-                  workspaceId={props.selectedWorkspaceId}
-                  sessionId={props.selectedSessionId}
-                  workspacePath={props.workspaceSessionGroups.find((group) => group.workspace.id === props.selectedWorkspaceId)?.workspace.path}
-                />
-              </SidebarMenuItem>
-            ) : null}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                type="button"
                 data-testid="local-workflows-toggle"
                 aria-expanded={localWorkflowsOpen}
                 aria-label="Workflows"
@@ -1248,7 +1209,7 @@ export function AppSidebar(props: AppSidebarProps) {
             <LocalWorkflowsPanel
               open={localWorkflowsOpen}
               onClose={() => setLocalWorkflowsOpen(false)}
-              client={props.auditClient}
+              client={props.offlinegptServerClient}
               workspaceId={props.selectedWorkspaceId}
               onOpenSession={props.onOpenSession}
             />
@@ -1559,7 +1520,7 @@ function WorkspaceHeader({
     <SidebarMenuButton
       render={<div />}
       className={cn(
-        "gap-2 group-hover/workspace-header:bg-sidebar-accent group-hover/workspace-header:text-sidebar-accent-foreground mac:group-hover/workspace-header:bg-black/5 dark:mac:group-hover/workspace-header:bg-white/10",
+        "gap-2 group-hover/workspace-header:bg-sidebar-accent group-hover/workspace-header:text-sidebar-accent-foreground glass:group-hover/workspace-header:bg-black/5 dark:glass:group-hover/workspace-header:bg-white/10",
         statusLabel && "h-10",
       )}
     >

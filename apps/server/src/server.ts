@@ -51,7 +51,7 @@ import {
   MCP_APP_SANDBOX_PROXY_SCRIPT,
   parseMcpAppSandboxCsp,
 } from "./mcp-app-sandbox.js";
-import { deleteSkill, listSkills, renderSkillContentForResponse, upsertSkill } from "./skills.js";
+import { deleteSkill, listSkills, renderSkillContentForResponse, upsertSkill, validateSkillSupportingFiles } from "./skills.js";
 import { deleteCommand, listCommands, repairCommands, upsertCommand } from "./commands.js";
 import { ApiError, formatError } from "./errors.js";
 import { readJsoncFile, updateJsoncTopLevel, writeJsoncFile } from "./jsonc.js";
@@ -3350,13 +3350,22 @@ function createRoutes(
     const name = String(body.name ?? "");
     const content = String(body.content ?? "");
     const description = body.description ? String(body.description) : undefined;
+    const files = Array.isArray(body.files)
+      ? body.files.map((file: unknown) => {
+        if (!file || typeof file !== "object" || !("path" in file) || !("content" in file) || typeof file.path !== "string" || typeof file.content !== "string") {
+          throw new ApiError(400, "invalid_skill_files", "Each supporting file needs a string path and content");
+        }
+        return { path: file.path, content: file.content };
+      })
+      : undefined;
+    if (files) validateSkillSupportingFiles(files);
     await requireApproval(ctx, {
       workspaceId: workspace.id,
       action: "skills.upsert",
       summary: `Upsert skill ${name}`,
-      paths: [join(workspace.path, ".opencode", "skills", name, "SKILL.md")],
+      paths: [join(workspace.path, ".opencode", "skills", name, "SKILL.md"), ...(files ?? []).map((file) => join(workspace.path, ".opencode", "skills", name, file.path))],
     });
-    const result = await upsertSkill(workspace.path, { name, content, description });
+    const result = await upsertSkill(workspace.path, { name, content, description, files });
     await recordAudit(workspace.path, {
       id: shortId(),
       workspaceId: workspace.id,

@@ -55,8 +55,8 @@ export function SettingsShell(props: SettingsShellProps) {
   if (props.compact) {
     return (
       <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
-        <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-dls-border px-3 mac:titlebar-drag">
-          <div className="flex min-w-0 items-center gap-2 mac:titlebar-no-drag">
+        <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-b border-dls-border px-3 glass:titlebar-drag wco:pr-[calc(100vw_-_env(titlebar-area-x,0px)_-_env(titlebar-area-width,100vw)_+_0.75rem)]">
+          <div className="flex min-w-0 items-center gap-2 glass:titlebar-no-drag">
             <SettingsSectionMenu
               activeTab={props.activeTab}
               developerMode={props.developerMode}
@@ -69,7 +69,7 @@ export function SettingsShell(props: SettingsShellProps) {
               onSelectWorkspace={props.onSelectWorkspace}
             />
           </div>
-          <div className="flex shrink-0 items-center gap-1 mac:titlebar-no-drag">
+          <div className="flex shrink-0 items-center gap-1 glass:titlebar-no-drag">
             <Button
               variant="ghost"
               type="button"
@@ -110,11 +110,11 @@ export function SettingsShell(props: SettingsShellProps) {
           workspaces={props.workspaces}
           onSelectWorkspace={props.onSelectWorkspace}
         />
-        <SidebarInset className="min-h-0 overflow-hidden bg-background mac:bg-background/80 mac:[&_header]:transition-[padding-left] mac:[&_header]:duration-200 mac:[&_header]:ease-linear mac:peer-data-[state=collapsed]:[&_header]:pl-16 [&_header]:pl-16 lg:[&_header]:pl-6">
+        <SidebarInset className="min-h-0 overflow-hidden bg-background glass:bg-background/80 mac:[&_header]:transition-[padding-left] mac:[&_header]:duration-200 mac:[&_header]:ease-linear mac:peer-data-[state=collapsed]:[&_header]:pl-16 [&_header]:pl-16 lg:[&_header]:pl-6">
           <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <header className="shrink-0 flex h-10 items-center justify-between border-b border-dls-border px-4 md:px-6 mac:titlebar-drag">
+            <header className="shrink-0 flex h-10 items-center justify-between border-b border-dls-border px-4 md:px-6 glass:titlebar-drag wco:h-[env(titlebar-area-height,36px)] wco:pr-[calc(100vw_-_env(titlebar-area-x,0px)_-_env(titlebar-area-width,100vw)_+_1rem)]">
               <div className="flex min-w-0 items-center gap-3">
-                <SidebarTrigger className="mac:titlebar-no-drag lg:hidden" />
+                <SidebarTrigger className="glass:titlebar-no-drag lg:hidden" />
                 {props.headerLeadingSlot}
                 <div className="truncate text-[15px] font-semibold text-dls-text">{title}</div>
                 <span className="hidden truncate text-[13px] text-dls-secondary lg:inline">
@@ -131,7 +131,7 @@ export function SettingsShell(props: SettingsShellProps) {
                   </span>
                 ) : null}
               </div>
-              <div className="flex shrink-0 items-center gap-1.5 text-gray-10 mac:titlebar-no-drag">
+              <div className="flex shrink-0 items-center gap-1.5 text-gray-10 glass:titlebar-no-drag">
                 <DesktopUpdateButton />
                 <NotificationBell />
                 <Button

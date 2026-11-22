@@ -55,7 +55,7 @@ import type { ProviderCatalog } from "./use-model-behavior";
 import type { ModelAvailability } from "./model-availability";
 import { isComputerTarget } from "./composer/computer-mentions";
 import { decodeComposerMentionValue, encodeComposerMentionValue, type ComposerMentionKind } from "./composer/mention-encoding";
-import { desktopBridge, openDesktopUrl } from "@/app/lib/desktop";
+import { openDesktopUrl } from "@/app/lib/desktop";
 import { parseSlashCommandInvocation } from "./composer/slash-command";
 import { parseConnectSkillToken } from "./composer/connect-skill-token";
 import { createPastedTextChip, resolvePastedTextPlaceholders } from "./composer/pasted-text";
@@ -90,6 +90,11 @@ import { useSessionScrollController } from "./scroll-controller";
 import { SessionScrollOverlay } from "./scroll-overlay";
 import { SessionFindBar } from "./find-bar";
 import { useSessionFindStore } from "./find-store";
+import { ConversationViewTabs, type ConversationViewTab } from "@/react-app/domains/trajectory/conversation-view-tabs";
+import { useConversationViewStore } from "@/react-app/domains/trajectory/conversation-view-store";
+import { trajectoryCopy } from "@/react-app/domains/trajectory/trajectory-copy";
+import { TrajectoryView } from "@/react-app/domains/trajectory/trajectory-view";
+import { useTrajectoryHistory } from "@/react-app/domains/trajectory/use-trajectory-history";
 import { getSessionActivityStatusLabel, useSessionActivityStore, type SessionActivityStatus } from "@/react-app/domains/session/status/session-activity-store";
 import { PermissionApprovalPanel } from "@/react-app/domains/session/chat/permission-approval-modal";
 import { QuestionPanel } from "@/react-app/domains/session/modals/question-modal";
@@ -161,6 +166,11 @@ import { useOrgMcpConnections } from "@/react-app/domains/connections/use-org-mc
 import { buildConnectorToolIdentities } from "@/react-app/domains/connections/connector-tool-identity";
 
 const EMPTY_TRANSCRIPT: UIMessage[] = [];
+const EMPTY_SESSION_MESSAGES: OfflineGptSessionSnapshot["messages"] = [];
+const CONVERSATION_VIEWS: readonly ConversationViewTab[] = [
+  { id: "chat", label: trajectoryCopy.chat },
+  { id: "trajectory", label: trajectoryCopy.view },
+];
 const IDLE_STATUS: SessionStatus = { type: "idle" };
 const DEFAULT_COMPOSER_CONTROL_TEXT = "Help me outline the next OfflineGPT task.";
 const SESSION_SURFACE_SELECTOR = "[data-session-surface-id]";
@@ -1392,6 +1402,24 @@ export function SessionSurface(props: SessionSurfaceProps) {
     useCallback(() => sessionNeedsStop(props.opencodeBaseUrl, props.sessionId), [props.opencodeBaseUrl, props.sessionId]),
   );
   const chatStreaming = needsStop || sending || liveStatus.type === "busy" || liveStatus.type === "retry";
+  const conversationView = useConversationViewStore((state) => state.preferredView);
+  const conversationViewUnpinned = useConversationViewStore((state) => state.unpinned);
+  const setConversationView = useConversationViewStore((state) => state.setPreferredView);
+  const setConversationViewPinned = useConversationViewStore((state) => state.setPinned);
+  const trajectoryActive = conversationView === "trajectory";
+  const loadTrajectoryPage = useCallback(async (limit: number) => {
+    const page = await opencodeSessionNative.composeNativeSessionSnapshot(
+      { opencodeBaseUrl: props.opencodeBaseUrl, token: props.offlinegptToken },
+      props.sessionId,
+      { limit },
+    );
+    return page.messages;
+  }, [props.offlinegptToken, props.opencodeBaseUrl, props.sessionId]);
+  const trajectoryHistory = useTrajectoryHistory({
+    sessionId: props.sessionId,
+    messages: snapshot?.messages ?? EMPTY_SESSION_MESSAGES,
+    loadPage: loadTrajectoryPage,
+  });
   // A busy status is a claim that decays: the sync layer revalidates it
   // continuously against /session/status, and once that validation keeps
   // failing (network drop, sleep, dead engine) the transcript must present
@@ -2456,26 +2484,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
     }
     setComposerDraft(props.sessionId, draft.replace(/@([^\s@]*)$/, `@${encodeComposerMentionValue(value)} `));
     setComposerMentions(props.sessionId, { ...mentions, [value]: kind });
-    // Pre-flight Computer Use permissions when an app is mentioned so missing
-    // Accessibility / Screen Recording grants surface before send, not as a
-    // mid-task failure. Only ever runs on macOS desktop (apps aren't offered
-    // elsewhere); errors are silently ignored.
-    if (kind === "app") {
-      void (async () => {
-        try {
-          const status = (await desktopBridge.checkComputerUsePermissions()) as { ok?: boolean };
-          if (status.ok === true) return;
-          toast.warning(t("composer.computer_use_permissions_missing", { app: value }), {
-            action: {
-              label: t("composer.computer_use_permissions_setup"),
-              onClick: () => void desktopBridge.openComputerUsePermissionSetup(),
-            },
-          });
-        } catch {
-          // Desktop bridge unavailable — nothing to pre-flight.
-        }
-      })();
-    }
   }, [draft, mentions, props.onSelectAgent, props.sessionId, setComposerDraft, setComposerMentions]);
 
   const handlePasteText = useCallback((text: string) => {
@@ -3004,6 +3012,13 @@ export function SessionSurface(props: SessionSurfaceProps) {
       onFocusCapture={handleFindSurfaceInteraction}
       className="flex h-full min-h-0 flex-col"
     >
+      <ConversationViewTabs
+        views={CONVERSATION_VIEWS}
+        active={conversationView}
+        unpinned={conversationViewUnpinned}
+        onSelect={setConversationView}
+        onPinnedChange={setConversationViewPinned}
+      />
       {model.transitionState === "switching" && showDelayedLoading ? (
         <div className="flex justify-center px-6 pt-4">
           <div className="rounded-full border border-dls-border bg-dls-hover/80 px-3 py-1 text-xs text-dls-secondary">
@@ -3013,7 +3028,19 @@ export function SessionSurface(props: SessionSurfaceProps) {
       ) : null}
 
       <div className="relative min-h-0 flex-1">
+        {trajectoryActive ? (
+          <div className="absolute inset-0 z-[2]" role="tabpanel" aria-label={trajectoryCopy.view}>
+            <TrajectoryView
+              messages={trajectoryHistory.messages}
+              busy={chatStreaming}
+              loading={!snapshot && snapshotQuery.isLoading}
+              hasEarlierRecords={trajectoryHistory.hasEarlierRecords}
+              onLoadEarlier={trajectoryHistory.loadEarlier}
+            />
+          </div>
+        ) : null}
         <div
+          aria-hidden={trajectoryActive || undefined}
           ref={scrollRef}
           onWheel={(event) => {
             sessionScroll.markScrollGesture(event.target);
@@ -3031,7 +3058,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
           onScroll={sessionScroll.handleScroll}
           // Extra top padding while the find bar is open so it never covers
           // the first message (short transcripts cannot scroll it clear).
-          className={`absolute inset-0 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y px-3 pb-4 sm:px-5 ${findOwned ? "pt-16" : "pt-4"}`}
+          className={`absolute inset-0 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y px-3 pb-4 sm:px-5 ${findOwned ? "pt-16" : "pt-4"} ${trajectoryActive ? "invisible" : ""}`}
         >
           {/* Chat column: tighter than the composer (800px) so messages
                keep a comfortable reading width and don't feel "too big". */}
@@ -3155,17 +3182,21 @@ export function SessionSurface(props: SessionSurfaceProps) {
             ) : null}
           </div>
         </div>
-        <SessionScrollOverlay
-          sessionId={props.sessionId}
-          isStreaming={chatStreaming}
-          onJumpToLatest={sessionScroll.jumpToLatest}
-          onJumpToStartOfMessage={sessionScroll.jumpToStartOfMessage}
-        />
-        <SessionFindBar
-          sessionId={props.sessionId}
-          scrollRef={scrollRef}
-          onBeforeJump={handleFindBeforeJump}
-        />
+        {trajectoryActive ? null : (
+          <>
+            <SessionScrollOverlay
+              sessionId={props.sessionId}
+              isStreaming={chatStreaming}
+              onJumpToLatest={sessionScroll.jumpToLatest}
+              onJumpToStartOfMessage={sessionScroll.jumpToStartOfMessage}
+            />
+            <SessionFindBar
+              sessionId={props.sessionId}
+              scrollRef={scrollRef}
+              onBeforeJump={handleFindBeforeJump}
+            />
+          </>
+        )}
       </div>
 
       <div ref={composerShellRef} className="shrink-0 px-0 pb-2 pt-2">

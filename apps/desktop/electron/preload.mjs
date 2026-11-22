@@ -24,6 +24,8 @@ function applyShellDocumentMarkers() {
       root.classList.add("offlinegpt-platform-mac");
     } else if (process.platform === "win32") {
       root.classList.add("offlinegpt-platform-windows");
+      // Set by main.mjs only when the window has the Mica backdrop and a hidden title bar.
+      if (process.argv.includes("--offlinegpt-window-material=mica")) root.classList.add("offlinegpt-material-mica");
     } else if (process.platform === "linux") {
       root.classList.add("offlinegpt-platform-linux");
     }

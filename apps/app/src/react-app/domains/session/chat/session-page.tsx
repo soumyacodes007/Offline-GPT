@@ -1346,12 +1346,12 @@ export function SessionPage(props: SessionPageProps) {
   ) : null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top,rgba(74,111,255,0.12),transparent_42%),var(--app-bg,#0b1020)] text-dls-text max-lg:pt-[env(safe-area-inset-top)] mac:bg-transparent">
+    <div className="flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top,rgba(74,111,255,0.12),transparent_42%),var(--app-bg,#0b1020)] text-dls-text max-lg:pt-[env(safe-area-inset-top)] glass:bg-transparent">
       <SidebarProvider
         open={sidebarOpen}
         onOpenChange={setSidebarOpen}
         className={cn(
-          "relative min-h-0 flex-1 mac:bg-transparent",
+          "relative min-h-0 flex-1 glass:bg-transparent",
           leftSidebarResizing &&
             "**:data-[slot=sidebar-container]:transition-none **:data-[slot=sidebar-gap]:transition-none",
           !shellConfig.sidebar && "**:data-[slot=sidebar-container]:hidden **:data-[slot=sidebar-gap]:hidden",
@@ -1397,7 +1397,7 @@ export function SessionPage(props: SessionPageProps) {
           onForgetWorkspace={props.sidebar.onForgetWorkspace}
           onOpenCreateWorkspace={props.sidebar.onOpenCreateWorkspace}
           onOpenSessionSearch={props.sidebar.onOpenSessionSearch}
-          auditClient={props.offlinegptServerClient}
+          offlinegptServerClient={props.offlinegptServerClient}
           automationsActive={props.sidebar.automationsActive}
           automationsNeedAttention={props.sidebar.automationsNeedAttention}
           onOpenAutomations={props.sidebar.onOpenAutomations}
@@ -1429,12 +1429,15 @@ export function SessionPage(props: SessionPageProps) {
         />
         <SidebarInset
           className={cn(
-            "min-h-0 overflow-hidden bg-sidebar mac:bg-transparent mac:[&_header]:transition-[padding-left] mac:[&_header]:duration-200 mac:[&_header]:ease-linear mac:peer-data-[state=collapsed]:[&_header]:pl-34 mac:max-md:[&_header]:pl-34",
+            "min-h-0 overflow-hidden bg-sidebar glass:bg-transparent mac:[&_header]:transition-[padding-left] mac:[&_header]:duration-200 mac:[&_header]:ease-linear mac:peer-data-[state=collapsed]:[&_header]:pl-34 mac:max-md:[&_header]:pl-34",
             !shellConfig.sidebar && "mac:[&_header]:pl-34",
           )}
         >
+          {/* Windows 11 draws its caption buttons over the top-right corner;
+              this strip keeps them clear of the panes and moves the window. */}
+          <div aria-hidden="true" className="hidden h-[env(titlebar-area-height,36px)] shrink-0 titlebar-drag wco:block" />
           <div className={cn(
-            "flex min-h-0 flex-1 max-lg:p-0 lg:py-2 lg:pl-2",
+            "flex min-h-0 flex-1 max-lg:p-0 lg:py-2 lg:pl-2 wco:lg:pt-0",
             !sidebarOpen && "mac:lg:pt-0 mac:lg:pl-0",
           )}>
           <ResizablePanelGroup
@@ -1443,13 +1446,13 @@ export function SessionPage(props: SessionPageProps) {
             className="min-h-0 flex-1 max-lg:rounded-none lg:rounded-[14px]"
           >
             <ResizablePanel minSize={isMobile ? "0px" : "360px"} className="min-w-0">
-              <main data-session-pane className="flex h-full min-w-0 flex-col overflow-hidden bg-dls-surface max-lg:rounded-none max-lg:border-0 max-lg:shadow-none lg:rounded-[14px] lg:border lg:border-border lg:shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:lg:shadow-[0_10px_30px_rgba(0,0,0,0.45)] mac:bg-dls-surface/85 mac:backdrop-blur-2xl mac:backdrop-saturate-150">
+              <main data-session-pane className="flex h-full min-w-0 flex-col overflow-hidden bg-dls-surface max-lg:rounded-none max-lg:border-0 max-lg:shadow-none lg:rounded-[14px] lg:border lg:border-border lg:shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:lg:shadow-[0_10px_30px_rgba(0,0,0,0.45)] glass:bg-dls-surface/85 glass:backdrop-blur-2xl glass:backdrop-saturate-150">
           {/* The pane `<main>` above already carries the macOS vibrancy blur. A
               second backdrop filter on the header (or on the transcript surface
               below) is invisible — nothing scrolls beneath either — but each
               one forces an extra full-pane blur pass every frame the transcript
               repaints. Keep the pane as the only backdrop surface. */}
-          <header className="z-10 flex h-9 shrink-0 items-center justify-between border-b border-border px-3 max-lg:h-12 lg:px-6 mac:titlebar-drag @container/titlebar">
+          <header className="z-10 flex h-9 shrink-0 items-center justify-between border-b border-border px-3 max-lg:h-12 lg:px-6 glass:titlebar-drag @container/titlebar">
             <div className="flex min-w-0 items-center gap-3">
               {shellConfig.sidebar ? <SidebarTrigger className="mac:hidden" /> : null}
               {parentSessionLink && !props.primarySlot && !hasMainContentTakeover ? (
@@ -1459,7 +1462,7 @@ export function SessionPage(props: SessionPageProps) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 shrink-0 cursor-pointer gap-1 rounded-lg px-1.5 text-[12px] text-gray-10 transition-colors hover:bg-muted hover:text-foreground mac:titlebar-no-drag"
+                        className="h-6 shrink-0 cursor-pointer gap-1 rounded-lg px-1.5 text-[12px] text-gray-10 transition-colors hover:bg-muted hover:text-foreground glass:titlebar-no-drag"
                         data-parent-session-back={parentSessionLink.sessionId}
                         aria-label={`Back to ${parentSessionLink.title || "parent chat"}`}
                         onClick={() => openSessionTab(parentSessionLink.workspaceId, parentSessionLink.sessionId)}
@@ -1506,7 +1509,7 @@ export function SessionPage(props: SessionPageProps) {
               ) : null}
             </div>
 
-            <div className="flex shrink-0 items-center gap-1.5 text-gray-10 mac:titlebar-no-drag">
+            <div className="flex shrink-0 items-center gap-1.5 text-gray-10 glass:titlebar-no-drag">
               <DesktopUpdateButton />
               {!props.primarySlot && findButtonSessionId && !hasMainContentTakeover ? (
                 <Tooltip>
@@ -1657,7 +1660,7 @@ export function SessionPage(props: SessionPageProps) {
             className="min-h-0 flex-1 overflow-hidden"
           >
             <ResizablePanel minSize="180px" className="min-h-0">
-            <div className="relative h-full min-w-0 overflow-hidden bg-dls-surface mac:bg-dls-surface/85">
+            <div className="relative h-full min-w-0 overflow-hidden bg-dls-surface glass:bg-dls-surface/85">
               {props.primarySlot ? (
                 <div className="h-full overflow-y-auto" data-workspace-primary-slot>
                   {props.primarySlot}
@@ -1950,14 +1953,14 @@ export function SessionPage(props: SessionPageProps) {
                   maxSize="70%"
                   className="min-h-0 overflow-hidden pl-2 lg:flex lg:flex-col"
                 >
-                  <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-border bg-dls-surface shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.45)] mac:bg-dls-surface/85 mac:backdrop-blur-2xl mac:backdrop-saturate-150">
+                  <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-border bg-dls-surface shadow-[0_8px_24px_rgba(15,23,42,0.06)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.45)] glass:bg-dls-surface/85 glass:backdrop-blur-2xl glass:backdrop-saturate-150">
                     {sidePanelContent}
                   </div>
                 </ResizablePanel>
               </>
             ) : null}
           </ResizablePanelGroup>
-          <aside className="hidden w-10 shrink-0 flex-col items-center gap-1 px-1 py-2 text-muted-foreground lg:flex mac:titlebar-no-drag">
+          <aside className="hidden w-10 shrink-0 flex-col items-center gap-1 px-1 py-2 text-muted-foreground lg:flex glass:titlebar-no-drag">
             {isElectronRuntime() ? (
               <Button
                 variant="ghost"

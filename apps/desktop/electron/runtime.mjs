@@ -1594,6 +1594,8 @@ export function createRuntimeManager({
       env.XDG_STATE_HOME = devPaths.xdgStateHome;
       env.OPENCODE_CONFIG_DIR = devPaths.opencodeConfigDir;
       env.OPENCODE_TEST_HOME = devPaths.homeDir;
+      // Tools that read the user's own sign-in (e.g. `claude auth status`) need the real home.
+      env.OFFLINEGPT_REAL_HOME = os.userInfo().homedir;
     }
     return env;
   }

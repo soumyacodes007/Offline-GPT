@@ -100,7 +100,7 @@ export type ComposerPart =
   | { type: "skill"; name: string }
   | { type: "connect-skill"; slug: string; name: string; marketplace: string; capability: string }
   | { type: "file"; path: string; label?: string }
-  /** A macOS app targeted via Computer Use (composer "@App" mention). */
+  /** A running app targeted via Computer Use / Cua Driver (composer "@App" mention). */
   | { type: "app"; name: string }
   | { type: "computer"; target: "cloud" | "desktop" }
   | { type: "paste"; id: string; label: string; text: string; lines: number };

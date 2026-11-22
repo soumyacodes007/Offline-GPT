@@ -27,8 +27,9 @@ describe("OfflineGPT extension catalog platform filter", () => {
     expect(filteredIds("web")).toEqual(["ollama"]);
   });
 
-  test("keeps OfflineGPT Browser desktop-only and Computer Use mac-only", () => {
+  test("keeps OfflineGPT Browser and Computer Use (Cua Driver) desktop-only on every OS", () => {
     expect(filteredIds("darwin")).toEqual(["offlinegpt-browser", "computer-use", "ollama"]);
-    expect(filteredIds("linux")).toEqual(["offlinegpt-browser", "ollama"]);
+    expect(filteredIds("linux")).toEqual(["offlinegpt-browser", "computer-use", "ollama"]);
+    expect(filteredIds("windows")).toEqual(["offlinegpt-browser", "computer-use", "ollama"]);
   });
 });

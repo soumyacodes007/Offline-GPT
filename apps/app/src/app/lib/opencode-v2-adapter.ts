@@ -449,11 +449,15 @@ function mapV2MessageParts(
   }];
 }
 
+const V2_TIMELINE_MARKERS = new Set(["agent-switched", "model-switched", "location-switched", "idle"]);
+
 function mapV2Message(value: unknown, sessionID: string): V2MappedMessage | null {
   if (!isRecord(value)) return null;
   // Native instruction/catalog updates belong to the model context, not the
   // visible conversation. Filter by role so identical user text is preserved.
   if (messageRole(value) === "system") return null;
+  // OpenCode 2.3 lists timeline markers beside messages; they are not chat turns.
+  if (V2_TIMELINE_MARKERS.has(readString(value, "type") ?? "")) return null;
   const id = readString(value, "id") ?? readString(value, "messageID");
   if (!id) return null;
   const time = readRecord(value, "time");
@@ -1369,7 +1373,8 @@ export function createClientV2(
       "POST",
       `/api/session/${encodeURIComponent(parameters.sessionID)}/permission/${encodeURIComponent(parameters.requestID)}/reply`,
       {
-        reply: parameters.reply ?? "once",
+        // OpenCode 2.3 renamed the reply field to `decision`.
+        decision: parameters.reply ?? "once",
         ...(parameters.message ? { message: parameters.message } : {}),
       },
       options?.signal,
@@ -1442,7 +1447,7 @@ export function createClientV2(
   const listQuestions = async (
     _parameters: DirectoryParameters = {}, options?: RequestOptions,
   ): Promise<FieldsResult<QuestionRequest[]>> => {
-    const result = await request("GET", "/api/form/request", undefined, options?.signal);
+    const result = await request("GET", "/api/form", undefined, options?.signal);
     if (!result.response.ok) return failedResult(result);
     const questions = responseItems(result.payload).flatMap((item) => {
       const question = mapV2Question(item);
@@ -1466,7 +1471,7 @@ export function createClientV2(
     const question = questionFormsByID.get(parameters.requestID);
     if (!question) return {
       error: { name: "QuestionNotFound", requestID: parameters.requestID },
-      request: new Request(`${baseUrl}/api/form/request`),
+      request: new Request(`${baseUrl}/api/form`),
       response: new Response(null, { status: 404 }),
     };
     const answer = parameters.answers ? Object.fromEntries(question.fields.map((field, index) => {
@@ -1474,9 +1479,11 @@ export function createClientV2(
         field.options.find((option) => option.label === label)?.value ?? label);
       return [field.key, field.multiple ? values : values[0] ?? ""];
     })) : undefined;
-    const result = await request("POST",
-      `/api/session/${encodeURIComponent(question.request.sessionID)}/form/${encodeURIComponent(parameters.requestID)}/${answer ? "reply" : "cancel"}`,
-      answer ? { answer } : undefined, options?.signal);
+    // OpenCode 2.3 cancels a form with DELETE on the form itself.
+    const formPath = `/api/session/${encodeURIComponent(question.request.sessionID)}/form/${encodeURIComponent(parameters.requestID)}`;
+    const result = answer
+      ? await request("POST", `${formPath}/reply`, { answer }, options?.signal)
+      : await request("DELETE", formPath, undefined, options?.signal);
     if (!result.response.ok) return failedResult(result);
     questionFormsByID.delete(parameters.requestID);
     return successfulResult(result, true);
@@ -1548,10 +1555,11 @@ export function createClientV2(
         options?.signal,
       );
       if (!result.response.ok) return failedResult(result);
+      // OpenCode 2.3 returns the newest page first; the transcript is chronological.
       const data = responseItems(result.payload).flatMap((item) => {
         const mapped = mapV2Message(item, parameters.sessionID);
         return mapped ? [mapped] : [];
-      });
+      }).sort((left, right) => left.info.time.created - right.info.time.created);
       return successfulResult(result, data);
     },
     todo: async (parameters: SessionParameters): Promise<FieldsResult<never[]>> =>
@@ -1590,7 +1598,7 @@ export function createClientV2(
       if (!modelResult.response.ok) return failedResult(modelResult);
       if (parameters.system !== undefined) {
         const instructions = await request("PUT",
-          `/api/session/${encodeURIComponent(parameters.sessionID)}/instructions/entries/offlinegpt-context`,
+          `/api/experimental/session/${encodeURIComponent(parameters.sessionID)}/instructions/entries/offlinegpt-context`,
           { value: parameters.system }, options?.signal);
         if (!instructions.response.ok) return failedResult(instructions);
       }
@@ -1634,9 +1642,10 @@ export function createClientV2(
         return unsupportedResult(baseUrl, "session.archive", V2_SESSION_ARCHIVE_UNAVAILABLE);
       }
       if (!parameters.title) return getSession(parameters, options);
+      // OpenCode 2.3 renames through PATCH on the session.
       const result = await request(
-        "POST",
-        `/api/session/${encodeURIComponent(parameters.sessionID)}/rename`,
+        "PATCH",
+        `/api/session/${encodeURIComponent(parameters.sessionID)}`,
         { title: parameters.title },
         options?.signal,
       );
@@ -1667,11 +1676,12 @@ export function createClientV2(
   const adapter = {
     global: {
       health: async (options?: RequestOptions): Promise<FieldsResult<{ healthy: boolean; version: string }>> => {
-        const result = await request("GET", "/api/health", undefined, options?.signal);
+        // OpenCode 2.3 removed /api/health; a successful /api/info means the server is up.
+        const result = await request("GET", "/api/info", undefined, options?.signal);
         if (!result.response.ok) return failedResult(result);
         const data = responseData(result.payload);
         return successfulResult(result, {
-          healthy: isRecord(data) && data.healthy === true,
+          healthy: isRecord(data),
           version: readString(data, "version") ?? "v2",
         });
       },

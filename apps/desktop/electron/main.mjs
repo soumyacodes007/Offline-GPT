@@ -24,13 +24,15 @@ import { registerMigrationIpc } from "./migration.mjs";
 import { createRuntimeManager, createSystemCaCertificateVerifyProc } from "./runtime.mjs";
 import { registerUpdaterIpc } from "./updater.mjs";
 import {
-  checkComputerUsePermissions,
-  getComputerUseMcpCommand,
-  getComputerUseState,
-  computerUseAction,
+  checkCuaDriver,
+  getCuaCursorSettings,
+  getCuaDriverMcpCommand,
+  installCuaDriver,
   listRunningApps,
-  openComputerUseSetupApp,
-} from "./computer-use.mjs";
+  previewCuaCursor,
+  runCuaDriverDoctor,
+  setCuaCursorSetting,
+} from "./cua-driver.mjs";
 import { createUiControlServer } from "./ui-control-server.mjs";
 import { createApplicationMenu } from "./app-menu.mjs";
 import { applyBrandAppName } from "./brand-app-name.mjs";
@@ -1749,9 +1751,31 @@ function macosVibrancyForCurrentTheme() {
   return nativeTheme.shouldUseDarkColors ? "under-window" : "sidebar";
 }
 
+// Windows 11 22H2 (build 22621) is the first release with the Mica backdrop.
+// Older Windows keeps the standard opaque frame.
+const WINDOWS_MICA_MIN_BUILD = 22621;
+function windowsMicaSupported() {
+  if (process.platform !== "win32" || process.env.OFFLINEGPT_DISABLE_MICA === "1") return false;
+  const build = Number(os.release().split(".")[2]);
+  return Number.isFinite(build) && build >= WINDOWS_MICA_MIN_BUILD;
+}
+const WINDOWS_TITLEBAR_HEIGHT = 36;
+function windowsTitleBarOverlayForCurrentTheme() {
+  return {
+    color: "#00000000",
+    symbolColor: nativeTheme.shouldUseDarkColors ? "#ededed" : "#1f1f1f",
+    height: WINDOWS_TITLEBAR_HEIGHT,
+  };
+}
+
 function applyNativeTheme(mode) {
   nativeTheme.themeSource = mode;
 
+  if (process.platform === "win32") {
+    // Keep the native window controls readable on the Mica backdrop.
+    if (windowsMicaSupported()) mainWindow?.setTitleBarOverlay(windowsTitleBarOverlayForCurrentTheme());
+    return true;
+  }
   if (process.platform !== "darwin") {
     return true;
   }
@@ -1907,32 +1931,25 @@ const desktopCommandHandlers = {
       }
       return ["npx", "-y", "offlinegpt-ui-mcp"];
   },
-  "getComputerUseState": async () => getComputerUseState(),
-  "computerUseAction": async (event, value) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error("Computer Use controls require the main OfflineGPT window.");
-    return computerUseAction(value);
+  "getCuaDriverMcpCommand": async () => getCuaDriverMcpCommand(),
+  "checkCuaDriver": async () => checkCuaDriver(),
+  "runCuaDriverDoctor": async () => runCuaDriverDoctor(),
+  "installCuaDriver": async (event) => {
+    // Runs Cua's remote installer, so only the main window may trigger it.
+    if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error("Installing Cua Driver requires the main OfflineGPT window.");
+    return installCuaDriver();
   },
-  "getComputerUseMcpCommand": async (event, ...args) => {
-      return getComputerUseMcpCommand();
+  "listRunningApps": async () => listRunningApps(),
+  "getCuaCursorSettings": async () => getCuaCursorSettings(),
+  "setCuaCursorSetting": async (event, key, value) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error("Cursor settings require the main OfflineGPT window.");
+    return setCuaCursorSetting(key, value);
   },
-  "checkComputerUsePermissions": async (event, ...args) => {
-      // Read permissions in the same child-process context as setup.
-      return checkComputerUsePermissions();
-  },
-  "listRunningApps": async (event, ...args) => {
-      // Running regular macOS apps for composer @App mentions.
-      return listRunningApps();
-  },
-  "openComputerUsePermissionSetup": async (event, ...args) => {
-      // Open the GUI app. Returns immediately — React shows "verify" CTA.
-      await openComputerUseSetupApp();
-      // Return a fresh check so the UI shows the current state.
-      return checkComputerUsePermissions();
-  },
-  "openComputerUsePermissionSettings": async (event, ...args) => {
-      // Legacy: open the setup app (same as above).
-      await openComputerUseSetupApp();
-      return checkComputerUsePermissions();
+  "previewCuaCursor": async (event) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error("The cursor preview requires the main OfflineGPT window.");
+    // Glide around the display that holds the OfflineGPT window (screen coordinates).
+    const { screen } = require("electron");
+    return previewCuaCursor(screen.getDisplayMatching(mainWindow.getBounds()).workArea);
   },
   "getOfflineGptUiMcpEnvironment": async (event, ...args) => {
       return {
@@ -2507,6 +2524,17 @@ async function createMainWindow() {
       visualEffectState: "active",
     });
   }
+  // Windows 11: the Mica backdrop plays the role of macOS vibrancy, and the
+  // native caption buttons are drawn over the app instead of a title bar.
+  const windowsMica = windowsMicaSupported();
+  if (windowsMica) {
+    Object.assign(windowAppearanceOptions, {
+      backgroundColor: "#00000000",
+      backgroundMaterial: "mica",
+      titleBarStyle: "hidden",
+      titleBarOverlay: windowsTitleBarOverlayForCurrentTheme(),
+    });
+  }
 
   const bootSidecar = await readBrandIconSidecar();
   const bootSourceUrl = typeof bootSidecar?.sourceUrl === "string" ? bootSidecar.sourceUrl : null;
@@ -2545,6 +2573,8 @@ async function createMainWindow() {
       // Enable Chromium's built-in PDF viewer so PDFs render inside the
       // artifact panel (<embed> pointed at a blob URL).
       plugins: true,
+      // Lets the preload mark the document so styles match the native material.
+      ...(windowsMica ? { additionalArguments: ["--offlinegpt-window-material=mica"] } : {}),
     },
   });
   if (cachedBrandImage && bootSourceUrl) {

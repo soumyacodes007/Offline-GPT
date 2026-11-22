@@ -165,14 +165,16 @@ export async function createManagedOpencodeV2Server(
   }
 
   async function health(): Promise<OpencodeV2Health> {
-    const response = await fetchJson("/api/health", { timeoutMs: 5_000 });
+    // OpenCode 2.3 removed /api/health; /api/info reports the same identity.
+    const response = await fetchJson("/api/info", { timeoutMs: 5_000 });
     if (response.status !== 200 || !isRecord(response.json)) {
-      throw new Error(`OpenCode v2 health returned HTTP ${response.status}`);
+      throw new Error(`OpenCode v2 info returned HTTP ${response.status}`);
     }
-    const { healthy, version, pid } = response.json;
-    if (typeof healthy !== "boolean" || typeof version !== "string" || typeof pid !== "number") {
-      throw new Error("OpenCode v2 health returned an invalid payload");
+    const { version, pid } = response.json;
+    if (typeof version !== "string" || typeof pid !== "number") {
+      throw new Error("OpenCode v2 info returned an invalid payload");
     }
+    const healthy = true;
     if (pid !== child.pid) throw new Error("OpenCode v2 health did not match the spawned child");
     return { healthy, version, pid };
   }

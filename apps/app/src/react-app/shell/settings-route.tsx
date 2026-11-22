@@ -75,7 +75,7 @@ import ConnectionsModals from "@/react-app/domains/connections/modals";
 import { AiSettingsView } from "@/react-app/domains/settings/pages/ai-view";
 // Side-effect imports: register extension config components into the registry.
 import "@/react-app/domains/settings/ollama-config";
-import "@/react-app/domains/settings/computer-use-config";
+import "@/react-app/domains/settings/cua-computer-use-config";
 import "@/react-app/domains/settings/browser-extension-config";
 import { useSettingsExtensionController } from "@/react-app/domains/settings/settings-extension-controller";
 import { buildExtensionItems } from "@/react-app/domains/settings/extension-items";
@@ -233,14 +233,6 @@ function isOfflineGPTCloudProvider(provider: {
   return [provider.providerId, provider.source, provider.sourceProviderId].some(
     (value) => value?.trim().toLowerCase() === "offlinegpt",
   );
-}
-
-function normalizeComputerUsePermissions(value: unknown) {
-  if (typeof value !== "object" || value === null) return null;
-  return {
-    accessibility: "accessibility" in value && value.accessibility === true,
-    screenRecording: "screenRecording" in value && value.screenRecording === true,
-  };
 }
 
 function reconcileSelectedWorkspaceId(
@@ -555,7 +547,6 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
   const [imageExtensionBusy, setImageExtensionBusy] = useState(false);
   const [imageExtensionStatus, setImageExtensionStatus] = useState<string | null>(null);
   const [imageExtensionError, setImageExtensionError] = useState<string | null>(null);
-  const [computerUsePermissions, setComputerUsePermissions] = useState<{ accessibility: boolean; screenRecording: boolean } | null>(null);
   const [extensionStateVersion, setExtensionStateVersion] = useState(0);
   const [imageGenerationBusy, setImageGenerationBusy] = useState(false);
   const [imageGenerationStatus, setImageGenerationStatus] = useState<string | null>(null);
@@ -1107,21 +1098,6 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     return () => {
       window.removeEventListener(OFFLINEGPT_EXTENSION_STATE_CHANGED, refresh);
       window.removeEventListener("storage", refresh);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isDesktopRuntime() || !isMacPlatform()) return;
-    let cancelled = false;
-    void desktopBridge.checkComputerUsePermissions()
-      .then((result) => {
-        if (cancelled) return;
-        const permissions = normalizeComputerUsePermissions(result);
-        if (permissions) setComputerUsePermissions(permissions);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
     };
   }, []);
 
@@ -1877,7 +1853,6 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
       loadedPlugins,
       connectedProviders,
       configuredEnvKeys,
-      permissions: computerUsePermissions ?? undefined,
       // Toggle state reader for extensions with defaultEnabled / explicit toggle.
       isToggleEnabled: (ref: string) => {
         const catalog = connectionsStore.quickConnect;
@@ -1885,7 +1860,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
         return match ? isOfflineGPTExtensionEnabled(match) : false;
       },
     };
-  }, [computerUsePermissions, connectionsSnapshot, extensionStateVersion, providerConnectedIds, userEnvKeys]);
+  }, [connectionsSnapshot, extensionStateVersion, providerConnectedIds, userEnvKeys]);
   const allowManageExtensions = !checkDesktopRestriction({ restriction: "allowManageExtensions" });
   const builtInExtensionsDisabled = checkDesktopRestriction({ restriction: "allowBuiltInExtensions" });
   const restartExtensionLocalServer = useCallback(async () => {
@@ -1908,7 +1883,6 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
     enablementContext,
     mcpServers: connectionsSnapshot.mcpServers,
     mcpConnectingName: connectionsSnapshot.mcpConnectingName,
-    onComputerUsePermissionsChange: setComputerUsePermissions,
     restartLocalServer: restartExtensionLocalServer,
     connectMcp: async (entry) => {
       const result = await connectionsStore.connectMcp(entry);
@@ -2707,6 +2681,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
         onSubmitApiKey={providerAuthStore.submitProviderApiKey}
         onSubmitOAuth={providerAuthStore.completeProviderAuthOAuth}
         onRefreshProviders={providerAuthStore.refreshProviders}
+        onCheckClaudeCliAuth={providerAuthStore.checkClaudeCliAuth}
         onClose={() => providerAuthStore.closeProviderAuthModal()}
       />
       <RenameWorkspaceModal

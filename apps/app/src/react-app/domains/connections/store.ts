@@ -12,6 +12,7 @@ import {
   type McpDirectoryInfo,
 } from "../../../app/constants";
 import { extensionResource } from "../../../app/extensions";
+import { CUA_DRIVER_SKILL_CONTENT, CUA_DRIVER_SKILL_FILES, CUA_DRIVER_SKILL_NAME } from "../../../app/data/skills/cua-driver";
 import {
   mintCloudControlMcpToken,
   readDenSettings,
@@ -369,25 +370,17 @@ export function createConnectionsStore(options: {
     if (!canTryOfflineGptServer || !offlinegptClient || !offlinegptWorkspaceId) return null;
 
     let response = await offlinegptClient.listMcp(offlinegptWorkspaceId);
-    // Upgrade the enabled bundled helper when a local workspace is opened.
-    // Never enable a disabled entry, rewrite a custom command, or target a remote worker.
+    // Computer Use now runs Cua Driver as the `cua-driver` MCP. Drop the entry
+    // that pointed at the removed bundled macOS helper; custom commands and
+    // remote workers are left alone.
     if (isDesktopRuntime() && options.workspaceType() === "local") {
-      const computer = response.items.find((entry) => entry.name === "computer-use");
-      const config = computer?.config;
-      const command = config?.command;
-      if (config?.type === "local" && config.enabled !== false && Array.isArray(command)
-        && typeof command[0] === "string" && command[0].endsWith("/ComputerUse")
-        && ((command.length === 2 && command[1] === "mcp") || (command.length === 3 && command[1] === "relay"))) {
-        const currentCommand = await resolveDesktopCommand("getComputerUseMcpCommand", false);
-        const bundled = currentCommand && (command[0] === currentCommand[0]
-          || command[0].endsWith("/OfflineGPT Computer Use.app/Contents/MacOS/ComputerUse"));
-        if (bundled && JSON.stringify(command) !== JSON.stringify(currentCommand)) {
-          const writable = await resolveWritableOfflineGptTarget();
-          if (writable.canUseOfflineGptServer && writable.offlinegptClient && writable.offlinegptWorkspaceId === offlinegptWorkspaceId
-            && !mcpMutationDenied(true)) {
-            await writable.offlinegptClient.addMcp(offlinegptWorkspaceId, { name: "computer-use", config: { ...config, command: currentCommand } });
-            response = await offlinegptClient.listMcp(offlinegptWorkspaceId);
-          }
+      const command = response.items.find((entry) => entry.name === "computer-use")?.config?.command;
+      if (Array.isArray(command) && typeof command[0] === "string"
+        && command[0].endsWith("/OfflineGPT Computer Use.app/Contents/MacOS/ComputerUse")) {
+        const writable = await resolveWritableOfflineGptTarget();
+        if (writable.canUseOfflineGptServer && writable.offlinegptClient && writable.offlinegptWorkspaceId === offlinegptWorkspaceId
+          && !mcpMutationDenied(true)) {
+          response = await writable.offlinegptClient.removeMcp(offlinegptWorkspaceId, "computer-use");
         }
       }
     }
@@ -437,7 +430,7 @@ export function createConnectionsStore(options: {
     };
   };
 
-  const resolveDesktopCommand = async (commandName: "getComputerUseMcpCommand" | "getOfflineGptUiMcpCommand", fallbackOnError = true) => {
+  const resolveDesktopCommand = async (commandName: "getCuaDriverMcpCommand" | "getOfflineGptUiMcpCommand", fallbackOnError = true) => {
     try {
       const command = await window.__OFFLINEGPT_ELECTRON__?.invokeDesktop?.(commandName);
       if (Array.isArray(command) && command.every((part) => typeof part === "string") && command.length > 0) {
@@ -447,7 +440,7 @@ export function createConnectionsStore(options: {
       if (!fallbackOnError) {
         throw error instanceof Error
           ? error
-          : new Error("Computer Use helper app is unavailable. Restart OfflineGPT or reinstall the app.");
+          : new Error("Cua Driver is unavailable. Install it from Library → Computer Use.");
       }
       // Fall through to the published package command in the manifest/catalog.
     }
@@ -456,9 +449,9 @@ export function createConnectionsStore(options: {
 
   const resolveLocalMcpCommand = async (entry: McpDirectoryInfo) => {
     const mcpResource = extensionResource(entry.extensionManifest, "mcp");
-    if (mcpResource?.localCommandRef === "offlinegpt.computerUseMcp") {
-      const command = await resolveDesktopCommand("getComputerUseMcpCommand", false);
-      if (!command) throw new Error("Computer Use requires the bundled OfflineGPT helper on macOS.");
+    if (mcpResource?.localCommandRef === "offlinegpt.cuaDriverMcp") {
+      const command = await resolveDesktopCommand("getCuaDriverMcpCommand", false);
+      if (!command) throw new Error("Computer Use requires Cua Driver. Install it from Library → Computer Use.");
       return command;
     }
     if (mcpResource?.localCommandRef === "offlinegpt.uiMcp" || entry.serverName === "offlinegpt-ui") {
@@ -944,6 +937,15 @@ export function createConnectionsStore(options: {
           name: slug,
           config: mcpEntryConfig,
         });
+        // Computer Use ships Cua's official skill pack alongside its MCP.
+        if (extensionResource(entry.extensionManifest, "skill")?.id === CUA_DRIVER_SKILL_NAME) {
+          await offlinegptClient.upsertSkill(offlinegptWorkspaceId, {
+            name: CUA_DRIVER_SKILL_NAME,
+            content: CUA_DRIVER_SKILL_CONTENT,
+            files: [...CUA_DRIVER_SKILL_FILES],
+          });
+          options.markReloadRequired?.("skills", { type: "skill", name: CUA_DRIVER_SKILL_NAME, action: "added" });
+        }
       } else {
         if (!activeClient || !resolvedProjectDir) {
           throw new Error(t("mcp.connect_server_first"));

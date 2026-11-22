@@ -19,7 +19,6 @@ type SettingsExtensionControllerInput = {
   enablementContext: EnablementContext;
   mcpServers: McpServerEntry[];
   mcpConnectingName: string | null;
-  onComputerUsePermissionsChange: (permissions: { accessibility: boolean; screenRecording: boolean }) => void;
   restartLocalServer?: () => Promise<boolean>;
   connectMcp: (entry: McpDirectoryInfo) => void | Promise<void>;
   refreshMcpServers: () => void | Promise<void>;
@@ -59,7 +58,6 @@ export function useSettingsExtensionController(input: SettingsExtensionControlle
       connecting: input.mcpConnectingName === entry.name,
       onConnect: () => input.connectMcp(entry),
       onRefresh: input.refreshMcpServers,
-      onPermissionsChange: input.onComputerUsePermissionsChange,
     },
     imageExtension: {
       ...input.imageExtension,

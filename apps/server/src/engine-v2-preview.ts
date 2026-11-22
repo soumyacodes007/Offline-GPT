@@ -345,7 +345,8 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
       // revoked tool active. Only touch registrations owned by this mirror.
       for (const [name, fingerprint] of applied) {
         if (desired.has(name) && JSON.stringify(desired.get(name)) === fingerprint) continue;
-        const result = await active.fetchJson(`/api/mcp/${encodeURIComponent(name)}`, {
+        // OpenCode 2.3 moved MCP registration under /api/experimental/mcp.
+        const result = await active.fetchJson(`/api/experimental/mcp/${encodeURIComponent(name)}`, {
           method: "DELETE", directory, timeoutMs: 15_000,
         });
         if (result.status !== 204 && result.status !== 404) throw new Error(`OpenCode v2 MCP removal failed (${result.status})`);
@@ -355,7 +356,7 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
       for (const [name, mcpConfig] of desired) {
         const fingerprint = JSON.stringify(mcpConfig);
         if (applied.get(name) === fingerprint) continue;
-        const result = await active.fetchJson(`/api/mcp/${encodeURIComponent(name)}`, {
+        const result = await active.fetchJson(`/api/experimental/mcp/${encodeURIComponent(name)}`, {
           method: "PUT", body: { config: mcpConfig }, directory, timeoutMs: 30_000,
         });
         if (result.status !== 204) throw new Error(`OpenCode v2 MCP registration failed (${result.status})`);

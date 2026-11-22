@@ -2328,7 +2328,7 @@ function parseExtensionResourceType(value: unknown): OfflineGPTExtensionResource
 
 function parseExtensionLocalCommandRef(value: unknown): OfflineGPTExtensionResource["localCommandRef"] | undefined {
   switch (value) {
-    case "offlinegpt.computerUseMcp":
+    case "offlinegpt.cuaDriverMcp":
     case "offlinegpt.uiMcp":
       return value;
     default:

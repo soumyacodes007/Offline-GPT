@@ -75,11 +75,11 @@ describe("local MCP server recovery", () => {
   });
 });
 
-describe("bundled Computer Use setup", () => {
+describe("Computer Use (Cua Driver) setup", () => {
   async function connectWithHelper(command: string[] | null) {
     Object.defineProperty(globalThis, "window", {
       configurable: true,
-      value: { __OFFLINEGPT_ELECTRON__: { invokeDesktop: async (name: string) => name === "getComputerUseMcpCommand" ? command : null } },
+      value: { __OFFLINEGPT_ELECTRON__: { invokeDesktop: async (name: string) => name === "getCuaDriverMcpCommand" ? command : null } },
     });
     const server = createOfflineGptServerStore({
       startupPreference: () => "server", documentVisible: () => true, developerMode: () => false,
@@ -88,9 +88,14 @@ describe("bundled Computer Use setup", () => {
       restartLocalServer: async () => false, createRemoteWorkspaceFlow: async () => false,
     });
     const saved: Array<Parameters<ReturnType<typeof createOfflineGptServerClient>["addMcp"]>[1]> = [];
+    const skills: Array<Parameters<ReturnType<typeof createOfflineGptServerClient>["upsertSkill"]>[1]> = [];
     const client = {
       ...createOfflineGptServerClient({ baseUrl: "http://127.0.0.1:1" }),
       addMcp: async (_workspace: string, payload: Parameters<ReturnType<typeof createOfflineGptServerClient>["addMcp"]>[1]) => { saved.push(payload); return { items: [] }; },
+      upsertSkill: async (_workspace: string, payload: Parameters<ReturnType<typeof createOfflineGptServerClient>["upsertSkill"]>[1]) => {
+        skills.push(payload);
+        return { name: payload.name, path: `/tmp/setup/.opencode/skills/${payload.name}/SKILL.md`, description: "", scope: "project" as const };
+      },
       listMcp: async () => ({ items: [] }),
     };
     const getSnapshot: typeof server.getSnapshot = () => ({ ...server.getSnapshot(), offlinegptServerStatus: "connected", offlinegptServerClient: client });
@@ -103,19 +108,23 @@ describe("bundled Computer Use setup", () => {
     if (!entry) throw new Error("Computer Use catalog entry missing");
     expect(entry.command).toEqual([]);
     const result = await store.connectMcp(entry);
-    return { result, saved };
+    return { result, saved, skills };
   }
 
-  test("resolves the desktop helper before validating the empty catalog command", async () => {
-    const command = ["/Applications/OfflineGPT.app/Contents/Resources/helpers/OfflineGPT Computer Use.app/Contents/MacOS/ComputerUse", "mcp"];
-    const { result, saved } = await connectWithHelper(command);
+  test("resolves the installed cua-driver and installs the cua-driver skill pack", async () => {
+    const command = ["/Users/person/.local/bin/cua-driver", "mcp"];
+    const { result, saved, skills } = await connectWithHelper(command);
     expect(result).toEqual({ ok: true });
     expect(saved).toEqual([{ name: "computer-use", config: { type: "local", enabled: true, command } }]);
+    expect(skills.map((skill) => skill.name)).toEqual(["cua-driver"]);
+    expect(skills[0]?.content).toContain("name: cua-driver");
+    expect(skills[0]?.files?.map((file) => file.path)).toEqual(expect.arrayContaining(["WORKFLOW.md", "RUNTIME.md", "MACOS.md", "WINDOWS.md", "LINUX.md", "LICENSE.md"]));
   });
 
-  test("missing helper returns an actionable error without saving a connection", async () => {
-    const { result, saved } = await connectWithHelper(null);
-    expect(result).toEqual({ ok: false, error: "Computer Use requires the bundled OfflineGPT helper on macOS." });
+  test("missing Cua Driver returns an actionable error without saving a connection", async () => {
+    const { result, saved, skills } = await connectWithHelper(null);
+    expect(result).toEqual({ ok: false, error: "Computer Use requires Cua Driver. Install it from Library → Computer Use." });
     expect(saved).toEqual([]);
+    expect(skills).toEqual([]);
   });
 });
