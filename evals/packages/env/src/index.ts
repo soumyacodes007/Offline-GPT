@@ -16,3 +16,5 @@ export * from "./eval-engine.ts";
 export * from "./inference.ts";
 export { requestBrowserTask } from "./browser-task.ts";
 export * from "./browser-fixture.ts";
+export * from "./airgapped-inference.ts";
+export * from "./airgapped-workspace.ts";
