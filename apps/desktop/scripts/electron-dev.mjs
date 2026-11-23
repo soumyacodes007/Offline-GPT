@@ -233,7 +233,6 @@ if (process.env.OFFLINEGPT_ELECTRON_SKIP_SHARED_PREPARE !== "1") {
 
 // Build workspace packages that Electron imports from their dist output.
 console.log("[electron-dev] Building Electron workspace dependencies...");
-runSync(pnpmCmd, ["--filter", "@offlinegpt/headless-threads", "build"], { cwd: repoRoot });
 runSync(pnpmCmd, ["--filter", "offlinegpt-server", "build"], { cwd: repoRoot });
 
 const initialProbeUrls = [startUrl, ...viteProbeUrls].filter(Boolean);
