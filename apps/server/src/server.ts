@@ -34,7 +34,16 @@ import { buildEngineAuthProbeHeader } from "./engine-registry.js";
 import { addPlugin, listPlugins, normalizePluginSpec, removePlugin } from "./plugins.js";
 import { sanitizePortableOpencodeConfig } from "./portable-opencode.js";
 import { addMcp, listMcp, removeMcp, setMcpEnabled } from "./mcp.js";
-import { buildOfflineGPTV2Instructions, waitForOfflineGPTV2Skills, OFFLINEGPT_V2_INSTRUCTION_KEY } from "./opencode-v2-instructions.js";
+import {
+  buildOfflineGPTV2Capabilities,
+  buildOfflineGPTV2Instructions,
+  waitForOfflineGPTV2Skills,
+  OFFLINEGPT_V2_CAPABILITIES_KEY,
+  OFFLINEGPT_V2_CONNECT_CATALOG_KEY,
+  OFFLINEGPT_V2_STEERING_KEY,
+  buildOfflineGPTV2Steering,
+  OFFLINEGPT_V2_INSTRUCTION_KEY,
+} from "./opencode-v2-instructions.js";
 import {
   callMcpAppTool,
   listMcpAppCatalog,
@@ -91,6 +100,8 @@ import {
 import { serve, type ServeResult } from "./serve-node.js";
 import { serveStaticUi } from "./static-ui.js";
 import { externalFetch, loopbackFetch } from "./server-fetch.js";
+import { registerSchedulePluginRoute, registerScheduleRoutes } from "./routes/schedule.js";
+import { createScheduleService, type ScheduleService } from "./schedule/service.js";
 import { registerCoreRoutes } from "./routes/core.js";
 import { registerFileRoutes } from "./routes/files.js";
 import { registerOperationRoutes } from "./routes/operations.js";
@@ -99,8 +110,6 @@ import { registerSessionGroupRoutes } from "./routes/session-groups.js";
 import { registerUiControlRoutes } from "./routes/ui-control.js";
 import { registerWorkspaceRoutes } from "./routes/workspaces.js";
 import { registerCloudMcpRoutes } from "./routes/cloud-mcp.js";
-import { registerLocalWorkflowRoutes } from "./routes/local-workflows.js";
-import type { LocalWorkflowService } from "./local-workflows.js";
 import { UiControlMailbox } from "./ui-control.js";
 import { captureServerException, isExpectedRequestCancellation } from "./telemetry.js";
 import {
@@ -154,6 +163,7 @@ import { findManagedEngineWorkspace } from "./workspaces.js";
 import { startThreadApprovalReplayer, type ThreadApprovalReplayer } from "./thread-approvals.js";
 import { CloudProviderSync, parseCloudProviderDenSession } from "./cloud-provider-sync.js";
 import { createEngineV2Preview, type EngineV2Preview } from "./engine-v2-preview.js";
+import { readV2EngineInspection, readV2McpStatus } from "./opencode-v2-engine-inspection.js";
 import pkg from "../package.json" with { type: "json" };
 import constants from "../../../constants.json" with { type: "json" };
 
@@ -165,7 +175,6 @@ export {
 
 const SERVER_VERSION = pkg.version;
 const OPENCODE_VERSION = constants.opencodeVersion.trim().replace(/^v/, "");
-const localWorkflowServices = new WeakMap<ServerConfig, LocalWorkflowService>();
 
 let desktopCloudSyncQueue: Promise<void> = Promise.resolve();
 const agentDiagnosticsLastRunByServer = new WeakMap<ServerConfig, Map<string, number>>();
@@ -648,6 +657,8 @@ async function assertWorkspaceOwnsProxiedSessionRead(
   }
 }
 
+const scheduleServices = new WeakMap<ServerConfig, ScheduleService>();
+
 export function assertOpencodeProxyAllowed(actor: Actor, method: string, proxyPath: string) {
   const m = method.toUpperCase();
   const scope = actor.scope ?? "viewer";
@@ -1100,7 +1111,7 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
     stop: async () => {
       let recoveryError: unknown;
       try { await taskRecovery?.stop(); } catch (error) { recoveryError = error; }
-      await localWorkflowServices.get(config)?.stop();
+      scheduleServices.get(config)?.stop();
       managedDesktopPolicy(config).onChange = undefined;
       cloudProviderSync.stop();
       await engineV2Preview.stop().catch(() => undefined);
@@ -1139,8 +1150,13 @@ async function proxyOpencodeV2Request(input: {
   const forwardedPath = withoutPrefix || "/";
   // Runtime provider configuration contains server-owned credentials. The
   // renderer uses the catalog/status APIs; it must not read or mutate this file.
-  if (/^\/api\/config(?:\/|$)/.test(decodeURIComponent(forwardedPath))) {
+  if (/^\/api\/(?:experimental\/)?config(?:\/|$)/.test(decodeURIComponent(forwardedPath))) {
     throw new ApiError(403, "engine_config_private", "Engine configuration is private");
+  }
+  // Stored credentials carry raw tokens. Clients see connections through
+  // /api/integration and may only remove a credential by id.
+  if (method !== "DELETE" && /^\/api\/credential(?:\/|$)/.test(decodeURIComponent(forwardedPath))) {
+    throw new ApiError(403, "engine_credentials_private", "Engine credentials are private");
   }
   if (method !== "GET" && method !== "HEAD" && /^\/api\/mcp(?:\/|$)/.test(decodeURIComponent(forwardedPath))) {
     throw new ApiError(403, "engine_mcp_managed", "Manage connections through OfflineGPT");
@@ -1196,7 +1212,7 @@ async function proxyOpencodeV2Request(input: {
   }
 
   if (method !== "GET" && method !== "HEAD"
-    && decodeURIComponent(forwardedPath).endsWith(`/instructions/entries/${OFFLINEGPT_V2_INSTRUCTION_KEY}`)) {
+    && [OFFLINEGPT_V2_INSTRUCTION_KEY, OFFLINEGPT_V2_CAPABILITIES_KEY, OFFLINEGPT_V2_STEERING_KEY, OFFLINEGPT_V2_CONNECT_CATALOG_KEY].some((key) => decodeURIComponent(forwardedPath).endsWith(`/instructions/entries/${key}`))) {
     throw new ApiError(403, "engine_instructions_managed", "OfflineGPT instructions are managed by the server");
   }
 
@@ -1219,11 +1235,37 @@ async function proxyOpencodeV2Request(input: {
     });
     const value = buildOfflineGPTV2Instructions(connectReady);
     const instructionUrl = new URL(target);
-    instructionUrl.pathname = `/api/session/${encodeURIComponent(sessionId)}/instructions/entries/${OFFLINEGPT_V2_INSTRUCTION_KEY}`;
+    instructionUrl.pathname = `/api/experimental/session/${encodeURIComponent(sessionId)}/instructions/entries/${OFFLINEGPT_V2_INSTRUCTION_KEY}`;
     const synced = await loopbackFetch(instructionUrl.toString(), {
       method: "PUT", headers: internalHeaders, body: JSON.stringify({ value }), signal: AbortSignal.timeout(15_000),
     });
     if (!synced.ok) throw new ApiError(502, "engine_instruction_sync_failed", "OfflineGPT instructions could not be updated");
+    // The capabilities guidance is its own entry so each stays within v2's entry size limit.
+    const capabilitiesUrl = new URL(instructionUrl);
+    capabilitiesUrl.pathname = `/api/experimental/session/${encodeURIComponent(sessionId)}/instructions/entries/${OFFLINEGPT_V2_CAPABILITIES_KEY}`;
+    const capabilities = await loopbackFetch(capabilitiesUrl.toString(), {
+      method: "PUT", headers: internalHeaders, body: JSON.stringify({ value: await buildOfflineGPTV2Capabilities() }), signal: AbortSignal.timeout(15_000),
+    });
+    if (!capabilities.ok) throw new ApiError(502, "engine_instruction_sync_failed", "OfflineGPT instructions could not be updated");
+    // The v1 extensions plugin steered chats from its system-prompt hook; v2 has none, so send it as entries.
+    const cloudEntry = isRecord(mcpPayload) && Array.isArray(mcpPayload.data)
+      ? mcpPayload.data.find((entry) => isRecord(entry) && entry.name === "offlinegpt-cloud")
+      : undefined;
+    const cloudStatus = isRecord(cloudEntry) && isRecord(cloudEntry.status) && typeof cloudEntry.status.status === "string"
+      ? cloudEntry.status.status
+      : undefined;
+    const { steering, connectCatalog } = await buildOfflineGPTV2Steering(input.config, cloudStatus);
+    for (const [key, entry] of [[OFFLINEGPT_V2_STEERING_KEY, steering], [OFFLINEGPT_V2_CONNECT_CATALOG_KEY, connectCatalog]] as const) {
+      const entryUrl = new URL(instructionUrl);
+      entryUrl.pathname = `/api/experimental/session/${encodeURIComponent(sessionId)}/instructions/entries/${key}`;
+      const response = await loopbackFetch(entryUrl.toString(), entry
+        ? { method: "PUT", headers: internalHeaders, body: JSON.stringify({ value: entry }), signal: AbortSignal.timeout(15_000) }
+        : { method: "DELETE", headers: internalHeaders, signal: AbortSignal.timeout(15_000) });
+      // Clearing a catalog entry that was never set is fine.
+      if (!response.ok && !(entry === "" && response.status === 404)) {
+        throw new ApiError(502, "engine_instruction_sync_failed", "OfflineGPT instructions could not be updated");
+      }
+    }
   }
 
   const requestBody = method === "GET" || method === "HEAD"
@@ -2274,6 +2316,28 @@ function createRoutes(
     if (reloadDeferred) cloudProviderSync.markReloadPending();
     return reloadDeferred ? "deferred" : "reloaded";
   };
+  /**
+   * Make OpenCode v2 re-read a workspace's config. Its own file watcher may be
+   * reloading the same file already, which fails an overlapping reload with 500,
+   * so retry briefly.
+   */
+  const reloadEngineV2Location = async (workspace: WorkspaceInfo): Promise<void> => {
+    let status = 0;
+    for (let attempt = 0; attempt < 5 && (status === 0 || status >= 500); attempt += 1) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+      status = (await engineV2Preview.fetchJson("/api/location/reload", { method: "POST", body: {}, directory: workspace.path, timeoutMs: 15_000 })).status;
+    }
+    if (status >= 300) throw new ApiError(502, "opencode_reload_failed", "OpenCode v2 could not reload this workspace", { status });
+  };
+  // Workspaces OpenCode v2 serves deliver and check Cloud MCP through v2's MCP API.
+  const cloudMcpEngineV2For = (workspace: WorkspaceInfo) => engineV2Preview.status().chatRouting && workspace.workspaceType !== "remote"
+    ? {
+      status: () => readV2McpStatus(engineV2Preview.fetchJson, workspace.path),
+      disconnect: async (name: string) => {
+        await engineV2Preview.fetchJson(`/api/experimental/mcp/${encodeURIComponent(name)}/disconnect`, { method: "POST", body: {}, directory: workspace.path, timeoutMs: 5_000 });
+      },
+    }
+    : undefined;
   registerCoreRoutes({
     routes,
     config,
@@ -2293,6 +2357,7 @@ function createRoutes(
     resolveOpencodeDirectory,
     createWorkspaceOpencodeClient,
     refreshRegistrationFromLiveStatus: refreshEngineMcpRegistrationFromLiveStatus,
+    cloudMcpEngineV2For,
     serializeWorkspace,
     resolveDevLogPath,
     onManagedProviderAuthChanged: async () => {
@@ -2331,7 +2396,96 @@ function createRoutes(
     resolveWorkspaceWithoutBootstrap,
   });
 
+  // Scheduled tasks deliver through this server's own OpenCode v2 route so each
+  // message gets the same OfflineGPT instructions as a chat the person sends.
+  const scheduleEngine = async (workspaceId: string, path: string, init: { method?: string; body?: unknown } = {}) => {
+    const status = engineV2Preview.status();
+    if (!status.chatRouting || !status.running) {
+      throw new Error("Scheduled tasks run on OpenCode v2. Turn on v2 chat routing in Settings > Advanced.");
+    }
+    const response = await loopbackFetch(`http://127.0.0.1:${config.port}/workspace/${encodeURIComponent(workspaceId)}/opencode2${path}`, {
+      method: init.method ?? "GET",
+      headers: { authorization: `Bearer ${config.token}`, ...(init.body === undefined ? {} : { "content-type": "application/json" }) },
+      ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+      signal: AbortSignal.timeout(60_000),
+    });
+    const text = await response.text();
+    const json: unknown = text ? JSON.parse(text) : null;
+    return { status: response.status, data: isRecord(json) && "data" in json ? json.data : json };
+  };
+  const scheduleService = createScheduleService({
+    config,
+    log: (message, attributes) => console.warn(`[schedule] ${message}`, attributes ?? {}),
+    port: {
+      async sessionExists(workspaceId, sessionId) {
+        return (await scheduleEngine(workspaceId, `/api/session/${encodeURIComponent(sessionId)}`)).status === 200;
+      },
+      async isBusy(workspaceId, sessionId) {
+        const active = await scheduleEngine(workspaceId, "/api/session/active");
+        return isRecord(active.data) && sessionId in active.data;
+      },
+      async deliver({ task, sessionId }) {
+        const workspace = await resolveWorkspace(config, task.workspaceId);
+        let target = sessionId;
+        if (!target) {
+          const stamp = task.target.kind === "new" ? ` (${new Date().toISOString().slice(0, 16).replace("T", " ")})` : "";
+          const created = await scheduleEngine(workspace.id, "/api/session", {
+            method: "POST",
+            body: { title: `${task.title}${stamp}`, location: { directory: workspace.path } },
+          });
+          const id = isRecord(created.data) && typeof created.data.id === "string" ? created.data.id : null;
+          if (!id) throw new Error(`Could not create the chat for this task (OpenCode ${created.status}).`);
+          target = id;
+        }
+        let model = task.model ? { providerID: task.model.provider_id, id: task.model.model_id } : null;
+        if (!model) {
+          const fallback = await scheduleEngine(workspace.id, "/api/model/default");
+          const providerID = isRecord(fallback.data) && typeof fallback.data.providerID === "string" ? fallback.data.providerID : null;
+          const id = isRecord(fallback.data) && typeof fallback.data.id === "string" ? fallback.data.id : null;
+          if (!providerID || !id) throw new Error("No default model is configured. Pick a model for this task.");
+          model = { providerID, id };
+        }
+        const selected = await scheduleEngine(workspace.id, `/api/session/${encodeURIComponent(target)}/model`, { method: "POST", body: { model } });
+        if (selected.status >= 300) throw new Error(`Could not select the model ${model.providerID}/${model.id} (OpenCode ${selected.status}).`);
+        const sent = await scheduleEngine(workspace.id, `/api/session/${encodeURIComponent(target)}/prompt`, { method: "POST", body: { text: task.prompt } });
+        if (sent.status >= 300) throw new Error(`The chat did not accept the message (OpenCode ${sent.status}).`);
+        return { sessionId: target };
+      },
+    },
+  });
+  scheduleServices.set(config, scheduleService);
+  scheduleService.start();
+  registerScheduleRoutes({
+    routes,
+    config,
+    service: scheduleService,
+    jsonResponse,
+    readJsonBody,
+    ensureWritable,
+    requireClientScope,
+    resolveWorkspace,
+  });
+  registerSchedulePluginRoute({
+    routes,
+    service: scheduleService,
+    jsonResponse,
+    readJsonBody,
+    pluginToken: () => engineV2Preview.pluginToken,
+    workspaceForSession: async (sessionID) => {
+      const session = await engineV2Preview.fetchJson(`/api/session/${encodeURIComponent(sessionID)}`, { timeoutMs: 10_000 });
+      const data = isRecord(session.json) && isRecord(session.json.data) ? session.json.data : null;
+      const directory = data && isRecord(data.location) && typeof data.location.directory === "string" ? data.location.directory : null;
+      if (session.status !== 200 || !directory) throw new ApiError(404, "session_not_found", "The calling chat was not found.");
+      // Windows paths compare case-insensitively; elsewhere case is significant.
+      const same = (left: string, right: string) => process.platform === "win32" ? left.toLowerCase() === right.toLowerCase() : left === right;
+      const workspace = config.workspaces.find((entry) => entry.workspaceType !== "remote" && same(resolve(entry.path), resolve(directory)));
+      if (!workspace) throw new ApiError(404, "workspace_not_found", "The calling chat is not in an OfflineGPT workspace.");
+      return workspace;
+    },
+  });
+
   registerCloudMcpRoutes({
+    engineV2For: cloudMcpEngineV2For,
     routes,
     config,
     jsonResponse,
@@ -2342,29 +2496,17 @@ function createRoutes(
     resolveOpencodeDirectory,
     createWorkspaceOpencodeClient,
     refreshRegistrationFromLiveStatus: refreshEngineMcpRegistrationFromLiveStatus,
-    registerRuntimeMcp: (routeConfig, workspace, onlyNames, options) =>
-      syncRuntimeMcpToOpencodeEngine(
-        routeConfig,
-        workspace,
-        onlyNames,
-        options,
-        engineMcpServerState,
-      ),
+    registerRuntimeMcp: async (routeConfig, workspace, onlyNames, options) => {
+      if (!cloudMcpEngineV2For(workspace)) return syncRuntimeMcpToOpencodeEngine(routeConfig, workspace, onlyNames, options, engineMcpServerState);
+      await engineV2Preview.syncWorkspaceMcp(workspace.id, workspace.path);
+      const live = await readV2McpStatus(engineV2Preview.fetchJson, workspace.path);
+      const names = onlyNames ?? Object.keys(live);
+      const failures = names.filter((name) => !live[name]).map((name) => ({ name, message: "OpenCode v2 did not register this MCP server" }));
+      return { status: failures.length ? "failed" : "ok", syncedNames: names.filter((name) => live[name]), failures };
+    },
     serverMetadata: { serverVersion: SERVER_VERSION, expectedOpencodeVersion: OPENCODE_VERSION },
   });
 
-  const localWorkflowService = registerLocalWorkflowRoutes({
-    routes,
-    config,
-    jsonResponse,
-    readJsonBody,
-    ensureWritable,
-    requireClientScope,
-    resolveWorkspace,
-    resolveWorkspaceWithoutBootstrap,
-    createWorkspaceOpencodeClient,
-  });
-  localWorkflowServices.set(config, localWorkflowService);
 
   addRoute(routes, "POST", "/workspace/:id/diagnostics/agent-context", "client", async (ctx) => {
     requireClientScope(ctx, "collaborator");
@@ -2385,7 +2527,6 @@ function createRoutes(
       if (!parsed.success) {
         throw new ApiError(400, "invalid_agent_diagnostics_request", "Agent diagnostics request is invalid");
       }
-      const opencode = createWorkspaceOpencodeClient(config, workspace, { boundedDiagnosticsReads: true });
       const timeoutSignal = AbortSignal.timeout(agentDiagnosticsTimeoutMs());
       const diagnosticsSignal = AbortSignal.any([ctx.request.signal, timeoutSignal]);
       let response: Response;
@@ -2404,16 +2545,8 @@ function createRoutes(
             ),
           dependencies: {
             signal: diagnosticsSignal,
-            inspectEffectiveEngine: async (signal) => {
-              const [configResult, agentResult] = await Promise.all([
-                opencode.config.get({}, { signal }),
-                opencode.app.agents({}, { signal }),
-              ]);
-              return {
-                config: unwrapOpencodeResult(configResult, "/config"),
-                agents: unwrapOpencodeResult(agentResult, "/agent"),
-              };
-            },
+            ...(usesEngineV2(workspace) ? { engineConfigured: engineV2Preview.status().running, engineV2: true } : {}),
+            inspectEffectiveEngine: (signal) => readEngineInspection(workspace, signal),
           },
         }));
       } catch (error) {
@@ -2667,11 +2800,36 @@ function createRoutes(
   });
 
   const pendingRunModeRefresh = new Set<string>();
+  // Local workspaces follow chat: with v2 routing, the v2 engine is the one to inspect and refresh.
+  const usesEngineV2 = (workspace: WorkspaceInfo) => engineV2Preview.status().chatRouting && workspace.workspaceType !== "remote";
+  const readEngineInspection = async (workspace: WorkspaceInfo, signal?: AbortSignal) => {
+    if (usesEngineV2(workspace)) return readV2EngineInspection(engineV2Preview.fetchJson, workspace.path, signal);
+    const opencode = createWorkspaceOpencodeClient(config, workspace, { boundedDiagnosticsReads: true });
+    const [configResult, agentResult] = await Promise.all([opencode.config.get({}, { signal }), opencode.app.agents({}, { signal })]);
+    return { config: unwrapOpencodeResult(configResult, "/config"), agents: unwrapOpencodeResult(agentResult, "/agent") };
+  };
+  const requireRunModeIdle = async (workspace: WorkspaceInfo) => {
+    await requireWorkspaceRunModeIdle(config, workspace);
+    if (!usesEngineV2(workspace)) return;
+    const directory = workspace.path;
+    const [active, permissions, forms] = await Promise.all([
+      engineV2Preview.fetchJson("/api/session/active", { directory, timeoutMs: 5_000 }),
+      engineV2Preview.fetchJson("/api/permission/request", { directory, timeoutMs: 5_000 }),
+      engineV2Preview.fetchJson("/api/form", { directory, timeoutMs: 5_000 }),
+    ]).catch(() => { throw new ApiError(409, "workspace_run_mode_activity_unknown", "Cannot verify that all workspace sessions are idle; no permission change was made."); });
+    const data = (json: unknown) => (isRecord(json) ? json.data : undefined);
+    if ([active, permissions, forms].some(({ status }) => status !== 200)) {
+      throw new ApiError(409, "workspace_run_mode_activity_unknown", "Cannot verify that all workspace sessions are idle; no permission change was made.");
+    }
+    const busy = [active, permissions, forms].some(({ json }) => {
+      const value = data(json);
+      return Array.isArray(value) ? value.length > 0 : isRecord(value) && Object.keys(value).length > 0;
+    });
+    if (busy) throw new ApiError(409, "workspace_run_mode_busy", "Wait for all workspace sessions, including permission and question requests, to finish before changing run mode.");
+  };
   const runModeState = async (workspace: WorkspaceInfo): Promise<WorkspaceRunModeState & { path: string }> => {
     const state = await readWorkspaceRunMode(workspace.path);
-    if (engineV2Preview.status().chatRouting) {
-      return { ...state, supported: false, reason: "Workspace run modes are unavailable while OpenCode v2 chat routing is enabled." };
-    }
+    if (usesEngineV2(workspace)) return state;
     if (workspace.workspaceType === "remote" || resolve(resolveOpencodeDirectory(workspace) ?? workspace.path) !== resolve(workspace.path)) {
       return { ...state, supported: false, reason: "Workspace run modes require an engine using this local workspace directory." };
     }
@@ -2694,7 +2852,7 @@ function createRoutes(
     }
     const initial = await runModeState(workspace);
     if (!initial.supported) throw new ApiError(409, "workspace_run_mode_unsupported", initial.reason);
-    await requireWorkspaceRunModeIdle(config, workspace);
+    await requireRunModeIdle(workspace);
     await requireApproval(ctx, {
       workspaceId: workspace.id,
       action: "config.write",
@@ -2709,7 +2867,14 @@ function createRoutes(
       // Approval can wait while another session starts or the runtime changes.
       const current = await runModeState(workspace);
       if (!current.supported) throw new ApiError(409, "workspace_run_mode_unsupported", current.reason);
-      await requireWorkspaceRunModeIdle(config, workspace);
+      await requireRunModeIdle(workspace);
+      // v2 acknowledges a reload before its agents are rebuilt, so remember the rules to see them change.
+      const governingRules = async () => {
+        const snapshot = validateEffectiveEngineSnapshot(await readEngineInspection(workspace));
+        const agent = snapshot && selectGoverningAgent(snapshot.agents, snapshot.defaultAgent);
+        return agent ? JSON.stringify(agent.permission) : null;
+      };
+      const rulesBefore = usesEngineV2(workspace) ? await governingRules().catch(() => null) : null;
       const changed = await setWorkspaceRunMode(workspace.path, mode);
       if (changed) {
         pendingRunModeRefresh.add(current.path);
@@ -2728,18 +2893,26 @@ function createRoutes(
       if (pendingRunModeRefresh.has(current.path)) {
         refresh = "deferred";
         try {
-          if (engineV2Preview.status().chatRouting) throw new Error("OpenCode v2 chat routing is enabled");
-          await requireWorkspaceRunModeIdle(config, workspace);
-          // Directory-scoped disposal leaves other workspaces alone. The
-          // detached MCP sync uses the same fence, so do not await it here.
-          await reloadOpencodeEngineInPlace(config, workspace, engineMcpServerState, { awaitPostRefreshSync: false });
-          const opencode = createWorkspaceOpencodeClient(config, workspace, { boundedDiagnosticsReads: true });
-          const [configResult, agentResult] = await Promise.all([opencode.config.get({}), opencode.app.agents({})]);
-          const snapshot = validateEffectiveEngineSnapshot({
-            config: unwrapOpencodeResult(configResult, "/config"),
-            agents: unwrapOpencodeResult(agentResult, "/agent"),
-          });
-          if (engineV2Preview.status().chatRouting || !snapshot || !selectGoverningAgent(snapshot.agents, snapshot.defaultAgent)) throw new Error("Engine reload could not be confirmed");
+          await requireRunModeIdle(workspace);
+          if (usesEngineV2(workspace)) {
+            // OpenCode v2 re-reads this location's config, including the v1 `permission` key.
+            await reloadEngineV2Location(workspace);
+            // v2 rebuilds agents in stages: wait until the rules differ and then hold steady.
+            let previous: string | null = null;
+            let rules = await governingRules();
+            for (let attempt = 0; changed && attempt < 30 && rules !== null && (rules === rulesBefore || rules !== previous); attempt += 1) {
+              await new Promise((resolve) => setTimeout(resolve, 300));
+              previous = rules;
+              rules = await governingRules();
+            }
+            if (rules === null || (changed && (rules === rulesBefore || rules !== previous))) throw new Error("OpenCode v2 did not apply the run mode");
+          } else {
+            // Directory-scoped disposal leaves other workspaces alone. The
+            // detached MCP sync uses the same fence, so do not await it here.
+            await reloadOpencodeEngineInPlace(config, workspace, engineMcpServerState, { awaitPostRefreshSync: false });
+          }
+          const snapshot = validateEffectiveEngineSnapshot(await readEngineInspection(workspace));
+          if (!snapshot || !selectGoverningAgent(snapshot.agents, snapshot.defaultAgent)) throw new Error("Engine reload could not be confirmed");
           pendingRunModeRefresh.delete(current.path);
           refresh = "reloaded";
         } catch {
@@ -2761,12 +2934,7 @@ function createRoutes(
     const workspace = await resolveWorkspace(config, ctx.params.id);
     // The engine's own evaluated ruleset decides; OfflineGPT only names the
     // layer each winning rule came from.
-    const opencode = createWorkspaceOpencodeClient(config, workspace, { boundedDiagnosticsReads: true });
-    const [configResult, agentResult] = await Promise.all([opencode.config.get({}), opencode.app.agents({})]);
-    const snapshot = validateEffectiveEngineSnapshot({
-      config: unwrapOpencodeResult(configResult, "/config"),
-      agents: unwrapOpencodeResult(agentResult, "/agent"),
-    });
+    const snapshot = validateEffectiveEngineSnapshot(await readEngineInspection(workspace));
     if (!snapshot) {
       throw new ApiError(502, "opencode_invalid_response", "OpenCode returned an unreadable agent list", { workspaceId: workspace.id });
     }
@@ -3223,8 +3391,10 @@ function createRoutes(
     readJsonBody,
     requireClientScope,
     resolveWorkspace,
-    reloadOpencodeEngine: (routeConfig, workspace) =>
-      reloadOpencodeEngine(routeConfig, workspace, engineMcpServerState, { reason: "operation_route" }),
+    // With v2 routing there is no v1 engine to reload; a failed reload makes the app restart the server.
+    reloadOpencodeEngine: (routeConfig, workspace) => cloudMcpEngineV2For(workspace)
+      ? reloadEngineV2Location(workspace)
+      : reloadOpencodeEngine(routeConfig, workspace, engineMcpServerState, { reason: "operation_route" }),
   });
 
   registerUiControlRoutes({ routes, jsonResponse, readJsonBody, requireClientScope });
