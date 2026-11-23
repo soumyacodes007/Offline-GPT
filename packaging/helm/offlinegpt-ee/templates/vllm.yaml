@@ -1,0 +1,102 @@
+{{- if .Values.vllm.enabled }}
+{{- if not .Values.vllm.modelsClaim }}
+{{- fail "vllm.modelsClaim is required: a PersistentVolumeClaim holding the model weights (prepared offline)" }}
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "offlinegpt-ee.fullname" . }}-vllm
+  labels:
+    {{- include "offlinegpt-ee.componentLabels" (dict "root" . "component" "vllm") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.vllm.containerPort }}
+      targetPort: http
+  selector:
+    {{- include "offlinegpt-ee.componentSelectorLabels" (dict "root" . "component" "vllm") | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "offlinegpt-ee.fullname" . }}-vllm
+  labels:
+    {{- include "offlinegpt-ee.componentLabels" (dict "root" . "component" "vllm") | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "offlinegpt-ee.componentSelectorLabels" (dict "root" . "component" "vllm") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "offlinegpt-ee.componentSelectorLabels" (dict "root" . "component" "vllm") | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.vllm.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.vllm.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: vllm
+          image: "{{ .Values.vllm.image.repository }}:{{ .Values.vllm.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --model=/models/{{ .Values.vllm.modelDir }}
+            - --served-model-name={{ .Values.vllm.servedModelName }}
+            - --max-model-len={{ .Values.vllm.maxModelLen }}
+            - --gpu-memory-utilization={{ .Values.vllm.gpuMemoryUtilization }}
+            - --enable-auto-tool-choice
+            - --tool-call-parser={{ .Values.vllm.toolCallParser }}
+            - --port={{ .Values.vllm.containerPort }}
+            {{- range .Values.vllm.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          env:
+            - name: HF_HUB_OFFLINE
+              value: "1"
+            - name: TRANSFORMERS_OFFLINE
+              value: "1"
+            - name: VLLM_NO_USAGE_STATS
+              value: "1"
+            - name: DO_NOT_TRACK
+              value: "1"
+          ports:
+            - name: http
+              containerPort: {{ .Values.vllm.containerPort }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 60
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+            - name: shm
+              mountPath: /dev/shm
+          {{- with .Values.vllm.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: {{ .Values.vllm.modelsClaim }}
+            readOnly: true
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+{{- end }}
