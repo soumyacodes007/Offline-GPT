@@ -163,7 +163,7 @@ export function createSessionActionsStore(options: {
         parts.push({ type: "agent", name: part.name } as AgentPartInput);
         continue;
       }
-      if (part.type === "computer" || part.type === "app" || part.type === "skill" || part.type === "connect-skill") {
+      if (part.type === "app" || part.type === "skill" || part.type === "connect-skill") {
         // The resolved user text already contains the visible mention label.
         const [, instruction] = mentionPromptParts(part);
         parts.push(instruction);
