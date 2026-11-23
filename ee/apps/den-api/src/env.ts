@@ -2,6 +2,7 @@ import os from "node:os"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { denUrls } from "@offlinegpt-ee/utils/den-urls"
+import { assertNoPublicServices, edition, isAirgapped } from "@offlinegpt-ee/utils/edition"
 import { DEN_WORKER_POLL_INTERVAL_MS } from "./CONSTS.js"
 import { normalizeConfiguredPublicApiBaseUrl } from "./request-url.js"
 import { resolveDenServiceVersion } from "./service-version.js"
@@ -103,7 +104,7 @@ const EnvSchema = z.object({
   CLOUD_IDLE_STOP_MINUTES: z.string().optional(),
   CLOUD_IDLE_LOOP_SECONDS: z.string().optional(),
   CLOUD_IDLE_STOP_BATCH_SIZE: z.string().optional(),
-  PROVISIONER_MODE: z.enum(["stub", "render", "daytona"]).optional(),
+  PROVISIONER_MODE: z.enum(["stub", "render", "daytona", "docker"]).optional(),
   WORKER_URL_TEMPLATE: z.string().optional(),
   WORKER_ACTIVITY_BASE_URL: z.string().optional(),
   DEN_AUTOMATIONS_ENABLED: z.string().optional(),
@@ -191,6 +192,14 @@ const EnvSchema = z.object({
   STRIPE_OFFLINEGPT_WEB_PRICE_ID: z.string().optional(),
   STRIPE_BILLING_SUCCESS_URL: z.string().optional(),
   STRIPE_BILLING_CANCEL_URL: z.string().optional(),
+  DOCKER_SOCKET_PATH: z.string().optional(),
+  DOCKER_WORKER_IMAGE: z.string().optional(),
+  DOCKER_WORKER_NETWORK: z.string().optional(),
+  DOCKER_WORKER_NAME_PREFIX: z.string().optional(),
+  DOCKER_WORKER_PORT: z.string().optional(),
+  DOCKER_WORKER_MEMORY_MB: z.string().optional(),
+  DOCKER_WORKER_CPUS: z.string().optional(),
+  DOCKER_WORKER_HEALTH_TIMEOUT_MS: z.string().optional(),
 }).superRefine((value, ctx) => {
   if (!value.BETTER_AUTH_URL && !value.DEN_BASE_URL) {
     ctx.addIssue({
@@ -222,6 +231,18 @@ const EnvSchema = z.object({
     }
   }
 
+  if (value.PROVISIONER_MODE === "docker") {
+    for (const key of ["DOCKER_WORKER_IMAGE", "DOCKER_WORKER_NETWORK"] as const) {
+      if (!value[key]?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${key} is required when PROVISIONER_MODE=docker`,
+          path: [key],
+        })
+      }
+    }
+  }
+
   if (value.PROVISIONER_MODE === "daytona") {
     for (const key of ["DAYTONA_API_KEY"] as const) {
       if (!value[key]) {
@@ -236,6 +257,33 @@ const EnvSchema = z.object({
 })
 
 const parsed = EnvSchema.parse(process.env)
+
+// Settings that call public internet services. The air-gapped edition refuses
+// to start with any of them set.
+export const AIRGAPPED_FORBIDDEN_SETTINGS = [
+  "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "POLAR_ACCESS_TOKEN", "LOOPS_API_KEY", "LINEAR_API_KEY",
+  "RESEND_API_KEY", "RENDER_API_KEY", "VERCEL_TOKEN", "DAYTONA_API_KEY", "OPENROUTER_MANAGEMENT_API_KEY",
+  "GOOGLE_CLIENT_ID", "GITHUB_CLIENT_ID", "GITHUB_CONNECTOR_APP_ID",
+] as const
+
+if (isAirgapped) {
+  assertNoPublicServices(process.env, AIRGAPPED_FORBIDDEN_SETTINGS, "den-api")
+  if (parsed.PROVISIONER_MODE === "render" || parsed.PROVISIONER_MODE === "daytona") {
+    throw new Error(`den-api: OFFLINEGPT_EDITION=airgapped does not allow PROVISIONER_MODE=${parsed.PROVISIONER_MODE}; use docker.`)
+  }
+  if (parsed.DEN_ORG_MODE?.trim() === "multi_org") {
+    throw new Error("den-api: OFFLINEGPT_EDITION=airgapped runs one organization; DEN_ORG_MODE must be single_org.")
+  }
+  if (parsed.DEN_PASSWORD_BREACH_SCREENING_ENABLED?.trim().toLowerCase() === "true") {
+    throw new Error("den-api: OFFLINEGPT_EDITION=airgapped cannot screen passwords against the public breach API.")
+  }
+  if (parsed.DEN_DESKTOP_RELEASES_MODE === "github") {
+    throw new Error("den-api: OFFLINEGPT_EDITION=airgapped cannot read desktop releases from GitHub; use static.")
+  }
+  if ((parsed.DEN_BOTID_PROTECTION_ENABLED ?? "0").trim() === "1") {
+    throw new Error("den-api: OFFLINEGPT_EDITION=airgapped cannot use hosted bot protection.")
+  }
+}
 
 function splitCsv(value: string | undefined) {
   return (value ?? "")
@@ -543,7 +591,8 @@ const dashboardsEnabled = parseBooleanFlag(parsed.DEN_DASHBOARDS_ENABLED ?? "fal
 // of den-api makes den-api's own headers duplicates, which browsers reject.
 // The allowlist still feeds proxy-trust decisions; only header emission stops.
 const corsHandledByEdge = parseBooleanFlag(parsed.DEN_CORS_HANDLED_BY_EDGE ?? "false")
-const offlinegptWebEnabled = parseBooleanFlag(parsed.DEN_OFFLINEGPT_WEB_ENABLED ?? "false")
+// The air-gapped edition is the web product, with no subscription to buy.
+const offlinegptWebEnabled = isAirgapped || parseBooleanFlag(parsed.DEN_OFFLINEGPT_WEB_ENABLED ?? "false")
 
 const devMode = (parsed.OFFLINEGPT_DEV_MODE ?? "0").trim() === "1"
 const port = Number(parsed.PORT ?? "8790")
@@ -625,7 +674,7 @@ const requireEmailVerification = parsed.DEN_REQUIRE_EMAIL_VERIFICATION === undef
   : parsed.DEN_REQUIRE_EMAIL_VERIFICATION.trim().toLowerCase() !== "false"
 // Fail-closed even in dev mode: offline rigs opt out explicitly via DEN_PASSWORD_BREACH_SCREENING_ENABLED=false.
 const passwordBreachScreeningEnabled = parsed.DEN_PASSWORD_BREACH_SCREENING_ENABLED === undefined
-  ? true
+  ? !isAirgapped
   : parsed.DEN_PASSWORD_BREACH_SCREENING_ENABLED.trim().toLowerCase() !== "false"
 
 const daytonaSandboxPublic =
@@ -641,6 +690,8 @@ const planetscaleCredentials =
     : null
 
 export const env = {
+  edition,
+  airgapped: isAirgapped,
   databaseUrl: parsed.DATABASE_URL,
   dbEncryptionKey: optionalString(parsed.DEN_DB_ENCRYPTION_KEY),
   dbMode: parsed.DB_MODE ?? (parsed.DATABASE_URL ? "mysql" : "planetscale"),
@@ -761,7 +812,7 @@ export const env = {
   // Desktop-release endpoint overrides for evals/self-host testing. Static mode
   // keeps air-gapped deployments on the committed release snapshot.
   desktopReleasesBaseUrl: optionalString(parsed.DEN_DESKTOP_RELEASES_BASE_URL),
-  desktopReleasesMode: parsed.DEN_DESKTOP_RELEASES_MODE ?? "github",
+  desktopReleasesMode: parsed.DEN_DESKTOP_RELEASES_MODE ?? (isAirgapped ? "static" : "github"),
   // Native-provider endpoint overrides for evals/self-host testing. Unset in
   // production so Google, Microsoft Entra, and Graph use their public APIs.
   googleOAuthAuthorizeUrl: optionalString(parsed.DEN_GOOGLE_OAUTH_AUTHORIZE_URL),
@@ -845,6 +896,16 @@ export const env = {
       parsed.RENDER_HEALTHCHECK_TIMEOUT_MS ?? "180000",
     ),
     pollIntervalMs: Number(parsed.RENDER_POLL_INTERVAL_MS ?? "5000"),
+  },
+  docker: {
+    socketPath: optionalString(parsed.DOCKER_SOCKET_PATH) ?? "/var/run/docker.sock",
+    workerImage: optionalString(parsed.DOCKER_WORKER_IMAGE),
+    network: optionalString(parsed.DOCKER_WORKER_NETWORK) ?? "offlinegpt-internal",
+    workerNamePrefix: optionalString(parsed.DOCKER_WORKER_NAME_PREFIX) ?? "offlinegpt-ws",
+    workerPort: Number(parsed.DOCKER_WORKER_PORT ?? "8787"),
+    memoryMb: parsed.DOCKER_WORKER_MEMORY_MB ? Number(parsed.DOCKER_WORKER_MEMORY_MB) : undefined,
+    cpus: parsed.DOCKER_WORKER_CPUS ? Number(parsed.DOCKER_WORKER_CPUS) : undefined,
+    healthTimeoutMs: Number(parsed.DOCKER_WORKER_HEALTH_TIMEOUT_MS ?? "180000"),
   },
   vercel: {
     apiBase: parsed.VERCEL_API_BASE ?? "https://api.vercel.com",
