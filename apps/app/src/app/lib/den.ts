@@ -2,23 +2,6 @@ import {
   normalizeDesktopConfig,
   type DesktopConfig as SharedDesktopConfig,
 } from "@offlinegpt/types/den/desktop-policies";
-import {
-  AUTOMATION_MODEL_ATTENTION_CAPABILITY,
-  AUTOMATION_MODEL_ATTENTION_CAPABILITY_HEADER,
-} from "@offlinegpt/types/automations";
-import type {
-  AutomationDetail,
-  AutomationDesktopRunnerPresence,
-  AutomationDesktopRunnerRegistration,
-  AutomationList,
-  AutomationRun,
-  AutomationRunReceipt,
-  AutomationRunnerTokenResponse,
-  CreateAutomation,
-  CreateCloudAutomation,
-  UpdateAutomation,
-} from "@offlinegpt/types/automations";
-import { generatedArtifactViewSchema, savedAppDetailSchema, savedAppSummarySchema, type SaveApp, type WorkflowDetail } from "@offlinegpt/types/workflows";
 
 // Re-export the shared schema under the local alias so React consumers
 // (e.g. the cloud domain's desktop-config provider) can import it alongside
@@ -2823,7 +2806,6 @@ type DenRequestOptions = {
   body?: unknown;
   timeoutMs?: number;
   organizationId?: string | null;
-  automationModelAttentionCapable?: boolean;
 };
 
 async function fetchWithTimeout(fetchImpl: FetchLike, url: string, init: RequestInit, timeoutMs: number) {
@@ -2870,9 +2852,6 @@ async function requestJsonRaw<T>(
   if (organizationId) {
     headers[ORG_SCOPE_HEADER] = organizationId;
     headers[ORG_PROXY_HEADER] = organizationId;
-  }
-  if (options.automationModelAttentionCapable) {
-    headers[AUTOMATION_MODEL_ATTENTION_CAPABILITY_HEADER] = AUTOMATION_MODEL_ATTENTION_CAPABILITY;
   }
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
@@ -3059,44 +3038,6 @@ export function createDenClient(options: { baseUrl: string; apiBaseUrl?: string 
       };
     },
 
-    async listSavedApps(orgId: string) {
-      const payload = await requestJson<unknown>(baseUrls, "/v1/apps", {
-        method: "GET", token, organizationId: orgId,
-      });
-      if (!isRecord(payload) || !Array.isArray(payload.items) || typeof payload.enabled !== "boolean") {
-        throw new Error("Your apps could not be loaded.");
-      }
-      return { enabled: payload.enabled, sharingEnabled: payload.sharingEnabled === true, items: payload.items.map((item) => savedAppSummarySchema.parse(item)) };
-    },
-    async getSavedApp(orgId: string, appId: string, options: { revisionId?: string; receiptId?: string } = {}) {
-      const params = new URLSearchParams();
-      if (options.revisionId) params.set("revisionId", options.revisionId);
-      if (options.receiptId) params.set("receiptId", options.receiptId);
-      return savedAppDetailSchema.parse(await requestJson<unknown>(baseUrls, `/v1/apps/${encodeURIComponent(appId)}?${params}`, {
-        method: "GET", token, organizationId: orgId,
-      }));
-    },
-    async saveApp(orgId: string, appId: string, input: SaveApp) {
-      return generatedArtifactViewSchema.parse(await requestJson<unknown>(baseUrls, `/v1/apps/${encodeURIComponent(appId)}/save`, {
-        method: "POST", token, organizationId: orgId, body: input,
-      }));
-    },
-    async deleteApp(orgId: string, appId: string) {
-      await requestJson<unknown>(baseUrls, `/v1/artifact-views/${encodeURIComponent(appId)}/retire`, {
-        method: "POST", token, organizationId: orgId,
-      });
-    },
-    async shareSavedApp(orgId: string, appId: string, email: string) {
-      await requestJson<unknown>(baseUrls, `/v1/apps/${encodeURIComponent(appId)}/share`, {
-        method: "POST", token, organizationId: orgId, body: { email },
-      });
-    },
-    async setAppOnDashboard(orgId: string, appId: string, added: boolean) {
-      await requestJson<unknown>(baseUrls, `/v1/apps/${encodeURIComponent(appId)}/dashboard`, {
-        method: "POST", token, organizationId: orgId, body: { added },
-      });
-    },
-
     /** Organization-managed dashboards granted to the signed-in member. */
     async listGrantedDashboards(orgId: string): Promise<DenGrantedDashboard[]> {
       const context = await requestJson<unknown>(baseUrls, "/v1/org", {
@@ -3247,167 +3188,6 @@ export function createDenClient(options: { baseUrl: string; apiBaseUrl?: string 
         organizationId: orgId,
       });
       return getDenOrgLlmProviders(payload);
-    },
-
-    async listAutomations(
-      orgId: string,
-      options: { cursor?: string; limit?: number } = {},
-    ): Promise<AutomationList> {
-      const params = new URLSearchParams();
-      if (options.cursor) params.set("cursor", options.cursor);
-      if (options.limit) params.set("limit", String(options.limit));
-      const query = params.size > 0 ? `?${params.toString()}` : "";
-      return requestJson<AutomationList>(baseUrls, `/v1/automations${query}`, {
-        method: "GET",
-        token,
-        organizationId: orgId,
-        automationModelAttentionCapable: true,
-      });
-    },
-
-    /**
-     * Null when this Den cannot report presence: desktops outlive the Den they
-     * were released against, and self-hosted Dens lag further still. Unknown
-     * presence is not an absent desktop, so callers must not warn on it.
-     */
-    async getAutomationDesktopRunnerPresence(orgId: string): Promise<AutomationDesktopRunnerPresence | null> {
-      try {
-        return await requestJson<AutomationDesktopRunnerPresence>(baseUrls, "/v1/automation-runners/presence", {
-          method: "GET",
-          token,
-          organizationId: orgId,
-          automationModelAttentionCapable: true,
-        });
-      } catch (error) {
-        if (error instanceof DenApiError && error.status === 404) return null;
-        throw error;
-      }
-    },
-
-    async mintAutomationRunnerToken(orgId: string, registration: AutomationDesktopRunnerRegistration): Promise<AutomationRunnerTokenResponse> {
-      return requestJson<AutomationRunnerTokenResponse>(baseUrls, "/v1/automation-runners/token", {
-        method: "POST",
-        token,
-        organizationId: orgId,
-        body: registration,
-        automationModelAttentionCapable: true,
-      });
-    },
-
-    async createAutomation(orgId: string, input: CreateAutomation): Promise<AutomationDetail> {
-      return requestJson<AutomationDetail>(baseUrls, "/v1/automations", {
-        method: "POST",
-        token,
-        organizationId: orgId,
-        body: input,
-        automationModelAttentionCapable: true,
-      });
-    },
-
-    /** Web creation surface: placement is fixed to OfflineGPT Cloud by the route. */
-    async createCloudAutomation(orgId: string, input: CreateCloudAutomation): Promise<AutomationDetail> {
-      return requestJson<AutomationDetail>(baseUrls, "/v1/cloud-automations", {
-        method: "POST",
-        token,
-        organizationId: orgId,
-        body: input,
-        automationModelAttentionCapable: true,
-      });
-    },
-
-    async getWorkflow(orgId: string, configObjectId: string): Promise<WorkflowDetail> {
-      const payload = await requestJson<{ script: WorkflowDetail }>(
-        baseUrls,
-        `/v1/workflows/${encodeURIComponent(configObjectId)}?maxAgeMs=86400000`,
-        { method: "GET", token, organizationId: orgId },
-      );
-      return payload.script;
-    },
-
-    async getAutomation(orgId: string, automationId: string): Promise<AutomationDetail> {
-      return requestJson<AutomationDetail>(
-        baseUrls,
-        `/v1/automations/${encodeURIComponent(automationId)}`,
-        { method: "GET", token, organizationId: orgId, automationModelAttentionCapable: true },
-      );
-    },
-
-    async updateAutomation(
-      orgId: string,
-      automationId: string,
-      input: UpdateAutomation,
-    ): Promise<AutomationDetail> {
-      return requestJson<AutomationDetail>(
-        baseUrls,
-        `/v1/automations/${encodeURIComponent(automationId)}`,
-        { method: "PATCH", token, organizationId: orgId, body: input, automationModelAttentionCapable: true },
-      );
-    },
-
-    async activateAutomation(orgId: string, automationId: string): Promise<AutomationDetail> {
-      return requestJson<AutomationDetail>(
-        baseUrls,
-        `/v1/automations/${encodeURIComponent(automationId)}/activate`,
-        { method: "POST", token, organizationId: orgId, body: {}, automationModelAttentionCapable: true },
-      );
-    },
-
-    async deactivateAutomation(orgId: string, automationId: string): Promise<AutomationDetail> {
-      return requestJson<AutomationDetail>(
-        baseUrls,
-        `/v1/automations/${encodeURIComponent(automationId)}/deactivate`,
-        { method: "POST", token, organizationId: orgId, body: {}, automationModelAttentionCapable: true },
-      );
-    },
-
-    async archiveAutomation(orgId: string, automationId: string): Promise<AutomationDetail> {
-      return requestJson<AutomationDetail>(
-        baseUrls,
-        `/v1/automations/${encodeURIComponent(automationId)}`,
-        { method: "DELETE", token, organizationId: orgId, automationModelAttentionCapable: true },
-      );
-    },
-
-    async runAutomationNow(orgId: string, automationId: string): Promise<AutomationRun> {
-      const payload = await requestJson<{ run: AutomationRun }>(
-        baseUrls,
-        `/v1/automations/${encodeURIComponent(automationId)}/run`,
-        { method: "POST", token, organizationId: orgId, body: {}, automationModelAttentionCapable: true },
-      );
-      return payload.run;
-    },
-
-    async listAutomationRuns(
-      orgId: string,
-      automationId: string,
-      options: { cursor?: string; limit?: number } = {},
-    ): Promise<{ items: AutomationRun[]; nextCursor: string | null }> {
-      const params = new URLSearchParams();
-      if (options.cursor) params.set("cursor", options.cursor);
-      if (options.limit) params.set("limit", String(options.limit));
-      const query = params.size > 0 ? `?${params.toString()}` : "";
-      return requestJson<{ items: AutomationRun[]; nextCursor: string | null }>(
-        baseUrls,
-        `/v1/automations/${encodeURIComponent(automationId)}/runs${query}`,
-        { method: "GET", token, organizationId: orgId, automationModelAttentionCapable: true },
-      );
-    },
-
-    async getAutomationRun(orgId: string, runId: string): Promise<AutomationRunReceipt> {
-      return requestJson<AutomationRunReceipt>(
-        baseUrls,
-        `/v1/automation-runs/${encodeURIComponent(runId)}`,
-        { method: "GET", token, organizationId: orgId, automationModelAttentionCapable: true },
-      );
-    },
-
-    async cancelAutomationRun(orgId: string, runId: string): Promise<AutomationRun> {
-      const payload = await requestJson<{ run: AutomationRun }>(
-        baseUrls,
-        `/v1/automation-runs/${encodeURIComponent(runId)}/cancel`,
-        { method: "POST", token, organizationId: orgId, body: {}, automationModelAttentionCapable: true },
-      );
-      return payload.run;
     },
 
     async getOrgLlmProviderConnection(orgId: string, llmProviderId: string): Promise<DenOrgLlmProviderConnection> {
