@@ -26,6 +26,8 @@ function generateCurrentSchemaSql() {
     cwd: packageDir,
     encoding: "utf8",
     env: process.env,
+    // pnpm.cmd is a shim that only a shell can start on Windows.
+    shell: process.platform === "win32",
   })
 
   if (result.status !== 0) {
