@@ -1,3 +1,4 @@
+import { isAirgapped } from "@offlinegpt-ee/utils/edition"
 import { readOrganizationMetadata } from "@offlinegpt/types/den/managed-models-policy"
 
 export type OfflineGPTWebAccessSource = "subscription" | "complimentary" | null
@@ -55,9 +56,11 @@ export function resolveOfflineGPTWebAccess(input: {
   accessSource: OfflineGPTWebAccessSource
   complimentaryAccess: boolean
 } {
+  // The air-gapped edition is the customer's own deployment: web access is
+  // included and there is no subscription to buy.
   const accessSource: OfflineGPTWebAccessSource = input.deploymentAvailable && input.hasEligibleSubscription
     ? "subscription"
-    : input.complimentaryAccess
+    : input.complimentaryAccess || isAirgapped
       ? "complimentary"
       : null
 
