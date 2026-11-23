@@ -102,6 +102,7 @@ export const idTypesMapNameToPrefix = {
   tempFile: "tmpf",
   dashboard: "dsb",
   dashboardAccessGrant: "dsg",
+  accessPolicyRule: "apr",
 } as const
 
 export const denTypeIdPrefixes = idTypesMapNameToPrefix
