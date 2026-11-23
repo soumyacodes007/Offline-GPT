@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util"
+import { decideAccess, loadAccessPolicyRules, resolveMemberAccessContext } from "@offlinegpt-ee/den-db"
 import { and, asc, desc, eq, inArray, isNull, or } from "@offlinegpt-ee/den-db/drizzle"
 import {
   ConnectedAccountTable,
@@ -1459,7 +1460,32 @@ export async function listUsableExternalMcpConnections(input: {
   for (const connection of sourcedConnections) {
     if (connection.kind === "external_mcp") byId.set(connection.id, connection)
   }
-  return [...byId.values()]
+  return applyMcpConnectionPolicy(input, [...byId.values()], "external_mcp")
+}
+
+/**
+ * Den access policy for connections, on top of their grants: a deny rule
+ * removes a granted connection, and an allow rule makes one usable without a
+ * grant. With no rules this returns the granted list unchanged.
+ */
+async function applyMcpConnectionPolicy(
+  input: { organizationId: OrganizationId; orgMembershipId: OrgMembershipId },
+  granted: ExternalMcpConnectionRow[],
+  kind: ExternalMcpConnectionRow["kind"],
+): Promise<ExternalMcpConnectionRow[]> {
+  const rules = await loadAccessPolicyRules(db, { organizationId: input.organizationId, resourceKinds: ["mcp_connection"] })
+  if (rules.length === 0) return granted
+  const context = await resolveMemberAccessContext(db, input.orgMembershipId)
+  if (!context) return []
+  const grantedIds = new Set(granted.map((connection) => connection.id))
+  const candidates = (await listExternalMcpConnections(input.organizationId)).filter((connection) => connection.kind === kind)
+  return candidates.filter((connection) => decideAccess({
+    rules,
+    principals: context.principals,
+    resourceKind: "mcp_connection",
+    resourceId: connection.id,
+    baseline: grantedIds.has(connection.id) ? "granted" : "closed",
+  }).allowed)
 }
 
 export async function externalMcpConnectionReadyForMember(
@@ -1512,7 +1538,7 @@ export async function listUsableNativeProviderConnections(input: {
   teamIds: TeamId[]
 }): Promise<ExternalMcpConnectionRow[]> {
   const directConnections = await directlyUsableExternalMcpConnections(input)
-  return directConnections.filter((connection) => connection.kind === "native_provider")
+  return applyMcpConnectionPolicy(input, directConnections.filter((connection) => connection.kind === "native_provider"), "native_provider")
 }
 
 /**
@@ -1535,7 +1561,7 @@ export async function listVisibleExternalMcpConnections(input: {
   for (const connection of sourcedConnections) {
     if (connection.kind === "external_mcp") byId.set(connection.id, connection)
   }
-  return [...byId.values()]
+  return applyMcpConnectionPolicy(input, [...byId.values()], "external_mcp")
 }
 
 export async function memberCanUseExternalMcpConnection(input: {
