@@ -5,7 +5,7 @@
 
 import type { Session } from "@opencode-ai/sdk/v2/client";
 
-import { createClient, unwrap } from "@/app/lib/opencode";
+import { createClient, setServerEngineV2Routing, unwrap } from "@/app/lib/opencode";
 import { createClientV2, isOpencodeV2BaseUrl } from "@/app/lib/opencode-v2-adapter";
 import { deleteNativeSession } from "@/app/lib/opencode-session-native";
 import { OfflineGptServerError, type OfflineGptWorkspaceInfo } from "@/app/lib/offlinegpt-server";
@@ -62,6 +62,7 @@ async function routeSessionEndpoint(endpoint: ResolvedWorkspaceEndpoint): Promis
     if (error instanceof OfflineGptServerError && error.status === 404) return null;
     throw error;
   });
+  setServerEngineV2Routing(endpoint.baseUrl, Boolean(status?.enabled && status.chatRouting));
   return status?.enabled && status.chatRouting
     ? { ...endpoint, opencodeBaseUrl: `${endpoint.mountedBaseUrl}/opencode2` }
     : endpoint;
