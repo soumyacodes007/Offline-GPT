@@ -107,7 +107,7 @@ export type CommandPaletteProps = {
   /** Called when the first-class Extensions page is chosen. */
   onOpenExtensions: (section?: string) => void;
   onToggleSidebar?: () => void;
-  onOpenAutomations?: () => void;
+  onOpenSchedule?: () => void;
   onOpenDashboard?: () => void;
   onCreateWorkspace?: () => void;
   /** Optional: open the full default-model picker. */
@@ -419,15 +419,15 @@ export function CommandPalette(props: CommandPaletteProps) {
           },
         }]
       : []),
-    ...(props.onOpenAutomations
+    ...(props.onOpenSchedule
       ? [{
-          id: "automations.open",
-          title: "Automations",
+          id: "schedule.open",
+          title: "Scheduled tasks",
           keywords: ["schedule", "scheduled", "recurring", "cron", "daily", "weekly"],
           group: ACTIONS_GROUP,
           action: () => {
             props.onClose();
-            props.onOpenAutomations?.();
+            props.onOpenSchedule?.();
           },
         }]
       : []),
