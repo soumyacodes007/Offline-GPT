@@ -660,27 +660,47 @@ describe("OpenCode v2 event translation", () => {
 });
 
 describe("OpenCode v2 client compatibility", () => {
-  test.each([0, 1_788_548_737_221])("rejects archived=%i without reading, renaming, or deleting the session", async (archived) => {
+  test.each([[0, false], [1_788_548_737_221, true]])("archives through PATCH (archived=%i sends %s)", async (archived, expected) => {
     const originalFetch = globalThis.fetch;
     const requests: Request[] = [];
     globalThis.fetch = async (input, init) => {
       requests.push(input instanceof Request ? input : new Request(input, init));
-      return jsonResponse({ data: { id: "ses_archive", title: "Keep this session", time: { created: 1 } } });
+      return jsonResponse({ data: { id: "ses_archive", title: "Kept", time: { created: 1, updated: 2, ...(expected ? { archived: 3 } : {}) } } });
     };
     try {
       const client = createClientV2("http://opencode.test/opencode2", "/workspace", {});
-      for (const title of [undefined, "Do not partially rename"]) {
-        const parameters = { sessionID: "ses_archive", title, time: { archived } };
-        const result = await client.session.update(parameters);
-        expect(result.response.status).toBe(501);
-        expect(result.data).toBeUndefined();
-        expect(result.error).toMatchObject({
-          name: "UnsupportedInV2Preview", operation: "session.archive",
-          message: "Archiving and unarchiving are not available in the OpenCode v2 preview.",
-        });
-        await expect(client.session.update(parameters, { throwOnError: true })).rejects.toThrow("Archiving and unarchiving are not available");
-      }
-      expect(requests).toEqual([]);
+      const result = await client.session.update({ sessionID: "ses_archive", title: "Renamed", time: { archived } });
+      expect(result.data?.time.archived).toBe(expected ? 3 : undefined);
+      expect(requests.map((request) => [request.method, new URL(request.url).pathname])).toEqual([["PATCH", "/opencode2/api/session/ses_archive"]]);
+      expect(await requests[0]?.json()).toEqual({ title: "Renamed", archived: expected });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("undo stages a revert, redo clears it, and the next prompt commits a staged undo", async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: { method: string; path: string; body: unknown }[] = [];
+    globalThis.fetch = async (input, init) => {
+      const request = input instanceof Request ? input : new Request(input, init);
+      const body = request.method === "GET" || request.method === "DELETE" ? undefined : await request.json();
+      requests.push({ method: request.method, path: new URL(request.url).pathname, body });
+      return jsonResponse({ data: { id: "ses_undo", time: { created: 1 }, revert: { messageID: "msg_turn" } } });
+    };
+    try {
+      const client = createClientV2("http://opencode.test/opencode2", "/workspace", {});
+      expect((await client.session.revert({ sessionID: "ses_undo", messageID: "msg_turn" })).data?.revert?.messageID).toBe("msg_turn");
+      await client.session.unrevert({ sessionID: "ses_undo" });
+      await client.session.revert({ sessionID: "ses_undo", messageID: "msg_turn" });
+      await client.session.promptAsync({ sessionID: "ses_undo", model: { providerID: "p", modelID: "m" }, parts: [{ type: "text", text: "again" }] });
+      expect(requests.map(({ method, path }) => `${method} ${path}`)).toEqual([
+        "POST /opencode2/api/session/ses_undo/revert/stage", "GET /opencode2/api/session/ses_undo",
+        "DELETE /opencode2/api/session/ses_undo/revert", "GET /opencode2/api/session/ses_undo",
+        "POST /opencode2/api/session/ses_undo/revert/stage", "GET /opencode2/api/session/ses_undo",
+        "POST /opencode2/api/session/ses_undo/model", "POST /opencode2/api/session/ses_undo/revert/commit",
+        "POST /opencode2/api/session/ses_undo/prompt",
+      ]);
+      expect(requests[0]?.body).toEqual({ messageID: "msg_turn", files: true });
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -1080,6 +1100,9 @@ describe("OpenCode v2 client compatibility", () => {
           sessionID: "ses_tool",
           role: "assistant",
           time: { created: 1_788_552_837_299, completed: 1_788_552_838_186 },
+          // The captured message reports zero usage; Trajectory reads it.
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          cost: 0,
         },
         parts: [
           {
@@ -1209,8 +1232,11 @@ describe("OpenCode v2 client compatibility", () => {
         ["GET", "/workspace/owned/opencode2/api/event"], ["GET", "/workspace/owned/opencode2/api/session/ses_fork"],
       ]);
       expect(requests.every((request) => request.headers.get("Authorization") === "Bearer fixture-token")).toBe(true);
-      expect((await client.session.fork({ sessionID: "ses_source" })).response.status).toBe(501);
-      expect(requests).toHaveLength(2);
+      const forked = await client.session.fork({ sessionID: "ses_source", messageID: "msg_boundary" });
+      expect(forked.data?.id).toBe("ses_fork");
+      expect(requests).toHaveLength(3);
+      expect([requests[2]?.method, new URL(requests[2]?.url ?? "").pathname]).toEqual(["POST", "/workspace/owned/opencode2/api/session/ses_source/fork"]);
+      expect(await requests[2]?.json()).toEqual({ before: "msg_boundary" });
     } finally { globalThis.fetch = originalFetch; }
   });
 
@@ -1600,6 +1626,10 @@ test("v2 provider catalog retains display names without exposing request setting
     if (request.url.endsWith("/api/model")) return jsonResponse({ data: [{ id: "coding", providerID: "lpr_fixture", name: "Coding" }] });
     if (request.url.endsWith("/api/provider")) return jsonResponse({ data: [{ id: "lpr_fixture", name: "Assigned Coding", settings: { apiKey: "fixture-private" } }] });
     if (request.url.endsWith("/api/model/default")) return jsonResponse({ data: {} });
+    if (request.url.endsWith("/api/integration")) return jsonResponse({ data: [
+      { id: "lpr_fixture", name: "Assigned Coding", methods: [{ type: "key" }], connections: [] },
+      { id: "signed_out", name: "Signed Out", methods: [{ type: "key" }, { type: "env", names: ["SIGNED_OUT_KEY"] }, { id: "browser", type: "oauth", label: "Browser" }], connections: [] },
+    ] });
     throw new Error(`Unexpected request: ${request.url}`);
   };
   try {
@@ -1607,6 +1637,10 @@ test("v2 provider catalog retains display names without exposing request setting
     const result = await client.provider.list();
     expect(result.data?.all[0]?.name).toBe("Assigned Coding");
     expect(JSON.stringify(result.data)).not.toContain("fixture-private");
+    // Providers that are not signed in yet are listed but not connected, as in v1.
+    expect(result.data?.connected).toEqual(["lpr_fixture"]);
+    expect(result.data?.all[1]).toMatchObject({ id: "signed_out", env: ["SIGNED_OUT_KEY"], models: {} });
+    expect((await client.provider.auth()).data?.signed_out).toEqual([{ type: "api", label: "API key" }, { type: "oauth", label: "Browser" }]);
   } finally {
     globalThis.fetch = originalFetch;
   }
