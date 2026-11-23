@@ -117,31 +117,6 @@ function sessionContribution(): OfflineGptFeatureContribution {
   };
 }
 
-function automationContribution(): OfflineGptFeatureContribution {
-  const provider: OfflineGptProviderRef = { id: "offlinegpt-automations", kind: "builtin" };
-  return {
-    featureId: "automations",
-    provider,
-    affordances: [
-      affordance({
-        id: "automation.propose",
-        kind: "command",
-        title: "Propose an Automation",
-        description: "Offer a scheduled Automation for the person to review and create. This only renders a proposal in the chat; it cannot create, activate, or run anything.",
-        provider,
-        arguments: [
-          argument("name", "string", true, "Short Automation name, at most 120 characters."),
-          argument("instructions", "string", true, "Self-contained instructions the Automation runs on its schedule."),
-          argument("schedule", "object", true, "once/daily/weekly schedule with an IANA timezone. Intervals are not supported."),
-          argument("model", "object", false, "Optional providerId and modelId. Omit to use the person's default."),
-        ],
-        effects: noEffects,
-      }),
-    ],
-    guidance: [],
-  };
-}
-
 function extensionContribution(): OfflineGptFeatureContribution {
   const provider: OfflineGptProviderRef = { id: "offlinegpt-extensions", kind: "extension" };
   return {
@@ -244,7 +219,6 @@ export function buildOfflineGptProviderContributions(
   const connect = connectContribution(skills, cloudMcp);
   return [
     sessionContribution(),
-    automationContribution(),
     extensionContribution(),
     ...mcps
       .filter((mcp) => mcp.name !== "offlinegpt-cloud")
