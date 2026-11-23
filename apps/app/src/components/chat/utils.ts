@@ -3,6 +3,7 @@ import type { ThreadStatus } from "@/lib/messages"
 // Relative so the pure grouping contract stays importable from alias-free
 // test workspaces (evals specs import this module directly).
 import { isAggregatableToolPart, type AggregateThought } from "../../lib/tool-aggregate"
+import { codeModeToolCalls } from "../../lib/code-mode-tools"
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
@@ -171,7 +172,7 @@ type AssistantRenderGroup =
   | { kind: "text"; text: string }
   | { kind: "reasoning"; text: string; isStreaming: boolean }
   | { kind: "file"; part: FileUIPart }
-  | { kind: "tool"; part: ToolUIPart | DynamicToolUIPart }
+  | { kind: "tool"; part: ToolUIPart | DynamicToolUIPart; files?: FileUIPart[] }
   | { kind: "tool-aggregate"; parts: (ToolUIPart | DynamicToolUIPart)[]; thoughts: AggregateThought[] }
 
 /**
@@ -310,6 +311,13 @@ export function getAssistantRenderGroups(
     }
 
     if (part.type === "file") {
+      // Screenshots a code-mode step returned stay inside that step instead
+      // of filling the transcript between step lines.
+      const previous = groups.at(-1)
+      if (previous?.kind === "tool" && previous.part.type === "dynamic-tool" && codeModeToolCalls(previous.part)) {
+        previous.files = [...(previous.files ?? []), part]
+        continue
+      }
       groups.push({ kind: "file", part })
       continue
     }
