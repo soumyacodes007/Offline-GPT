@@ -1,3 +1,4 @@
+import { decideAccess, loadAccessPolicyRules, recordAccessDenied, resolveMemberAccessContext } from "@offlinegpt-ee/den-db"
 import { and, eq, inArray, isNull } from "@offlinegpt-ee/den-db/drizzle"
 import {
   ConfigObjectAccessGrantTable,
@@ -347,7 +348,7 @@ async function resolveMarketplaceRoleForIds(context: PluginArchActorContext, mar
   return resolveGrantRole({ context, grants })
 }
 
-export async function resolvePluginArchResourceRole(input: ResourceLookupInput) {
+async function resolvePluginArchResourceGrantRole(input: ResourceLookupInput) {
   if (!(await resourceExistsInOrganization(input))) {
     return null
   }
@@ -445,6 +446,34 @@ export async function resolvePluginArchResourceRole(input: ResourceLookupInput) 
   const pluginRole = await resolvePluginRoleForIds(input.context, memberships.map((membership) => membership.pluginId))
   resolved = maxRole(resolved, pluginRole ? "viewer" : null)
   return resolved
+}
+
+/**
+ * The member's role on a resource: its own grants, then Den access policy
+ * rules on top (qm-style: a deny removes access, an allow gives viewer
+ * access, and a resource with allow rules is restricted to them). Org admins
+ * manage every resource and are not limited by use policy.
+ */
+export async function resolvePluginArchResourceRole(input: ResourceLookupInput): Promise<PluginArchRole | null> {
+  const granted = await resolvePluginArchResourceGrantRole(input)
+  if (isPluginArchOrgAdmin(input.context) || !(await resourceExistsInOrganization(input))) return granted
+  const memberId = input.context.organizationContext.currentMember.id
+  const context = await resolveMemberAccessContext(db, memberId)
+  if (!context) return null
+  const rules = await loadAccessPolicyRules(db, { organizationId: context.organizationId, resourceKinds: [input.resourceKind] })
+  if (rules.length === 0) return granted
+  const decision = decideAccess({
+    rules,
+    principals: context.principals,
+    resourceKind: input.resourceKind,
+    resourceId: input.resourceId,
+    baseline: granted ? "granted" : "closed",
+  })
+  if (!decision.allowed) {
+    if (granted) await recordAccessDenied(db, { context, resourceKind: input.resourceKind, resourceId: input.resourceId, decision, surface: "den-api" }).catch(() => {})
+    return null
+  }
+  return granted ?? "viewer"
 }
 
 export async function requirePluginArchCapability(context: PluginArchActorContext, capability: PluginArchCapability, requireFreshSession?: boolean) {
