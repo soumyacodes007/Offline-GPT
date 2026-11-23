@@ -17,16 +17,7 @@ import { isDesktopRuntime } from "./runtime-env";
 import type { ExecResult, OpencodeConfigFile, WorkspaceInfo, WorkspaceList } from "./desktop";
 import type { DenOrgMarketplace, DenOrgPluginResolved, DenResourceSnapshot } from "./den-types";
 import type { CloudImportedMarketplace, CloudImportedPlugin, CloudImportedProvider } from "../cloud/import-state";
-import type {
-  LocalModelRef,
-  LocalRouteCategory,
-  LocalRouteDecision,
-  LocalRoutingSettings,
-  LocalWorkflow,
-  LocalWorkflowInput,
-  LocalWorkflowRun,
-  LocalWorkflowsSnapshot,
-} from "@offlinegpt/types/local-workflows";
+import type { ScheduleCreateRequest, ScheduleListResult, ScheduleTask, ScheduleUpdateRequest } from "@offlinegpt/types/schedule";
 
 export type OfflineGptServerCapabilities = {
   skills: { read: boolean; write: boolean; source: "offlinegpt" | "opencode" };
@@ -2186,37 +2177,30 @@ export function createOfflineGptServerClient(options: { baseUrl: string; token?:
         `/workspace/${workspaceId}/audit?limit=${limit}`,
         { token, hostToken },
       ),
-    getLocalWorkflows: (workspaceId: string) =>
-      requestJson<LocalWorkflowsSnapshot>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/local-workflows`, {
+    listScheduledTasks: (workspaceId: string) =>
+      requestJson<ScheduleListResult>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/schedule`, {
         token, hostToken, timeoutMs: timeouts.config,
       }),
-    saveLocalWorkflowRouting: (workspaceId: string, body: LocalRoutingSettings) =>
-      requestJson<LocalRoutingSettings>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/local-workflows/routing`, {
-        token, hostToken, method: "PUT", body, timeoutMs: timeouts.config,
-      }),
-    previewLocalWorkflowRoute: (workspaceId: string, body: { prompt: string; category?: LocalRouteCategory | "auto"; model?: LocalModelRef | null }) =>
-      requestJson<LocalRouteDecision>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/local-workflows/route`, {
+    createScheduledTask: (workspaceId: string, body: ScheduleCreateRequest) =>
+      requestJson<ScheduleTask>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/schedule`, {
         token, hostToken, method: "POST", body, timeoutMs: timeouts.config,
       }),
-    createLocalWorkflow: (workspaceId: string, body: LocalWorkflowInput) =>
-      requestJson<LocalWorkflow>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/local-workflows`, {
-        token, hostToken, method: "POST", body, timeoutMs: timeouts.config,
-      }),
-    updateLocalWorkflow: (workspaceId: string, workflowId: string, body: Partial<LocalWorkflowInput>) =>
-      requestJson<LocalWorkflow>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/local-workflows/${encodeURIComponent(workflowId)}`, {
+    updateScheduledTask: (workspaceId: string, taskId: string, body: ScheduleUpdateRequest) =>
+      requestJson<ScheduleTask>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/schedule/${encodeURIComponent(taskId)}`, {
         token, hostToken, method: "PATCH", body, timeoutMs: timeouts.config,
       }),
-    deleteLocalWorkflow: (workspaceId: string, workflowId: string) =>
-      requestJson<{ ok: true }>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/local-workflows/${encodeURIComponent(workflowId)}`, {
+    deleteScheduledTask: (workspaceId: string, taskId: string) =>
+      requestJson<{ deleted: true }>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/schedule/${encodeURIComponent(taskId)}`, {
         token, hostToken, method: "DELETE", timeoutMs: timeouts.config,
       }),
-    runLocalWorkflow: (workspaceId: string, workflowId: string) =>
-      requestJson<LocalWorkflowRun>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/local-workflows/${encodeURIComponent(workflowId)}/run`, {
-        token, hostToken, method: "POST", body: {}, timeoutMs: timeouts.config,
+    deleteEndedScheduledTasks: (workspaceId: string) =>
+      requestJson<{ deleted: number }>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/schedule/ended`, {
+        token, hostToken, method: "DELETE", timeoutMs: timeouts.config,
       }),
-    cancelLocalWorkflowRun: (workspaceId: string, runId: string) =>
-      requestJson<LocalWorkflowRun>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/local-workflows/runs/${encodeURIComponent(runId)}/cancel`, {
-        token, hostToken, method: "POST", body: {}, timeoutMs: timeouts.config,
+    // Delivery creates a chat and sends a message, so allow longer than a config read.
+    runScheduledTask: (workspaceId: string, taskId: string) =>
+      requestJson<ScheduleTask>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/schedule/${encodeURIComponent(taskId)}/run`, {
+        token, hostToken, method: "POST", body: {}, timeoutMs: 120_000,
       }),
     upsertCommand: (
       workspaceId: string,
