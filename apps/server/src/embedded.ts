@@ -38,6 +38,7 @@ import { keepOfflineGptRuntimeConfigFileFresh, writeOfflineGptRuntimeConfigFile 
 import { migrateOfflineGptCloudMcpRuntimeConfig } from "./cloud-mcp-health.js";
 import { migrateWorkspaceRuntimeConfigToEngineGlobal } from "./runtime-opencode-config-store.js";
 import { resolveOpencodeModelsUrl } from "./opencode-models-url.js";
+import { readEngineV2PreviewState, resolveInitialEngineV2PreviewState } from "./engine-v2-preview.js";
 import type { ServeResult } from "./serve-node.js";
 import type { LocalManagedMcpVaultKeyProvider, ServerConfig } from "./types.js";
 
@@ -73,7 +74,10 @@ export type EmbeddedServerHandle = {
 export async function startEmbeddedServer(options: EmbeddedServerOptions): Promise<EmbeddedServerHandle> {
   const config = await resolveServerConfig(options);
   config.localManagedMcpVaultKey = options.localManagedMcpVaultKey;
-  config.resumeInterruptedTasks = options.resumeInterruptedTasks === true && options.manageOpencode === true && !config.opencodeBaseUrl;
+  // With chat routed to OpenCode v2 nothing reaches the v1 engine, so it is not started.
+  const engineV2State = resolveInitialEngineV2PreviewState(process.env, readEngineV2PreviewState(config));
+  const manageOpencodeV1 = options.manageOpencode === true && !(engineV2State.enabled && engineV2State.chatRouting === true);
+  config.resumeInterruptedTasks = options.resumeInterruptedTasks === true && manageOpencodeV1 && !config.opencodeBaseUrl;
   const logger = createServerLogger(config);
 
   // Spawn managed OpenCode if requested and no explicit base URL was provided.
@@ -192,7 +196,7 @@ export async function startEmbeddedServer(options: EmbeddedServerOptions): Promi
   config.port = server.port;
   const serverUrl = `http://${config.host === "0.0.0.0" ? "127.0.0.1" : config.host}:${server.port}`;
 
-  if (!config.opencodeBaseUrl && options.manageOpencode) {
+  if (!config.opencodeBaseUrl && manageOpencodeV1) {
     const workspace = findManagedEngineWorkspace(config.workspaces);
     if (workspace) {
       // Reap engines recorded by servers that died without cleanup. Best
