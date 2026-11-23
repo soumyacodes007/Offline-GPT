@@ -29,21 +29,6 @@
       "development": "./src/offlinegpt-provider.ts",
       "default": "./src/offlinegpt-provider.ts"
     },
-    "./automations": {
-      "types": "./src/automations.ts",
-      "development": "./src/automations.ts",
-      "default": "./src/automations.ts"
-    },
-    "./workflows": {
-      "types": "./src/workflows.ts",
-      "development": "./src/workflows.ts",
-      "default": "./src/workflows.ts"
-    },
-    "./local-workflows": {
-      "types": "./src/local-workflows.ts",
-      "development": "./src/local-workflows.ts",
-      "default": "./src/local-workflows.ts"
-    },
     "./skill-created-app": {
       "types": "./src/skill-created-app.ts",
       "development": "./src/skill-created-app.ts",
@@ -129,6 +114,11 @@
       "development": "./src/den/desktop-policies.ts",
       "bun": "./src/den/desktop-policies.ts",
       "default": "./dist/den/desktop-policies.js"
+    },
+    "./schedule": {
+      "types": "./src/schedule.ts",
+      "development": "./src/schedule.ts",
+      "default": "./src/schedule.ts"
     }
   },
   "files": [
