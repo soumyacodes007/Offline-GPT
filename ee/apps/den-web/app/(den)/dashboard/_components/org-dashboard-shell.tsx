@@ -17,7 +17,6 @@ import { DEFAULT_AUTH_NAME } from "../../_lib/den-flow";
 import {
   formatRoleLabel,
   getAnalyticsRoute,
-  getAutomationsRoute,
   getBackgroundAgentsRoute,
   getApiKeysRoute,
   getBrandAppearanceRoute,
@@ -42,7 +41,6 @@ import {
   getPluginsRoute,
   getSsoRoute,
   getScimRoute,
-  getWorkflowRunsRoute,
   getWebRoute,
 } from "../../_lib/den-org";
 import { useOrgListWindow } from "../../_lib/use-org-list-window";
@@ -239,9 +237,6 @@ function getDashboardPageTitle(pathname: string, orgSlug: string | null) {
   if (pathname.startsWith(getBackgroundAgentsRoute(orgSlug))) {
     return "Background Tasks";
   }
-  if (pathname.startsWith(getAutomationsRoute(orgSlug))) {
-    return "My Automations";
-  }
   if (pathname.startsWith(getCustomLlmProvidersRoute(orgSlug))) {
     return "Bring your Own Keys";
   }
@@ -278,9 +273,6 @@ function getDashboardPageTitle(pathname: string, orgSlug: string | null) {
   }
   if (pathname.startsWith(getYourConnectionsRoute(orgSlug))) {
     return "Your Connections";
-  }
-  if (pathname.startsWith(getWorkflowRunsRoute(orgSlug))) {
-    return "Workflow Runs";
   }
   if (pathname.startsWith(getToolTesterRoute(orgSlug))) {
     return "Tool Tester";
