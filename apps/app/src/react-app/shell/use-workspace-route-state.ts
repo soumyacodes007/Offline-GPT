@@ -22,7 +22,7 @@ import {
   type OfflineGptServerInfo,
   type WorkspaceList,
 } from "@/app/lib/desktop";
-import { createClient, unwrap } from "@/app/lib/opencode";
+import { createClient, setServerEngineV2Routing, unwrap } from "@/app/lib/opencode";
 import { createClientV2 } from "@/app/lib/opencode-v2-adapter";
 import { getNativeSession } from "@/app/lib/opencode-session-native";
 import { createOfflineGptServerClient, OfflineGptServerError, type OfflineGptServerClient } from "@/app/lib/offlinegpt-server";
@@ -80,7 +80,7 @@ import {
   preserveWorkspaceRouteSession,
   removeWorkspaceRouteSession,
   sessionIdForLegacyWorkspaceInference,
-  automationsRoute,
+  scheduleRoute,
   dashboardRoute,
   workspaceExtensionsRoute,
   workspaceSessionRoute,
@@ -88,7 +88,7 @@ import {
 
 export type UseWorkspaceRouteStateInput = {
   developerMode: boolean;
-  workspaceRoute?: "session" | "automations" | "dashboard" | "apps";
+  workspaceRoute?: "session" | "schedule" | "dashboard";
   /** Invoked when the offlinegpt-server settings-changed event fires (the route bumps its settings version). */
   onServerSettingsChanged: () => void;
   /** Receives the local offlinegpt-server host info discovered during refresh. */
@@ -159,14 +159,9 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
       navigate(workspaceExtensionsRoute(workspaceId, extensionsRoutePath), options);
       return;
     }
-    if (workspaceRoute === "automations") {
-      if (/^\/automations(?:\/|$)/.test(location.pathname)) return;
-      navigate(automationsRoute(), options);
-      return;
-    }
-    if (workspaceRoute === "apps") {
-      if (/^(?:\/apps|\/dashboard\/apps)(?:\/|$)/.test(location.pathname)) return;
-      navigate("/apps", options);
+    if (workspaceRoute === "schedule") {
+      if (/^\/schedule(?:\/|$)/.test(location.pathname)) return;
+      navigate(scheduleRoute(), options);
       return;
     }
     if (workspaceRoute === "dashboard") {
@@ -353,9 +348,14 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
         }
         try {
           // The sidebar lists from whichever engine chat is routed to.
-          const fetchedItems = workspace.workspaceType !== "remote" && engineV2ChatRoutingRef.current
+          const listedFromV2 = workspace.workspaceType !== "remote" && engineV2ChatRoutingRef.current;
+          const fetchedItems = listedFromV2
             ? await listRouteSessions(endpoint, v2RouteSessionList)
             : await listRouteSessions(endpoint);
+          // Routing is resolved after startup; a list from the other engine is stale.
+          if (listedFromV2 !== (workspace.workspaceType !== "remote" && engineV2ChatRoutingRef.current)) {
+            return fetchWithRetries(workspace, attempt);
+          }
           const workspaceRoot = normalizeDirectoryPath(workspace.path ?? "");
           const items = workspaceRoot && !isRemoteOfflineGptWorkspace
             ? fetchedItems.filter((session) =>
@@ -1024,6 +1024,7 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
     const refresh = async () => {
       try {
         const status = await offlinegptClient.getEngineV2PreviewStatus();
+        setServerEngineV2Routing(routingServerUrl, status.enabled && status.chatRouting);
         if (!cancelled) {
           setEngineV2ChatRouting(status.enabled && status.chatRouting);
           setEngineRoutingReady(true);
@@ -1115,10 +1116,9 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
       for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
         if (cancelled) return;
         try {
+          // The native helper tags a missing session as `session_not_found` for both engines.
           const session = engineV2ChatRouting
-            ? unwrap(await createClientV2(opencode2BaseUrl, selectedWorkspaceRoot || undefined, {
-                token: selectedWorkspaceServerToken,
-              }).session.get({ sessionID: selectedSessionId }))
+            ? await getNativeSession({ opencodeBaseUrl: opencode2BaseUrl, token: selectedWorkspaceServerToken }, selectedSessionId)
             : await getNativeSession(selectedWorkspaceEndpoint, selectedSessionId);
           if (cancelled) return;
           if (session.id !== selectedSessionId) {
@@ -1148,6 +1148,12 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
           if (cancelled) return;
           const message = error instanceof Error ? error.message : describeRouteError(error);
           const kind = classifyRouteSessionReadError(error);
+          // Sessions created before v2 chat routing are not in v2: open a new session instead.
+          if (kind === "not-found" && engineV2ChatRouting) {
+            setModernRouteSessionResolution(null);
+            navigateToWorkspaceSession(selectedWorkspaceId, null, { replace: true });
+            return;
+          }
           if (kind !== "retryable" || attempt + 1 >= maxAttempts) {
             setModernRouteSessionResolution({
               key: modernRouteSessionLoadKey,
