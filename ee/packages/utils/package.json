@@ -30,11 +30,16 @@
       "types": "./src/inference-bearer-key.ts",
       "development": "./src/inference-bearer-key.ts",
       "default": "./dist/inference-bearer-key.js"
+    },
+    "./edition": {
+      "types": "./src/edition.ts",
+      "development": "./src/edition.ts",
+      "default": "./dist/edition.js"
     }
   },
   "scripts": {
     "build": "tsup",
-    "test": "bun test src/observability.test.ts src/den-urls.test.ts src/inference-bearer-key.test.ts"
+    "test": "bun test src/observability.test.ts src/den-urls.test.ts src/inference-bearer-key.test.ts src/edition.test.ts"
   },
   "dependencies": {
     "luxon": "^3.6.1",
