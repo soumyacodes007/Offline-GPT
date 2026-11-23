@@ -24,14 +24,12 @@ import {
   type GrantedConsentMap,
 } from "./granted-dashboard-store";
 import { McpAppTile, type DashboardLaunchEndpoint } from "./mcp-app-tile";
-import { DashboardApps, type CreateDashboardApp } from "./dashboard-apps";
 
 /**
- * Personal apps alongside the dashboards shared by the organization.
+ * Dashboards shared by the organization.
  * Company definitions stay in Den; personal placement belongs to each member.
  */
-export function DashboardPage({ fallbackEndpoints, onCreateApp }: {
-  onCreateApp: CreateDashboardApp;
+export function DashboardPage({ fallbackEndpoints }: {
   /** Other workspace MCP runtimes tiles may launch through when the primary one lacks their server. */
   fallbackEndpoints?: DashboardLaunchEndpoint[];
 }) {
@@ -95,13 +93,11 @@ export function DashboardPage({ fallbackEndpoints, onCreateApp }: {
       grantedDashboards={grantedReady ? grantedQuery.data ?? [] : []}
       grantedError={grantedReady && grantedQuery.error ? true : false}
       fallbackEndpoints={fallbackEndpoints}
-      onCreateApp={onCreateApp}
     />
   );
 }
 
-function DashboardBoard({ consentScopeKey, cacheScopeKey, grantedDashboards, grantedError, fallbackEndpoints, onCreateApp }: {
-  onCreateApp: CreateDashboardApp;
+function DashboardBoard({ consentScopeKey, cacheScopeKey, grantedDashboards, grantedError, fallbackEndpoints }: {
   consentScopeKey: string;
   cacheScopeKey: string;
   /** Organization-managed dashboards granted to this member, rendered read-only. */
@@ -128,7 +124,6 @@ function DashboardBoard({ consentScopeKey, cacheScopeKey, grantedDashboards, gra
       data-dashboard-cache-scope={cacheScopeKey}
       data-dashboard-consent-scope={consentScopeKey}
     >
-      <DashboardApps key={consentScopeKey} onCreateApp={onCreateApp} />
       {grantedError ? (
         <p className="mb-4 text-xs text-muted-foreground" role="status">
           Your organization&apos;s dashboards could not be loaded right now.
