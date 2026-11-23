@@ -2311,6 +2311,9 @@ function createRoutes(
   // the generation that owns live sessions. Legacy/external engines keep
   // the established busy deferral.
   const applyManagedProviderReload = async (workspace: WorkspaceInfo): Promise<"reloaded" | "deferred"> => {
+    // OpenCode v2 mirrors providers itself on every runtime config write, and
+    // when it serves chats there may be no v1 engine to reload at all.
+    if (engineV2Preview.status().chatRouting) return "reloaded";
     const reloadDeferred = await shouldDeferInPlaceEngineReload(config, workspace, engineHasActiveSessions);
     if (!reloadDeferred) await reloadOpencodeEngine(config, workspace, engineMcpServerState, { reason: "managed_provider_reload" });
     if (reloadDeferred) cloudProviderSync.markReloadPending();
