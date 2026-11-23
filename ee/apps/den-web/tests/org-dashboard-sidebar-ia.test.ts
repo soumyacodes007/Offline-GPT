@@ -10,11 +10,6 @@ const navigation = readFileSync(
   fileURLToPath(new URL("../app/(den)/dashboard/_lib/dashboard-navigation.ts", import.meta.url)),
   "utf8",
 );
-const legacyRunsPage = readFileSync(
-  fileURLToPath(new URL("../app/(den)/dashboard/(admin)/script-runs/page.tsx", import.meta.url)),
-  "utf8",
-);
-
 function indexOfNeedle(needle: string) {
   const index = navigation.indexOf(needle);
   expect(index).toBeGreaterThan(-1);
@@ -24,7 +19,8 @@ function indexOfNeedle(needle: string) {
 describe("Den org sidebar information architecture", () => {
   test("members get Work labels and never see Collections or Workflow Runs as member destinations", () => {
     expect(navigation).toContain('label: "My Library"');
-    expect(navigation).toContain('label: "My Automations"');
+    // Automations and Workflow Runs were removed from Den.
+    expect(navigation).not.toContain('label: "My Automations"');
     expect(navigation).toContain('label: "OfflineGPT Web"');
     expect(navigation).toContain('label: "Work"');
     expect(navigation).not.toContain('label: "Your Connections"');
@@ -71,9 +67,5 @@ describe("Den org sidebar information architecture", () => {
     expect(navigation).not.toContain('label: "Sources"');
     expect(navigation).not.toContain('label: "Brand appearance"');
     expect(navigation).not.toContain('label: "Desktop Policies"');
-  });
-
-  test("redirects the old Script runs path to Workflow runs", () => {
-    expect(legacyRunsPage).toContain('redirect(getWorkflowRunsRoute())');
   });
 });
