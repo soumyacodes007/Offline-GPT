@@ -10,12 +10,12 @@ import {
   pluginFlowPayloadSchema,
   registerAgentPluginFlowApp,
 } from "../src/mcp/plugin-flow-app.js"
-import { workflowArtifactAppServerCapabilities } from "../src/mcp/workflow-artifact-app.js"
+import { mcpAppServerCapabilities } from "../src/mcp/mcp-app-capabilities.js"
 
 async function withClient<T>(run: (client: Client) => Promise<T>): Promise<T> {
   const server = new McpServer(
     { name: "plugin-flow-test", version: "1.0.0" },
-    { capabilities: workflowArtifactAppServerCapabilities },
+    { capabilities: mcpAppServerCapabilities },
   )
   registerAgentPluginFlowApp(server)
   const client = new Client(
