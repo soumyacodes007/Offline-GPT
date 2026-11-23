@@ -659,6 +659,13 @@
       "when": 1788895934599,
       "tag": "0094_managed_usage_facts",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "5",
+      "when": 1795424250887,
+      "tag": "0095_remove_automations_saved_apps_remote_sessions",
+      "breakpoints": true
     }
   ]
 }
