@@ -27,19 +27,6 @@
   },
   {
     "type": "dependency",
-    "from": "specs/automation-revision-revert.e2e.test.ts",
-    "to": "@offlinegpt/behaviors",
-    "unresolvedTo": "@offlinegpt/behaviors",
-    "dependencyTypes": [
-      "unknown"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "specs-use-testkit-only"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "specs/cloud-provider-local-credential-fallback.e2e.test.ts",
     "to": "@offlinegpt/behaviors",
     "unresolvedTo": "@offlinegpt/behaviors",
@@ -290,19 +277,6 @@
     "from": "specs/responsive-session-layout.e2e.test.ts",
     "to": "@offlinegpt/cdp",
     "unresolvedTo": "@offlinegpt/cdp",
-    "dependencyTypes": [
-      "unknown"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "specs-use-testkit-only"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "specs/saved-script-automations.e2e.test.ts",
-    "to": "@offlinegpt/behaviors",
-    "unresolvedTo": "@offlinegpt/behaviors",
     "dependencyTypes": [
       "unknown"
     ],
