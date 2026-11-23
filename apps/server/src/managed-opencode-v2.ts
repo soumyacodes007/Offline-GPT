@@ -1,4 +1,5 @@
 import { offlinegptV2PluginPath } from "./offlinegpt-extensions-plugin-path.js";
+import { isAirgappedEdition } from "./edition.js";
 import type { EnginePermissionRule } from "./managed-policy-rules.js";
 // Parallel v2 lane prototype: provider injection is a watched-config write. This module
 // deliberately has no reload/dispose call, unlike managed-opencode.ts and server.ts reloadOpencodeEngine.
@@ -87,6 +88,16 @@ export async function createManagedOpencodeV2Server(
   let url = "";
   const providers = new Map<string, OpencodeV2ProviderSpec>();
   const opencodeModelsUrl = (options.env?.OPENCODE_MODELS_URL ?? process.env.OPENCODE_MODELS_URL)?.replace(/\/+$/, "");
+  const airgapped = isAirgappedEdition(options.env?.OFFLINEGPT_EDITION ? options.env : process.env);
+  // No public catalog, updater, free-model service, or session sharing. The
+  // model list comes from the internal inference service when one is set.
+  const airgappedEnv: Record<string, string> = airgapped
+    ? {
+        OPENCODE_DISABLE_AUTOUPDATE: "1",
+        OPENCODE_DISABLE_FREE_MODELS: "1",
+        ...(opencodeModelsUrl === undefined ? { OPENCODE_DISABLE_MODELS_FETCH: "1" } : {}),
+      }
+    : {};
   // The engine needs OS paths and locale settings, not the server's provider,
   // cloud, database, or control-plane credentials. Unknown keys stay private.
   const inherited: Record<string, string> = {};
@@ -120,6 +131,7 @@ export async function createManagedOpencodeV2Server(
       OPENCODE_DB: join(options.rootDir, "opencode.db"),
       OPENCODE_CONFIG_DIR: configDir,
       ...(opencodeModelsUrl === undefined ? {} : { OPENCODE_MODELS_URL: opencodeModelsUrl }),
+      ...airgappedEnv,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -222,6 +234,7 @@ export async function createManagedOpencodeV2Server(
     await writeFile(temporary, `${JSON.stringify({
       $schema: "https://opencode.ai/config.json",
       providers: providerConfig,
+      ...(airgapped ? { share: "disabled" } : {}),
       ...(options.permissions ? { permissions: await options.permissions() } : {}),
       // v2 loads configured plugins only from folders; they are absent when
       // the server runs from source without a build.
