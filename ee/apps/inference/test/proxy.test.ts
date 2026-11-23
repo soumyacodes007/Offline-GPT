@@ -41,6 +41,9 @@ type TestServerOptions = {
   providerKey?: { encrypted_api_key: string } | null
   fetch?: typeof fetch
   usageLimited?: boolean
+  selfHostedUpstream?: { url: string; apiKey?: string } | null
+  modelCatalog?: () => Promise<readonly import("../src/model-catalog.js").ModelCatalogEntry[]>
+  modelAccess?: (key: { org_membership_id: string }) => Promise<import("../src/model-access.js").ModelAccess | null>
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -199,6 +202,9 @@ function createTestServer(options: TestServerOptions = {}) {
       }
     },
     fetch: upstreamFetch,
+    selfHostedUpstream: options.selfHostedUpstream,
+    modelCatalog: options.modelCatalog,
+    modelAccess: options.modelAccess,
     analytics: options.analytics,
     reporter,
   })
@@ -1000,5 +1006,99 @@ test("authenticates before rejecting unsupported routes", async () => {
   assert.equal(calls.findActiveInferenceKey, 0)
   assert.equal(calls.ensureUsableBuckets, 0)
   assert.equal(calls.getOpenRouterProviderKey, 0)
+  assert.equal(upstreamRequests.length, 0)
+})
+
+const selfHostedCatalog = async () => [{ alias: "qwen-small", upstreamModel: "Qwen/Qwen2.5-0.5B-Instruct", displayName: "Qwen small", enabled: true, usageFactor: 1 }]
+
+test("self-hosted upstream: lists the upstream catalog and forwards chat without an OpenRouter key", async () => {
+  const { app, upstreamRequests, calls } = createTestServer({
+    selfHostedUpstream: { url: "http://vllm.internal:8000/v1", apiKey: "vllm-key" },
+    modelCatalog: selfHostedCatalog,
+  })
+
+  const models = await app.fetch(inferenceRequest({ method: "GET", path: "/api/v1/models", headers: authHeaders() }))
+  assert.equal(models.status, 200)
+  assert.deepEqual((await models.json()).data.map((model: { id: string }) => model.id), ["qwen-small"])
+
+  const headers = authHeaders("application/json")
+  headers.set("x-offlinegpt-session-id", "ses_abc123")
+  const response = await app.fetch(inferenceRequest({
+    method: "POST", headers,
+    body: JSON.stringify({ model: "offlinegpt/qwen-small", messages: [{ role: "user", content: "hi" }] }),
+  }))
+  assert.equal(response.status, 200)
+  assert.equal(calls.getOpenRouterProviderKey, 0)
+  assert.equal(upstreamRequests.length, 1)
+  assert.equal(upstreamRequests[0].url, "http://vllm.internal:8000/v1/chat/completions")
+  assert.equal(upstreamRequests[0].headers.get("authorization"), "Bearer vllm-key")
+  assert.equal(upstreamRequests[0].headers.get("x-session-id"), "ses_abc123")
+  assert.equal(upstreamRequests[0].headers.get("x-title"), null)
+  const body = parseJsonObject(requireBodyText(upstreamRequests[0].body))
+  assert.equal(body.model, "Qwen/Qwen2.5-0.5B-Instruct")
+  assert.equal("trace" in body, false)
+  assert.equal("session_id" in body, false)
+})
+
+test("self-hosted upstream: unknown models and an unreachable catalog fail clearly", async () => {
+  const { app, upstreamRequests } = createTestServer({
+    selfHostedUpstream: { url: "http://vllm.internal:8000/v1" },
+    modelCatalog: selfHostedCatalog,
+  })
+  const unknown = await app.fetch(inferenceRequest({
+    method: "POST", headers: authHeaders("application/json"),
+    body: JSON.stringify({ model: "z-ai/glm-5.2", messages: [] }),
+  }))
+  assert.equal(unknown.status, 404)
+  assert.equal(await readErrorCode(unknown), "model_not_found")
+
+  const down = createTestServer({
+    selfHostedUpstream: { url: "http://vllm.internal:8000/v1" },
+    modelCatalog: async () => { throw new Error("connect ECONNREFUSED") },
+  })
+  const response = await down.app.fetch(inferenceRequest({ method: "GET", path: "/api/v1/models", headers: authHeaders() }))
+  assert.equal(response.status, 502)
+  assert.equal(await readErrorCode(response), "upstream_unreachable")
+  assert.equal(upstreamRequests.length, 0)
+})
+
+test("access policy: restricted models are hidden and refused, and the denial is recorded", async () => {
+  const { decideAccess } = await import("@offlinegpt-ee/den-db")
+  const denied: string[] = []
+  const catalog = async () => [
+    { alias: "main", upstreamModel: "main", displayName: "Main", enabled: true, usageFactor: 1 },
+    { alias: "coder", upstreamModel: "coder", displayName: "Coder", enabled: true, usageFactor: 1 },
+  ]
+  // Only the IT team may use "coder"; this caller is in Finance.
+  const rules = [{ id: "apr_1", resourceKind: "model" as const, resourceId: "coder", principalKind: "team" as const, principalId: "tem_it", effect: "allow" as const, expiresAt: null, removedAt: null }]
+  const principals = [{ kind: "member" as const, id: "member_123" }, { kind: "team" as const, id: "tem_finance" }, { kind: "org" as const, id: "organization_123" }]
+  const { app, upstreamRequests } = createTestServer({
+    selfHostedUpstream: { url: "http://vllm.internal:8000/v1" },
+    modelCatalog: catalog,
+    modelAccess: async () => ({
+      decide: (alias) => decideAccess({ rules, principals, resourceKind: "model", resourceId: alias, baseline: "open" }),
+      async recordDenied(alias) { denied.push(alias) },
+    }),
+  })
+
+  const models = await app.fetch(inferenceRequest({ method: "GET", path: "/api/v1/models", headers: authHeaders() }))
+  assert.deepEqual((await models.json()).data.map((model: { id: string }) => model.id), ["main"])
+
+  const refused = await app.fetch(inferenceRequest({ method: "POST", headers: authHeaders("application/json"), body: JSON.stringify({ model: "coder", messages: [] }) }))
+  assert.equal(refused.status, 403)
+  assert.equal(await readErrorCode(refused), "model_not_allowed")
+  assert.deepEqual(denied, ["coder"])
+  assert.equal(upstreamRequests.length, 0)
+
+  const allowed = await app.fetch(inferenceRequest({ method: "POST", headers: authHeaders("application/json"), body: JSON.stringify({ model: "main", messages: [] }) }))
+  assert.equal(allowed.status, 200)
+  assert.equal(upstreamRequests.length, 1)
+})
+
+test("access policy: a member who left the org is refused before any model call", async () => {
+  const { app, upstreamRequests } = createTestServer({ modelAccess: async () => null })
+  const response = await app.fetch(inferenceRequest({ method: "POST", headers: authHeaders("application/json"), body: JSON.stringify({ model: "z-ai/glm-5.2", messages: [] }) }))
+  assert.equal(response.status, 403)
+  assert.equal(await readErrorCode(response), "member_removed")
   assert.equal(upstreamRequests.length, 0)
 })
