@@ -12,6 +12,7 @@ import {
   reapOrphanEngineInstances,
 } from "./engine-registry.js";
 import { createManagedOpencodeServer, type ManagedOpencodeServer } from "./managed-opencode.js";
+import { readEngineV2PreviewState, resolveInitialEngineV2PreviewState } from "./engine-v2-preview.js";
 import { clearEnginePoolForConfig, computeEngineConfigFingerprint, type EnginePool, type EngineSpawnTemplate } from "./engine-pool.js";
 import {
   clearTrustedOpencodeProcess,
@@ -64,7 +65,10 @@ config.port = server.port;
 const serverUrl = `http://${config.host === "0.0.0.0" ? "127.0.0.1" : config.host}:${server.port}`;
 const workerActivityHeartbeat = startWorkerActivityHeartbeat(config, logger);
 
-if (!config.opencodeBaseUrl && process.env.OFFLINEGPT_MANAGE_OPENCODE === "1") {
+// With chat routed to OpenCode v2 nothing reaches the v1 engine, so it is not started.
+const engineV2State = resolveInitialEngineV2PreviewState(process.env, readEngineV2PreviewState(config));
+const engineV2Only = engineV2State.enabled && engineV2State.chatRouting === true;
+if (!config.opencodeBaseUrl && process.env.OFFLINEGPT_MANAGE_OPENCODE === "1" && !engineV2Only) {
   const workspace = findManagedEngineWorkspace(config.workspaces);
   if (workspace) {
     // Reap engines recorded by servers that died without cleanup. Best
