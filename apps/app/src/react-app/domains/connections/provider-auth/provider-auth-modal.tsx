@@ -26,6 +26,11 @@ import {
 import { toast } from "@/components/ui/sonner";
 import { openDesktopUrl } from "@/app/lib/desktop";
 import type { ClaudeCliAuthStatus } from "@/app/lib/offlinegpt-server";
+import {
+  ClaudeLoginTerminal,
+  claudeTerminalCommand,
+  isClaudeTerminalAvailable,
+} from "./claude-login-terminal";
 import { isDesktopRuntime } from "@/app/utils";
 import { compareProviders } from "@/app/utils/providers";
 import { Button } from "@/components/ui/button";
@@ -90,6 +95,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   const [claudeStatus, setClaudeStatus] = useState<ClaudeCliAuthStatus | null>(null);
   const [claudeChecking, setClaudeChecking] = useState(false);
   const [claudeCommandCopied, setClaudeCommandCopied] = useState(false);
+  const [claudeTerminal, setClaudeTerminal] = useState<"login" | "install" | null>(null);
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [oauthCodeInput, setOauthCodeInput] = useState("");
@@ -587,8 +593,26 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     }
   };
 
+  // Polled by the in-app terminal: install is done once the CLI exists, login once signed in.
+  const pollClaudeTerminal = async (kind: "login" | "install") => {
+    if (!props.onCheckClaudeCliAuth) return false;
+    try {
+      const status = await props.onCheckClaudeCliAuth();
+      setClaudeStatus(status);
+      return kind === "install" ? status.state !== "not-installed" : status.state === "signed-in";
+    } catch {
+      return false;
+    }
+  };
+
+  const finishClaudeTerminal = (kind: "login" | "install") => {
+    // After an install the user still needs to sign in, so continue straight into it.
+    setClaudeTerminal(kind === "install" ? "login" : null);
+  };
+
   const openClaudeSignIn = () => {
     setLocalError(null);
+    setClaudeTerminal(null);
     setClaudeStatus(null);
     setClaudeCommandCopied(false);
     setView("claude-cli");
@@ -607,6 +631,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   const handleBack = () => {
     if (resolvedView === "claude-cli") {
       setView("method");
+      setClaudeTerminal(null);
       setClaudeStatus(null);
       setLocalError(null);
       return;
@@ -919,7 +944,25 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                       {claudeStatus.detail}
                     </div>
                   ) : null}
-                  {claudeStatus?.state === "signed-out" || claudeStatus?.state === "not-installed" ? (
+                  {claudeTerminal ? (
+                    <ClaudeLoginTerminal
+                      key={claudeTerminal}
+                      command={claudeTerminalCommand(claudeTerminal, window.__OFFLINEGPT_ELECTRON__?.meta?.platform)}
+                      checkSignedIn={() => pollClaudeTerminal(claudeTerminal)}
+                      onSignedIn={() => finishClaudeTerminal(claudeTerminal)}
+                      onClose={() => {
+                        setClaudeTerminal(null);
+                        void checkClaudeSignIn();
+                      }}
+                    />
+                  ) : null}
+                  {!claudeTerminal && isClaudeTerminalAvailable() &&
+                  (claudeStatus?.state === "signed-out" || claudeStatus?.state === "not-installed") ? (
+                    <Button onClick={() => setClaudeTerminal(claudeStatus.state === "not-installed" ? "install" : "login")}>
+                      {claudeStatus.state === "not-installed" ? "Install and sign in" : "Sign in"}
+                    </Button>
+                  ) : null}
+                  {!claudeTerminal && (claudeStatus?.state === "signed-out" || claudeStatus?.state === "not-installed") ? (
                     <div className="space-y-2 text-xs text-gray-10">
                       <div>
                         {claudeStatus.state === "signed-out"
