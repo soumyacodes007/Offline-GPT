@@ -551,14 +551,6 @@ export function getBackgroundAgentsRoute(orgSlug?: string | null): string {
   return `${getOrgDashboardRoute(orgSlug)}/background-agents`;
 }
 
-export function getWorkflowRunsRoute(orgSlug?: string | null): string {
-  return `${getAnalyticsRoute(orgSlug)}/workflow-runs`;
-}
-
-export function getAutomationsRoute(orgSlug?: string | null): string {
-  return `${getOrgDashboardRoute(orgSlug)}/automations`;
-}
-
 export function getCustomLlmProvidersRoute(orgSlug?: string | null): string {
   return `${getOrgDashboardRoute(orgSlug)}/custom-llm-providers`;
 }
