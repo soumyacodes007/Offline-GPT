@@ -126,11 +126,30 @@ type DiagnosticMcpItem = Omit<McpItem, "source"> & {
 
 type EffectiveToolPolicyDecision = "allow" | "ask" | "deny";
 
+/** Which agent OfflineGPT chats run on, and which agent the engine defaults to. */
+type ChatAgent = {
+  name: (snapshot: EffectiveEngineSnapshot) => string;
+  defaultAgent: (snapshot: EffectiveEngineSnapshot) => string | null;
+};
+
+const V1_CHAT_AGENT: ChatAgent = { name: () => "offlinegpt", defaultAgent: (snapshot) => snapshot.defaultAgent };
+const V2_CHAT_AGENT: ChatAgent = {
+  name: (snapshot) => snapshot.defaultAgent ?? "build",
+  defaultAgent: (snapshot) => snapshot.defaultAgent ?? "build",
+};
+
 type DiagnosticDependencies = {
   fetchImpl?: typeof fetch;
   now?: () => number;
   uuid?: () => string;
   inspectEffectiveEngine?: InspectAgentDiagnosticsEngine;
+  /** Set when the engine is not the v1 connection, e.g. OpenCode v2. */
+  engineConfigured?: boolean;
+  /**
+   * OpenCode v2 runs OfflineGPT chats on its default agent (OfflineGPT's prompt
+   * arrives as session instructions) instead of an injected `offlinegpt` agent.
+   */
+  engineV2?: boolean;
   signal?: AbortSignal;
   /** Test seam for the administrator-provisioned enterprise activation read. */
   readActivatedEnterpriseOrigin?: (signal?: AbortSignal) => Promise<string | null>;
@@ -145,6 +164,7 @@ type EffectiveToolPolicyAssessment = {
 
 function assessEffectiveToolPolicy(
   snapshot: EffectiveEngineSnapshot | null,
+  chatAgent: ChatAgent,
 ): EffectiveToolPolicyAssessment {
   if (!snapshot) {
     return {
@@ -154,7 +174,7 @@ function assessEffectiveToolPolicy(
       unavailableReasons: ["effective_engine_snapshot_unavailable"],
     };
   }
-  const offlinegptAgent = snapshot.agents.find((agent) => agent.name === "offlinegpt");
+  const offlinegptAgent = snapshot.agents.find((agent) => agent.name === chatAgent.name(snapshot));
   if (!offlinegptAgent) {
     return {
       status: "unavailable",
@@ -164,7 +184,7 @@ function assessEffectiveToolPolicy(
     };
   }
   if (
-    snapshot.defaultAgent !== "offlinegpt"
+    chatAgent.defaultAgent(snapshot) !== chatAgent.name(snapshot)
     || offlinegptAgent.hidden
     || (offlinegptAgent.mode !== "primary" && offlinegptAgent.mode !== "all")
   ) {
@@ -1141,6 +1161,7 @@ function engineConfigCheck(
 }
 
 function engineAgentCheck(
+  chatAgent: ChatAgent,
   snapshot: EffectiveEngineSnapshot | null,
   inspectionStatus: "observed" | "not-configured" | "not-supplied" | "invalid" | "unavailable",
   engineApiReadPerformed: boolean,
@@ -1154,7 +1175,7 @@ function engineAgentCheck(
       durationMs,
     );
   }
-  const agent = snapshot.agents.find((candidate) => candidate.name === "offlinegpt");
+  const agent = snapshot.agents.find((candidate) => candidate.name === chatAgent.name(snapshot));
   return diagnosticCheck({
     id: "engine-agent",
     status: agent ? "passed" : "failed",
@@ -1254,7 +1275,9 @@ export async function runAgentContextDiagnostics(input: {
   const startedMs = now();
   const startedAt = new Date(startedMs).toISOString();
   const runId = uuid();
-  const engineConfigured = Boolean(resolveWorkspaceOpencodeConnection(input.config, input.workspace).baseUrl?.trim());
+  const chatAgent = input.dependencies?.engineV2 ? V2_CHAT_AGENT : V1_CHAT_AGENT;
+  const engineConfigured = input.dependencies?.engineConfigured
+    ?? Boolean(resolveWorkspaceOpencodeConnection(input.config, input.workspace).baseUrl?.trim());
 
   let effectiveEngine: EffectiveEngineSnapshot | null = null;
   let engineApiReadPerformed = false;
@@ -1307,12 +1330,13 @@ export async function runAgentContextDiagnostics(input: {
   const expectedRuntimeConfig = buildOfflineGptRuntimeConfigObjectFromSnapshot(globalRuntimeInspection.config);
   const expectedAgents = isRecord(expectedRuntimeConfig.agent) ? expectedRuntimeConfig.agent : {};
   const expectedAgent = isRecord(expectedAgents.offlinegpt) ? expectedAgents.offlinegpt : null;
-  const effectiveOfflineGptAgent = effectiveEngine?.agents.find((agent) => agent.name === "offlinegpt") ?? null;
+  const effectiveOfflineGptAgent = effectiveEngine?.agents.find((agent) => agent.name === chatAgent.name(effectiveEngine)) ?? null;
   const effectiveAgentModeUsable = effectiveOfflineGptAgent?.mode === "primary"
     || effectiveOfflineGptAgent?.mode === "all";
   const effectiveAgentUsable = Boolean(
     effectiveOfflineGptAgent
-    && effectiveEngine?.defaultAgent === "offlinegpt"
+    && effectiveEngine
+    && chatAgent.defaultAgent(effectiveEngine) === chatAgent.name(effectiveEngine)
     && !effectiveOfflineGptAgent.hidden
     && effectiveAgentModeUsable,
   );
@@ -1342,10 +1366,14 @@ export async function runAgentContextDiagnostics(input: {
   const canonicalConnectPluginSpec = expectedPlugins.find(
     (spec) => pluginLabel(spec) === "offlinegpt-extensions-preview",
   ) ?? null;
-  const canonicalPluginSpecMatched = canonicalConnectPluginSpec !== null
-    && reportedPlugins.some(
-      (reportedPlugin) => pluginSpecIdentity(reportedPlugin) === pluginSpecIdentity(canonicalConnectPluginSpec),
-    );
+  // OpenCode v2 loads the Connect tools from the offlinegpt-tools plugin folder; the
+  // server sends the steering text as a session instruction entry.
+  const canonicalPluginSpecMatched = chatAgent === V2_CHAT_AGENT
+    ? reportedPlugins.some((reportedPlugin) => pluginLabel(reportedPlugin) === "offlinegpt-tools")
+    : canonicalConnectPluginSpec !== null
+      && reportedPlugins.some(
+        (reportedPlugin) => pluginSpecIdentity(reportedPlugin) === pluginSpecIdentity(canonicalConnectPluginSpec),
+      );
 
   const projectAgent = effectiveEngine
     ? {
@@ -1402,7 +1430,7 @@ export async function runAgentContextDiagnostics(input: {
     ...item,
     source: "engine.config" as const,
     disabledByTools: item.name === OFFLINEGPT_CLOUD_MCP_NAME
-      ? assessEffectiveToolPolicy(effectiveEngine).status === "denied" || undefined
+      ? assessEffectiveToolPolicy(effectiveEngine, chatAgent).status === "denied" || undefined
       : undefined,
   }));
   const inventoryTotal = inventory.items.length + (engineConfigItems?.length ?? 0);
@@ -1433,7 +1461,7 @@ export async function runAgentContextDiagnostics(input: {
   const runtimeCloudConfig = runtimeMcpMap(runtime)[OFFLINEGPT_CLOUD_MCP_NAME] ?? null;
   const runtimeCloudRegistration = runtimeCloudItem && runtimeCloudConfig ? registrationForItem(runtimeCloudItem) : null;
   const staticallyDeniedCloudAgentToolIds = new Set(inventory.toolPolicy.deniedToolIds);
-  const effectiveToolPolicy = assessEffectiveToolPolicy(effectiveEngine);
+  const effectiveToolPolicy = assessEffectiveToolPolicy(effectiveEngine, chatAgent);
   const cloudToolPolicyStatus = effectiveEngine
     ? effectiveToolPolicy.status
     : staticallyDeniedCloudAgentToolIds.size > 0
@@ -1614,7 +1642,7 @@ export async function runAgentContextDiagnostics(input: {
       code: effectiveEngine
         ? !effectiveOfflineGptAgent
           ? "effective_offlinegpt_agent_missing"
-          : effectiveEngine.defaultAgent !== "offlinegpt"
+          : chatAgent.defaultAgent(effectiveEngine) !== chatAgent.name(effectiveEngine)
             ? "effective_default_agent_mismatch"
             : effectiveOfflineGptAgent.hidden
               ? "effective_offlinegpt_agent_hidden"
@@ -1627,7 +1655,7 @@ export async function runAgentContextDiagnostics(input: {
       message: effectiveEngine
         ? !effectiveOfflineGptAgent
           ? "The effective engine configuration does not contain the OfflineGPT agent."
-          : effectiveEngine.defaultAgent !== "offlinegpt"
+          : chatAgent.defaultAgent(effectiveEngine) !== chatAgent.name(effectiveEngine)
             ? "The effective engine default does not select the OfflineGPT agent."
             : effectiveOfflineGptAgent.hidden
               ? "The effective OfflineGPT agent is hidden and cannot be used as the default agent."
@@ -1646,7 +1674,7 @@ export async function runAgentContextDiagnostics(input: {
       details: {
         configuredAgentPresent: Boolean(expectedAgent),
         effectiveAgentPresent: effectiveEngine ? Boolean(effectiveOfflineGptAgent) : null,
-        effectiveDefaultAgentIsOfflineGpt: effectiveEngine ? effectiveEngine.defaultAgent === "offlinegpt" : null,
+        effectiveDefaultAgentIsOfflineGpt: effectiveEngine ? chatAgent.defaultAgent(effectiveEngine) === chatAgent.name(effectiveEngine) : null,
         effectiveAgentHidden: effectiveOfflineGptAgent?.hidden ?? null,
         effectiveAgentMode: effectiveOfflineGptAgent?.mode ?? null,
         effectiveAgentUsableAsDefault: effectiveEngine ? effectiveAgentUsable : null,
@@ -1657,7 +1685,16 @@ export async function runAgentContextDiagnostics(input: {
         runtimeInspectionStatus: runtimeInspection.status,
       },
     }),
-    diagnosticCheck({
+    chatAgent === V2_CHAT_AGENT ? diagnosticCheck({
+      id: "agent-prompt-markers",
+      status: "skipped",
+      evidenceKind: "expected",
+      code: "prompt_delivered_as_session_instructions",
+      message: "OpenCode v2 receives the OfflineGPT base prompt as per-session instructions, not inside an agent definition.",
+      owner: "offlinegpt-server",
+      action: "No action is required.",
+      details: { engine: "opencode-v2" },
+    }) : diagnosticCheck({
       id: "agent-prompt-markers",
       status: promptMatchesCanonicalIntent ? "passed" : "failed",
       evidenceKind: effectiveEngine ? "observed" : "expected",
@@ -1826,7 +1863,7 @@ export async function runAgentContextDiagnostics(input: {
       },
     }),
     engineConfigCheck(effectiveEngine, engineInspectionStatus, engineApiReadPerformed, engineInspectionDuration),
-    engineAgentCheck(effectiveEngine, engineInspectionStatus, engineApiReadPerformed, engineInspectionDuration),
+    engineAgentCheck(chatAgent, effectiveEngine, engineInspectionStatus, engineApiReadPerformed, engineInspectionDuration),
     diagnosticCheck({
       id: "engine-plugin-tools",
       status: "warning",
