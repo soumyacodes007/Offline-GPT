@@ -1,7 +1,6 @@
 import {
   BarChart3,
   Box,
-  CalendarClock,
   Globe,
   Home,
   LayoutDashboard,
@@ -19,7 +18,6 @@ import {
   type DenOrgCapabilities,
   getAnalyticsRoute,
   getApiKeysRoute,
-  getAutomationsRoute,
   getBillingRoute,
   getBrandAppearanceRoute,
   getCustomLlmProvidersRoute,
@@ -88,7 +86,6 @@ export function buildDashboardNavSections({
   orgMode,
   runtimeConfigLoaded,
 }: BuildDashboardNavSectionsInput): DashboardNavSection[] {
-  const workflowsEnabled = capabilities.workflows;
   const showWeb = runtimeConfigLoaded && capabilities.offlinegptWeb;
   const workItems: DashboardNavItem[] = [
     {
@@ -101,9 +98,6 @@ export function buildDashboardNavSections({
       label: "My Library",
       icon: LibraryBig,
     },
-    ...(workflowsEnabled && orgSlug
-      ? [{ href: getAutomationsRoute(orgSlug), label: "My Automations", icon: CalendarClock }]
-      : []),
     ...(showWeb
       ? [{ href: orgSlug ? getWebRoute(orgSlug) : "#", label: "OfflineGPT Web", icon: Globe }]
       : []),
@@ -200,7 +194,7 @@ export function buildDashboardNavSections({
 // Alias order is ranking priority in the command palette.
 const PAGE_KEYWORDS: Record<string, string[]> = {
   Advanced: ["policy", "desktop policies", "mdm", "lock", "marketplace", "branding"],
-  Analytics: ["usage", "stats", "consumption", "workflow runs", "history", "langfuse"],
+  Analytics: ["usage", "stats", "consumption", "history", "langfuse"],
   "API Keys": ["token", "secret"],
   Billing: ["plan", "invoice", "payment"],
   "Bring your Own Keys": ["llm", "provider", "byok", "api key"],
@@ -211,7 +205,6 @@ const PAGE_KEYWORDS: Record<string, string[]> = {
   General: ["organization", "workspace"],
   Members: ["people", "users", "invite", "teams", "roles"],
   Models: ["llm", "provider", "byok", "api key"],
-  "My Automations": ["schedule", "recurring", "tasks"],
   "My Library": ["skills", "plugins", "connections"],
   "OfflineGPT Models": ["llm", "provider", "managed", "inference"],
   "OfflineGPT Web": ["cloud", "sessions"],
