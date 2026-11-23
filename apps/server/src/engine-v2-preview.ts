@@ -1,5 +1,7 @@
+import { randomBytes } from "node:crypto";
 import { executionRules } from "./managed-policy-rules.js";
 import { managedDesktopPolicy } from "./managed-desktop-policy.js";
+import { readClaudeCliAuthStatus } from "./claude-cli-auth.js";
 import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -64,6 +66,10 @@ export interface EngineV2Preview {
   connection(): { url: string; username: string; password: string } | undefined;
   ensureWorkspaceReady(directory: string): Promise<void>;
   syncWorkspaceMcp(workspaceId: string, directory: string): Promise<void>;
+  /** Call the running v2 engine; throws when it is not running. */
+  fetchJson: ManagedOpencodeV2Server["fetchJson"];
+  /** Per-boot secret the engine's OfflineGPT plugins present to narrow internal routes. */
+  readonly pluginToken: string;
   stop(): Promise<void>;
 }
 
@@ -300,6 +306,7 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
   const { config } = options;
   const rootDir = join(runtimeStorageDir(config), "opencode-v2", "state");
   const workspaceDir = join(rootDir, "workspace");
+  const pluginToken = randomBytes(32).toString("base64url");
   const initialState = resolveInitialEngineV2PreviewState(process.env, readEngineV2PreviewState(config));
   let enabled = initialState.enabled;
   let chatRouting = initialState.chatRouting === true;
@@ -340,6 +347,18 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
       }));
       const applied = workspaceMcp.get(directory) ?? new Map<string, string>();
       workspaceMcp.set(directory, applied);
+      // Runtime registrations live in the location, which v2 disposes and
+      // reloads (idle eviction, plugin reloads). Forget any it no longer has
+      // so they are registered again instead of staying missing.
+      if (applied.size > 0) {
+        const live = await active.fetchJson("/api/mcp", { directory, timeoutMs: 5_000 });
+        const entries = isRecord(live.json) ? live.json.data : undefined;
+        if (live.status === 200 && Array.isArray(entries)) {
+          for (const name of [...applied.keys()]) {
+            if (!entries.some((entry) => isRecord(entry) && entry.name === name)) applied.delete(name);
+          }
+        }
+      }
       let changed = false;
       // Remove first so a failed replacement cannot leave an old credential or
       // revoked tool active. Only touch registrations owned by this mirror.
@@ -485,6 +504,31 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
     }
   }
 
+  // OpenCode v2's Claude Agent provider runs the user's own `claude`; connecting only records that choice.
+  async function connectClaudeAgent(managed: ManagedOpencodeV2Server): Promise<void> {
+    if ((await readClaudeCliAuthStatus()).state !== "signed-in") return;
+    // Plugins finish activating a while after the server answers, and requests fail with 503 until then.
+    const deadline = Date.now() + 90_000;
+    for (;;) {
+      if (sidecar !== managed) return;
+      const integration = await managed.fetchJson("/api/integration/claude-agent", { directory: workspaceDir, timeoutMs: 10_000 }).catch(() => undefined);
+      if (integration?.status === 200) {
+        const data = isRecord(integration.json) ? integration.json.data : undefined;
+        if (isRecord(data) && Array.isArray(data.connections) && data.connections.length > 0) return;
+        const connected = await managed.fetchJson("/api/integration/claude-agent/connect/external", {
+          method: "POST",
+          body: { methodID: "claude-login" },
+          directory: workspaceDir,
+          timeoutMs: 30_000,
+        });
+        if (connected.status >= 400) throw new Error(`connect returned HTTP ${connected.status}`);
+        return;
+      }
+      if (Date.now() > deadline) throw new Error("OpenCode v2 was not ready to connect Claude");
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+    }
+  }
+
   async function startSidecar(): Promise<void> {
     const resolved = await resolveBinary(config);
     binSource = resolved.source;
@@ -494,7 +538,17 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
     const managed = await createManagedOpencodeV2Server({
       bin: resolved.bin,
       rootDir,
-      env: { OPENCODE_MODELS_URL: opencodeModelsUrl, OFFLINEGPT_SERVER_URL: `http://127.0.0.1:${config.port}`, OFFLINEGPT_POLICY_TOKEN: managedDesktopPolicy(config).evaluationToken },
+      env: {
+        OPENCODE_MODELS_URL: opencodeModelsUrl,
+        OFFLINEGPT_SERVER_URL: `http://127.0.0.1:${config.port}`,
+        OFFLINEGPT_V2_PLUGIN_TOKEN: pluginToken,
+        OFFLINEGPT_POLICY_TOKEN: managedDesktopPolicy(config).evaluationToken,
+        // Dev mode sandboxes HOME. The engine needs the real one to load the user's skills
+        // and so the Claude Agent provider's `claude` finds the user's login.
+        ...(process.env.OFFLINEGPT_REAL_HOME
+          ? { HOME: process.env.OFFLINEGPT_REAL_HOME, USERPROFILE: process.env.OFFLINEGPT_REAL_HOME }
+          : {}),
+      },
       permissions: async () => executionRules((await readGlobalRuntimeOpencodeConfig(config)).managedPolicy?.execution),
     });
     sidecar = managed;
@@ -523,6 +577,7 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
       unsubscribe = () => { unsubscribeConfig(); unsubscribeEnv?.(); };
       scheduleMirror();
       if (mirrorInFlight) await mirrorInFlight;
+      void connectClaudeAgent(managed).catch((error) => { lastError = `Claude Agent: ${errorMessage(error)}`; });
       if (!enabled || !allowRunning) {
         await closeSidecar();
         return;
@@ -627,5 +682,10 @@ export function createEngineV2Preview(options: { config: ServerConfig; env?: Pic
     if (enabled) void start().catch(recordStartError);
   }
   if (!options.deferStart) startWhenReady();
-  return { start: startWhenReady, status, setEnabled, setChatRouting, connection, ensureWorkspaceReady, syncWorkspaceMcp, stop };
+  async function fetchJson(...args: Parameters<ManagedOpencodeV2Server["fetchJson"]>): ReturnType<ManagedOpencodeV2Server["fetchJson"]> {
+    if (!sidecar) throw new Error("OpenCode v2 is not running");
+    return sidecar.fetchJson(...args);
+  }
+
+  return { start: startWhenReady, status, setEnabled, setChatRouting, connection, ensureWorkspaceReady, syncWorkspaceMcp, fetchJson, pluginToken, stop };
 }
