@@ -1,4 +1,3 @@
-import { workflowRunPreviewSchema, type WorkflowRunPreview } from "@offlinegpt/types/workflows";
 import { DEN_WORKER_POLL_INTERVAL_MS } from "./CONSTS";
 import { denApiCredentials, denApiEndpoint } from "./den-api-origin";
 import { ORG_SCOPE_HEADER, getRequestOrgScope, shouldPinOrgScopePath } from "./org-scope";
@@ -163,22 +162,6 @@ export type WorkerListItem = {
   provider: string | null;
   isMine: boolean;
   createdAt: string | null;
-};
-
-export type WorkflowRun = {
-  id: string;
-  workflow: WorkflowRunPreview | null;
-  source: string;
-  status: "succeeded" | "failed";
-  errorKind: string | null;
-  errorMessage: string | null;
-  toolCallCount: number;
-  toolCalls: Array<{ name: string }>;
-  durationMs: number;
-  startedAt: string;
-  finishedAt: string;
-  createdAt: string;
-  orgMembershipId: string | null;
 };
 
 export type WorkerRuntimeService = {
@@ -880,55 +863,6 @@ export function getWorkersList(payload: unknown): WorkerListItem[] {
   }
 
   return rows;
-}
-
-function parseWorkflowRun(value: unknown): WorkflowRun | null {
-  if (
-    !isRecord(value)
-    || typeof value.id !== "string"
-    || typeof value.source !== "string"
-    || (value.status !== "succeeded" && value.status !== "failed")
-    || typeof value.toolCallCount !== "number"
-    || typeof value.durationMs !== "number"
-    || typeof value.startedAt !== "string"
-    || typeof value.finishedAt !== "string"
-    || typeof value.createdAt !== "string"
-  ) {
-    return null;
-  }
-
-  const toolCalls = Array.isArray(value.toolCalls)
-    ? value.toolCalls.flatMap((call) =>
-        isRecord(call) && typeof call.name === "string" ? [{ name: call.name }] : [],
-      )
-    : [];
-  const workflow = workflowRunPreviewSchema.safeParse(value.workflow);
-
-  return {
-    id: value.id,
-    workflow: workflow.success ? workflow.data : null,
-    source: value.source,
-    status: value.status,
-    errorKind: typeof value.errorKind === "string" ? value.errorKind : null,
-    errorMessage: typeof value.errorMessage === "string" ? value.errorMessage : null,
-    toolCallCount: value.toolCallCount,
-    toolCalls,
-    durationMs: value.durationMs,
-    startedAt: value.startedAt,
-    finishedAt: value.finishedAt,
-    createdAt: value.createdAt,
-    orgMembershipId: typeof value.orgMembershipId === "string" ? value.orgMembershipId : null,
-  };
-}
-
-export function getWorkflowRuns(payload: unknown): WorkflowRun[] {
-  if (!isRecord(payload) || !Array.isArray(payload.runs)) {
-    return [];
-  }
-  return payload.runs.flatMap((run) => {
-    const parsed = parseWorkflowRun(run);
-    return parsed ? [parsed] : [];
-  });
 }
 
 export function getWorkerStatusMeta(status: string): { label: string; bucket: WorkerStatusBucket } {
