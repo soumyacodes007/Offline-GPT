@@ -118,7 +118,6 @@ import { isPluginArchOrgAdmin, requirePluginArchCapability, type PluginArchActor
 import { pluginArchRoutePaths } from "./contracts.js"
 import { ensureOrganizationAdmin, orgAccessFailureStatus } from "../shared.js"
 import { isAgentOAuthClientConnection, listMemberUsableConnectionFacts } from "../mcp-connections.js"
-import { listWorkflowLibraryItems } from "../../../workflow-library.js"
 import {
   PluginArchRouteFailure,
   addPluginMembership,
@@ -1052,7 +1051,7 @@ export function registerPluginArchRoutes<T extends { Variables: OrgRouteVariable
     describeRoute({
       tags: ["Plugins"],
       summary: "List my library",
-      description: "Lists the Workflows, Remote MCP Apps, plugins, and connections the caller can use, with every applicable access edge. Workflows and Remote MCP Apps remain config objects contained by their parent OfflineGPT Connect Plugin.",
+      description: "Lists the Remote MCP Apps, plugins, and connections the caller can use, with every applicable access edge. Remote MCP Apps remain config objects contained by their parent OfflineGPT Connect Plugin.",
       responses: {
         200: jsonResponse("Effective member library returned successfully.", meLibraryListResponseSchema),
         401: jsonResponse("The caller must be signed in to view their library.", unauthorizedSchema),
@@ -1061,13 +1060,12 @@ export function registerPluginArchRoutes<T extends { Variables: OrgRouteVariable
     async (c: OrgContext) => {
       try {
         const context = actorContext(c)
-        const [pluginItems, connections, workflowItems] = await Promise.all([
+        const [pluginItems, connections] = await Promise.all([
           listMeLibraryPluginItems({ context }),
           listMemberUsableConnectionFacts({ context }),
-          listWorkflowLibraryItems({ context }),
         ])
         const connectionItems = await listMeLibraryConnectionItems({ connections, context })
-        const items = [...pluginItems, ...connectionItems, ...workflowItems]
+        const items = [...pluginItems, ...connectionItems]
         items.sort((left, right) => {
           const byName = left.name.localeCompare(right.name)
           return byName !== 0 ? byName : left.id.localeCompare(right.id)
