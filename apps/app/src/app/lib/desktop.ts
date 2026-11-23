@@ -158,9 +158,6 @@ declare global {
         command: C,
         ...args: DesktopCommandArgs<C>
       ) => Promise<DesktopCommandResult<C>>;
-      automationRunner?: {
-        onCredentialRejected?: (callback: () => void) => () => void;
-      };
       fileSystem?: {
         getPathForFile?: (file: File) => string;
       };
