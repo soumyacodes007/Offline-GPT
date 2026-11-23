@@ -62,7 +62,6 @@ import { downloadBinaryToPath, uploadMultipartFromBytes } from "./binary-transfe
 import {
   createLinuxDesktopIntegration,
 } from "./linux-desktop-integration.mjs";
-import { createDesktopAutomationRunner, normalizeRunnerBaseUrl } from "./automation-runner.mjs";
 import {
   desktopActivationRequired,
   enterprisePreactivationCommandAllowed,
@@ -107,7 +106,6 @@ const {
   nativeImage,
   nativeTheme,
   net: electronNet,
-  powerMonitor,
   Notification: ElectronNotification,
   session,
   shell,
@@ -115,7 +113,6 @@ const {
 } = require("electron");
 const pty = require(["node", "pty"].join("-"));
 const NATIVE_DEEP_LINK_EVENT = "offlinegpt:deep-link-native";
-const AUTOMATION_RUNNER_CREDENTIAL_REJECTED_EVENT = "offlinegpt:automation-runner:credential-rejected";
 const isDevMode = process.env.OFFLINEGPT_DEV_MODE === "1";
 const DESKTOP_DISTRIBUTION = resolveDesktopDistribution({
   isPackaged: app.isPackaged,
@@ -1317,41 +1314,6 @@ const runtimeManager = createRuntimeManager({
       }),
 });
 const initialRunnerBootstrap = workspaceStore.readDesktopBootstrapConfigSync();
-const legacyRunnerBaseUrls = [
-  initialRunnerBootstrap.apiBaseUrl,
-  initialRunnerBootstrap.baseUrl,
-  initialRunnerBootstrap.baseUrl
-    ? `${String(initialRunnerBootstrap.baseUrl).replace(/\/+$/, "")}/api/den`
-    : null,
-  `${DEFAULT_DEN_BASE_URL}/api/den`,
-].map((value) => normalizeRunnerBaseUrl(value)).filter(Boolean);
-const desktopAutomationRunner = createDesktopAutomationRunner({
-  // v1 credentials predate token audiences. Keep them usable during the Den
-  // rollout only for endpoints trusted before the renderer starts issuing IPC.
-  legacyBaseUrls: legacyRunnerBaseUrls,
-  getLocalRuntime: async () => {
-    const server = await runtimeManager.offlinegptServerInfo();
-    return { baseUrl: server.baseUrl, token: server.clientToken ?? server.ownerToken };
-  },
-  log: (state) => console.info(`[automation-runner] ${state}`),
-  onCredentialRejected: () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    mainWindow.webContents.send(AUTOMATION_RUNNER_CREDENTIAL_REJECTED_EVENT);
-  },
-});
-
-// Scheduled Automations are due at wall-clock times a laptop routinely sleeps
-// through. Waking the machine has to poll for work now, not up to a full poll
-// interval later, or a recovered occurrence sits queued while the desktop is
-// already back.
-const wakeAutomationRunner = (wakeEvent) => {
-  if (desktopAutomationRunner.wake().polled) {
-    console.info(`[automation-runner] polling for work after ${wakeEvent}`);
-  }
-};
-powerMonitor.on("resume", () => wakeAutomationRunner("resume"));
-powerMonitor.on("unlock-screen", () => wakeAutomationRunner("unlock-screen"));
-
 let runtimeDisposedForQuit = false;
 let runtimeDisposeInProgress = false;
 let runtimeBootstrapPromise = null;
@@ -2052,9 +2014,6 @@ const desktopCommandHandlers = {
   },
   "offlinegptServerInfo": async (event, ...args) => {
       return runtimeManager.offlinegptServerInfo();
-  },
-  "automationRunnerConfigure": async (event, ...args) => {
-      return desktopAutomationRunner.configure(args[0] ?? null);
   },
   "offlinegptServerRestart": async (event, ...args) => {
       return runtimeManager.offlinegptServerRestart(args[0] ?? {});
@@ -2826,7 +2785,6 @@ or use: pnpm dev:worktree`);
     event.preventDefault();
     if (runtimeDisposeInProgress) return;
     showShutdownScreen();
-    desktopAutomationRunner.stop();
     browserLoginSync.shutdown();
     runDetachedTask("stop services before quit", async () => {
       try {
