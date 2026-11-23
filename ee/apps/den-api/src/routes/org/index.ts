@@ -1,6 +1,7 @@
 import type { Hono } from "hono"
 import type { RequestIdVariables } from "hono/request-id"
 import { delegatedRoute } from "../../middleware/index.js"
+import { registerOrgAccessPolicyRoutes } from "./access-policy.js"
 import { registerOrgApiKeyRoutes } from "./api-keys.js"
 import { registerOrgBillingRoutes } from "./billing.js"
 import { registerOrgBrandAssetRoutes } from "./brand-assets.js"
@@ -63,6 +64,7 @@ export function registerOrgRoutes<T extends { Variables: OrgRouteVariables & Req
   registerOrgBrandAssetRoutes(app)
   registerOrgDashboardRoutes(app)
   registerOrgDesktopPolicyRoutes(app)
+  registerOrgAccessPolicyRoutes(app)
   registerOrgEgressDiagnosticRoutes(app)
   registerOrgInferenceRoutes(app)
   registerModelsAnalyticsRoutes(app)
