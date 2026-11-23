@@ -1,5 +1,6 @@
 import "./load-env.js";
 import type { DenDbMode, PlanetScaleCredentials } from "@offlinegpt-ee/den-db";
+import { assertNoPublicServices, isAirgapped } from "@offlinegpt-ee/utils/edition";
 import { z } from "zod";
 
 const EnvSchema = z
@@ -14,6 +15,9 @@ const EnvSchema = z
     DEN_DB_ENCRYPTION_KEY: z.string().trim().min(32),
     INFERENCE_PROXY_BASE_URL: z.string().optional(),
     OPENROUTER_UPSTREAM_URL: z.string().optional(),
+    INFERENCE_UPSTREAM_URL: z.string().optional(),
+    INFERENCE_UPSTREAM_API_KEY: z.string().optional(),
+    INFERENCE_MODELS: z.string().optional(),
     INFERENCE_UPSTREAM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(900000).default(120000),
     INFERENCE_STREAM_IDLE_MS: z.coerce.number().int().min(1000).max(900000).default(120000),
     OPENAI_REALTIME_API_KEY: z.string().optional(),
@@ -68,6 +72,29 @@ const parsed = EnvSchema.parse({
     process.env.INFERENCE_WEBHOOK_SECRET ??
     (isDevMode ? "local-dev-webhook-secret" : undefined),
 });
+
+if (isAirgapped) {
+  assertNoPublicServices(process.env, ["OPENROUTER_UPSTREAM_URL", "OPENAI_REALTIME_API_KEY", "OPENAI_API_KEY", "SENTRY_DSN"], "inference");
+  if (!parsed.INFERENCE_UPSTREAM_URL?.trim()) {
+    throw new Error("inference: OFFLINEGPT_EDITION=airgapped requires INFERENCE_UPSTREAM_URL (your vLLM or other OpenAI-compatible server, e.g. http://vllm:8000/v1).");
+  }
+  if (!parsed.INFERENCE_PROXY_BASE_URL?.trim()) {
+    throw new Error("inference: OFFLINEGPT_EDITION=airgapped requires INFERENCE_PROXY_BASE_URL, the internal URL workspaces use to reach this service (e.g. http://inference:8791).");
+  }
+}
+
+function optionalHttpUrl(name: string, value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    throw new Error(`${name} must be an absolute http(s) URL`);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error(`${name} must be an absolute http(s) URL`);
+  return trimmed.replace(/\/+$/, "");
+}
 
 function optionalString(value: string | undefined) {
   const trimmed = value?.trim();
@@ -126,6 +153,13 @@ export const env = {
   openRouterUpstreamUrl: normalizeUrl(
     parsed.OPENROUTER_UPSTREAM_URL ?? "https://openrouter.ai/api/v1",
   ),
+  // A self-hosted OpenAI-compatible upstream (vLLM, the vLLM router, ...).
+  // When set, requests go there instead of OpenRouter and no per-org
+  // OpenRouter key is needed.
+  selfHostedUpstream: (() => {
+    const url = optionalHttpUrl("INFERENCE_UPSTREAM_URL", parsed.INFERENCE_UPSTREAM_URL);
+    return url ? { url, apiKey: optionalString(parsed.INFERENCE_UPSTREAM_API_KEY), models: optionalString(parsed.INFERENCE_MODELS) } : null;
+  })(),
   openAiRealtimeApiKey: optionalString(parsed.OPENAI_REALTIME_API_KEY) ?? optionalString(parsed.OPENAI_API_KEY),
   adminToken: optionalString(parsed.INFERENCE_ADMIN_TOKEN),
   webhookSecret: optionalString(parsed.INFERENCE_WEBHOOK_SECRET),
