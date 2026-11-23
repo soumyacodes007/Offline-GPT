@@ -8,6 +8,10 @@ image:
 imagePullSecrets: []
 
 config:
+  # "hosted" (default) or "airgapped". The air-gapped edition refuses settings
+  # that call public services and needs inference.upstreamUrl (see
+  # examples/values.airgapped.yaml).
+  edition: hosted
   databaseMode: mysql
   offlinegptDevMode: "0"
   # Passed to the den-api Node.js process as NODE_OPTIONS at container startup.
@@ -110,6 +114,12 @@ config:
     stripeInferencePriceId: ""
     openRouterUpstreamUrl: ""
     creditsPerDollar: ""
+    # Self-hosted OpenAI-compatible upstream (vLLM, the vLLM router, ...).
+    # Defaults to the in-chart vLLM service when vllm.enabled is true.
+    upstreamUrl: ""
+    # Optional JSON list of { alias, upstreamModel?, displayName?, contextLength? };
+    # empty means read the upstream's GET /models.
+    models: ""
   web:
     posthogKey: ""
     posthogHost: ""
@@ -320,3 +330,24 @@ ingress:
     path: /
     pathType: Prefix
   tls: []
+
+# Self-hosted model server for the air-gapped edition. The model is read from
+# a PersistentVolumeClaim prepared offline; nothing is downloaded.
+vllm:
+  enabled: false
+  image:
+    repository: vllm/vllm-openai
+    tag: v0.11.0
+  modelsClaim: ""
+  modelDir: Qwen2.5-0.5B-Instruct
+  servedModelName: main
+  maxModelLen: 8192
+  gpuMemoryUtilization: "0.85"
+  toolCallParser: hermes
+  extraArgs: []
+  containerPort: 8000
+  resources:
+    limits:
+      nvidia.com/gpu: 1
+  nodeSelector: {}
+  tolerations: []
