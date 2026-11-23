@@ -217,7 +217,7 @@ describe("workspace run mode API", () => {
     expect(await (await put("approve")).json()).toMatchObject({ mode: "approve", changed: true, refresh: "deferred" });
   });
 
-  test("blocks unsupported configs and the live v2 chat-routing flag without touching the file", async () => {
+  test("blocks unsupported configs, and with v2 routing never writes before v2 confirms idle", async () => {
     const { root, origin, base, put, engineState } = await startModeServer();
     for (const content of ['{"permission":"deny"}', '{"permission":{"*":{}}}', '{"permission":']) {
       await writeFile(opencodeConfigPath(root), content);
@@ -229,8 +229,11 @@ describe("workspace run mode API", () => {
     await writeFile(opencodeConfigPath(root), valid);
     const toggle = await fetch(`${origin}/experimental/engine-v2-preview`, { method: "PUT", headers, body: JSON.stringify({ chatRouting: true }) });
     expect(toggle.status).toBe(200);
-    expect(await (await fetch(base, { headers })).json()).toMatchObject({ mode: "approve", supported: false, reason: expect.stringContaining("v2") });
-    expect((await put("run-everything")).status).toBe(409);
+    // Run modes work on v2, but this fixture's v2 engine is not running, so activity is unknown.
+    expect(await (await fetch(base, { headers })).json()).toMatchObject({ mode: "approve", supported: true });
+    const blocked = await put("run-everything");
+    expect(blocked.status).toBe(409);
+    expect(await blocked.json()).toMatchObject({ code: "workspace_run_mode_activity_unknown" });
     expect(await readFile(opencodeConfigPath(root), "utf8")).toBe(valid);
     expect(engineState.disposals).toBe(0);
   });
