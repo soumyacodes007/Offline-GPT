@@ -31,6 +31,11 @@ export function offlinegptPluginPath(name: string, here?: string): string {
   return join(here, "opencode-plugins", `${name}.${extension}`);
 }
 
+/** OpenCode v2 plugins are folders, built beside the v1 plugin directory. */
+export function offlinegptV2PluginPath(name: string): string {
+  return join(dirname(dirname(offlinegptPluginPath(name))), "opencode-plugins-v2", name);
+}
+
 export const offlinegptExtensionsPreviewPluginPath = () => offlinegptPluginPath("offlinegpt-extensions-preview");
 export const offlinegptChromeDevtoolsPluginPath = () => offlinegptPluginPath("offlinegpt-chrome-devtools");
 export const offlinegptCapabilitiesKnowledgePluginPath = () => offlinegptPluginPath("offlinegpt-capabilities-knowledge");
