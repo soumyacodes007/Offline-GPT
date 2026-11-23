@@ -76,7 +76,6 @@ import { resolveOrganizationMemberAuthority } from "../../../organization-team-r
 import { env } from "../../../env.js"
 import { appLogger } from "../../../observability/logger.js"
 import { roleIncludesOwner } from "../../../orgs.js"
-import { redactWorkflowNormalizedPayloadAuthoringDetails } from "../../../workflow-projections.js"
 import { memberFacingMcpConnectionsEnabled } from "../../../capability-sources/external-mcp-rollout.js"
 import { comparablePluginMcpRequirementUrl, marketplaceMcpServerEntries, resolveMarketplacePluginCloudReadiness } from "../../../mcp/marketplace-capabilities.js"
 import { assertPublicUrl } from "../../../capability-sources/url-guard.js"
@@ -731,7 +730,7 @@ function serializeVersion(row: ConfigObjectVersionRow) {
     id: row.id,
     isDeletedVersion: row.isDeletedVersion,
     normalizedPayloadJson: isCodemodeWorkflowVersion
-      ? redactWorkflowNormalizedPayloadAuthoringDetails(row.normalizedPayloadJson)
+      ? withoutExampleInput(row.normalizedPayloadJson)
       : row.normalizedPayloadJson,
     rawSourceText: isCodemodeWorkflowVersion ? null : row.rawSourceText,
     schemaVersion: row.schemaVersion,
@@ -7712,4 +7711,10 @@ export async function enqueueGithubWebhookSync(input: {
   return queuedIds.length > 0
     ? { accepted: true as const, queued: true as const, syncEventIds: queuedIds }
     : { accepted: false as const, reason: "event ignored" }
+}
+
+/** Old workflow objects may still sit in a library; never return their example input. */
+function withoutExampleInput(payload: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!payload) return null
+  return Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "exampleInput"))
 }
