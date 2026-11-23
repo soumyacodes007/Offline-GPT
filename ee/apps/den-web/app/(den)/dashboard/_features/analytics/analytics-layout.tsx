@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowUpRight, BarChart3, Sparkles, ScrollText } from "lucide-react";
-import { getAnalyticsRoute, getModelsAnalyticsRoute, getWorkflowRunsRoute } from "../../../_lib/den-org";
+import { getAnalyticsRoute, getModelsAnalyticsRoute } from "../../../_lib/den-org";
 import { useOrgDashboard } from "../../_providers/org-dashboard-provider";
 import { useDenFlow } from "../../../_providers/den-flow-provider";
 
@@ -19,7 +19,6 @@ export function AnalyticsPageHeader({ orgSlug, active, title, description, actio
   const pages = [
     { id: "adoption", label: "Usage & adoption", href: getAnalyticsRoute(orgSlug), icon: BarChart3 },
     ...(runtimeConfig.orgMode === "single_org" ? [] : [{ id: "models", label: "Models & usage", href: getModelsAnalyticsRoute(orgSlug), icon: Sparkles }]),
-    ...(orgContext?.capabilities.workflows && orgContext.entitlements.analytics ? [{ id: "workflows", label: "Workflow Runs", href: getWorkflowRunsRoute(orgSlug), icon: ScrollText }] : []),
   ];
   return <header className="grid gap-5">
     <p className="text-xs font-medium text-[#637291]">Analytics</p>
