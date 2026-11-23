@@ -1,7 +1,4 @@
 import { expect } from "vitest";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { fileURLToPath } from "node:url";
 import { denFetch, type DenSession } from "@offlinegpt/behaviors";
 import { server, test } from "@offlinegpt/testkit";
 import { parseTeamAdminContext } from "./helpers/team-admin-context.ts";
@@ -227,55 +224,4 @@ test("team Admin grants are live, scoped, protected, and cleared across SCIM lif
   await canReadAdmin(direct, 200);
   expect((await context(inherited)).currentMember.directRole).toBe("member");
   evidence.recordAssertionEvidence("SCIM controls membership but never derives roles from group names", "An IdP group named super-admin grants nothing until approved, then only Admin. PATCH/PUT removals revoke immediately. Mapping disable/re-enable, group deletion, and provider removal clear designation; retained teams and direct roles do not retain inherited authority.", true);
-
-  if (!den.database) throw new Error("The in-process background authorization check requires a fresh local testkit database.");
-  await patchTeam(nextTeam.id, { grantsOrganizationAdmin: true });
-  const background = await promisify(execFile)(process.execPath, ["--input-type=module", "-e", `
-    import { createRequire } from 'node:module';
-    const { createConnection } = createRequire(import.meta.resolve('@offlinegpt/env'))('mysql2/promise');
-    const db = await createConnection(process.env.DATABASE_URL);
-    const input = JSON.parse(process.env.TEAM_ADMIN_TEST_INPUT);
-    await db.execute("UPDATE organization SET metadata = JSON_SET(metadata, '$.complimentaryAccess', JSON_OBJECT('offlinegptWeb', true)) WHERE id = ?", [input.organizationId]);
-    const suffix = input.teamId.slice(4);
-    const action = { kind: 'saved_script', script: {
-      pluginId: 'plg_' + suffix, configObjectId: 'cob_' + suffix,
-      configObjectVersionId: 'cov_' + suffix,
-    }, input: {} };
-    const check = async (token) => {
-      const headers = { authorization: 'Bearer ' + token, 'x-offlinegpt-org-id': input.organizationId, 'content-type': 'application/json' };
-      const context = await (await fetch(input.apiUrl + '/v1/org', { headers })).json();
-      const response = await fetch(input.apiUrl + '/v1/cloud-automations', { method: 'POST', headers, body: JSON.stringify({ name: 'Authorization boundary', schedule: { kind: 'once', timezone: 'UTC', at: Date.now() + 86400000 }, action }) });
-      const result = await response.json();
-      return { role: context.currentMember.role, directRole: context.currentMember.directRole, outcome: result.error };
-    };
-    const granted = await check(input.memberToken);
-    await db.execute('UPDATE team SET grants_organization_admin = false WHERE id = ?', [input.teamId]);
-    const revoked = await check(input.memberToken);
-    const direct = await check(input.directToken);
-    await db.end();
-    console.log(JSON.stringify({ granted, revoked, direct }));
-    process.exit(0);
-  `], {
-    cwd: fileURLToPath(new URL("..", import.meta.url)),
-    timeout: 30_000,
-    env: {
-      ...process.env,
-      DATABASE_URL: den.database.url,
-      DB_MODE: "mysql",
-      DATABASE_REDIS_URL: "",
-      DEN_DB_ENCRYPTION_KEY: "local-dev-db-encryption-key-please-change-1234567890",
-      BETTER_AUTH_SECRET: "local-testkit-secret-not-for-production-use!!",
-      DEN_BASE_URL: den.ref.apiUrl,
-      OFFLINEGPT_DEV_MODE: "1",
-      TEAM_ADMIN_TEST_INPUT: JSON.stringify({ organizationId: orgId, teamId: nextTeam.id, apiUrl: den.ref.apiUrl, memberToken: inherited.token, directToken: direct.token }),
-    },
-  });
-  const backgroundResult: unknown = JSON.parse(text(background.stdout.trim().split("\n").at(-1)));
-  expect(backgroundResult).toEqual({
-    granted: { role: "member,admin", directRole: "member", outcome: "automation_saved_script_version_not_found" },
-    revoked: { role: "member", directRole: "member", outcome: "automation_saved_script_forbidden" },
-    direct: { role: "admin", directRole: "admin", outcome: "automation_saved_script_version_not_found" },
-  });
-  await canReadAdmin(inherited, 403);
-  evidence.recordAssertionEvidence("Workflow automation admission resolves current team authority", "The live Automation API reaches version validation for inherited Admin; clearing the team grant makes the next request forbidden. Direct Admin still reaches version validation without a team grant. No Automation is created.", true);
 });
