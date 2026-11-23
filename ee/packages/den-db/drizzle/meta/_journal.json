@@ -666,6 +666,13 @@
       "when": 1795424250887,
       "tag": "0095_remove_automations_saved_apps_remote_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "5",
+      "when": 1795472294080,
+      "tag": "0096_access_policy_rules",
+      "breakpoints": true
     }
   ]
 }
