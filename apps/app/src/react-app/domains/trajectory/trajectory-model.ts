@@ -316,7 +316,8 @@ export function projectTrajectory(messages: readonly OfflineGptSessionMessage[],
       const startedAt = segmentStart ?? firstTokenAt;
       const error = segment.last ? messageError : undefined;
       const state: TrajectoryRecordState = error ? "error" : finished ? "complete" : "running";
-      const usage = finish ? usageOf(finish.tokens) : parts.length === 1 && finished ? usageOf(info.tokens) : undefined;
+      // The OpenCode v2 adapter creates streamed assistant messages before the engine reports usage.
+      const usage = finish ? usageOf(finish.tokens) : parts.length === 1 && finished && info.tokens ? usageOf(info.tokens) : undefined;
       cumulativeUsage = addUsage(cumulativeUsage, usage);
       const body = text.join("\n\n");
       const number = requests.length + 1;
