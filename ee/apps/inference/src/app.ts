@@ -10,7 +10,8 @@ import { z } from "zod";
 import { db } from "./db.js";
 import { env } from "./env.js";
 import { isSentryEnabled } from "./instrumentation.js";
-import { registerProxyRoutes } from "./proxy.js";
+import { buildOpencodeModelsCatalog } from "./model-catalog.js";
+import { defaultModelCatalog, registerProxyRoutes } from "./proxy.js";
 import { registerWebhookRoutes } from "./webhooks.js";
 
 const srcDir = path.dirname(fileURLToPath(import.meta.url));
@@ -78,7 +79,20 @@ app.get("/ready", async (c) => {
   }
 });
 
-if (shouldServeLocalModelCatalog) {
+if (env.selfHostedUpstream) {
+  // Workspaces read their model list here (OPENCODE_MODELS_URL=<this>/models).
+  const proxyBaseUrl = env.proxyBaseUrl ?? `http://127.0.0.1:${env.port}`;
+  app.get("/models/api.json", async (c) => {
+    try {
+      const catalog = await defaultModelCatalog();
+      c.header("Cache-Control", "no-store");
+      return c.json(buildOpencodeModelsCatalog(catalog, proxyBaseUrl));
+    } catch {
+      console.error("[inference] self-hosted model catalog unavailable");
+      return c.json({ error: "upstream_unreachable" }, 502);
+    }
+  });
+} else if (shouldServeLocalModelCatalog) {
   app.get("/models/api.json", async (c) => {
     const body = await readFile(modelsApiJsonPath, "utf8");
     c.header("Content-Type", "application/json; charset=utf-8");
