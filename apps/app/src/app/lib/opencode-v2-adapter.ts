@@ -1,10 +1,16 @@
 import type {
+  Agent,
+  Command,
   FilePart,
+  McpStatus,
   Model,
+  Path,
   Part,
   PermissionRequest,
   PermissionV2Request,
   Provider,
+  ProviderAuthAuthorization,
+  ProviderAuthMethod,
   ProviderListResponse,
   QuestionRequest,
   ReasoningPart,
@@ -13,9 +19,10 @@ import type {
   TextPart,
   ToolPart,
   UnknownError,
+  VcsInfo,
 } from "@opencode-ai/sdk/v2/client";
 
-import { createClient, createDesktopFetch, type FieldsResult } from "./opencode";
+import { createDesktopFetch, createV1Client, type FieldsResult, type OpencodeClient } from "./opencode";
 import { isDesktopRuntime } from "./runtime-env";
 import type { OpencodeEvent } from "../types";
 import { normalizeDirectoryPath } from "../utils";
@@ -43,7 +50,24 @@ type ModelBinding = {
 type PromptPart = {
   type?: unknown;
   text?: unknown;
+  url?: unknown;
+  mime?: unknown;
+  filename?: unknown;
 };
+
+/**
+ * Images, PDFs and text go to OpenCode v2 as attachments the model reads
+ * natively. Office files stay out: no model reads their raw bytes, so the
+ * model opens them by the workspace path in the attached-files note with the
+ * `document_read` and spreadsheet tools.
+ */
+function promptFiles(parts: PromptPart[]): Array<{ uri: string; name?: string }> {
+  return parts.flatMap((part) => {
+    if (part.type !== "file" || typeof part.url !== "string" || typeof part.mime !== "string") return [];
+    if (!part.mime.startsWith("image/") && part.mime !== "application/pdf" && part.mime !== "text/plain") return [];
+    return [{ uri: part.url, ...(typeof part.filename === "string" ? { name: part.filename } : {}) }];
+  });
+}
 
 type PromptParameters = SessionParameters & {
   model?: { providerID: string; modelID: string };
@@ -66,8 +90,6 @@ type SessionUpdateParameters = SessionParameters & {
   title?: string;
   time?: { archived?: number };
 };
-
-export const V2_SESSION_ARCHIVE_UNAVAILABLE = "Archiving and unarchiving are not available in the OpenCode v2 preview.";
 
 type PermissionReply = "once" | "always" | "reject";
 
@@ -210,6 +232,51 @@ function responseItems(value: unknown): unknown[] {
   return Array.isArray(data) ? data : [];
 }
 
+function mapV2Agent(value: unknown): Agent | null {
+  const name = readString(value, "id");
+  const mode = readString(value, "mode");
+  if (!isRecord(value) || !name || (mode !== "primary" && mode !== "subagent" && mode !== "all")) return null;
+  const permissions = Array.isArray(value.permissions) ? value.permissions : [];
+  return {
+    name,
+    description: readString(value, "description"),
+    mode,
+    hidden: value.hidden === true,
+    options: {},
+    // OpenCode 2.3 renamed the rule fields: action → permission, resource → pattern, effect → action.
+    permission: permissions.flatMap((rule) => {
+      const permission = readString(rule, "action");
+      const pattern = readString(rule, "resource");
+      const action = readString(rule, "effect");
+      return permission && pattern && (action === "allow" || action === "deny" || action === "ask")
+        ? [{ permission, pattern, action }]
+        : [];
+    }),
+  };
+}
+
+function mapV2Command(value: unknown): Command | null {
+  const name = readString(value, "name");
+  return name ? { name, description: readString(value, "description"), template: "", hints: [] } : null;
+}
+
+function mapV2McpStatus(value: unknown): Record<string, McpStatus> {
+  const statuses: Record<string, McpStatus> = {};
+  for (const item of responseItems(value)) {
+    const name = readString(item, "name");
+    const status = readRecord(item, "status");
+    const state = readString(status, "status");
+    if (!name || !status || !state) continue;
+    const error = readString(status, "error") ?? "";
+    statuses[name] = state === "connected" || state === "disabled" || state === "needs_auth"
+      ? { status: state }
+      : state === "needs_client_registration"
+        ? { status: state, error }
+        : { status: "failed", error };
+  }
+  return statuses;
+}
+
 function eventProperties(value: Record<string, unknown>): Record<string, unknown> {
   const data = readRecord(value, "data");
   if (data) return data;
@@ -237,6 +304,8 @@ function mapV2Session(value: unknown, directory: string | undefined, eventCreate
   const updated = readNumber(time, "updated") ?? readNumber(source, "updated") ?? created;
   const archived = readNumber(time, "archived");
   const parentID = readString(source, "parentID");
+  const revert = readRecord(source, "revert");
+  const revertMessageID = readString(revert, "messageID");
   const mapped: Session = {
     id,
     slug: readString(source, "slug") ?? id,
@@ -251,6 +320,7 @@ function mapV2Session(value: unknown, directory: string | undefined, eventCreate
       ...(archived === undefined ? {} : { archived }),
     },
     ...(parentID ? { parentID } : {}),
+    ...(revertMessageID ? { revert: { messageID: revertMessageID, partID: readString(revert, "partID"), snapshot: readString(revert, "snapshot") } } : {}),
   };
   return mapped;
 }
@@ -467,6 +537,9 @@ function mapV2Message(value: unknown, sessionID: string): V2MappedMessage | null
   const parts = mapV2MessageParts(value, id, resolvedSessionID, created);
   const role = messageRole(value);
   const error = readRecord(value, "error");
+  const tokens = readRecord(value, "tokens");
+  const cache = readRecord(tokens, "cache");
+  const cost = readNumber(value, "cost");
   return {
     info: {
       id,
@@ -476,6 +549,18 @@ function mapV2Message(value: unknown, sessionID: string): V2MappedMessage | null
         created,
         ...(completed === undefined ? {} : { completed }),
       },
+      // OpenCode 2.3 reports usage in the same shape as v1 assistant messages.
+      ...(role === "assistant" && tokens
+        ? {
+            tokens: {
+              input: readNumber(tokens, "input") ?? 0,
+              output: readNumber(tokens, "output") ?? 0,
+              reasoning: readNumber(tokens, "reasoning") ?? 0,
+              cache: { read: readNumber(cache, "read") ?? 0, write: readNumber(cache, "write") ?? 0 },
+            },
+          }
+        : {}),
+      ...(role === "assistant" && cost !== undefined ? { cost } : {}),
       ...(role === "assistant" && error
         ? { error: { name: "UnknownError", data: { message: errorMessage(error) } } }
         : {}),
@@ -1309,9 +1394,9 @@ export function isOpencodeV2BaseUrl(baseUrl: string): boolean {
   }
 }
 
-const v2Clients = new WeakSet<ReturnType<typeof createClient>>();
+const v2Clients = new WeakSet<OpencodeClient>();
 
-export function isOpencodeV2Client(client: ReturnType<typeof createClient>): boolean {
+export function isOpencodeV2Client(client: OpencodeClient): boolean {
   return v2Clients.has(client);
 }
 
@@ -1319,11 +1404,13 @@ export function createClientV2(
   opencode2BaseUrl: string,
   directory: string | undefined,
   auth: { token?: string },
-): ReturnType<typeof createClient> {
+): OpencodeClient {
   const baseUrl = opencode2BaseUrl.replace(/\/+$/, "");
   const fetchImpl = createV2Fetch(auth);
-  const compatibilityClient = createClient(baseUrl, directory, { mode: "offlinegpt", token: auth.token });
+  const compatibilityClient = createV1Client(baseUrl, directory, { mode: "offlinegpt", token: auth.token });
   const permissionSessionByRequestID = new Map<string, string>();
+  /** Sessions with an undo staged by this client; the next prompt commits it. */
+  const stagedReverts = new Set<string>();
   const questionFormsByID = new Map<string, NonNullable<ReturnType<typeof mapV2Question>>>();
 
   const request = async (
@@ -1606,10 +1693,17 @@ export function createClientV2(
         .filter((part) => part.type === "text" && typeof part.text === "string")
         .map((part) => typeof part.text === "string" ? part.text : "")
         .join("");
+      const files = promptFiles(parameters.parts ?? []);
+      // As in v1, prompting after an undo drops the reverted turns for good.
+      if (stagedReverts.has(parameters.sessionID)) {
+        const committed = await request("POST", `/api/session/${encodeURIComponent(parameters.sessionID)}/revert/commit`, {}, options?.signal);
+        if (!committed.response.ok && committed.response.status !== 404) return failedResult(committed);
+        stagedReverts.delete(parameters.sessionID);
+      }
       const promptResult = await request(
         "POST",
         `/api/session/${encodeURIComponent(parameters.sessionID)}/prompt`,
-        { text },
+        { text, ...(files.length ? { files } : {}) },
         options?.signal,
       );
       return promptResult.response.ok ? successfulResult(promptResult, {}) : failedResult(promptResult);
@@ -1635,18 +1729,14 @@ export function createClientV2(
       parameters: SessionUpdateParameters,
       options?: RequestOptions,
     ): Promise<FieldsResult<Session>> => {
-      // The native preview exposes archived state but no archive mutation.
-      // Reject the entire update before a rename or read can imply success.
-      if (parameters.time?.archived !== undefined) {
-        if (options?.throwOnError) throw new Error(V2_SESSION_ARCHIVE_UNAVAILABLE);
-        return unsupportedResult(baseUrl, "session.archive", V2_SESSION_ARCHIVE_UNAVAILABLE);
-      }
-      if (!parameters.title) return getSession(parameters, options);
-      // OpenCode 2.3 renames through PATCH on the session.
+      // v1 archives with a timestamp (0 clears it); OpenCode 2.3 takes a boolean.
+      const archived = parameters.time?.archived === undefined ? undefined : parameters.time.archived > 0;
+      if (!parameters.title && archived === undefined) return getSession(parameters, options);
+      // OpenCode 2.3 renames and archives through PATCH on the session.
       const result = await request(
         "PATCH",
         `/api/session/${encodeURIComponent(parameters.sessionID)}`,
-        { title: parameters.title },
+        { ...(parameters.title ? { title: parameters.title } : {}), ...(archived === undefined ? {} : { archived }) },
         options?.signal,
       );
       if (!result.response.ok) return failedResult(result);
@@ -1665,12 +1755,244 @@ export function createClientV2(
       );
       return result.response.ok ? successfulResult(result, true) : failedResult(result);
     },
-    fork: async (): Promise<FieldsResult<Session>> => unsupportedResult(baseUrl, "session.fork"),
-    revert: async (): Promise<FieldsResult<Session>> => unsupportedResult(baseUrl, "session.revert"),
-    unrevert: async (): Promise<FieldsResult<Session>> => unsupportedResult(baseUrl, "session.unrevert"),
-    summarize: async (): Promise<FieldsResult<boolean>> => unsupportedResult(baseUrl, "session.summarize"),
-    shell: async (): Promise<FieldsResult<Record<string, never>>> => unsupportedResult(baseUrl, "session.shell"),
-    command: async (): Promise<FieldsResult<Record<string, never>>> => unsupportedResult(baseUrl, "session.command"),
+    fork: async (
+      parameters: SessionParameters & { messageID?: string },
+      options?: RequestOptions,
+    ): Promise<FieldsResult<Session>> => {
+      const result = await request(
+        "POST",
+        `/api/session/${encodeURIComponent(parameters.sessionID)}/fork`,
+        parameters.messageID ? { before: parameters.messageID } : {},
+        options?.signal,
+      );
+      if (!result.response.ok) return failedResult(result);
+      const mapped = mapV2Session(result.payload, directory);
+      return mapped ? successfulResult(result, mapped) : failedResult({ ...result, payload: { name: "InvalidV2SessionResponse" } });
+    },
+    revert: async (
+      parameters: SessionParameters & { messageID: string },
+      options?: RequestOptions,
+    ): Promise<FieldsResult<Session>> => {
+      // v1 hides the turn and restores its files until the next prompt; v2 stages the same revert.
+      const result = await request(
+        "POST",
+        `/api/session/${encodeURIComponent(parameters.sessionID)}/revert/stage`,
+        { messageID: parameters.messageID, files: true },
+        options?.signal,
+      );
+      if (!result.response.ok) return failedResult(result);
+      stagedReverts.add(parameters.sessionID);
+      return getSession(parameters, options);
+    },
+    unrevert: async (parameters: SessionParameters, options?: RequestOptions): Promise<FieldsResult<Session>> => {
+      const result = await request("DELETE", `/api/session/${encodeURIComponent(parameters.sessionID)}/revert`, undefined, options?.signal);
+      if (!result.response.ok) return failedResult(result);
+      stagedReverts.delete(parameters.sessionID);
+      return getSession(parameters, options);
+    },
+    summarize: async (parameters: SessionParameters, options?: RequestOptions): Promise<FieldsResult<boolean>> => {
+      const result = await request("POST", `/api/session/${encodeURIComponent(parameters.sessionID)}/compact`, {}, options?.signal);
+      return result.response.ok ? successfulResult(result, true) : failedResult(result);
+    },
+    shell: async (
+      parameters: SessionParameters & { command: string },
+      options?: RequestOptions,
+    ): Promise<FieldsResult<Record<string, never>>> => {
+      const result = await request(
+        "POST",
+        `/api/session/${encodeURIComponent(parameters.sessionID)}/shell`,
+        { command: parameters.command },
+        options?.signal,
+      );
+      return result.response.ok ? successfulResult(result, {}) : failedResult(result);
+    },
+    command: async (
+      parameters: SessionParameters & { command: string; arguments?: string; model?: string },
+      options?: RequestOptions,
+    ): Promise<FieldsResult<Record<string, never>>> => {
+      // v1 passes the model as "provider/model"; v2 keeps it on the session.
+      const slash = parameters.model?.indexOf("/") ?? -1;
+      if (parameters.model && slash > 0) {
+        const modelResult = await request(
+          "POST",
+          `/api/session/${encodeURIComponent(parameters.sessionID)}/model`,
+          { model: { providerID: parameters.model.slice(0, slash), id: parameters.model.slice(slash + 1) } },
+          options?.signal,
+        );
+        if (!modelResult.response.ok) return failedResult(modelResult);
+      }
+      const result = await request(
+        "POST",
+        `/api/session/${encodeURIComponent(parameters.sessionID)}/command`,
+        { name: parameters.command, text: parameters.arguments ?? "" },
+        options?.signal,
+      );
+      return result.response.ok ? successfulResult(result, {}) : failedResult(result);
+    },
+  };
+
+  type Integration = {
+    id: string;
+    name: string;
+    env: string[];
+    /** v1 addresses sign-in methods by index; each entry keeps v2's method id (null for an API key). */
+    methods: { type: "api" | "oauth"; label: string; id: string | null }[];
+    credentialIDs: string[];
+  };
+  const listIntegrations = async (signal?: AbortSignal): Promise<Integration[]> => {
+    const result = await request("GET", "/api/integration", undefined, signal);
+    if (!result.response.ok) return [];
+    return responseItems(result.payload).flatMap((item) => {
+      const id = readString(item, "id");
+      if (!isRecord(item) || !id) return [];
+      const rawMethods = Array.isArray(item.methods) ? item.methods : [];
+      const connections = Array.isArray(item.connections) ? item.connections : [];
+      return [{
+        id,
+        name: readString(item, "name") ?? id,
+        env: rawMethods.flatMap((method) => readString(method, "type") === "env" && isRecord(method) && Array.isArray(method.names)
+          ? method.names.filter((name): name is string => typeof name === "string")
+          : []),
+        methods: rawMethods.flatMap((method): Integration["methods"] => {
+          const type = readString(method, "type");
+          if (type === "key") return [{ type: "api" as const, label: readString(method, "label") ?? "API key", id: null }];
+          const methodID = readString(method, "id");
+          return type === "oauth" && methodID ? [{ type: "oauth" as const, label: readString(method, "label") ?? methodID, id: methodID }] : [];
+        }),
+        credentialIDs: connections.flatMap((connection) =>
+          readString(connection, "type") === "credential" ? readString(connection, "id") ?? [] : []),
+      }];
+    });
+  };
+  const oauthAttemptByProvider = new Map<string, { attemptID: string; mode: "auto" | "code" }>();
+
+  const providerAuth = async (_parameters?: DirectoryParameters, options?: RequestOptions): Promise<FieldsResult<Record<string, ProviderAuthMethod[]>>> => {
+    const integrations = await listIntegrations(options?.signal);
+    return localResult(baseUrl, "/api/integration", Object.fromEntries(integrations.flatMap((integration) =>
+      integration.methods.length ? [[integration.id, integration.methods.map(({ type, label }) => ({ type, label }))]] : [])));
+  };
+
+  const authorizeOauth = async (
+    parameters: DirectoryParameters & { providerID: string; method: number },
+    options?: RequestOptions,
+  ): Promise<FieldsResult<ProviderAuthAuthorization>> => {
+    const integration = (await listIntegrations(options?.signal)).find((entry) => entry.id === parameters.providerID);
+    const methodID = integration?.methods[parameters.method]?.id;
+    if (!methodID) return unsupportedResult(baseUrl, "provider.oauth.authorize", `No sign-in method ${parameters.method} for ${parameters.providerID}`);
+    const result = await request(
+      "POST",
+      `/api/integration/${encodeURIComponent(parameters.providerID)}/connect/oauth`,
+      { methodID },
+      options?.signal,
+    );
+    if (!result.response.ok) return failedResult(result);
+    const data = responseData(result.payload);
+    const attemptID = readString(data, "attemptID");
+    const url = readString(data, "url");
+    if (!attemptID || !url) return failedResult({ ...result, payload: { name: "InvalidV2OAuthAttempt" } });
+    const mode = readString(data, "mode") === "code" ? "code" : "auto";
+    oauthAttemptByProvider.set(parameters.providerID, { attemptID, mode });
+    return successfulResult(result, { url, method: mode, instructions: readString(data, "instructions") ?? "" });
+  };
+
+  const completeOauth = async (
+    parameters: DirectoryParameters & { providerID: string; method: number; code?: string },
+    options?: RequestOptions,
+  ): Promise<FieldsResult<boolean>> => {
+    const attempt = oauthAttemptByProvider.get(parameters.providerID);
+    if (!attempt) return unsupportedResult(baseUrl, "provider.oauth.callback", `No sign-in in progress for ${parameters.providerID}`);
+    const attemptPath = `/api/integration/${encodeURIComponent(parameters.providerID)}/connect/oauth/${encodeURIComponent(attempt.attemptID)}`;
+    if (parameters.code) {
+      const result = await request("POST", `${attemptPath}/complete`, { code: parameters.code }, options?.signal);
+      if (!result.response.ok) return failedResult(result);
+    }
+    // v1's callback resolved once the browser sign-in finished; v2 reports it on the attempt.
+    for (;;) {
+      const result = await request("GET", attemptPath, undefined, options?.signal);
+      if (!result.response.ok) return failedResult(result);
+      const status = readString(responseData(result.payload), "status");
+      if (status === "complete") {
+        oauthAttemptByProvider.delete(parameters.providerID);
+        return successfulResult(result, true);
+      }
+      if (status !== "pending") {
+        oauthAttemptByProvider.delete(parameters.providerID);
+        return failedResult({ ...result, payload: { name: "ProviderAuthOauthCallbackFailed", data: { message: readString(responseData(result.payload), "message") ?? `Sign-in ${status ?? "failed"}` } } });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+    }
+  };
+
+  const setAuth = async (
+    parameters: { providerID: string; auth: { type: string; key?: string } },
+    options?: RequestOptions,
+  ): Promise<FieldsResult<boolean>> => {
+    if (parameters.auth.type !== "api" || !parameters.auth.key) {
+      return unsupportedResult(baseUrl, "auth.set", "Only API keys can be stored directly in OpenCode v2.");
+    }
+    const result = await request(
+      "POST",
+      `/api/integration/${encodeURIComponent(parameters.providerID)}/connect/key`,
+      { key: parameters.auth.key },
+      options?.signal,
+    );
+    return result.response.ok ? successfulResult(result, true) : failedResult(result);
+  };
+
+  const removeAuth = async (parameters: { providerID: string }, options?: RequestOptions): Promise<FieldsResult<boolean>> => {
+    const integration = (await listIntegrations(options?.signal)).find((entry) => entry.id === parameters.providerID);
+    for (const credentialID of integration?.credentialIDs ?? []) {
+      const result = await request("DELETE", `/api/credential/${encodeURIComponent(credentialID)}`, undefined, options?.signal);
+      if (!result.response.ok) return failedResult(result);
+    }
+    return localResult(baseUrl, "/api/credential", true);
+  };
+
+  // OpenCode 2.3 signs MCP servers in through the integration the server reports.
+  const mcpAttemptByName = new Map<string, { integrationID: string; attemptID: string }>();
+  const mcpIntegrationID = async (name: string, signal?: AbortSignal): Promise<string | undefined> => {
+    const result = await request("GET", "/api/mcp", undefined, signal);
+    const entry = responseItems(result.payload).find((item) => readString(item, "name") === name);
+    return readString(entry, "integrationID");
+  };
+  const mcpStatusOf = async (name: string, signal?: AbortSignal): Promise<FieldsResult<McpStatus>> => {
+    const result = await request("GET", "/api/mcp", undefined, signal);
+    if (!result.response.ok) return failedResult(result);
+    return successfulResult(result, mapV2McpStatus(result.payload)[name] ?? { status: "failed", error: `MCP server ${name} not found` });
+  };
+  const mcpAuth = {
+    start: async (parameters: DirectoryParameters & { name: string }, options?: RequestOptions): Promise<FieldsResult<{ authorizationUrl?: string }>> => {
+      const integrationID = await mcpIntegrationID(parameters.name, options?.signal);
+      if (!integrationID) return unsupportedResult(baseUrl, "mcp.auth.start", `${parameters.name} does not support OAuth`);
+      const integration = (await listIntegrations(options?.signal)).find((entry) => entry.id === integrationID);
+      const methodID = integration?.methods.find((method) => method.type === "oauth")?.id;
+      if (!methodID) return unsupportedResult(baseUrl, "mcp.auth.start", `${parameters.name} does not support OAuth`);
+      const result = await request("POST", `/api/integration/${encodeURIComponent(integrationID)}/connect/oauth`, { methodID }, options?.signal);
+      if (!result.response.ok) return failedResult(result);
+      const data = responseData(result.payload);
+      const attemptID = readString(data, "attemptID");
+      if (!attemptID) return failedResult({ ...result, payload: { name: "InvalidV2OAuthAttempt" } });
+      mcpAttemptByName.set(parameters.name, { integrationID, attemptID });
+      return successfulResult(result, { authorizationUrl: readString(data, "url") });
+    },
+    callback: async (parameters: DirectoryParameters & { name: string; code: string }, options?: RequestOptions): Promise<FieldsResult<McpStatus>> => {
+      const attempt = mcpAttemptByName.get(parameters.name);
+      if (!attempt) return unsupportedResult(baseUrl, "mcp.auth.callback", `No sign-in in progress for ${parameters.name}`);
+      const result = await request(
+        "POST",
+        `/api/integration/${encodeURIComponent(attempt.integrationID)}/connect/oauth/${encodeURIComponent(attempt.attemptID)}/complete`,
+        { code: parameters.code },
+        options?.signal,
+      );
+      if (!result.response.ok) return failedResult(result);
+      mcpAttemptByName.delete(parameters.name);
+      await request("POST", `/api/experimental/mcp/${encodeURIComponent(parameters.name)}/connect`, {}, options?.signal);
+      return mcpStatusOf(parameters.name, options?.signal);
+    },
+    remove: async (parameters: DirectoryParameters & { name: string }, options?: RequestOptions): Promise<FieldsResult<boolean>> => {
+      const integrationID = await mcpIntegrationID(parameters.name, options?.signal);
+      return integrationID ? removeAuth({ providerID: integrationID }, options) : localResult(baseUrl, "/api/credential", true);
+    },
   };
 
   const adapter = {
@@ -1730,19 +2052,53 @@ export function createClientV2(
             models: { [model.id]: model },
           });
         }
-        const all = [...providersByID.values()];
+        const connected = [...providersByID.keys()];
+        // v1 also listed providers that are not signed in yet; v2 keeps those in the integration catalogue.
+        for (const integration of await listIntegrations(options?.signal)) {
+          if (providersByID.has(integration.id)) continue;
+          providersByID.set(integration.id, {
+            id: integration.id, name: integration.name, source: "api", env: integration.env, options: {}, models: {},
+          });
+        }
         return successfulResult(modelsResult, {
-          all,
-          connected: all.map((provider) => provider.id),
+          all: [...providersByID.values()],
+          connected,
           default: defaultsResult.response.ok ? mapDefaultModels(defaultsResult.payload) : {},
         });
       },
+      auth: providerAuth,
     },
+    providerOauth: { authorize: authorizeOauth, callback: completeOauth },
+    auth: { set: setAuth, remove: removeAuth },
     app: {
-      agents: async (): Promise<FieldsResult<never[]>> => localResult(baseUrl, "/api/agent", []),
+      agents: async (_parameters?: DirectoryParameters, options?: RequestOptions): Promise<FieldsResult<Agent[]>> => {
+        const result = await request("GET", "/api/agent", undefined, options?.signal);
+        if (!result.response.ok) return failedResult(result);
+        return successfulResult(result, responseItems(result.payload).flatMap((item) => mapV2Agent(item) ?? []));
+      },
     },
     command: {
-      list: async (): Promise<FieldsResult<never[]>> => localResult(baseUrl, "/api/command", []),
+      list: async (_parameters?: DirectoryParameters, options?: RequestOptions): Promise<FieldsResult<Command[]>> => {
+        const result = await request("GET", "/api/command", undefined, options?.signal);
+        if (!result.response.ok) return failedResult(result);
+        return successfulResult(result, responseItems(result.payload).flatMap((item) => mapV2Command(item) ?? []));
+      },
+    },
+    path: {
+      get: async (_parameters?: DirectoryParameters, options?: RequestOptions): Promise<FieldsResult<Path>> => {
+        const result = await request("GET", "/api/location", undefined, options?.signal);
+        if (!result.response.ok) return failedResult(result);
+        const location = readString(result.payload, "directory") ?? directory ?? "";
+        // v2 reports only the location; the engine's state paths are not exposed.
+        return successfulResult(result, { home: "", state: "", config: "", worktree: location, directory: location });
+      },
+    },
+    vcs: {
+      get: async (_parameters?: DirectoryParameters, options?: RequestOptions): Promise<FieldsResult<VcsInfo>> => {
+        const result = await request("GET", "/api/vcs", undefined, options?.signal);
+        if (!result.response.ok) return failedResult(result);
+        return successfulResult(result, { branch: readString(readRecord(responseData(result.payload), "branch"), "name") });
+      },
     },
     permission: {
       list: listPermissions,
@@ -1763,10 +2119,32 @@ export function createClientV2(
       },
     },
     find: {
-      files: async (): Promise<FieldsResult<never[]>> => localResult(baseUrl, "/api/fs/find", []),
+      files: async (
+        parameters: DirectoryParameters & { query: string; dirs?: "true" | "false"; limit?: number },
+        options?: RequestOptions,
+      ): Promise<FieldsResult<string[]>> => {
+        const query = new URLSearchParams({ query: parameters.query });
+        if (parameters.limit !== undefined) query.set("limit", String(parameters.limit));
+        if (parameters.dirs === "false") query.set("type", "file");
+        const result = await request("GET", `/api/fs/find?${query.toString()}`, undefined, options?.signal);
+        if (!result.response.ok) return failedResult(result);
+        // Directories arrive with a trailing "\" on Windows; v1 callers expect "/".
+        return successfulResult(result, responseItems(result.payload).flatMap((item) => readString(item, "path")?.replace(/\\$/, "/") ?? []));
+      },
     },
     mcp: {
-      status: async (): Promise<FieldsResult<Record<string, never>>> => localResult(baseUrl, "/api/mcp", {}),
+      status: async (_parameters?: DirectoryParameters, options?: RequestOptions): Promise<FieldsResult<Record<string, McpStatus>>> => {
+        const result = await request("GET", "/api/mcp", undefined, options?.signal);
+        return result.response.ok ? successfulResult(result, mapV2McpStatus(result.payload)) : failedResult(result);
+      },
+      connect: async (parameters: DirectoryParameters & { name: string }, options?: RequestOptions): Promise<FieldsResult<boolean>> => {
+        const result = await request("POST", `/api/experimental/mcp/${encodeURIComponent(parameters.name)}/connect`, {}, options?.signal);
+        return result.response.ok ? successfulResult(result, true) : failedResult(result);
+      },
+      disconnect: async (parameters: DirectoryParameters & { name: string }, options?: RequestOptions): Promise<FieldsResult<boolean>> => {
+        const result = await request("POST", `/api/experimental/mcp/${encodeURIComponent(parameters.name)}/disconnect`, {}, options?.signal);
+        return result.response.ok ? successfulResult(result, true) : failedResult(result);
+      },
     },
     event: {
       subscribe: async (
@@ -1799,13 +2177,18 @@ export function createClientV2(
   Object.assign(compatibilityClient.session, adapter.session);
   Object.assign(compatibilityClient.config, adapter.config);
   Object.assign(compatibilityClient.provider, adapter.provider);
+  Object.assign(compatibilityClient.provider.oauth, adapter.providerOauth);
+  Object.assign(compatibilityClient.auth, adapter.auth);
   Object.assign(compatibilityClient.app, adapter.app);
   Object.assign(compatibilityClient.command, adapter.command);
   Object.assign(compatibilityClient.permission, adapter.permission);
   Object.assign(compatibilityClient.question, adapter.question);
   Object.assign(compatibilityClient.v2.session.permission, adapter.v2.session.permission);
   Object.assign(compatibilityClient.find, adapter.find);
+  Object.assign(compatibilityClient.path, adapter.path);
+  Object.assign(compatibilityClient.vcs, adapter.vcs);
   Object.assign(compatibilityClient.mcp, adapter.mcp);
+  Object.assign(compatibilityClient.mcp.auth, mcpAuth);
   Object.assign(compatibilityClient.event, adapter.event);
   v2Clients.add(compatibilityClient);
   return compatibilityClient;
