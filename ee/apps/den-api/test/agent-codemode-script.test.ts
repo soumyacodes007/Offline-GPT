@@ -152,11 +152,12 @@ test("registers execute_capability_script without any org rollout flag", async (
   expect(tools).not.toContain("retire_artifact_view")
 })
 
-test("registers Code Mode without enabling agent-authored MCP App views", async () => {
+test("registers Code Mode without workflow artifact apps", async () => {
   const names = listedToolNames(await rpc(buildApp(), "tools/list"))
   expect(names).toContain("execute_capability_script")
-  expect(names).toContain("render_workflow_artifact")
-  expect(names).toContain("render_dynamic_artifact")
+  // Workflows and their artifact apps were removed.
+  expect(names).not.toContain("render_workflow_artifact")
+  expect(names).not.toContain("render_dynamic_artifact")
   expect(names).not.toContain("save_artifact_view")
   expect(names).not.toContain("activate_artifact_view_revision")
   expect(names).not.toContain("retire_artifact_view")
