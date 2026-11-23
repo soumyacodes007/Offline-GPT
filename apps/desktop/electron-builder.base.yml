@@ -6,6 +6,7 @@ files:
   - electron/**/*
   - server/**/*
   - "!server/dist/opencode-plugins/**"
+  - "!server/dist/opencode-plugins-v2/**"
   - package.json
   - from: .electron-runtime/node_modules
     to: node_modules
@@ -19,6 +20,9 @@ extraResources:
     filter:
       - "*.js"
       - "*.wasm"
+  # OpenCode v2 plugins are folders (bundle, package.json, wasm).
+  - from: server/dist/opencode-plugins-v2
+    to: opencode-plugins-v2
   - from: ../../packages/docs
     to: offlinegpt-docs
     filter:
