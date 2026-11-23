@@ -2,7 +2,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Agent } from "@opencode-ai/sdk/v2/client";
-import { AppWindowMac, Cloud, Monitor, ArrowUp, Check, ChevronDown, ChevronRight, FileText, LoaderCircle, Paperclip, Plus, RefreshCw, Settings, Square, Terminal, X, Zap } from "lucide-react";
+import { AppWindowMac, ArrowUp, Check, ChevronDown, ChevronRight, FileText, LoaderCircle, Paperclip, Plus, RefreshCw, Settings, Square, Terminal, X, Zap } from "lucide-react";
 import fuzzysort from "fuzzysort";
 import { toast } from "@/components/ui/sonner";
 import type { CloudImportedPlugin, CloudImportedPluginFile } from "@/app/cloud/import-state";
@@ -18,7 +18,6 @@ import {
 import { ModelSelect } from "@/components/model-select";
 import { LexicalPromptEditor, syncAttachmentChipStatus, type ComposerAttachmentToken, type LexicalPromptEditorHandle } from "./editor";
 import { listRunningAppsForMention } from "./app-mentions";
-import { COMPUTER_MENTIONS } from "./computer-mentions";
 import type { ComposerMentionKind } from "./mention-encoding";
 import {
   connectSkillSlashCommandOptions,
@@ -527,12 +526,11 @@ export const ReactSessionComposer = memo(function ReactSessionComposer(props: Co
   useEffect(() => {
     if (!mentionOpen) return;
     let cancelled = false;
-    setMentionItems(COMPUTER_MENTIONS);
+    setMentionItems([]);
     void Promise.all([props.listAgents(), props.searchFiles(mentionQuery), listRunningAppsForMention()]).then(([agentList, files, apps]) => {
       if (cancelled) return;
       const recent = props.recentFiles.slice(0, 8);
       const next: MentionItem[] = [
-        ...COMPUTER_MENTIONS,
         ...agentList.map((agent) => ({ id: `agent:${agent.name}`, kind: "agent" as const, value: agent.name, label: agent.name })),
         ...recent.map((file) => ({ id: `file:${file}`, kind: "file" as const, value: file, label: file })),
         // Running apps from Cua Driver (Computer Use targets). Listed after recent files
@@ -543,7 +541,7 @@ export const ReactSessionComposer = memo(function ReactSessionComposer(props: Co
       ];
       setMentionItems(next);
     }).catch(() => {
-      if (!cancelled) setMentionItems(COMPUTER_MENTIONS);
+      if (!cancelled) setMentionItems([]);
     });
     return () => {
       cancelled = true;
@@ -1248,9 +1246,7 @@ export const ReactSessionComposer = memo(function ReactSessionComposer(props: Co
                     setMentionOpen(false);
                   }}
                 >
-                  {item.kind === "computer" ? (
-                    item.value === "cloud" ? <Cloud size={14} className="mt-0.5 shrink-0 text-gray-9" /> : <Monitor size={14} className="mt-0.5 shrink-0 text-gray-9" />
-                  ) : item.kind === "agent" ? (
+                  {item.kind === "agent" ? (
                     <Zap size={14} className="mt-0.5 shrink-0 text-gray-9" />
                   ) : item.kind === "app" ? (
                     <AppWindowMac size={14} className="mt-0.5 shrink-0 text-gray-9" />
