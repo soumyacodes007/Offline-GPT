@@ -9,6 +9,7 @@ import {
   type CloudMcpProviderModelContext,
   type CloudMcpRuntimeRegistrar,
   type CloudMcpLiveStatusObserver,
+  type CloudMcpEngineV2,
 } from "../cloud-mcp-health.js";
 import { ApiError } from "../errors.js";
 import type { ServerConfig, TokenScope, WorkspaceInfo } from "../types.js";
@@ -31,6 +32,7 @@ export type RegisterCloudMcpRoutesOptions = {
   registerRuntimeMcp: CloudMcpRuntimeRegistrar;
   refreshRegistrationFromLiveStatus?: CloudMcpLiveStatusObserver;
   serverMetadata?: CloudMcpServerMetadata;
+  engineV2For?: (workspace: WorkspaceInfo) => CloudMcpEngineV2 | undefined;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -92,6 +94,7 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
     registerRuntimeMcp,
     refreshRegistrationFromLiveStatus,
     serverMetadata,
+    engineV2For,
   } = options;
 
   addRoute(routes, "GET", "/workspace/:id/mcp/offlinegpt-cloud/health", "client", async (ctx) => {
@@ -106,6 +109,7 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
       probe: probeFromQuery(ctx.url),
       createWorkspaceOpencodeClient,
       refreshRegistrationFromLiveStatus,
+      engineV2: engineV2For?.(workspace),
     });
     return jsonResponse(health);
   });
@@ -143,6 +147,7 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
       registerRuntimeMcp,
       refreshRegistrationFromLiveStatus,
       trigger: typeof body.trigger === "string" ? body.trigger : undefined,
+      engineV2For,
     });
     return jsonResponse(result);
   });
@@ -175,6 +180,7 @@ export function registerCloudMcpRoutes(options: RegisterCloudMcpRoutesOptions): 
       createWorkspaceOpencodeClient,
       registerRuntimeMcp,
       refreshRegistrationFromLiveStatus,
+      engineV2For,
     });
     return jsonResponse(health);
   });
