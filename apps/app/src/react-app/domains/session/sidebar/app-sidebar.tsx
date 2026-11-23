@@ -159,7 +159,6 @@ import { isSameWorkbenchSession, useWorkbenchStore, workbenchSessionKey } from "
 import { SidebarDestination } from "./sidebar-destination";
 import { SessionTitle } from "./session-title";
 import type { OfflineGptServerClient } from "../../../../app/lib/offlinegpt-server";
-import { LocalWorkflowsPanel } from "../../local-workflows/local-workflows-panel";
 
 /** Paper Desktop: unread #2FBE54, needs-action #E8933A (14px artboard → ~8px app). */
 const OUTCOME_DOT_UNREAD = "#2FBE54";
@@ -929,10 +928,9 @@ export type AppSidebarProps = {
   onEditWorkspaceConnection: (workspaceId: string) => void;
   onForgetWorkspace: (workspaceId: string) => void;
   onOpenCreateWorkspace: () => void;
-  automationsActive?: boolean;
-  automationsNeedAttention?: boolean;
-  onOpenAutomations?: () => void;
   dashboardActive?: boolean;
+  scheduleActive?: boolean;
+  onOpenSchedule?: () => void;
   onOpenDashboard?: () => void;
   /** Opens the cross-session message search dialog (Cmd/Ctrl+Shift+F). */
   onOpenSessionSearch?: () => void;
@@ -958,7 +956,6 @@ function isSessionActivityStatus(status: string | undefined): status is SessionA
 
 export function AppSidebar(props: AppSidebarProps) {
   const { config: shellConfig } = useShellConfig();
-  const [localWorkflowsOpen, setLocalWorkflowsOpen] = React.useState(false);
   // Lives in the UI store (not component state) so the open/closed state of
   // each workspace group survives this sidebar unmounting, e.g. while the
   // user is in Settings.
@@ -1192,27 +1189,6 @@ export function AppSidebar(props: AppSidebarProps) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ) : null}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                type="button"
-                data-testid="local-workflows-toggle"
-                aria-expanded={localWorkflowsOpen}
-                aria-label="Workflows"
-                title="Build sequential workflows and choose connected models for each step"
-                onClick={() => setLocalWorkflowsOpen(true)}
-                className="text-sidebar-foreground/70"
-              >
-                <Workflow className="size-4" />
-                <span className="flex-1 truncate">Workflows</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <LocalWorkflowsPanel
-              open={localWorkflowsOpen}
-              onClose={() => setLocalWorkflowsOpen(false)}
-              client={props.offlinegptServerClient}
-              workspaceId={props.selectedWorkspaceId}
-              onOpenSession={props.onOpenSession}
-            />
             {props.onOpenDashboard ? (
               <SidebarDestination
                 active={props.dashboardActive === true}
@@ -1221,24 +1197,12 @@ export function AppSidebar(props: AppSidebarProps) {
                 onSelect={props.onOpenDashboard}
               />
             ) : null}
-            {props.onOpenAutomations ? (
+            {props.onOpenSchedule ? (
               <SidebarDestination
-                active={props.automationsActive === true}
+                active={props.scheduleActive === true}
                 icon={Clock3}
-                label="Automations"
-                labelContent={(
-                  <span className="flex min-w-0 flex-1 items-center gap-2">
-                    <span className="truncate">Automations</span>
-                    {props.automationsNeedAttention ? (
-                      <AlertTriangle
-                        data-automations-attention-indicator
-                        className="ml-auto size-3.5 shrink-0 text-warning"
-                        aria-label="An Automation needs attention"
-                      />
-                    ) : null}
-                  </span>
-                )}
-                onSelect={props.onOpenAutomations}
+                label="Scheduled tasks"
+                onSelect={props.onOpenSchedule}
               />
             ) : null}
             <SidebarDestination
