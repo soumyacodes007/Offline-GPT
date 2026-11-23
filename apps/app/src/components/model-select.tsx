@@ -25,7 +25,6 @@ import {
   filterCloudManagedModelOptions,
   mergeModelOptions,
 } from "@/react-app/domains/connections/provider-auth/assigned-model-options";
-import { isCloudManagedProviderKey } from "@/react-app/domains/connections/provider-auth/cloud-provider-config";
 import {
   Command,
   CommandCollection,
@@ -224,7 +223,6 @@ interface ModelSelectProps {
 export function ModelSelect({
   open,
   value,
-  hideValue = false,
   onOpenChange,
   onChange,
   disabled = false,
@@ -339,9 +337,6 @@ export function ModelSelect({
   const effectiveBehaviorLabel = behaviorLabel ?? selectedOption?.behaviorLabel ?? "Default";
   const currentFavorite = favoriteOptions.find((option) => isSameModel(value, option)) ?? favoriteOptions[0] ?? null;
   const nextFavorite = nextFavoriteModel(favorites, value);
-  const showBehavior = !hideValue
-    && selectedThinkingOptions.length > 0
-    && Boolean(effectiveBehaviorLabel);
 
   const applyModel = (option: ModelOption, behavior?: string | null) => {
     useModelCollectionsStore.getState().recordRecent(option);
@@ -429,16 +424,8 @@ export function ModelSelect({
             />
           }
         >
-          <span className="flex min-w-0 max-w-56 items-center gap-1.5">
-            <span className="truncate">
-              {hideValue || (!denAuth.isSignedIn && isCloudManagedProviderKey(value.providerID))
-                ? "Select model"
-                : (selectedOption?.title ?? value.modelID ?? "Select model")}
-            </span>
-            {showBehavior ? (
-              <span className="shrink-0 text-gray-9">· {effectiveBehaviorLabel}</span>
-            ) : null}
-          </span>
+          {/* The trigger stays generic; the open picker names the selected model. */}
+          <span className="truncate">Model</span>
           <ChevronDown className="h-3 w-3" />
         </TooltipTrigger>
         <TooltipContent>
