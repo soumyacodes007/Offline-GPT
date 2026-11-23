@@ -47,8 +47,8 @@ export function settingsNavigationFromPathname(pathname: string, tab: SettingsTa
   };
 }
 
-export function automationsRoute() {
-  return "/automations";
+export function scheduleRoute() {
+  return "/schedule";
 }
 
 export function dashboardRoute() {
