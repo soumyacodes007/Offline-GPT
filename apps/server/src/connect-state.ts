@@ -4,6 +4,7 @@ import type { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 
 import {
   readOfflineGptCloudMcpHealth,
+  type CloudMcpEngineV2,
   type CloudMcpHealth,
   type CloudMcpLiveStatusObserver,
   type CloudMcpProviderModelContext,
@@ -70,6 +71,7 @@ export type ConnectSnapshotOptions = {
   resolveOpencodeDirectory?: (workspace: WorkspaceInfo) => string | null;
   createWorkspaceOpencodeClient?: (config: ServerConfig, workspace: WorkspaceInfo) => WorkspaceOpencodeClient;
   refreshRegistrationFromLiveStatus?: CloudMcpLiveStatusObserver;
+  engineV2For?: (workspace: WorkspaceInfo) => CloudMcpEngineV2 | undefined;
 };
 
 export type ConnectSnapshotInspection = {
@@ -275,6 +277,7 @@ async function resolveCloudHealth(config: ServerConfig, options: ConnectSnapshot
     probe: false,
     createWorkspaceOpencodeClient: options.createWorkspaceOpencodeClient,
     refreshRegistrationFromLiveStatus: options.refreshRegistrationFromLiveStatus,
+    engineV2: options.engineV2For?.(resolved.workspace),
   });
   return {
     cloudHealth,
