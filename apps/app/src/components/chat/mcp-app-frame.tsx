@@ -10,7 +10,6 @@ import { legacyConnectionActionAppResourceUri, connectorCatalogSchema } from "@o
 import { ConnectorCatalogCard } from "./connector-catalog"
 import { ConnectionCard } from "./connection-card"
 import { connectionCardPayloadFromChatToolResult, reconnectActionFromChatToolResult } from "@/components/tools/error-attribution"
-import { AppChatArtifact } from "@/react-app/domains/apps/app-chat-artifact"
 import { openDesktopUrl } from "@/app/lib/desktop"
 import {
   OfflineGptServerError,
@@ -604,13 +603,6 @@ function EmbeddedMcpAppFrame({ part }: { part: DynamicToolUIPart }) {
     resultCache.current = { signature: nextResultSignature, value: nextResult }
   }
   const result = resultCache.current.value
-  const draft = useMemo(() => {
-    if (part.toolName !== "save_artifact_view" && !part.toolName.endsWith("_save_artifact_view")) return null
-    const reference = result?._meta?.["offlinegpt/appDraft"]
-    if (!isRecord(reference) || typeof reference.appId !== "string" || typeof reference.revisionId !== "string"
-      || typeof reference.title !== "string" || (reference.receiptId !== undefined && typeof reference.receiptId !== "string")) return null
-    return { appId: reference.appId, revisionId: reference.revisionId, title: reference.title, receiptId: reference.receiptId }
-  }, [part.toolName, result])
   const launch = useMemo(() => gatewayMcpAppLaunch(result?._meta), [result])
   const [app, setApp] = useState<OfflineGptMcpAppResource | null>(null)
   const [error, setError] = useState<McpAppDiagnostic | null>(null)
@@ -626,7 +618,7 @@ function EmbeddedMcpAppFrame({ part }: { part: DynamicToolUIPart }) {
     let cancelled = false
     setApp(null)
     setError(null)
-    if (draft || !result || !offlinegptServerClient || !workspaceId) return () => { cancelled = true }
+    if (!result || !offlinegptServerClient || !workspaceId) return () => { cancelled = true }
     const startedAt = performance.now()
     void offlinegptServerClient.resolveMcpApp(workspaceId, part.toolName, launch ?? undefined)
       .then(({ app: resolved }) => {
@@ -653,19 +645,8 @@ function EmbeddedMcpAppFrame({ part }: { part: DynamicToolUIPart }) {
         }
       })
     return () => { cancelled = true }
-  }, [draft, launch, offlinegptServerClient, part.toolName, result, workspaceId])
+  }, [launch, offlinegptServerClient, part.toolName, result, workspaceId])
 
-  // A completed build opens a native artifact tab. Rendering still goes
-  // through the authorized Apps API and the shared sandbox inside that tab.
-  if (draft) return <AppChatArtifact key={`${draft.appId}:${draft.revisionId}:${draft.receiptId}`} {...draft} />
-  const viewId = result?._meta?.artifactViewId
-  const revisionId = result?._meta?.viewRevisionId
-  if (app && typeof viewId === "string" && typeof revisionId === "string" && app.resourceUri === `ui://offlinegpt/artifacts/${viewId}/views/${revisionId}/index.html`) {
-    const artifact = result?.structuredContent?.artifact
-    const title = typeof result?._meta?.appTitle === "string" ? result._meta.appTitle : isRecord(artifact) && typeof artifact.title === "string" ? artifact.title : "App preview"
-    const receiptId = isRecord(artifact) && typeof artifact.receiptId === "string" ? artifact.receiptId : undefined
-    return <AppChatArtifact key={`${viewId}:${revisionId}:${receiptId}`} appId={viewId} revisionId={revisionId} title={title} receiptId={receiptId} />
-  }
   if (!result || (!app && !error)) return null
   if (error) return <McpAppDiagnosticNotice error={error} notice={CHAT_MCP_APP_UNAVAILABLE_NOTICE} />
   if (!app) return null
