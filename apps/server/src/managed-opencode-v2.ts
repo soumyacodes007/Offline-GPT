@@ -1,9 +1,10 @@
-import { managedPolicyPluginPath } from "./managed-policy-plugin.js";
+import { offlinegptV2PluginPath } from "./offlinegpt-extensions-plugin-path.js";
 import type { EnginePermissionRule } from "./managed-policy-rules.js";
 // Parallel v2 lane prototype: provider injection is a watched-config write. This module
 // deliberately has no reload/dispose call, unlike managed-opencode.ts and server.ts reloadOpencodeEngine.
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
 import { chmod, mkdir, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -90,12 +91,14 @@ export async function createManagedOpencodeV2Server(
   // cloud, database, or control-plane credentials. Unknown keys stay private.
   const inherited: Record<string, string> = {};
   for (const key of [
-    "OFFLINEGPT_SERVER_URL", "OFFLINEGPT_POLICY_TOKEN",
+    "OFFLINEGPT_SERVER_URL", "OFFLINEGPT_POLICY_TOKEN", "OFFLINEGPT_V2_PLUGIN_TOKEN",
     "PATH", "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "TMP", "TEMP",
     "LANG", "LC_ALL", "LC_CTYPE", "TZ", "TERM", "CI",
     "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_RUNTIME_DIR",
     "SystemRoot", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE", "APPDATA", "LOCALAPPDATA",
     "NODE_EXTRA_CA_CERTS", "SSL_CERT_FILE", "SSL_CERT_DIR",
+    // The Claude Agent provider runs the user's own `claude`, which reads its own login from this folder.
+    "CLAUDE_CONFIG_DIR", "OPENCODE_CLAUDE_PATH",
   ]) {
     const value = options.env?.[key] ?? process.env[key];
     if (value !== undefined) inherited[key] = value;
@@ -220,7 +223,15 @@ export async function createManagedOpencodeV2Server(
       $schema: "https://opencode.ai/config.json",
       providers: providerConfig,
       ...(options.permissions ? { permissions: await options.permissions() } : {}),
-      ...(options.env?.OFFLINEGPT_SERVER_URL ? { plugins: [managedPolicyPluginPath(true)] } : {}),
+      // v2 loads configured plugins only from folders; they are absent when
+      // the server runs from source without a build.
+      plugins: [
+        ...(options.env?.OFFLINEGPT_SERVER_URL ? ["managed-policy"] : []),
+        "offlinegpt-office",
+        "offlinegpt-tools",
+        "offlinegpt-schedule",
+        "offlinegpt-lean-context",
+      ].map(offlinegptV2PluginPath).filter((path) => existsSync(path)),
     }, null, 2)}\n`, { mode: 0o600 });
     await rename(temporary, target);
   }
