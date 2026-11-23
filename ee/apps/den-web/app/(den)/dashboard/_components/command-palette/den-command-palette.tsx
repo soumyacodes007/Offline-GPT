@@ -13,7 +13,6 @@ import { useEffect, useMemo, useState } from "react";
 import { buildDenFeedbackUrl } from "../../../_lib/feedback";
 import {
   type DenOrgCapabilities,
-  getAutomationsRoute,
   getOrgAccessFlags,
   getPluginRoute,
 } from "../../../_lib/den-org";
@@ -24,7 +23,6 @@ import {
 } from "../../_lib/dashboard-navigation";
 import { paletteFilter } from "../../_lib/palette-filter";
 import { useOrgDashboard } from "../../_providers/org-dashboard-provider";
-import { useAutomations } from "../automation-data";
 import { usePlugins } from "../plugin-data";
 
 const OFFLINEGPT_DOCS_URL = "https://offlinegptlabs.com/docs";
@@ -123,7 +121,6 @@ export function DenCommandPalette({ open, onOpenChange }: DenCommandPaletteProps
   );
   const capabilities = orgContext?.capabilities ?? EMPTY_CAPABILITIES;
   const pluginsQuery = usePlugins({ enabled: open && access.isAdmin });
-  const automationsQuery = useAutomations({ enabled: open && capabilities.workflows });
 
   useEffect(() => {
     if (!open) return;
@@ -177,20 +174,6 @@ export function DenCommandPalette({ open, onOpenChange }: DenCommandPaletteProps
     }));
   }, [access.isAdmin, activeOrg, pluginsQuery.data]);
 
-  const automationEntries = useMemo<PaletteEntry[]>(() => {
-    if (!activeOrg || !capabilities.workflows) return [];
-    return (automationsQuery.data?.items ?? [])
-      .filter((item) => item.automation.state !== "archived")
-      .map((item) => ({
-        id: `automation:${item.automation.id}`,
-        label: item.automation.name,
-        href: `${getAutomationsRoute(activeOrg.slug)}?automation=${encodeURIComponent(item.automation.id)}`,
-        icon: CalendarClock,
-        hint: "Automation",
-        keywords: [item.automation.state, "schedule", "recurring"],
-      }));
-  }, [activeOrg, automationsQuery.data, capabilities.workflows]);
-
   const actionEntries = useMemo<PaletteEntry[]>(() => [
     {
       id: "action:docs",
@@ -213,8 +196,8 @@ export function DenCommandPalette({ open, onOpenChange }: DenCommandPaletteProps
   ], [activeOrg?.slug, pathname, runtimeConfig.orgMode, runtimeConfigLoaded]);
 
   const allEntries = useMemo(
-    () => [...pageEntries, ...pluginEntries, ...automationEntries, ...actionEntries],
-    [actionEntries, automationEntries, pageEntries, pluginEntries],
+    () => [...pageEntries, ...pluginEntries, ...actionEntries],
+    [actionEntries, pageEntries, pluginEntries],
   );
   const entriesById = useMemo(
     () => new Map(allEntries.map((entry) => [entry.id, entry])),
@@ -277,11 +260,6 @@ export function DenCommandPalette({ open, onOpenChange }: DenCommandPaletteProps
             <PaletteGroup
               heading="Plugins"
               entries={visibleDataEntries(pluginEntries, query)}
-              onSelect={selectEntry}
-            />
-            <PaletteGroup
-              heading="Automations"
-              entries={visibleDataEntries(automationEntries, query)}
               onSelect={selectEntry}
             />
             <PaletteGroup heading="Actions" entries={actionEntries} onSelect={selectEntry} />
