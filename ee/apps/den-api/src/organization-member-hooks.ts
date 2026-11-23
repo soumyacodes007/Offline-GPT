@@ -3,6 +3,7 @@ import { MemberTable, OrganizationTable } from "@offlinegpt-ee/den-db/schema"
 import { cache } from "./cache.js"
 import { db } from "./db.js"
 import { syncInferenceAfterMemberChange } from "./inference.js"
+import { offboardMemberWorkers } from "./workers/member-offboarding.js"
 import { syncInferenceSubscriptionQuantityAfterMemberChange, syncSeatSubscriptionQuantityAfterMemberChange, syncWebSubscriptionQuantityAfterMemberChange } from "./stripe-billing.js"
 
 type OrgId = typeof OrganizationTable.$inferSelect.id
@@ -24,6 +25,7 @@ const organizationMemberChangeHooks: OrganizationMemberChangeHook[] = [
   syncInferenceSubscriptionQuantityAfterMemberChange,
   syncWebSubscriptionQuantityAfterMemberChange,
   syncInferenceAfterMemberChange,
+  offboardMemberWorkers,
 ]
 
 async function countOrganizationMembers(organizationId: OrgId) {
