@@ -180,7 +180,7 @@ import type { DenSettings } from "@/app/lib/den";
 import { readActiveWorkspaceId, writeActiveWorkspaceId } from "./session-memory";
 import { useUiStateStore } from "./ui-state-store";
 import {
-  automationsRoute,
+  scheduleRoute,
   globalExtensionsRoute,
   settingsReturnRoute,
   workspaceExtensionsRoute,
@@ -2612,7 +2612,7 @@ function SettingsRouteContent(props: SettingsSurfaceProps = {}) {
         onClose={() => setCommandPaletteOpen(false)}
         developerMode={developerMode}
         onToggleSidebar={toggleSidebar}
-        onOpenAutomations={() => navigate(automationsRoute())}
+        onOpenSchedule={() => navigate(scheduleRoute())}
         onCreateNewSession={() => void handleCreatePaletteSession()}
         onOpenSession={(workspaceId, sessionId) => {
           navigate(workspaceSessionRoute(workspaceId, sessionId));
