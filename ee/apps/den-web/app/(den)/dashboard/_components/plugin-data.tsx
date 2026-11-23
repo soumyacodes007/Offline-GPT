@@ -801,33 +801,3 @@ export function useArchivePlugin() {
   });
 }
 
-export function useAttachWorkflowToPlugin(pluginId: string) {
-  const queryClient = useQueryClient();
-  const { runReauthableAction } = useOrgDashboard();
-
-  return useMutation({
-    mutationFn: async (workflowId: string) => {
-      await runReauthableAction("attach-workflow-to-plugin", async () => {
-        const { response, payload } = await requestJson(
-          `/v1/plugins/${encodeURIComponent(pluginId)}/config-objects`,
-          {
-            method: "POST",
-            body: JSON.stringify({ configObjectId: workflowId, membershipSource: "manual" }),
-          },
-          15000,
-        );
-        if (!response.ok) {
-          throw getRequestError(payload, response, `Failed to add Workflow (${response.status}).`);
-        }
-      });
-      return workflowId;
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: pluginQueryKeys.detail(pluginId) }),
-        queryClient.invalidateQueries({ queryKey: pluginQueryKeys.list() }),
-        queryClient.invalidateQueries({ queryKey: ["me", "library"] }),
-      ]);
-    },
-  });
-}
