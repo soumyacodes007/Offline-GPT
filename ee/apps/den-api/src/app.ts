@@ -28,9 +28,6 @@ import { registerDeprecatedMemoryRoutes } from "./routes/deprecated-memory.js"
 import { registerDeprecatedSkillHubRoutes } from "./routes/deprecated-skill-hubs.js"
 import { registerDevRoutes } from "./routes/dev/index.js"
 import { registerMcpTokenRoutes } from "./routes/mcp/index.js"
-import { registerAutomationRoutes } from "./routes/automations/index.js"
-import { configureCloudAgentExecutor, configureCloudWorkflowExecutor } from "./automations/service.js"
-import { cloudAgentRuntimeAvailable, executeCloudAgent } from "./automations/cloud-agent-executor.js"
 import { getCatalog } from "./mcp/index.js"
 import { buildCapabilityToolTree, createCapabilityRegistryContext } from "./mcp/capability-registry.js"
 import { executeMarketplaceCapability } from "./mcp/marketplace-capabilities.js"
@@ -220,7 +217,6 @@ registerDeprecatedMemoryRoutes(app)
 registerDeprecatedSkillHubRoutes(app)
 registerDevRoutes(app)
 registerMeRoutes(app)
-registerAutomationRoutes(app, { enabled: env.automations.runtimeEnabled })
 registerOrgRoutes(app)
 registerVersionRoutes(app)
 registerWebhookRoutes(app)
@@ -231,69 +227,6 @@ registerAgentMcpRoutes(app)
 registerExternalConnectionProxyRoutes(app)
 registerAdminMcpRoutes(app)
 registerTelemetryRoutes(app)
-
-configureCloudAgentExecutor({ execute: executeCloudAgent, runtimeAvailable: cloudAgentRuntimeAvailable })
-
-configureCloudWorkflowExecutor(async ({ organizationId, ownerMemberId, automationRunId, action }) => {
-  const normalizedOrganizationId = normalizeDenTypeId("organization", organizationId)
-  const normalizedOwnerMemberId = normalizeDenTypeId("member", ownerMemberId)
-  const members = await db.select({ userId: MemberTable.userId }).from(MemberTable).where(and(
-    eq(MemberTable.id, normalizedOwnerMemberId),
-    eq(MemberTable.organizationId, normalizedOrganizationId),
-    isNull(MemberTable.removedAt),
-  )).limit(1)
-  const userId = members[0]?.userId
-  if (!userId) return { ok: false, message: "The Automation owner is no longer active.", retryable: false }
-  const organizations = await db.select({ metadata: OrganizationTable.metadata }).from(OrganizationTable).where(
-    eq(OrganizationTable.id, normalizedOrganizationId),
-  ).limit(1)
-  const organizationMetadata = organizations[0]?.metadata
-  const member = await resolveMcpMemberIdentity({ userId, organizationId })
-  if (!member) return { ok: false, message: "The Automation owner is no longer active.", retryable: false }
-  const catalog = await getCatalog(app as unknown as Hono, undefined)
-  const principal = { userId, organizationId, scopes: new Set(DEN_MCP_REQUESTED_SCOPES), payload: {} }
-  const capabilityContext = createCapabilityRegistryContext({
-    app: app as unknown as Hono,
-    env: undefined,
-    catalog,
-    principal,
-    organizationId: normalizedOrganizationId,
-    member,
-    redirectUriBase: env.apiPublicUrl ?? "http://127.0.0.1",
-    generatedArtifactViewsEnabled: env.generatedArtifactViewsEnabled,
-    organizationMetadata,
-    mcpConnectionsGatingEnabled: env.mcpConnectionsGatingEnabled,
-  })
-  const result = await executeMarketplaceCapability({
-    organizationId,
-    member,
-    pluginId: action.script.pluginId,
-    configObjectId: action.script.configObjectId,
-    configObjectVersionId: action.script.configObjectVersionId,
-    automationRunId: normalizeDenTypeId("automationRun", automationRunId),
-    body: action.input,
-    validateScriptOutput: true,
-    buildTools: () => buildCapabilityToolTree(capabilityContext),
-  })
-  if (!result.ok) return {
-    ok: false,
-    message: result.message,
-    retryable: false,
-    ...("receiptId" in result ? { receiptId: result.receiptId ?? null } : {}),
-  }
-  if (result.result.status !== "executed") {
-    return { ok: false, message: result.result.hint ?? "The Workflow could not execute.", retryable: false }
-  }
-  if (!result.result.receiptId) {
-    return { ok: false, message: "The Workflow ran, but its durable artifact receipt could not be recorded.", retryable: true }
-  }
-  return {
-    ok: true,
-    value: result.result.value,
-    canonicalResult: result.result.canonicalResult ?? JSON.stringify(result.result.value),
-    receiptId: result.result.receiptId,
-  }
-})
 
 app.get(
   "/openapi.json",
