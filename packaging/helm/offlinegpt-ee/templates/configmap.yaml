@@ -8,6 +8,7 @@ data:
   CI: "true"
   NODE_ENV: "production"
   OFFLINEGPT_DEV_MODE: {{ .Values.config.offlinegptDevMode | quote }}
+  OFFLINEGPT_EDITION: {{ .Values.config.edition | quote }}
   DEN_API_NODE_OPTIONS: {{ .Values.config.denApiNodeOptions | quote }}
   # SECURITY: Enables non-local redis:// DATABASE_REDIS_URL values only for
   # trusted private networks. Keep false for public or cross-network Redis;
@@ -182,6 +183,14 @@ data:
   {{ end }}
   {{ with .Values.config.inference.openRouterUpstreamUrl }}
   OPENROUTER_UPSTREAM_URL: {{ . | quote }}
+  {{ end }}
+  {{ if .Values.config.inference.upstreamUrl }}
+  INFERENCE_UPSTREAM_URL: {{ .Values.config.inference.upstreamUrl | quote }}
+  {{ else if .Values.vllm.enabled }}
+  INFERENCE_UPSTREAM_URL: {{ printf "http://%s-vllm:%v/v1" (include "offlinegpt-ee.fullname" .) .Values.vllm.containerPort | quote }}
+  {{ end }}
+  {{ with .Values.config.inference.models }}
+  INFERENCE_MODELS: {{ . | quote }}
   {{ end }}
   {{ with .Values.config.inference.creditsPerDollar }}
   INFERENCE_CREDITS_PER_DOLLAR: {{ . | quote }}
