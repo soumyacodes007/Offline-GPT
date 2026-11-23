@@ -55,19 +55,6 @@ const createResultSchema = z.object({
   })),
 });
 
-const automationProposalResultSchema = z.object({
-  ok: z.literal(true),
-  kind: z.literal("automation-proposal"),
-  created: z.literal(false),
-  limitation: z.string(),
-  proposal: z.object({
-    name: z.string(),
-    instructions: z.string(),
-    schedule: z.record(z.string(), z.unknown()),
-    model: z.record(z.string(), z.unknown()).optional(),
-    workspaceId: z.string().optional(),
-  }),
-});
 
 const affordanceResultSchema = <T extends z.ZodTypeAny>(id: string, result: T) => z.object({
   ok: z.literal(true),
@@ -372,7 +359,6 @@ describe("OfflineGPTExtensionsPreview session tools", () => {
 
     expect(contributions.map((contribution) => contribution.featureId)).toEqual([
       "sessions",
-      "automations",
       "extensions",
       "mcp:notion",
       "connect",
@@ -852,66 +838,6 @@ describe("OfflineGPTExtensionsPreview semantic tool surface", () => {
     expect(fake.requests).toHaveLength(0);
   });
 
-  test("proposes an Automation without creating anything or calling a backend", async () => {
-    const fake = startFakeOfflineGPTServer();
-    const plugin = await OfflineGPTExtensionsPreview({ directory: "/tmp/archive" });
-
-    const output = await plugin.tool.offlinegpt_execute.execute({
-      id: "automation.propose",
-      args: {
-        name: "Morning Slack check",
-        instructions: "Summarize my most recent Slack message.",
-        schedule: { kind: "daily", timezone: "Europe/Berlin", hour: 9, minute: 0 },
-      },
-    }, { sessionID: "ses_origin" });
-    const parsed = affordanceResultSchema("automation.propose", automationProposalResultSchema)
-      .parse(JSON.parse(output));
-
-    expect(parsed.result.created).toBe(false);
-    expect(parsed.result.proposal.name).toBe("Morning Slack check");
-    expect(parsed.result.proposal.schedule).toEqual({
-      kind: "daily",
-      timezone: "Europe/Berlin",
-      hour: 9,
-      minute: 0,
-    });
-    // The whole point of proposal-only: an agent never reaches Den or the
-    // local server, so it cannot bring an Automation into existence.
-    expect(fake.requests).toHaveLength(0);
-    expect(parsed.effects).toEqual({ data: "none", ui: "none", external: false });
-  });
-
-  test("discards a model-supplied workspaceId and pins the conversation's workspace", async () => {
-    const plugin = await OfflineGPTExtensionsPreview({ directory: "/tmp/archive", workspaceId: "ws_conversation" });
-
-    const output = await plugin.tool.offlinegpt_execute.execute({
-      id: "automation.propose",
-      args: {
-        name: "Morning Slack check",
-        instructions: "Summarize my most recent Slack message.",
-        schedule: { kind: "daily", timezone: "Europe/Berlin", hour: 9, minute: 0 },
-        // A prompt-injected agent must not be able to retarget the Automation.
-        workspaceId: "ws_attacker",
-      },
-    }, { sessionID: "ses_origin" });
-    const parsed = affordanceResultSchema("automation.propose", automationProposalResultSchema)
-      .parse(JSON.parse(output));
-
-    expect(parsed.result.proposal.workspaceId).toBe("ws_conversation");
-  });
-
-  test("rejects a proposal whose schedule is not a supported kind", async () => {
-    const plugin = await OfflineGPTExtensionsPreview({ directory: "/tmp/archive" });
-
-    await expect(plugin.tool.offlinegpt_execute.execute({
-      id: "automation.propose",
-      args: {
-        name: "Every five minutes",
-        instructions: "Say hello.",
-        schedule: { kind: "interval", timezone: "Europe/Berlin", everyMinutes: 5 },
-      },
-    }, { sessionID: "ses_origin" })).rejects.toThrow();
-  });
 });
 
 async function startFakeWebMcpUiBridge() {
