@@ -12,8 +12,9 @@ import {
   sentryInferenceReporter,
 } from "./inference-reporting.js"
 import type { InferenceReporter } from "./inference-reporting.js"
-import { listModelCatalog, resolveModelAlias } from "./model-catalog.js"
+import { createSelfHostedCatalog, findModelAlias, listModelCatalog, parseConfiguredModels, type ModelCatalogEntry } from "./model-catalog.js"
 import type { AnalyticsObserver, beginModelAnalytics } from "./task-analytics.js"
+import type { ModelAccess } from "./model-access.js"
 import { completeChatResponse, inferenceError, readResponseJson, relayChatStream, upstreamError } from "./chat-response.js"
 
 type JsonObject = Record<string, unknown>
@@ -42,6 +43,20 @@ const blockedServerToolTypes = new Set([
   "openrouter:image_generation",
 ])
 
+type SelfHostedUpstream = { url: string; apiKey?: string }
+
+const defaultSelfHostedUpstream: SelfHostedUpstream | null = env.selfHostedUpstream
+  ? { url: env.selfHostedUpstream.url, apiKey: env.selfHostedUpstream.apiKey }
+  : null
+
+export const defaultModelCatalog = env.selfHostedUpstream
+  ? createSelfHostedCatalog({
+      upstreamUrl: env.selfHostedUpstream.url,
+      apiKey: env.selfHostedUpstream.apiKey,
+      configured: env.selfHostedUpstream.models ? parseConfiguredModels(env.selfHostedUpstream.models) : undefined,
+    })
+  : async () => listModelCatalog()
+
 const defaultProxyDependencies: ProxyDependencies = {
   async findActiveInferenceKey(key) {
     const keys = await import("./keys.js")
@@ -60,6 +75,12 @@ const defaultProxyDependencies: ProxyDependencies = {
     return limits.ensureUsableBuckets(organizationId)
   },
   fetch,
+  selfHostedUpstream: defaultSelfHostedUpstream,
+  modelCatalog: defaultModelCatalog,
+  async modelAccess(key) {
+    const { memberModelAccess } = await import("./model-access.js")
+    return memberModelAccess({ orgMembershipId: key.org_membership_id })
+  },
   async analytics(input) {
     const { beginModelAnalytics } = await import("./task-analytics.js")
     return beginModelAnalytics(input)
@@ -72,6 +93,11 @@ type ProxyDependencies = {
   getOpenRouterProviderKey: typeof getOpenRouterProviderKeyFn
   ensureUsableBuckets: typeof ensureUsableBucketsFn
   fetch: typeof fetch
+  /** When set, chat requests go to this OpenAI-compatible server instead of OpenRouter. */
+  selfHostedUpstream?: SelfHostedUpstream | null
+  modelCatalog?: () => Promise<readonly ModelCatalogEntry[]>
+  /** Den access policy for models; null means the member has left the org. Omitted: no policy. */
+  modelAccess?: (key: { org_membership_id: string }) => Promise<ModelAccess | null>
   reporter?: InferenceReporter
   analytics?: typeof beginModelAnalytics
 }
@@ -166,18 +192,31 @@ function validateModelSelection(json: JsonObject) {
   return null
 }
 
-function sanitizeHeaders(request: Request, apiKey: string, offlinegptRequestId: string) {
+function sanitizeHeaders(request: Request, apiKey: string | undefined, offlinegptRequestId: string, selfHosted: boolean) {
   const headers = new Headers()
   const accept = request.headers.get("accept")
   if (accept) headers.set("accept", accept)
-  headers.set("authorization", `Bearer ${apiKey}`)
+  if (apiKey) headers.set("authorization", `Bearer ${apiKey}`)
   headers.set("content-type", "application/json")
   headers.set("x-offlinegpt-request-id", offlinegptRequestId)
+  if (selfHosted) {
+    // Session affinity for the vLLM router (consistent_hash on x-session-id):
+    // an agent's turns land on the replica that already caches its prefix.
+    const sessionId = request.headers.get("x-offlinegpt-session-id")?.trim()
+    if (sessionId && /^[\w.:-]{1,200}$/.test(sessionId)) headers.set("x-session-id", sessionId)
+    return headers
+  }
   if (env.proxyBaseUrl) {
     headers.set("http-referer", env.proxyBaseUrl)
   }
   headers.set("x-title", "OfflineGPT Inference")
   return headers
+}
+
+// OpenRouter's `trace` extension is not part of the OpenAI API.
+function withoutTrace(body: PreparedBody["body"]): JsonObject {
+  const { trace: _trace, ...rest } = body
+  return rest
 }
 
 function openAiError(status: number, code: string, message: string) {
@@ -237,6 +276,8 @@ async function prepareBody(request: Request, input: {
   method: string
   headers: Record<string, string>
   reporter: InferenceReporter
+  catalog: readonly ModelCatalogEntry[]
+  selfHosted: boolean
 }): Promise<PreparedBodyResult> {
   if (!isJsonRequest(request)) {
     const payloadLog = buildUnparsedPayloadLog("unsupported_media_type", request.headers.get("content-type"))
@@ -312,7 +353,7 @@ async function prepareBody(request: Request, input: {
     return { error: openAiError(400, "invalid_json", "JSON request body is invalid."), incomingModel: null, upstreamModel: null }
   }
   const requestedModel = isJsonObject(json) && typeof json.model === "string" ? json.model : null
-  const model = requestedModel ? resolveModelAlias(requestedModel) : null
+  const model = requestedModel ? findModelAlias(input.catalog, requestedModel) : null
   const payloadLog = buildInferencePayloadLog(input.organizationId, json)
   input.reporter.request({
     organizationId: input.organizationId,
@@ -425,7 +466,7 @@ async function prepareBody(request: Request, input: {
 
   body.model = model.upstreamModel
   body.user = input.orgMembershipId
-  body.session_id = input.offlinegptRequestId
+  if (!input.selfHosted) body.session_id = input.offlinegptRequestId
   const trace = {
     trace_id: input.offlinegptRequestId,
     trace_name: "OfflineGPT Inference",
@@ -444,10 +485,10 @@ async function prepareBody(request: Request, input: {
   }
 }
 
-function listOpenAiModels() {
+function listOpenAiModels(catalog: readonly ModelCatalogEntry[]) {
   return {
     object: "list",
-    data: listModelCatalog().map((model) => ({
+    data: catalog.map((model) => ({
       id: model.alias,
       object: "model",
       created: 0,
@@ -468,6 +509,17 @@ function localRouteRejection(path: string, method: string) {
 
 export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies = defaultProxyDependencies) {
   const reporter = dependencies.reporter ?? sentryInferenceReporter
+  const selfHostedUpstream = dependencies.selfHostedUpstream ?? null
+  const modelCatalog = dependencies.modelCatalog ?? (async () => listModelCatalog())
+
+  async function readCatalog() {
+    try {
+      return await modelCatalog()
+    } catch {
+      logProxyError("Self-hosted model catalog unavailable", {})
+      return null
+    }
+  }
 
   async function managedModelsRejection(organizationId: string) {
     try {
@@ -500,8 +552,15 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
     const policyRejection = await managedModelsRejection(inferenceKey.organization_id)
     if (policyRejection) return policyRejection
 
+    const modelAccess = dependencies.modelAccess ? await dependencies.modelAccess(inferenceKey) : undefined
+    if (modelAccess === null) {
+      return c.json({ error: { message: "This OfflineGPT account is no longer a member of the organization.", type: "authentication_error", code: "member_removed" } }, 403)
+    }
+
     if (c.req.path === modelsPath && c.req.method === "GET") {
-      return c.json(listOpenAiModels())
+      const catalog = await readCatalog()
+      if (!catalog) return c.json(inferenceError("upstream_unreachable", "The model server could not be reached."), 502)
+      return c.json(listOpenAiModels(modelAccess ? catalog.filter((model) => modelAccess.decide(model.alias).allowed) : catalog))
     }
 
     if (c.req.path !== chatCompletionsPath || c.req.method !== "POST") {
@@ -541,7 +600,11 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
       return openAiError(400, "unsupported_query_parameters", "OfflineGPT chat completions does not accept query parameters.")
     }
 
+    const catalog = await readCatalog()
+    if (!catalog) return c.json(inferenceError("upstream_unreachable", "The model server could not be reached."), 502)
     const prepared = await prepareBody(c.req.raw, {
+      catalog,
+      selfHosted: selfHostedUpstream !== null,
       organizationId: inferenceKey.organization_id,
       orgMembershipId: inferenceKey.org_membership_id,
       inferenceKeyId: inferenceKey.id,
@@ -559,6 +622,12 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
         orgMembershipId: inferenceKey.org_membership_id,
       })
       return prepared.error
+    }
+
+    const modelDecision = modelAccess?.decide(prepared.modelAlias)
+    if (modelAccess && modelDecision && !modelDecision.allowed) {
+      await modelAccess.recordDenied(prepared.modelAlias, modelDecision)
+      return openAiError(403, "model_not_allowed", `Your organization's access policy does not allow model ${prepared.modelAlias}.`)
     }
 
     const limits = await dependencies.ensureUsableBuckets(inferenceKey.organization_id)
@@ -583,7 +652,9 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
       }, 429)
     }
 
-    const providerKey = await dependencies.getOpenRouterProviderKey(inferenceKey.organization_id)
+    const providerKey = selfHostedUpstream
+      ? { encrypted_api_key: selfHostedUpstream.apiKey }
+      : await dependencies.getOpenRouterProviderKey(inferenceKey.organization_id)
     if (!providerKey) {
       logProxyError("Missing active OpenRouter provider key", {
         path: c.req.path,
@@ -609,7 +680,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
     }
 
     const upstreamPath = c.req.path.replace(/^\/api\/v1/, "")
-    const upstreamUrl = new URL(`${env.openRouterUpstreamUrl}${upstreamPath}`)
+    const upstreamUrl = new URL(`${selfHostedUpstream?.url ?? env.openRouterUpstreamUrl}${upstreamPath}`)
     const startedAt = Date.now()
     // The provider validates n; only a valid requested cardinality constrains responses.
     const choiceCount = typeof prepared.body.n === "number" && Number.isSafeInteger(prepared.body.n) && prepared.body.n > 0 ? prepared.body.n : 1
@@ -641,8 +712,10 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
     try {
       const upstreamInit: ProxyRequestInit = {
         method: c.req.method,
-        headers: sanitizeHeaders(c.req.raw, providerKey.encrypted_api_key, offlinegptRequestId),
-        body: JSON.stringify({ ...prepared.body, trace: { ...prepared.body.trace, usage_started_at: limits.admittedAt.toISOString() } }),
+        headers: sanitizeHeaders(c.req.raw, providerKey.encrypted_api_key, offlinegptRequestId, selfHostedUpstream !== null),
+        body: JSON.stringify(selfHostedUpstream
+          ? withoutTrace(prepared.body)
+          : { ...prepared.body, trace: { ...prepared.body.trace, usage_started_at: limits.admittedAt.toISOString() } }),
         duplex: "half",
         signal: abort.signal,
         redirect: "error",
