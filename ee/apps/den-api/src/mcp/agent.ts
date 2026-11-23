@@ -33,18 +33,9 @@ import {
 import { resolveMcpMemberIdentity } from "./external-capabilities.js"
 import { executeMarketplaceCapability, listAccessibleMarketplaceSkillDescriptors, parseMarketplaceCapabilityName, type RemoteSkillDescriptor } from "./marketplace-capabilities.js"
 import { resolvePublicOrigin } from "../capability-sources/generic-oauth.js"
-import { automationService } from "../automations/service.js"
-import { AGENT_AUTOMATION_INDEX_LIMIT, registerAgentAutomationResources } from "./automation-index.js"
 import { env } from "../env.js"
 import { getOrganizationContextForUser, listTeamsForMember } from "../orgs.js"
-import { getWorkflowDetail, getWorkflowSnapshot } from "../workflows.js"
-import { artifactFreshness } from "../workflow-artifacts.js"
 import { PluginArchAuthorizationError, requirePluginArchCapability } from "../routes/org/plugin-system/access.js"
-import {
-  WORKFLOW_ARTIFACT_APP_SCHEMA_VERSION,
-  workflowArtifactAppServerCapabilities,
-  registerAgentWorkflowArtifactApp,
-} from "./workflow-artifact-app.js"
 import {
   executeBuiltinSkillCapability,
   listBuiltinSkillDescriptors,
@@ -59,23 +50,9 @@ import {
   type ExecuteCapabilityToolResult,
 } from "./capability-registry.js"
 import { runCodemodeScript } from "./codemode-run.js"
+import { mcpAppServerCapabilities } from "./mcp-app-capabilities.js"
 import { normalizeToolBody } from "./invoke.js"
-import { recordWorkflowResult } from "../workflow-runs.js"
-import {
-  activateArtifactViewRevision,
-  getGeneratedArtifactViewRevision,
-  listArtifactViews,
-  loadArtifactViewRevision,
-  readArtifactViewSource,
-  retireArtifactView,
-  saveArtifactViewRevision,
-} from "../artifact-views.js"
-import {
-  registerAgentGeneratedArtifactViews,
-  registerGeneratedArtifactResource,
-} from "./generated-artifact-views.js"
 import type { PluginArchActorContext } from "../routes/org/plugin-system/access.js"
-import { parseArtifactViewResourceUri } from "../artifact-view-resource.js"
 import {
   listUsableExternalMcpConnections,
   readyExternalMcpConnectionsForMember,
@@ -301,7 +278,7 @@ export function createAgentMcpServer(): McpServer {
     version: "1.0.0",
   }, {
     capabilities: {
-      ...workflowArtifactAppServerCapabilities,
+      ...mcpAppServerCapabilities,
       tools: { listChanged: true },
       resources: { listChanged: true },
     },
@@ -512,22 +489,6 @@ export function registerAgentMcpRoutes<T extends { Variables: RequestIdVariables
         member: memberIdentity,
         marketplaceEnabled: externalMcpConnectionsEnabled,
       })
-      if (env.automations.runtimeEnabled) {
-        // Owner-scoped: the index only ever carries this member's own
-        // Automations. Without a resolved member there is no owner to scope to,
-        // and a failure here must not take the whole connection down.
-        const automations = memberIdentity
-          ? await automationService.list({
-            organizationId: principal.organizationId,
-            ownerMemberId: memberIdentity.orgMembershipId,
-          }, { limit: AGENT_AUTOMATION_INDEX_LIMIT }).catch(() => null)
-          : null
-        registerAgentAutomationResources({
-          server,
-          items: automations?.items ?? [],
-          fetchedAt: Date.now(),
-        })
-      }
     }
 
     server.registerTool(
@@ -535,8 +496,8 @@ export function registerAgentMcpRoutes<T extends { Variables: RequestIdVariables
       {
         title: "Search capabilities",
         description: [
-          "Search connection actions, saved Workflows, and skills by keyword.",
-          "Direct MCP tools such as create_skill and save_artifact_view are outside this search; call an available direct tool itself. For an app, dashboard, or artifact view of Workflow results, use save_artifact_view and follow its prerequisites.",
+          "Search connection actions and skills by keyword.",
+          "Direct MCP tools such as create_skill are outside this search; call an available direct tool itself.",
           "Search covers native Google Workspace capabilities (Gmail, Calendar, Drive, Gmail drafts), org-connected external MCPs, and namespaced OfflineGPT Admin tools for allowlisted platform admins.",
           "Accessible Workflows appear as marketplace matches with kind workflow and execute through execute_capability like every other exact search result.",
           "Try 2-4 keyword variants before deciding a capability is unavailable.",
@@ -731,165 +692,6 @@ export function registerAgentMcpRoutes<T extends { Variables: RequestIdVariables
 
     registerAgentPluginFlowApp(server)
 
-    const loadWorkflowArtifact = async ({
-      configObjectId,
-      receiptId,
-      maxAgeMs,
-      expectedOutputSchemaDigest,
-    }: {
-      configObjectId: string
-      receiptId?: string
-      maxAgeMs?: number
-      expectedOutputSchemaDigest?: string
-    }) => {
-      if (!artifactContext) {
-        return {
-          ok: false as const,
-          error: "workflow_not_found",
-          message: "The Workflow is unavailable to this member.",
-        }
-      }
-      try {
-        const detail = await getWorkflowDetail({
-          context: artifactContext,
-          configObjectId,
-          maxAgeMs,
-        })
-        const snapshot = receiptId
-          ? await getWorkflowSnapshot({ context: artifactContext, configObjectId, receiptId })
-          : detail.latestSuccessfulSnapshot
-        if (!snapshot) {
-          return {
-            ok: false as const,
-            error: "workflow_snapshot_not_found",
-            message: receiptId
-              ? "That immutable artifact snapshot was not found."
-              : "This Workflow does not have a successful artifact snapshot yet. Run it explicitly or through its Automation first.",
-          }
-        }
-        if (snapshot.status !== "succeeded" || snapshot.contentDeletedAt !== null
-          || snapshot.markdown === null
-          || snapshot.resultDigest === null || snapshot.rendererVersion !== "codemode-markdown-v1") {
-          return {
-            ok: false as const,
-            error: "workflow_snapshot_unavailable",
-            message: "This artifact snapshot has no readable successful content.",
-          }
-        }
-        if (expectedOutputSchemaDigest && snapshot.outputSchemaDigest !== expectedOutputSchemaDigest) {
-          return {
-            ok: false as const,
-            error: "artifact_view_schema_incompatible",
-            message: "This Artifact result does not match the immutable view revision's output schema.",
-          }
-        }
-        const freshness = receiptId
-          ? artifactFreshness({
-              latestFinishedAt: new Date(snapshot.finishedAt),
-              latestStatus: "succeeded",
-              latestSuccessfulFinishedAt: new Date(snapshot.finishedAt),
-              latestSuccessfulReceiptId: snapshot.receiptId,
-              maxAgeMs: Math.min(30 * 24 * 60 * 60_000, Math.max(60_000, maxAgeMs ?? 24 * 60 * 60_000)),
-            })
-          : detail.freshness
-        return {
-          ok: true as const,
-          markdown: snapshot.markdown,
-          payload: {
-            schemaVersion: WORKFLOW_ARTIFACT_APP_SCHEMA_VERSION,
-            artifact: {
-              title: detail.title,
-              description: detail.description,
-              pluginId: snapshot.pluginId,
-              configObjectId: snapshot.configObjectId,
-              configObjectVersionId: snapshot.configObjectVersionId,
-              receiptId: snapshot.receiptId,
-              automationRunId: snapshot.automationRunId,
-              source: snapshot.source,
-              generatedAt: snapshot.finishedAt,
-              resultDigest: snapshot.resultDigest,
-              rendererVersion: snapshot.rendererVersion,
-              freshness,
-            },
-            data: snapshot.value,
-          },
-        }
-      } catch (error) {
-        if (error instanceof PluginArchAuthorizationError) {
-          return {
-            ok: false as const,
-            error: "workflow_not_found",
-            message: "The Workflow is unavailable to this member.",
-          }
-        }
-        const message = error instanceof Error ? error.message : "workflow_not_found"
-        return {
-          ok: false as const,
-          error: message.includes("not_found") ? "workflow_not_found" : "workflow_unavailable",
-          message: "The Workflow's retained Artifact could not be loaded.",
-        }
-      }
-    }
-
-    // Keep the generic MCP App tool as the interoperable baseline.
-    registerAgentWorkflowArtifactApp({
-      server,
-      load: loadWorkflowArtifact,
-      selectApp: async ({ configObjectId, receiptId }) => {
-        if (!artifactContext || !env.generatedArtifactViewsEnabled) return null
-        const views = await listArtifactViews({ context: artifactContext, activeOnly: true, savedOnly: true })
-        const snapshot = await getWorkflowSnapshot({ context: artifactContext, configObjectId, receiptId })
-        if (!snapshot) return null
-        for (const view of views) {
-          if (view.configObjectId !== configObjectId || view.useInWorkflow === false) continue
-          const revision = view.revisions.find((entry) => entry.id === view.activeRevisionId)
-          if (!revision || revision.buildStatus !== "ready" || revision.retiredAt
-            || revision.outputSchemaDigest !== snapshot.outputSchemaDigest) continue
-          return { artifactViewId: view.id, viewRevisionId: revision.id, resourceUri: revision.resourceUri, toolName: `render_artifact_${view.id}` }
-        }
-        return null
-      },
-    })
-
-    // This server deploys independently from Desktop. Do not advertise or
-    // serve bridge-dependent generated views until the compatible Desktop
-    // MCP Apps host has been released and the operator enables the rollout.
-    if (artifactContext && env.generatedArtifactViewsEnabled) {
-      const loadGeneratedResource = async ({ artifactViewId, revisionId }: { artifactViewId: string; revisionId: string }) => {
-        const { revision } = await loadArtifactViewRevision({ context: artifactContext, artifactViewId, revisionId })
-        if (revision.build_status !== "ready" || !revision.compiled_html || !revision.resource_digest) {
-          throw new Error("artifact_view_revision_not_ready")
-        }
-        return { html: revision.compiled_html, resourceDigest: revision.resource_digest, csp: revision.csp }
-      }
-      const generatedViews = await listArtifactViews({ context: artifactContext })
-      registerAgentGeneratedArtifactViews({
-        server,
-        views: generatedViews,
-        loadResource: loadGeneratedResource,
-        loadData: loadWorkflowArtifact,
-        readSource: (request) => readArtifactViewSource({ context: artifactContext, ...request }),
-        save: (request) => saveArtifactViewRevision({ context: artifactContext, ...request }),
-        activate: (request) => activateArtifactViewRevision({ context: artifactContext, ...request }),
-        retire: (request) => retireArtifactView({ context: artifactContext, ...request }),
-        notifyCatalogChanged: () => {
-          handlers.notify.toolsChanged(notificationScope)
-          handlers.notify.resourcesChanged(notificationScope)
-        },
-      })
-
-      const exactResource = requestInfo.resourceUri ? parseArtifactViewResourceUri(requestInfo.resourceUri) : null
-      if (exactResource && !generatedViews.some((view) => view.revisions.some((revision) => revision.resourceUri === requestInfo.resourceUri))) {
-        const exact = await getGeneratedArtifactViewRevision({ context: artifactContext, ...exactResource })
-        registerGeneratedArtifactResource({
-          server,
-          view: exact.view,
-          revision: exact.revision,
-          loadResource: loadGeneratedResource,
-        })
-      }
-    }
-
     server.registerTool(
       EXECUTE_CAPABILITY_SCRIPT_TOOL_NAME,
       {
@@ -903,12 +705,11 @@ export function registerAgentMcpRoutes<T extends { Variables: RequestIdVariables
           "Send plain source only (no markdown fences). End with `return <json-safe value>`; use console.log for progress logs.",
           "Run independent tool calls in parallel with Promise.all and return only the fields needed.",
           "Parameters go in `input` (a JSON object) and are read inside the script as `input.<field>`; never hardcode values that should be parameters.",
-          "Typical Workflows are recurring digests (Slack/Gmail/Calendar summaries), inbox or ticket triage, lead alerts and CRM syncs, and status reports. Put everything a person might change (channel, recipient, lookback hours, thresholds) in `input` so the saved Workflow can be scheduled as an Automation with different parameters. tools.$codemode.search is fine while exploring but a saved Workflow must call tools directly.",
         ].join(" "),
         annotations: EXECUTE_CAPABILITY_ANNOTATIONS,
         inputSchema: z.object({
           code: z.string().min(1),
-          input: z.unknown().optional().describe("Optional parameters for the script, bound read-only as `input`. Pass a JSON object (not a JSON string). It becomes the Workflow's example input when the run is saved with saveWorkflow."),
+          input: z.unknown().optional().describe("Optional parameters for the script, bound read-only as `input`. Pass a JSON object (not a JSON string). "),
         }),
       },
       async ({ code, input }) => executeCapabilityWithBudget({
@@ -923,14 +724,6 @@ export function registerAgentMcpRoutes<T extends { Variables: RequestIdVariables
             timeoutMs: 170_000,
           })
           const finishedAt = new Date()
-          await recordWorkflowResult(db, {
-            organizationId,
-            orgMembershipId: memberIdentity?.orgMembershipId,
-            source: "adhoc",
-            code,
-            startedAt,
-            finishedAt,
-          }, result)
           if (!result.ok) {
             return {
               isError: true,
