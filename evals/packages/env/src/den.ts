@@ -216,6 +216,8 @@ function spawnService(
   const child = spawn("pnpm", args, {
     cwd: REPO_ROOT,
     env: prepared && label === "den-api" ? { ...env, PORT: String(port) } : env,
+    // pnpm is a .cmd shim on Windows, which only a shell can start.
+    shell: process.platform === "win32",
     detached: true,
     stdio: ["ignore", logFd, logFd],
   });
@@ -283,6 +285,7 @@ async function runDbPush(databaseUrl: string): Promise<void> {
     for (const args of commands) {
       await execFileAsync("pnpm", args, {
         cwd: REPO_ROOT,
+        shell: process.platform === "win32",
         env: {
           ...process.env,
           DATABASE_URL: databaseUrl,
@@ -319,6 +322,7 @@ async function runDemoOrgSeed(databaseUrl: string, webPort: number, logPath: str
       ["--filter", "@offlinegpt-ee/den-api", "seed:demo-org", "--", "--reset"],
       {
         cwd: REPO_ROOT,
+        shell: process.platform === "win32",
         env: {
           ...process.env,
           DATABASE_URL: databaseUrl,
