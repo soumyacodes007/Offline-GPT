@@ -5,6 +5,7 @@ import { access, chmod, mkdir, mkdtemp, readdir, rename, rm, writeFile } from "n
 import { join } from "node:path";
 import { promisify } from "node:util";
 import artifacts from "./opencode-v2-artifacts.json" with { type: "json" };
+import { isAirgappedEdition } from "./edition.js";
 
 const exec = promisify(execFile);
 
@@ -52,6 +53,9 @@ export async function installOpencodeV2Binary(cacheRoot: string, version: string
   const name = platform === "windows" ? "opencode2.exe" : "opencode2";
   const binary = join(directory, name);
   try { await access(binary); return binary; } catch { /* First installation. */ }
+  if (isAirgappedEdition()) {
+    throw new Error("OpenCode v2 is not installed and OFFLINEGPT_EDITION=airgapped forbids downloading it. Put opencode2 on PATH or set OFFLINEGPT_OPENCODE2_BIN to the bundled engine.");
+  }
   await mkdir(cacheRoot, { recursive: true, mode: 0o700 });
   await chmod(cacheRoot, 0o700);
   await mkdir(directory, { recursive: true, mode: 0o700 });
