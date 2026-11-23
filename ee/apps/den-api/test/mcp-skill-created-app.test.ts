@@ -10,7 +10,7 @@ import {
   UPDATE_SKILL_TOOL_NAME,
   type CreateSkillResult,
 } from "../src/mcp/skill-created-app.js"
-import { workflowArtifactAppServerCapabilities } from "../src/mcp/workflow-artifact-app.js"
+import { mcpAppServerCapabilities } from "../src/mcp/mcp-app-capabilities.js"
 
 const payload = skillCreatedPayloadSchema.parse({
   schemaVersion: "1",
@@ -37,7 +37,7 @@ async function withClient<T>(
 ): Promise<T> {
   const server = new McpServer(
     { name: "skill-created-test", version: "1.0.0" },
-    { capabilities: workflowArtifactAppServerCapabilities },
+    { capabilities: mcpAppServerCapabilities },
   )
   registerAgentSkillCreatedApp({ server, create, update })
   const client = new Client(
