@@ -1,3 +1,4 @@
+import { isAirgappedEdition } from "./edition.js";
 import { loopbackFetch } from "./server-fetch.js";
 
 const LOCAL_MODELS_URL = "http://localhost:8791/models";
@@ -14,6 +15,9 @@ export async function resolveOpencodeModelsUrl(
   const env = options.env ?? process.env;
   const override = env.OPENCODE_MODELS_URL?.trim();
   if (override) return override;
+  if (isAirgappedEdition(env)) {
+    throw new Error("OFFLINEGPT_EDITION=airgapped requires OPENCODE_MODELS_URL, the internal model catalog (e.g. http://inference:8791/models).");
+  }
   if (env.OFFLINEGPT_DEV_MODE !== "1") return PRODUCTION_MODELS_URL;
 
   try {
