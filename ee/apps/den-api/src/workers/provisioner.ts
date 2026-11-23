@@ -1,6 +1,7 @@
 import { WorkerTable } from "@offlinegpt-ee/den-db/schema"
 import { env } from "../env.js"
 import { appLogger } from "../observability/logger.js"
+import { deprovisionWorkerOnDocker, provisionWorkerOnDocker } from "./docker.js"
 import {
   deprovisionWorkerOnDaytona,
   provisionWorkerOnDaytona,
@@ -360,6 +361,10 @@ export async function provisionWorker(
     return provisionWorkerOnDaytona(input)
   }
 
+  if (env.provisionerMode === "docker") {
+    return provisionWorkerOnDocker(input)
+  }
+
   const template = env.workerUrlTemplate ?? "https://workers.local/{workerId}"
   const url = template.replace("{workerId}", input.workerId)
   return {
@@ -375,6 +380,11 @@ export async function deprovisionWorker(input: {
 }) {
   if (env.provisionerMode === "daytona") {
     await deprovisionWorkerOnDaytona(input.workerId)
+    return
+  }
+
+  if (env.provisionerMode === "docker") {
+    await deprovisionWorkerOnDocker(input.workerId)
     return
   }
 
