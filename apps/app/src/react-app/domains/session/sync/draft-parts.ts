@@ -108,15 +108,13 @@ export async function draftToParts(
         const mentionPart = draft.parts.find((part) =>
           (part.type === "agent" && part.name === value)
           || (part.type === "app" && part.name === value)
-          || (part.type === "computer" && part.target === value
-            && (index <= 1 && !segments[0] || /\s$/.test(segments[index - 1] ?? "")))
           || (part.type === "file" && part.path === value),
         );
         if (mentionPart?.type === "agent") {
           parts.push({ type: "agent", name: mentionPart.name });
           continue;
         }
-        if (mentionPart?.type === "computer" || mentionPart?.type === "app") {
+        if (mentionPart?.type === "app") {
           parts.push(...mentionPromptParts(mentionPart));
           continue;
         }
@@ -155,7 +153,7 @@ export async function draftToParts(
         parts.push({ type: "agent", name: part.name });
         continue;
       }
-      if (part.type === "skill" || part.type === "connect-skill" || part.type === "computer" || part.type === "app") {
+      if (part.type === "skill" || part.type === "connect-skill" || part.type === "app") {
         parts.push(...mentionPromptParts(part));
         continue;
       }
