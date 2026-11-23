@@ -14,6 +14,7 @@ import {
 import type { McpDirectoryInfo } from "@/app/constants";
 import { openDesktopUrl, opencodeMcpAuth } from "@/app/lib/desktop";
 import { unwrap } from "@/app/lib/opencode";
+import { isOpencodeV2Client } from "@/app/lib/opencode-v2-adapter";
 import { getMcpIdentityKey, validateMcpServerName } from "@/app/mcp";
 import type { Client } from "@/app/types";
 import { isDesktopRuntime, normalizeDirectoryPath } from "@/app/utils";
@@ -268,7 +269,8 @@ export function McpAuthModal(props: McpAuthModalProps) {
         return;
       }
 
-      if (!props.isRemoteWorkspace) {
+      // v1 opens the browser and waits; OpenCode v2 hands back the URL like a remote worker.
+      if (!props.isRemoteWorkspace && !isOpencodeV2Client(props.client)) {
         const result = await props.client.mcp.auth.authenticate({
           name: slug,
           directory,
