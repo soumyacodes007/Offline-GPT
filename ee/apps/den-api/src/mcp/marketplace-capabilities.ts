@@ -26,6 +26,7 @@ import { EXTERNAL_MCP_PRESETS } from "../capability-sources/external-mcp-presets
 import { getConnectedAccount, getOrgOAuthClient } from "../capability-sources/oauth-credentials.js"
 import { db } from "../db.js"
 import { resolvePluginArchGrantRole } from "../routes/org/plugin-system/access.js"
+import { decideAccess, loadAccessPolicyRules, resolveMemberAccessContext, type AccessPolicyResourceKind } from "@offlinegpt-ee/den-db"
 import { offlinegptOrganizationConnectionsUrl, offlinegptYourConnectionsUrl } from "./connection-navigation.js"
 import { parseCodemodeScriptPayload, type CodemodeScriptInputIssue } from "./codemode-script-object.js"
 import { type BuiltCodemodeTools } from "./codemode-tools.js"
@@ -655,7 +656,7 @@ async function filterVisibleRows(input: {
   const pluginGrants = groupGrants(pluginGrantRows)
   const marketplaceGrants = groupGrants(marketplaceGrantRows)
 
-  return input.rows.filter((row) => {
+  const isGranted = (row: MarketplaceCapabilityRow) => {
     // Administrative visibility in Den must not silently publish every
     // capability to that administrator's personal desktop catalog. Desktop
     // discovery follows the same explicit member, team, and org-wide grants
@@ -665,6 +666,26 @@ async function filterVisibleRows(input: {
     return row.marketplace
       ? Boolean(grantRole(input.member, marketplaceGrants.get(row.marketplace.id) ?? []))
       : false
+  }
+
+  // Den access policy on top of the grants: an explicit deny on the skill,
+  // its plugin, or its marketplace hides it; an allow on any of them shows it.
+  const rules = await loadAccessPolicyRules(db, { organizationId: input.organizationId, resourceKinds: ["config_object", "plugin", "marketplace"] })
+  if (rules.length === 0) return input.rows.filter(isGranted)
+  const context = await resolveMemberAccessContext(db, input.member.orgMembershipId)
+  if (!context) return []
+  return input.rows.filter((row) => {
+    const granted = isGranted(row)
+    const layers: Array<[AccessPolicyResourceKind, string]> = [
+      ["config_object", row.configObject.id],
+      ["plugin", row.plugin.id],
+      ...(row.marketplace ? [["marketplace", row.marketplace.id] satisfies [AccessPolicyResourceKind, string]] : []),
+    ]
+    const decisions = layers.map(([resourceKind, resourceId]) => decideAccess({
+      rules, principals: context.principals, resourceKind, resourceId, baseline: granted ? "granted" : "closed",
+    }))
+    if (decisions.some((decision) => !decision.allowed && decision.via === "policy")) return false
+    return granted || decisions.some((decision) => decision.allowed && decision.via === "policy")
   })
 }
 
