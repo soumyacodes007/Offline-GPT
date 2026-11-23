@@ -1,0 +1,72 @@
+# OfflineGPT workspace image for the air-gapped edition: one container per
+# employee, started by Den's PROVISIONER_MODE=docker. It is built on a machine
+# with internet access, then mirrored into the customer's registry; at runtime
+# it downloads nothing.
+#
+#   docker build -f packaging/docker/Dockerfile.workspace-airgapped -t offlinegpt-workspace:airgapped .
+#
+# Everything the workspace needs is baked in and verified at build time:
+# offlinegpt-server, the web UI, the v1 and v2 OpenCode plugins, and the
+# pinned OpenCode v2 engine (SHA-256 from apps/server/src/opencode-v2-artifacts.json).
+FROM --platform=$BUILDPLATFORM node:22-bookworm-slim AS builder
+
+WORKDIR /src
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl git unzip python3 make g++ \
+  && npm install -g bun@1.3.14 \
+  && corepack enable \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+RUN pnpm install --frozen-lockfile --filter offlinegpt-server... --filter @offlinegpt/app...
+
+ARG TARGETARCH
+RUN set -eux; \
+  arch="${TARGETARCH:-$(dpkg --print-architecture)}"; \
+  case "$arch" in \
+    amd64) target="bun-linux-x64"; engine="linux-x64-baseline" ;; \
+    arm64) target="bun-linux-arm64"; engine="linux-arm64" ;; \
+    *) echo "unsupported architecture: $arch" >&2; exit 1 ;; \
+  esac; \
+  pnpm --filter offlinegpt-server build; \
+  pnpm --filter offlinegpt-server exec bun ./script/build.ts --outdir dist/bin --target "$target"; \
+  install -m 0755 "apps/server/dist/bin/offlinegpt-server-${target}" /tmp/offlinegpt-server; \
+  pnpm --filter @offlinegpt/app build:web; \
+  url="$(node -p "require('./apps/server/src/opencode-v2-artifacts.json').platforms['${engine}'].url")"; \
+  sha="$(node -p "require('./apps/server/src/opencode-v2-artifacts.json').platforms['${engine}'].sha256")"; \
+  curl -fsSL "$url" -o /tmp/opencode2.tar.gz; \
+  echo "${sha}  /tmp/opencode2.tar.gz" | sha256sum -c -; \
+  mkdir -p /tmp/opencode2 && tar -xzf /tmp/opencode2.tar.gz -C /tmp/opencode2; \
+  install -m 0755 "$(find /tmp/opencode2 -type f -name opencode | head -n 1)" /tmp/opencode2-bin
+
+FROM node:22-bookworm-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates git tar \
+  && rm -rf /var/lib/apt/lists/* \
+  && useradd --create-home --uid 10001 offlinegpt
+
+COPY --from=builder /tmp/offlinegpt-server /usr/local/bin/offlinegpt-server
+COPY --from=builder /tmp/opencode2-bin /usr/local/bin/opencode2
+COPY --from=builder /src/apps/app/dist /opt/offlinegpt/web
+COPY --from=builder /src/apps/server/dist/opencode-plugins /opt/offlinegpt/opencode-plugins
+COPY --from=builder /src/apps/server/dist/opencode-plugins-v2 /opt/offlinegpt/opencode-plugins-v2
+
+# The bootstrap script checks for `opencode`; on v2 the same binary serves both names.
+RUN ln -s /usr/local/bin/opencode2 /usr/local/bin/opencode \
+  && test -f /opt/offlinegpt/opencode-plugins-v2/offlinegpt-tools/server.js \
+  && test -f /opt/offlinegpt/opencode-plugins-v2/offlinegpt-schedule/server.js \
+  && test -f /opt/offlinegpt/opencode-plugins-v2/managed-policy/server.js \
+  && /usr/local/bin/opencode2 --version \
+  && mkdir -p /workspace /persist/offlinegpt \
+  && chown offlinegpt:offlinegpt /workspace /persist/offlinegpt
+
+ENV OFFLINEGPT_EDITION=airgapped \
+    OFFLINEGPT_ENGINE_V2_PREVIEW=1 \
+    OFFLINEGPT_OPENCODE2_BIN=/usr/local/bin/opencode2 \
+    OPENCODE_DISABLE_AUTOUPDATE=1 \
+    OPENCODE_DISABLE_FREE_MODELS=1
+
+USER offlinegpt
+WORKDIR /home/offlinegpt
+EXPOSE 8787
