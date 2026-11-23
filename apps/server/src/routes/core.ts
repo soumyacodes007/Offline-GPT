@@ -6,9 +6,8 @@ import {
   getConnectSnapshot,
   writeConnectState,
 } from "../connect-state.js";
-import type { CloudMcpLiveStatusObserver } from "../cloud-mcp-health.js";
+import type { CloudMcpEngineV2, CloudMcpLiveStatusObserver } from "../cloud-mcp-health.js";
 import { readOfflineGPTConnectSkillCatalog, renderOfflineGPTConnectSkillInstruction } from "../connect-skill-catalog.js";
-import { readOfflineGPTAutomationCatalog, renderOfflineGPTAutomationInstruction } from "../connect-automation-catalog.js";
 import { EnvStoreReadError, InvalidEnvKeyError, isValidEnvKey, type EnvService } from "../env-file.js";
 import { readClaudeCliAuthStatus } from "../claude-cli-auth.js";
 import { syncManagedProviderAuth, type ManagedProviderAuthResult } from "../managed-provider-auth.js";
@@ -42,6 +41,7 @@ interface RegisterCoreRoutesOptions {
   resolveOpencodeDirectory: (workspace: WorkspaceInfo) => string | null;
   createWorkspaceOpencodeClient: (config: ServerConfig, workspace: WorkspaceInfo) => WorkspaceOpencodeClient;
   refreshRegistrationFromLiveStatus?: CloudMcpLiveStatusObserver;
+  cloudMcpEngineV2For?: (workspace: WorkspaceInfo) => CloudMcpEngineV2 | undefined;
   serializeWorkspace: (workspace: ServerConfig["workspaces"][number]) => unknown;
   resolveDevLogPath: () => string | null;
   onManagedProviderAuthChanged?: (result: ManagedProviderAuthResult) => Promise<void>;
@@ -103,6 +103,7 @@ export function registerCoreRoutes(options: RegisterCoreRoutesOptions): void {
     resolveOpencodeDirectory,
     createWorkspaceOpencodeClient,
     refreshRegistrationFromLiveStatus,
+    cloudMcpEngineV2For,
     serializeWorkspace,
     resolveDevLogPath,
     onManagedProviderAuthChanged,
@@ -114,6 +115,7 @@ export function registerCoreRoutes(options: RegisterCoreRoutesOptions): void {
     resolveOpencodeDirectory,
     createWorkspaceOpencodeClient,
     refreshRegistrationFromLiveStatus,
+    engineV2For: cloudMcpEngineV2For,
     serverMetadata: { serverVersion, expectedOpencodeVersion: opencodeVersion },
   };
 
@@ -282,17 +284,6 @@ export function registerCoreRoutes(options: RegisterCoreRoutesOptions): void {
       schemaVersion: 1,
       skills,
       instruction: renderOfflineGPTConnectSkillInstruction(skills),
-    });
-  });
-
-  addRoute(routes, "GET", "/experimental/connect/automations", "client", async (_ctx) => {
-    // Owner-scoped through the same offlinegpt-cloud connection as skills.
-    const index = await readOfflineGPTAutomationCatalog(config);
-    return jsonResponse({
-      ok: true,
-      schemaVersion: 1,
-      index,
-      instruction: renderOfflineGPTAutomationInstruction(index),
     });
   });
 
