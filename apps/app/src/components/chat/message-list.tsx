@@ -41,10 +41,6 @@ import { ReadFileTool, WriteFileTool } from "@/components/tools/file"
 import { GlobTool } from "@/components/tools/glob"
 import { GrepTool } from "@/components/tools/grep"
 import { LspTool } from "@/components/tools/lsp"
-import {
-  isAutomationProposalToolPart,
-  OfflineGPTAutomationProposalTool,
-} from "@/components/tools/offlinegpt-automation-proposal"
 import { OfflineGPTSessionCreateTool } from "@/components/tools/offlinegpt-session-create"
 import { QuestionTool } from "@/components/tools/question"
 import { SkillTool } from "@/components/tools/skill"
@@ -157,6 +153,8 @@ function MessageTimestamp({ message, className }: { message: UIMessage; classNam
 
 interface ToolMessageProps {
   part: ToolUIPart | DynamicToolUIPart
+  /** Screenshots a code-mode step returned, shown inside the step. */
+  files?: FileUIPart[]
 }
 
 /**
@@ -183,11 +181,11 @@ class ToolMessage extends React.Component<ToolMessageProps, { failed: boolean }>
         <div className="text-xs text-muted-foreground">Tool step unavailable</div>
       )
     }
-    return <ToolMessageInner part={this.props.part} />
+    return <ToolMessageInner part={this.props.part} files={this.props.files} />
   }
 }
 
-const ToolMessageInner = ({ part }: ToolMessageProps) => {
+const ToolMessageInner = ({ part, files }: ToolMessageProps) => {
   const { connectorIdentities, onMcpReconnect, onMcpReopenAuthorization, onMcpRetry } = useMessageList()
   const parentActive = React.useContext(ParentRunActiveContext)
   const resolveLifecycle = useCurrentToolLifecycleResolver()
@@ -198,7 +196,17 @@ const ToolMessageInner = ({ part }: ToolMessageProps) => {
 
   if (part.type === "dynamic-tool") {
     const calls = codeModeToolCalls(part)
-    if (calls) return <CodeModeTool part={part} calls={calls} lifecycle={lifecycle} connectors={connectorIdentities} />
+    if (calls) {
+      return (
+        <CodeModeTool
+          part={part}
+          calls={calls}
+          lifecycle={lifecycle}
+          connectors={connectorIdentities}
+          attachments={files?.map((file, index) => <FileMessage key={`${part.toolCallId}:file:${index}`} part={file} tone="assistant" />)}
+        />
+      )
+    }
   }
 
   if (lifecycle === "waiting") {
@@ -297,9 +305,6 @@ const ToolMessageInner = ({ part }: ToolMessageProps) => {
     return <OfflineGPTSessionCreateTool part={part} />
   }
 
-  if (part.type === "dynamic-tool" && isAutomationProposalToolPart(part)) {
-    return <OfflineGPTAutomationProposalTool part={part} />
-  }
 
   // Failed calls use the same sentence line with the "failures are
   // instructions" treatment (inline Reconnect/Retry).
@@ -559,7 +564,7 @@ const AssistantMessage = React.memo(
 
             return (
               <div key={`tool-${index}`} className="w-full">
-                <ToolMessage part={group.part} />
+                <ToolMessage part={group.part} files={group.files} />
               </div>
             )
           })}
