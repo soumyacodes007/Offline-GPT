@@ -2,6 +2,7 @@ import { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
 
 import { desktopFetch } from "./desktop";
 import { isDesktopRuntime } from "./runtime-env";
+import { createClientV2 } from "./opencode-v2-adapter";
 
 export type FieldsResult<T> =
   | ({ data: T; error?: undefined } & { request: Request; response: Response })
@@ -318,7 +319,8 @@ export function unwrap<T>(result: FieldsResult<T>): NonNullable<T> {
   throw new Error(message || "Unknown error");
 }
 
-export function createClient(baseUrl: string, directory?: string, auth?: OpencodeAuth) {
+/** The v1 SDK client. Prefer `createClient`, which upgrades mounts whose server routes chat to OpenCode v2. */
+export function createV1Client(baseUrl: string, directory?: string, auth?: OpencodeAuth) {
   const headers: Record<string, string> = {};
   if (!isDesktopRuntime()) {
     const authHeader = resolveAuthHeader(auth);
@@ -380,6 +382,41 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
   };
 
   return client;
+}
+
+export type OpencodeClient = ReturnType<typeof createV1Client>;
+
+const ENGINE_V2_SERVERS_KEY = "offlinegpt.engineV2Servers";
+const engineV2Servers = new Set<string>(readEngineV2Servers());
+
+function readEngineV2Servers(): string[] {
+  try {
+    const value: unknown = JSON.parse(globalThis.localStorage?.getItem(ENGINE_V2_SERVERS_KEY) ?? "[]");
+    return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Record whether an OfflineGPT server routes chat to OpenCode v2, so its `/opencode` mounts use v2. */
+export function setServerEngineV2Routing(serverBaseUrl: string, enabled: boolean): void {
+  const key = serverBaseUrl.replace(/\/+$/, "");
+  if (!key || engineV2Servers.has(key) === enabled) return;
+  if (enabled) engineV2Servers.add(key);
+  else engineV2Servers.delete(key);
+  try {
+    globalThis.localStorage?.setItem(ENGINE_V2_SERVERS_KEY, JSON.stringify([...engineV2Servers]));
+  } catch {
+    // Routing still applies for this run.
+  }
+}
+
+export function createClient(baseUrl: string, directory?: string, auth?: OpencodeAuth): OpencodeClient {
+  const mount = /^(.*)(\/workspace\/[^/]+)\/opencode$/.exec(baseUrl.replace(/\/+$/, ""));
+  if (auth?.mode === "offlinegpt" && mount && engineV2Servers.has(mount[1])) {
+    return createClientV2(`${mount[1]}${mount[2]}/opencode2`, directory, { token: auth.token });
+  }
+  return createV1Client(baseUrl, directory, auth);
 }
 
 /** Includes body consumption: receiving headers alone cannot release a send lock. */
