@@ -2176,12 +2176,43 @@ type ReadOfflineGptCloudMcpHealthInput = {
   probe?: boolean;
   createWorkspaceOpencodeClient: (config: ServerConfig, workspace: WorkspaceInfo) => WorkspaceOpencodeClient;
   refreshRegistrationFromLiveStatus?: CloudMcpLiveStatusObserver;
+  /** Set when OpenCode v2 serves this workspace: its live MCP statuses replace the v1 registration probes. */
+  engineV2?: CloudMcpEngineV2;
+};
+
+/** The MCP calls Cloud MCP delivery needs from OpenCode v2. */
+export type CloudMcpEngineV2 = {
+  status(): Promise<Record<string, McpStatus>>;
+  disconnect(name: string): Promise<void>;
 };
 
 type DirectProbeReuse = {
   desiredRevision: string;
   value: CloudMcpHealth["tools"]["direct"];
 };
+
+/**
+ * OpenCode v2 has no tool-id or provider-projection API, so its MCP status is the
+ * evidence: a connected offlinegpt-cloud exposes the server's tools to every model.
+ */
+async function inspectOfflineGptCloudOnV2(base: Inspection, readStatus: () => Promise<Record<string, McpStatus>>): Promise<Inspection> {
+  let statuses: Record<string, McpStatus>;
+  try {
+    statuses = await readStatus();
+  } catch (error) {
+    const unreachable = thrownOpencodeFailure("engine_delivery", "/api/mcp", error);
+    return { ...base, engine: { status: "unreachable", error: unreachable.details }, failures: [unreachable] };
+  }
+  const cloudStatus = statuses[OFFLINEGPT_CLOUD_MCP_NAME];
+  const connected = cloudStatus?.status === "connected";
+  return {
+    ...base,
+    engine: engineStatusFromMcpStatus(cloudStatus),
+    engineInspection: engineInspectionFromStatuses(statuses),
+    tools: connected ? splitPresentMissing(expectedTools(), expectedTools()) : base.tools,
+    failures: connected ? [] : [statusFailure(cloudStatus)],
+  };
+}
 
 async function readOfflineGptCloudMcpHealthInternal(
   input: ReadOfflineGptCloudMcpHealthInput & { directProbeReuse?: DirectProbeReuse },
@@ -2217,7 +2248,8 @@ async function readOfflineGptCloudMcpHealthInternal(
       message: "Remote workspace has no exact OpenCode directory, so Cloud MCP readiness cannot be claimed.",
     }));
   }
-  if (desired.present && input.directory && !baseUrlConfigured(input.config, input.workspace)) {
+  const engineAvailable = input.engineV2 !== undefined || baseUrlConfigured(input.config, input.workspace);
+  if (desired.present && input.directory && !engineAvailable) {
     failures.push(failure({
       code: "opencode_unconfigured",
       stage: "prerequisites",
@@ -2241,7 +2273,11 @@ async function readOfflineGptCloudMcpHealthInternal(
     opencodeVersion: { expectedVersion: input.serverMetadata?.expectedOpencodeVersion ?? null, actualVersion: null, probe: "not_checked" },
     failures: [],
   };
-  if (desired.present && desired.config && desired.revision && !desired.validationProblem && input.directory && baseUrlConfigured(input.config, input.workspace)) {
+  const engineV2 = input.engineV2;
+  if (desired.present && desired.config && desired.revision && !desired.validationProblem && input.directory && engineV2) {
+    inspection = await inspectOfflineGptCloudOnV2(inspection, () => engineV2.status());
+    failures.push(...inspection.failures);
+  } else if (desired.present && desired.config && desired.revision && !desired.validationProblem && input.directory && engineAvailable) {
     inspection = await inspectOfflineGptCloud({
       opencode: input.createWorkspaceOpencodeClient(input.config, input.workspace),
       config: input.config,
@@ -2374,7 +2410,7 @@ async function wait(ms: number): Promise<void> {
 }
 
 async function pollConnected(input: {
-  opencode: WorkspaceOpencodeClient;
+  readStatus: () => Promise<{ data?: Record<string, McpStatus>; failure?: CloudMcpFailure }>;
   config: ServerConfig;
   workspace: WorkspaceInfo;
   directory: string | null;
@@ -2384,7 +2420,7 @@ async function pollConnected(input: {
   let lastFailure: CloudMcpFailure | null = null;
   for (const delay of POLL_DELAYS_MS) {
     await wait(delay);
-    const statusResult = await readMcpStatus(input.opencode, input.directory);
+    const statusResult = await input.readStatus();
     if (statusResult.failure) {
       lastFailure = statusResult.failure;
       continue;
@@ -2435,7 +2471,15 @@ export async function reconcileOfflineGptCloudMcp(input: {
   registerRuntimeMcp: CloudMcpRuntimeRegistrar;
   refreshRegistrationFromLiveStatus?: CloudMcpLiveStatusObserver;
   fanoutGlobalDesired?: boolean;
+  /** Resolves OpenCode v2 for workspaces it serves; v1 delivery is used otherwise. */
+  engineV2For?: (workspace: WorkspaceInfo) => CloudMcpEngineV2 | undefined;
 }): Promise<CloudMcpHealth> {
+  const engineV2 = input.engineV2For?.(input.workspace);
+  const disconnect = async (workspace: WorkspaceInfo, name: string, directory: string) => {
+    const v2 = input.engineV2For?.(workspace);
+    if (v2) return v2.disconnect(name).catch(() => undefined);
+    await input.createWorkspaceOpencodeClient(input.config, workspace).mcp.disconnect({ name, ...locationParams(directory) }).catch(() => undefined);
+  };
   const readHealth = (directProbeReuse?: DirectProbeReuse) => readOfflineGptCloudMcpHealthInternal({
     config: input.config,
     workspace: input.workspace,
@@ -2446,6 +2490,7 @@ export async function reconcileOfflineGptCloudMcp(input: {
     probe: true,
     directProbeReuse,
     refreshRegistrationFromLiveStatus: input.refreshRegistrationFromLiveStatus,
+    engineV2,
   });
   const configBody = input.body.config ?? input.body;
   const desiredConfig = canonicalizeCloudMcpConfig(normalizeCloudMcpConfig(configBody));
@@ -2467,10 +2512,7 @@ export async function reconcileOfflineGptCloudMcp(input: {
       .map(async (workspace) => {
         const directory = workspace.workspaceType === "local" ? workspace.path : workspace.directory ?? null;
         if (!directory) return;
-        await input.createWorkspaceOpencodeClient(input.config, workspace).mcp.disconnect({
-          name: OFFLINEGPT_CLOUD_MCP_NAME,
-          ...locationParams(directory),
-        }).catch(() => undefined);
+        await disconnect(workspace, OFFLINEGPT_CLOUD_MCP_NAME, directory);
         await input.registerRuntimeMcp(input.config, workspace, [OFFLINEGPT_CLOUD_MCP_NAME], { throwOnFailure: false })
           .catch(() => undefined);
       }));
@@ -2488,7 +2530,7 @@ export async function reconcileOfflineGptCloudMcp(input: {
     return healthWithFailure(await readHealth(), directoryFailure);
   }
 
-  if (!baseUrlConfigured(input.config, input.workspace)) {
+  if (!engineV2 && !baseUrlConfigured(input.config, input.workspace)) {
     const unconfiguredFailure = failure({
       code: "opencode_unconfigured",
       stage: "prerequisites",
@@ -2512,10 +2554,7 @@ export async function reconcileOfflineGptCloudMcp(input: {
     appHostAuthorization: readString(input.body.appHostAuthorization) ?? undefined,
   }).catch(() => ({ status: "unavailable" as const, appHostNames: [], directNames: [], removedNames: [] }));
 
-  const opencode = input.createWorkspaceOpencodeClient(input.config, input.workspace);
-  for (const name of connectServers.removedNames) {
-    await opencode.mcp.disconnect({ name, ...locationParams(input.directory) }).catch(() => undefined);
-  }
+  for (const name of connectServers.removedNames) await disconnect(input.workspace, name, input.directory);
 
   cloudMcpDeliveryState.markRegistering(input.workspace, input.directory, desiredRevision);
   const registration = await input.registerRuntimeMcp(input.config, input.workspace, [OFFLINEGPT_CLOUD_MCP_NAME], { throwOnFailure: false });
@@ -2532,7 +2571,9 @@ export async function reconcileOfflineGptCloudMcp(input: {
   }
 
   const connectedFailure = await pollConnected({
-    opencode,
+    readStatus: engineV2
+      ? () => engineV2.status().then((data) => ({ data }), (error: unknown) => ({ failure: thrownOpencodeFailure("engine_delivery", "/api/mcp", error) }))
+      : () => readMcpStatus(input.createWorkspaceOpencodeClient(input.config, input.workspace), input.directory),
     config: input.config,
     workspace: input.workspace,
     directory: input.directory,
@@ -2566,12 +2607,14 @@ export async function reconcilePersistedOfflineGptCloudMcp(input: {
   registerRuntimeMcp: CloudMcpRuntimeRegistrar;
   refreshRegistrationFromLiveStatus?: CloudMcpLiveStatusObserver;
   trigger?: string;
+  engineV2For?: (workspace: WorkspaceInfo) => CloudMcpEngineV2 | undefined;
 }): Promise<CloudMcpHealth> {
   const migrated = await migrateOfflineGptCloudMcpRuntimeConfig(input.config);
-  if (input.config.readOnly) return readOfflineGptCloudMcpHealth(input);
+  const healthInput = { ...input, engineV2: input.engineV2For?.(input.workspace) };
+  if (input.config.readOnly) return readOfflineGptCloudMcpHealth(healthInput);
   const desiredConfig = migrated.config ?? await readPersistedDesiredConfig(input.config, input.workspace.id);
   if (!desiredConfig) {
-    return readOfflineGptCloudMcpHealth(input);
+    return readOfflineGptCloudMcpHealth(healthInput);
   }
   return reconcileOfflineGptCloudMcp({
     ...input,
@@ -2623,7 +2666,9 @@ export async function refreshOfflineGptCloudMcpEngine(input: {
   registerRuntimeMcp: CloudMcpRuntimeRegistrar;
   refreshRegistrationFromLiveStatus?: CloudMcpLiveStatusObserver;
   trigger?: string;
+  engineV2For?: (workspace: WorkspaceInfo) => CloudMcpEngineV2 | undefined;
 }): Promise<CloudMcpEngineRefreshResult> {
+  const engineV2 = input.engineV2For?.(input.workspace);
   const trigger = input.trigger?.trim() || "engine-refresh";
   const startedAt = new Date().toISOString();
   const steps: CloudMcpEngineRefreshStep[] = [];
@@ -2641,11 +2686,14 @@ export async function refreshOfflineGptCloudMcpEngine(input: {
 
   const desiredConfig = await readPersistedDesiredConfig(input.config, input.workspace.id);
   if (!desiredConfig) {
-    return finish(false, await readOfflineGptCloudMcpHealth({ ...input, probe: true }), "desired_missing");
+    return finish(false, await readOfflineGptCloudMcpHealth({ ...input, engineV2, probe: true }), "desired_missing");
   }
 
   const disconnectStarted = Date.now();
-  try {
+  if (engineV2) {
+    const ok = await engineV2.disconnect(OFFLINEGPT_CLOUD_MCP_NAME).then(() => true, () => false);
+    steps.push({ step: "engine_disconnect", ok, latencyMs: Date.now() - disconnectStarted });
+  } else try {
     const opencode = input.createWorkspaceOpencodeClient(input.config, input.workspace);
     const result = await withEngineProbeTimeout(() => opencode.mcp.disconnect({
       name: OFFLINEGPT_CLOUD_MCP_NAME,
@@ -2682,6 +2730,7 @@ export async function refreshOfflineGptCloudMcpEngine(input: {
     registerRuntimeMcp: input.registerRuntimeMcp,
     refreshRegistrationFromLiveStatus: input.refreshRegistrationFromLiveStatus,
     trigger,
+    engineV2For: input.engineV2For,
   });
   steps.push({
     step: "reapply",
