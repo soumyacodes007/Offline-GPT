@@ -1,0 +1,41 @@
+# OfflineGPT air-gapped edition on Kubernetes.
+#
+# Mirror the chart and every image into the internal registry first
+# (scripts/airgap-bundle.mjs produces the image tarballs), and put the model
+# weights on a PersistentVolumeClaim. Then:
+#
+#   helm install offlinegpt oci://registry.psu.internal/offlinegpt-ee -f values.airgapped.yaml
+config:
+  edition: airgapped
+  tenancy:
+    mode: single_org
+    allowPublicSignup: "false"
+  auth:
+    passwordBreachScreeningEnabled: "false"
+  public:
+    webOrigin: https://offlinegpt.psu.internal
+    offlinegptWebEnabled: "true"
+
+image:
+  tag: airgapped
+
+denApi:
+  image:
+    repository: registry.psu.internal/offlinegpt-den-api
+denWeb:
+  image:
+    repository: registry.psu.internal/offlinegpt-den-web
+
+inference:
+  enabled: true
+  image:
+    repository: registry.psu.internal/offlinegpt-inference
+
+vllm:
+  enabled: true
+  image:
+    repository: registry.psu.internal/vllm-openai
+    tag: v0.11.0
+  modelsClaim: offlinegpt-models
+  modelDir: Qwen2.5-0.5B-Instruct
+  servedModelName: main
