@@ -10,25 +10,20 @@ const exec = promisify(execFile);
 
 // GitHub serves release assets from github.com through a redirect to its asset CDN.
 const RELEASE_HOSTS = new Set(["github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com"]);
-const MAX_REDIRECTS = 4;
 
-/** Download a pinned release asset, following redirects only between GitHub release hosts. */
 async function downloadReleaseAsset(url: string): Promise<Buffer> {
-  let current = new URL(url);
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    if (current.protocol !== "https:" || !RELEASE_HOSTS.has(current.hostname)) {
-      throw new Error(`OpenCode v2 download left the GitHub release hosts (${current.hostname})`);
+  const assertReleaseHost = (target: URL) => {
+    if (target.protocol !== "https:" || !RELEASE_HOSTS.has(target.hostname)) {
+      throw new Error(`OpenCode v2 download left the GitHub release hosts (${target.hostname})`);
     }
-    const response = await externalFetch(current.href, { redirect: "manual", signal: AbortSignal.timeout(180_000) });
-    const location = response.headers.get("location");
-    if (response.status >= 300 && response.status < 400 && location) {
-      current = new URL(location, current);
-      continue;
-    }
-    if (!response.ok) throw new Error(`OpenCode v2 download returned HTTP ${response.status}`);
-    return Buffer.from(await response.arrayBuffer());
-  }
-  throw new Error("OpenCode v2 download redirected too many times");
+  };
+  assertReleaseHost(new URL(url));
+  // Electron's net.fetch rejects redirect: "manual" ("Redirect was cancelled"),
+  // so follow redirects and check where they ended. The caller verifies the SHA-256.
+  const response = await externalFetch(url, { redirect: "follow", signal: AbortSignal.timeout(180_000) });
+  if (response.url) assertReleaseHost(new URL(response.url));
+  if (!response.ok) throw new Error(`OpenCode v2 download returned HTTP ${response.status}`);
+  return Buffer.from(await response.arrayBuffer());
 }
 
 async function findFile(directory: string, name: string): Promise<string | null> {
@@ -71,7 +66,9 @@ export async function installOpencodeV2Binary(cacheRoot: string, version: string
     const extracted = join(staging, "extracted");
     await mkdir(extracted);
     // bsdtar (Windows 10+, macOS) reads zip and tar.gz; Linux assets are tar.gz for GNU tar.
-    await exec("tar", ["-xf", archive, "-C", extracted], { timeout: 120_000 });
+    // On Windows name System32's bsdtar: a GNU tar earlier on PATH (Git for Windows) reads "C:" as a remote host.
+    const tar = platform === "windows" ? join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe") : "tar";
+    await exec(tar, ["-xf", archive, "-C", extracted], { timeout: 120_000 });
     const executable = await findFile(extracted, platform === "windows" ? "opencode.exe" : "opencode");
     if (!executable) throw new Error("OpenCode v2 archive did not contain the opencode executable");
     await chmod(executable, 0o755);
