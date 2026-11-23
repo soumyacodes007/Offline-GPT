@@ -1,10 +1,9 @@
 import type { TextPartInput } from "@opencode-ai/sdk/v2/client";
 import type { ComposerPart } from "@/app/types";
 import { appMentionInstruction } from "../surface/composer/app-mentions";
-import { computerMentionInstruction } from "../surface/composer/computer-mentions";
 import { connectSkillPrompt } from "../surface/composer/connect-skill-token";
 
-type InstructionMention = Extract<ComposerPart, { type: "computer" | "app" | "skill" | "connect-skill" }>;
+type InstructionMention = Extract<ComposerPart, { type: "app" | "skill" | "connect-skill" }>;
 
 /** Keep generated instructions out of user text in every send path. */
 export function mentionPromptParts(part: InstructionMention): [TextPartInput, TextPartInput & { synthetic: true }] {
@@ -14,8 +13,6 @@ export function mentionPromptParts(part: InstructionMention): [TextPartInput, Te
 
 function mentionContent(part: InstructionMention): { label: string; instruction: string } {
   switch (part.type) {
-    case "computer":
-      return { label: `@${part.target}`, instruction: computerMentionInstruction(part.target) };
     case "app":
       return { label: `@${part.name}`, instruction: appMentionInstruction(part.name) };
     case "skill":
