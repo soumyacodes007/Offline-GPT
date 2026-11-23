@@ -21,7 +21,6 @@ const worldImports: Record<string, () => Promise<unknown>> = {
   "dev-headless.ts": () => import("../../worlds/dev-headless.ts"),
   "headless-prod-live.ts": () => import("../../worlds/headless-prod-live.ts"),
   "litellm-per-member.ts": () => import("../../worlds/litellm-per-member.ts"),
-  "remote-session.ts": () => import("../../worlds/remote-session.ts"),
   "solo.ts": () => import("../../worlds/solo.ts"),
 };
 
