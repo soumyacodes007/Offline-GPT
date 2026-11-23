@@ -15,33 +15,26 @@ import { appendAgentInstructions, createInstructionSection } from "./agent-instr
  * - Connect, Library, and custom MCP servers
  * - Using OfflineGPT Cloud
  * - Finding OfflineGPT docs before falling back to code
- * - Other sessions, skills, automations, plugins
+ * - Other sessions, skills, scheduled tasks, workflows, plugins
  *
  * Each rule lives in exactly one place: Connect tool mechanics are in the base
  * agent prompt, readiness in the runtime steering, app control and browser
  * mechanics in the extensions plugin, and live catalogs in their own sections.
  */
 
-export function automationRuntimeKnowledge(runtimeProvider = process.env.DEN_RUNTIME_PROVIDER) {
-  // The Automation catalog section owns "read live before reporting"; these
-  // lines own capability roles, mutation gating, and schedule shape.
-  const shared = [
-    "OfflineGPT has first-class Automations. Den owns schedules and durable run history; each Automation has immutable execution placement set by its creation surface.",
-    "Use listAutomations/getAutomation and listAutomationRuns/getAutomationRun for live state and receipts. Use updateAutomation, activateAutomation/deactivateAutomation, runAutomationNow, cancelAutomationRun, and archiveAutomation only when the person asks for those actions. Deactivation stops future runs but does not cancel a run already in progress.",
-    "Schedules are once, daily, or weekly with an IANA timezone; there is no interval schedule or sub-daily cadence. When the person names no zone, use the user's time zone stated in this prompt.",
-  ];
-  if (runtimeProvider === "daytona") {
-    return [
-      ...shared,
-      "This chat is running in OfflineGPT Cloud. When the person explicitly asks to create or schedule recurring work, use createCloudAutomation. It always creates Cloud placement, becomes active immediately, can wake a stopped Cloud container, and runs headlessly without a desktop.",
-      "Do not use createAutomation or automation.propose from Cloud Chat. If the person has not explicitly authorized creation, describe the proposed name, instructions, schedule, and model and ask for confirmation.",
-      "Cloud agent Automations use the person's current OfflineGPT Connect integrations. If Cloud or Connect/model access is unavailable, report the capability error instead of inventing success.",
-    ].map((line) => `- ${line}`).join("\n");
-  }
+export function scheduleKnowledge() {
   return [
-    ...shared,
-    "This chat is running in OfflineGPT Desktop. For new recurring work, use offlinegpt_execute id automation.propose so the person can review and create it in the app. Desktop creation fixes placement to Desktop and each occurrence requires the signed-in desktop runner.",
-    "Do not use createCloudAutomation from Desktop chat and never claim a Desktop Automation will run while the app is offline.",
+    "OfflineGPT keeps scheduled tasks on the local OfflineGPT server. A due task arrives as an ordinary message in its target chat; nothing is sent by email or notification, and tasks only run while OfflineGPT is running.",
+    "Use schedule_create to add a task, schedule_list or schedule_view to read live state and delivery history, and schedule_edit to change, pause, resume, run now, or delete one. Change or delete a task only when the person asks.",
+    "Timing kinds: after (seconds from now), at (one instant), every (seconds, at least 60), daily or weekly (local time plus an IANA time zone), cron (five fields plus a time zone), or rrule (DTSTART and RRULE lines). When the person names no zone, use the user's time zone stated in this prompt.",
+    "Targets: new_once (default: create one chat on first delivery and reuse it), new (a fresh chat for every delivery), or session (an existing chat by id).",
+  ].map((line) => `- ${line}`).join("\n");
+}
+
+export function workflowKnowledge() {
+  return [
+    "The workflow tool runs a short JavaScript orchestration script you write. Inside it, await agent({ prompt, title? }) starts a subagent chat and resolves with its final text; Promise.all fans out several at once; phase(title) reports progress; args holds the JSON you pass. End the script with return <JSON value>.",
+    "Use it when work splits into independent parts that each need their own agent. For one simple task, just do it directly.",
   ].map((line) => `- ${line}`).join("\n");
 }
 
@@ -84,9 +77,12 @@ Here is what you can help users with:
 ## Skills
 - Specialized instruction packs for specific workflows, manageable via Settings > Library. Create them as the \`Skill creation:\` instruction in this prompt directs.
 
-## Automations
-${automationRuntimeKnowledge()}
-- Never write a cron entry, launchd/systemd unit, Task Scheduler job, or workspace script as a substitute for an OfflineGPT Automation.
+## Scheduled tasks
+${scheduleKnowledge()}
+- Never write a cron entry, launchd/systemd unit, Task Scheduler job, or workspace script as a substitute for an OfflineGPT scheduled task.
+
+## Workflows
+${workflowKnowledge()}
 
 ## Creating Plugins
 - Plugins extend OfflineGPT/OpenCode with custom tools.
