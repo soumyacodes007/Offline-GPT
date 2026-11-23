@@ -11,10 +11,11 @@ describe("dashboard sidebar destination", () => {
   test("appears immediately after session search and before the other destinations", () => {
     const search = sidebar.indexOf("props.onOpenSessionSearch ?");
     const dashboard = sidebar.indexOf("props.onOpenDashboard ?", search);
-    const automations = sidebar.indexOf("props.onOpenAutomations ?", search);
+    const scheduled = sidebar.indexOf("props.onOpenSchedule ?", search);
 
     expect(search).toBeGreaterThan(-1);
     expect(dashboard).toBeGreaterThan(search);
-    expect(dashboard).toBeLessThan(automations);
+    expect(scheduled).toBeGreaterThan(-1);
+    expect(dashboard).toBeLessThan(scheduled);
   });
 });
