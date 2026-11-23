@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { UIMessage } from "ai";
 import { useQuery } from "@tanstack/react-query";
+import { useInRouterContext, useLocation, useNavigate } from "react-router";
+import { workspaceSessionRoute } from "@/react-app/shell/workspace-routes";
 import type { SessionStatus } from "@opencode-ai/sdk/v2/client";
 import { Check, CirclePause, Minimize2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
@@ -53,7 +55,6 @@ import { WorkspaceRunModeMenu } from "./composer/workspace-run-mode-menu";
 import { useSessionModelSelection } from "./session-model-store";
 import type { ProviderCatalog } from "./use-model-behavior";
 import type { ModelAvailability } from "./model-availability";
-import { isComputerTarget } from "./composer/computer-mentions";
 import { decodeComposerMentionValue, encodeComposerMentionValue, type ComposerMentionKind } from "./composer/mention-encoding";
 import { openDesktopUrl } from "@/app/lib/desktop";
 import { parseSlashCommandInvocation } from "./composer/slash-command";
@@ -128,6 +129,8 @@ import {
   useComposerStateStore,
 } from "./composer-state-store";
 import { MessageList } from "@/components/chat/message-list";
+import { SubagentStrip } from "@/components/chat/subagent-strip";
+import { activeDelegatedTasks } from "@/react-app/domains/session/status/session-progress";
 import { MessageListProvider, type DispatchAction } from "@/components/chat/message-list-provider";
 import type {
   ChatToolReconnectAction,
@@ -1234,6 +1237,9 @@ export function SessionSurface(props: SessionSurfaceProps) {
   );
   const useDesktopLoopbackSnapshotRetry = isDesktopRuntime()
     && isLoopbackOfflineGptServerUrl(props.opencodeBaseUrl);
+  // A session the engine no longer has (for example one created before OpenCode
+  // v2 chat routing) opens a new session instead of showing a load error.
+  const inRouter = useInRouterContext();
   const snapshotQuery = useQuery<OfflineGptSessionSnapshot>({
     queryKey: snapshotQueryKey,
     queryFn: async ({ signal }) => {
@@ -1261,6 +1267,10 @@ export function SessionSurface(props: SessionSurfaceProps) {
       ? false
       : (failureCount) => !evalSnapshotFailureRef.current && failureCount < 3,
   });
+
+  const sessionMissing = snapshotQuery.error instanceof Error
+    && "code" in snapshotQuery.error
+    && snapshotQuery.error.code === "session_not_found";
 
   const currentSnapshot = snapshotQuery.data?.session.id === props.sessionId ? snapshotQuery.data : null;
   const inspectorOpencodeBaseUrl = useMemo(() => {
@@ -1511,6 +1521,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     }
     return [...baseRenderedMessages, ...pending, ...evalMarkdownMessages];
   }, [attachments.length, autoSendPayload, autoSending, baseRenderedMessages, draft, evalMarkdownMessages, pasteParts, props.sessionId, unmatchedPendingMessages]);
+  const runningSubagentTasks = useMemo(() => activeDelegatedTasks(renderedMessages), [renderedMessages]);
   const renderedMessagesRef = useRef(renderedMessages);
   useEffect(() => {
     renderedMessagesRef.current = renderedMessages;
@@ -1932,9 +1943,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
       if (segment.startsWith("@")) {
         const value = decodeComposerMentionValue(segment.slice(1));
         const kind = sourceMentions[value];
-        if (isComputerTarget(value) && (!kind || kind === "computer") && (index <= 1 && !segments[0] || /\s$/.test(segments[index - 1] ?? ""))) {
-          return [{ type: "computer", target: value } satisfies ComposerDraft["parts"][number]];
-        }
         if (kind === "agent") return [{ type: "agent", name: value } satisfies ComposerDraft["parts"][number]];
         if (kind === "file") return [{ type: "file", path: value, label: value } satisfies ComposerDraft["parts"][number]];
         if (kind === "app") return [{ type: "app", name: value } satisfies ComposerDraft["parts"][number]];
@@ -3005,6 +3013,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
 
   return (
     <DevProfiler id="SessionSurface">
+    {sessionMissing && inRouter ? <MissingSessionRedirect workspaceId={props.workspaceId} sessionId={props.sessionId} /> : null}
     <div
       data-session-surface-id={props.sessionId}
       data-session-surface-workspace-id={props.workspaceId}
@@ -3313,10 +3322,15 @@ export function SessionSurface(props: SessionSurfaceProps) {
         isRemoteWorkspace={props.isRemoteWorkspace}
           isSandboxWorkspace={props.isSandboxWorkspace}
           onUploadInboxFiles={props.onUploadInboxFiles ?? handleUploadInboxFiles}
-          compactTopSpacing={Boolean(props.activeQuestion || (props.todos ?? []).some((todo) => todo.content.trim()) || props.activePermission || queuedItems.length > 0)}
+          compactTopSpacing={Boolean(props.activeQuestion || (props.todos ?? []).some((todo) => todo.content.trim()) || props.activePermission || queuedItems.length > 0 || runningSubagentTasks.length > 0)}
           topAccessory={
-            props.activeQuestion || (props.todos ?? []).some((todo) => todo.content.trim()) || props.activePermission || queuedItems.length > 0 ? (
+            props.activeQuestion || (props.todos ?? []).some((todo) => todo.content.trim()) || props.activePermission || queuedItems.length > 0 || runningSubagentTasks.length > 0 ? (
               <div>
+                <SubagentStrip
+                  tasks={runningSubagentTasks}
+                  workspaceId={props.workspaceId}
+                  onOpenSession={props.onOpenSubagentSession}
+                />
                 {queuedItems.length > 0 ? (
                   <QueuedMessagesPanel
                     items={queuedItems}
@@ -3359,4 +3373,19 @@ export function SessionSurface(props: SessionSurfaceProps) {
     </div>
     </DevProfiler>
   );
+}
+
+/**
+ * A session the engine no longer has (for example one created before OpenCode
+ * v2 chat routing) opens a new session instead of showing a load error. Only
+ * the conversation in the address bar redirects; a split pane keeps its route.
+ */
+function MissingSessionRedirect({ workspaceId, sessionId }: { workspaceId: string; sessionId: string }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const sessionInRoute = location.pathname === workspaceSessionRoute(workspaceId, sessionId);
+  useEffect(() => {
+    if (sessionInRoute) navigate(workspaceSessionRoute(workspaceId), { replace: true });
+  }, [navigate, sessionInRoute, workspaceId]);
+  return null;
 }
