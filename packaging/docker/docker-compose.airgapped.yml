@@ -1,0 +1,166 @@
+# docker-compose.airgapped.yml — the OfflineGPT air-gapped edition on one host.
+#
+# Every service runs on `offlinegpt-internal`, an internal Docker network with
+# no route to the internet. Only den-gateway (the browser entry) and den-web
+# (the admin console) also join `offlinegpt-edge` so their ports can be
+# published to the customer's LAN.
+#
+# Images are built once on a machine with internet access, then moved in with
+# scripts/airgap-bundle.mjs (docker save / docker load):
+#   offlinegpt-den-api:airgapped, offlinegpt-den-web:airgapped,
+#   offlinegpt-den-gateway:airgapped, offlinegpt-inference:airgapped,
+#   offlinegpt-workspace:airgapped, mysql:8.4, redis:7.4-alpine, vllm/vllm-openai.
+#
+# Usage:
+#   OFFLINEGPT_MODELS_DIR=/srv/models OFFLINEGPT_PUBLIC_URL=https://offlinegpt.psu.internal \
+#     docker compose -f packaging/docker/docker-compose.airgapped.yml up -d
+#
+# Required secrets (set in .env next to this file or the shell):
+#   OFFLINEGPT_AUTH_SECRET, OFFLINEGPT_DB_ENCRYPTION_KEY, OFFLINEGPT_GATEWAY_KEY (each ≥ 32 chars),
+#   OFFLINEGPT_MYSQL_PASSWORD, OFFLINEGPT_ADMIN_BOOTSTRAP_CODE (one-time /setup code).
+
+x-airgapped-env: &airgapped-env
+  OFFLINEGPT_EDITION: airgapped
+  DEN_OBSERVABILITY_BACKEND: none
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${OFFLINEGPT_MYSQL_PASSWORD:?set OFFLINEGPT_MYSQL_PASSWORD}
+      MYSQL_DATABASE: offlinegpt_den
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks: [internal]
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    networks: [internal]
+
+  den-api:
+    image: offlinegpt-den-api:airgapped
+    restart: unless-stopped
+    command: ["sh", "-lc", "cd /app/ee/packages/den-db && yes | node --import tsx ./node_modules/drizzle-kit/bin.cjs push --config drizzle.config.ts && node /app/ee/apps/den-api/dist/main.js"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      <<: *airgapped-env
+      PORT: "8788"
+      DATABASE_URL: mysql://root:${OFFLINEGPT_MYSQL_PASSWORD}@mysql:3306/offlinegpt_den
+      DATABASE_REDIS_URL: redis://redis:6379
+      DATABASE_REDIS_ALLOW_INSECURE_INTERNAL: "1"
+      BETTER_AUTH_SECRET: ${OFFLINEGPT_AUTH_SECRET:?set OFFLINEGPT_AUTH_SECRET}
+      DEN_DB_ENCRYPTION_KEY: ${OFFLINEGPT_DB_ENCRYPTION_KEY:?set OFFLINEGPT_DB_ENCRYPTION_KEY}
+      BETTER_AUTH_URL: ${OFFLINEGPT_PUBLIC_URL:-http://localhost:8080}
+      DEN_API_PUBLIC_URL: ${OFFLINEGPT_PUBLIC_URL:-http://localhost:8080}/api/den
+      CORS_ORIGINS: ${OFFLINEGPT_PUBLIC_URL:-http://localhost:8080}
+      DEN_ORG_MODE: single_org
+      DEN_SINGLE_ORG_NAME: ${OFFLINEGPT_ORG_NAME:-OfflineGPT}
+      DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP: "false"
+      DEN_REQUIRE_EMAIL_VERIFICATION: "false"
+      DEN_INITIAL_ADMIN_BOOTSTRAP_CODE: ${OFFLINEGPT_ADMIN_BOOTSTRAP_CODE:?set OFFLINEGPT_ADMIN_BOOTSTRAP_CODE}
+      DEN_ALLOW_PRIVATE_MCP_URLS: "1"
+      DEN_GATEWAY_KEY: ${OFFLINEGPT_GATEWAY_KEY:?set OFFLINEGPT_GATEWAY_KEY}
+      INFERENCE_PROXY_BASE_URL: http://inference:8791
+      # One workspace container per employee, on the internal network.
+      PROVISIONER_MODE: docker
+      DOCKER_WORKER_IMAGE: offlinegpt-workspace:airgapped
+      DOCKER_WORKER_NETWORK: offlinegpt-internal
+      DOCKER_WORKER_MEMORY_MB: ${OFFLINEGPT_WORKSPACE_MEMORY_MB:-4096}
+      DOCKER_WORKER_CPUS: ${OFFLINEGPT_WORKSPACE_CPUS:-2}
+      WORKER_ACTIVITY_BASE_URL: http://den-api:8788
+      WORKER_ENV_OPENCODE_MODELS_URL: http://inference:8791/models
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [internal]
+
+  den-web:
+    image: offlinegpt-den-web:airgapped
+    restart: unless-stopped
+    depends_on: [den-api]
+    environment:
+      <<: *airgapped-env
+      DEN_API_BASE: http://den-api:8788
+      DEN_AUTH_FALLBACK_BASE: http://den-api:8788
+      DEN_AUTH_ORIGIN: ${OFFLINEGPT_PUBLIC_URL:-http://localhost:8080}
+      DEN_WEB_PUBLIC_ORIGIN: ${OFFLINEGPT_ADMIN_URL:-http://localhost:3005}
+      DEN_ORG_MODE: single_org
+      DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP: "false"
+    ports:
+      - "${OFFLINEGPT_ADMIN_PORT:-3005}:3005"
+    networks: [internal, edge]
+
+  den-gateway:
+    image: offlinegpt-den-gateway:airgapped
+    restart: unless-stopped
+    depends_on: [den-api]
+    environment:
+      PORT: "8788"
+      DEN_API_BASE: http://den-api:8788
+      DEN_GATEWAY_KEY: ${OFFLINEGPT_GATEWAY_KEY}
+    ports:
+      - "${OFFLINEGPT_PORT:-8080}:8788"
+    networks: [internal, edge]
+
+  inference:
+    image: offlinegpt-inference:airgapped
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      <<: *airgapped-env
+      PORT: "8791"
+      DATABASE_URL: mysql://root:${OFFLINEGPT_MYSQL_PASSWORD}@mysql:3306/offlinegpt_den
+      DB_MODE: mysql
+      DEN_DB_ENCRYPTION_KEY: ${OFFLINEGPT_DB_ENCRYPTION_KEY}
+      INFERENCE_WEBHOOK_SECRET: ${OFFLINEGPT_GATEWAY_KEY}
+      INFERENCE_UPSTREAM_URL: http://vllm:8000/v1
+      INFERENCE_PROXY_BASE_URL: http://inference:8791
+    networks: [internal]
+
+  vllm:
+    image: ${OFFLINEGPT_VLLM_IMAGE:-vllm/vllm-openai:v0.11.0}
+    restart: unless-stopped
+    # The model is read from a mounted directory; nothing is fetched.
+    command:
+      - --model=/models/${OFFLINEGPT_MODEL_DIR:-Qwen2.5-0.5B-Instruct}
+      - --served-model-name=${OFFLINEGPT_MODEL_ALIAS:-main}
+      - --max-model-len=${OFFLINEGPT_MAX_MODEL_LEN:-8192}
+      - --gpu-memory-utilization=${OFFLINEGPT_GPU_MEMORY_UTILIZATION:-0.85}
+      - --enable-auto-tool-choice
+      - --tool-call-parser=${OFFLINEGPT_TOOL_PARSER:-hermes}
+    environment:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      VLLM_NO_USAGE_STATS: "1"
+      DO_NOT_TRACK: "1"
+    volumes:
+      - ${OFFLINEGPT_MODELS_DIR:?set OFFLINEGPT_MODELS_DIR}:/models:ro
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks: [internal]
+
+networks:
+  internal:
+    name: offlinegpt-internal
+    internal: true
+  edge:
+    name: offlinegpt-edge
+
+volumes:
+  mysql-data:
