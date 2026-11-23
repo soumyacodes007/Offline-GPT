@@ -16,6 +16,10 @@ description: "Plan OfflineGPT deployments that limit or remove public internet a
 
 If desktops have internet access and Den is private, start with [Private network deployment](/start-here/private-network-deployment). If you need to inventory domains, use [Outbound network access](/start-here/outbound-network-access). If TLS inspection or private roots are involved, use [Certificate trust and proxies](/start-here/certificate-trust-and-proxies).
 
+## The air-gapped edition
+
+Set `OFFLINEGPT_EDITION=airgapped` on every OfflineGPT service to run the fully isolated edition: employees use OfflineGPT in the browser, each with a workspace container inside your network, and models come from your own vLLM (or any OpenAI-compatible server) through `INFERENCE_UPSTREAM_URL`. In this edition each service refuses at startup any setting that would call a public service. `packaging/docker/docker-compose.airgapped.yml` runs the whole stack on one host on an internal Docker network, and `scripts/airgap-bundle.mjs` packs every image, the compose file and model weights into one checksummed bundle you carry in. Kubernetes installs use `config.edition: airgapped` and `vllm.enabled` in the Helm chart (see `examples/values.airgapped.yaml`).
+
 ## Full isolation checklist
 
 Use this checklist only when the goal is a fully isolated OfflineGPT deployment, not just private Den or internal installer delivery.
