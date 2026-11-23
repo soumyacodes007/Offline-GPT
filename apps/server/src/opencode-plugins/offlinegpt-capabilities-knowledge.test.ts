@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { automationRuntimeKnowledge, OfflineGPTCapabilitiesKnowledge } from "./offlinegpt-capabilities-knowledge.js";
+import { OfflineGPTCapabilitiesKnowledge } from "./offlinegpt-capabilities-knowledge.js";
 
 describe("OfflineGPT capabilities knowledge plugin", () => {
   test("injects current OfflineGPT Connect guidance", async () => {
@@ -64,7 +64,7 @@ describe("OfflineGPT capabilities knowledge plugin", () => {
     expect(knowledge).not.toContain("Important docs to know");
     expect(knowledge).toContain("Create them as the `Skill creation:` instruction in this prompt directs.");
     expect(knowledge).toContain("use the user's time zone stated in this prompt");
-    expect(knowledge).toContain("Deactivation stops future runs but does not cancel a run already in progress.");
+    expect(knowledge).toContain("Change or delete a task only when the person asks.");
   });
 
   test("extends the engine system entry instead of adding a second system message", async () => {
@@ -127,40 +127,19 @@ describe("OfflineGPT capabilities knowledge plugin", () => {
     expect(read).not.toContain("~/.cursor/mcp.json");
   });
 
-  test("teaches Automations as the product feature for recurring work", async () => {
+  test("teaches scheduled tasks and workflows as the product features for recurring and parallel work", async () => {
     const plugin = await OfflineGPTCapabilitiesKnowledge();
     const output = { system: [] };
 
     await plugin["experimental.chat.system.transform"]({}, output);
 
     const knowledge = output.system.join("\n");
-    expect(knowledge).toContain("## Automations");
-    expect(knowledge).toContain("offlinegpt_execute");
-    expect(knowledge).toContain("automation.propose");
+    expect(knowledge).toContain("## Scheduled tasks");
+    for (const tool of ["schedule_create", "schedule_list", "schedule_view", "schedule_edit"]) expect(knowledge).toContain(tool);
     // Scheduling OfflineGPT work through the OS is the exact failure this guidance prevents.
     expect(knowledge).toContain("Never write a cron entry, launchd/systemd unit, Task Scheduler job");
-    expect(knowledge).toContain("Desktop creation fixes placement to Desktop");
-    // Reading and changing an existing Automation is a real capability, so the
-    // guidance must name it rather than claim the agent cannot act at all.
-    expect(knowledge).toContain("listAutomations");
-    expect(knowledge).toContain("listAutomationRuns");
-    expect(knowledge).toContain("updateAutomation");
-    expect(knowledge).toContain("runAutomationNow");
-    expect(knowledge).toContain("cancelAutomationRun");
-    // "Read live before reporting" is owned by the Automation catalog section
-    // that accompanies the listing; the knowledge block does not restate it.
-    expect(knowledge).not.toContain("from an actual capability call");
-    expect(knowledge).toContain("Deactivation stops future runs but does not cancel a run already in progress");
-    expect(knowledge).not.toContain("you cannot create, activate, or run an Automation");
-    expect(knowledge).toContain("there is no interval schedule");
-    expect(knowledge).toContain("signed-in desktop runner");
-  });
-
-  test("gives Cloud workers a Cloud-only creation contract", () => {
-    const knowledge = automationRuntimeKnowledge("daytona");
-    expect(knowledge).toContain("use createCloudAutomation");
-    expect(knowledge).toContain("runs headlessly without a desktop");
-    expect(knowledge).toContain("wake a stopped Cloud container");
-    expect(knowledge).toContain("Do not use createAutomation or automation.propose from Cloud Chat");
+    expect(knowledge).toContain("## Workflows");
+    expect(knowledge).toContain("await agent(");
+    expect(knowledge).not.toMatch(/Automation/);
   });
 });
