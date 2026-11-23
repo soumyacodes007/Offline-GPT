@@ -1,8 +1,6 @@
 import { DateTime, IANAZone } from "luxon";
-import rrule from "rrule";
+import { rrulestr } from "rrule";
 import type { ScheduleTiming } from "@offlinegpt/types/schedule";
-
-const { rrulestr } = rrule;
 
 /** A rejected timing, reported to agents and the UI as an input error. */
 export class ScheduleInputError extends Error {
