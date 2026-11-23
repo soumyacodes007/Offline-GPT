@@ -18,7 +18,7 @@ import { buildDiagnosticsBundleJson } from "@/app/lib/diagnostics-bundle";
 import { downloadTextAsFile } from "@/app/lib/download";
 import { canCreateWorkspaces } from "@/app/lib/workspace-creation-policy";
 import { createClient, isPromptAdmissionUnknown, unwrap } from "@/app/lib/opencode";
-import { createClientV2, isOpencodeV2BaseUrl, V2_SESSION_ARCHIVE_UNAVAILABLE } from "@/app/lib/opencode-v2-adapter";
+import { createClientV2, isOpencodeV2BaseUrl } from "@/app/lib/opencode-v2-adapter";
 import { abortSessionSafe, forkSession, listCommands, revertSession, setSessionArchived, shellInSession, unrevertSession } from "@/app/lib/opencode-session";
 import { getNativeSessionMessages } from "@/app/lib/opencode-session-native";
 import { useSessionManagementStore as sessionManagementStore } from "@/react-app/domains/session/sidebar/session-management-store";
@@ -104,12 +104,9 @@ import {
   type OpenSessionTab,
   type SessionPagePaneRuntime,
 } from "@/react-app/domains/session/chat/session-page";
-import { AutomationsPage } from "@/react-app/domains/automations/automations-page";
-import { AppsPage } from "@/react-app/domains/apps/apps-page";
 import { DashboardPage } from "@/react-app/domains/dashboard/dashboard-page";
+import { SchedulePage } from "@/react-app/domains/schedule/schedule-page";
 import { useDashboardDeploymentAvailability } from "@/react-app/domains/dashboard/dashboard-availability";
-import { useAutomationDeploymentEnabled } from "@/react-app/domains/automations/automation-availability";
-import { automationsStateChangedEvent } from "@/react-app/domains/automations/automation-events";
 import type {
   NewTaskComposerContext,
   NewTaskComposerHandoff,
@@ -254,7 +251,7 @@ import {
   globalExtensionsRoute,
   legacySessionRoute,
   mergeWorkspaceRouteSession,
-  automationsRoute,
+  scheduleRoute,
   dashboardRoute,
   workspaceExtensionsRoute,
   workspaceSessionRoute,
@@ -375,9 +372,8 @@ function focusedWorkbenchPaneOwner() {
 export function SessionRoute() {
   const navigate = useNavigate();
   const location = useLocation();
-  const appsRouteActive = /^(?:\/apps|\/dashboard\/apps)(?:\/|$)/.test(location.pathname);
-  const automationsRouteRequested = /^\/automations(?:\/|$)/.test(location.pathname);
   const dashboardRouteRequested = /^\/dashboard(?:\/|$)/.test(location.pathname);
+  const scheduleRouteActive = /^\/schedule(?:\/|$)/.test(location.pathname);
   const {
     enabled: mcpAppsDashboardEnabled,
     loading: dashboardAvailabilityLoading,
@@ -390,66 +386,15 @@ export function SessionRoute() {
   const denAuth = useDenAuth();
   const { config: shellConfig } = useShellConfig();
   const local = useLocal();
-  const automationDeploymentEnabled = useAutomationDeploymentEnabled();
-  // Desktop and Web share one Automations surface; the runtime only decides
-  // the placement of what each creates. Den's deployment flag stays the gate.
-  const automationsEnabled = automationDeploymentEnabled;
-  const automationsRouteActive = automationsEnabled && automationsRouteRequested;
   const denSettings = readDenSettings();
   const sessionDraftScope = resolveSessionDraftScope({
     hasCloudCredential: Boolean(denSettings.authToken?.trim()),
     verifiedIdentity: denAuth.verifiedIdentity,
   });
-  const [automationsSupported, setAutomationsSupported] = useState(false);
-  const [automationsNeedAttention, setAutomationsNeedAttention] = useState(false);
-  useEffect(() => {
-    if (!automationsRouteRequested || automationsEnabled) return;
-    navigate("/", { replace: true });
-  }, [automationsEnabled, automationsRouteRequested, navigate]);
   useEffect(() => {
     if (!dashboardRouteRequested || dashboardAvailabilityLoading || mcpAppsDashboardEnabled) return;
     navigate("/", { replace: true });
   }, [dashboardAvailabilityLoading, dashboardRouteRequested, mcpAppsDashboardEnabled, navigate]);
-  useEffect(() => {
-    const authToken = denSettings.authToken?.trim();
-    const organizationId = denSettings.activeOrgId?.trim();
-    if (!automationsEnabled || !denAuth.isSignedIn || !authToken || !organizationId) {
-      setAutomationsSupported(false);
-      setAutomationsNeedAttention(false);
-      return;
-    }
-    let cancelled = false;
-    const client = createDenClient({ baseUrl: denSettings.baseUrl, token: authToken });
-    const refreshAutomationState = () => {
-      void client.listAutomations(organizationId, { limit: 100 })
-        .then((result) => {
-          if (cancelled) return;
-          setAutomationsSupported(true);
-          setAutomationsNeedAttention(result.items.some((item) => item.automation.state === "needs_attention"));
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setAutomationsSupported(false);
-          setAutomationsNeedAttention(false);
-        });
-    };
-    refreshAutomationState();
-    const interval = window.setInterval(refreshAutomationState, 5 * 60_000);
-    window.addEventListener(automationsStateChangedEvent, refreshAutomationState);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      window.removeEventListener(automationsStateChangedEvent, refreshAutomationState);
-    };
-  }, [
-    automationsEnabled,
-    denAuth.isSignedIn,
-    denAuth.status,
-    denSettings.activeOrgId,
-    denSettings.authToken,
-    denSettings.baseUrl,
-  ]);
-  const automationsNavigationAvailable = automationsEnabled && automationsSupported;
   const reloadCoordinator = useReloadCoordinator();
   const checkDesktopRestriction = useCheckDesktopRestriction();
   const restrictionNotice = useRestrictionNotice();
@@ -510,7 +455,7 @@ export function SessionRoute() {
     runRemoteWorkspaceConnectionCheck,
   } = useWorkspaceRouteState({
     developerMode,
-    workspaceRoute: appsRouteActive ? "apps" : automationsRouteActive ? "automations" : dashboardWorkspaceRoute ? "dashboard" : "session",
+    workspaceRoute: scheduleRouteActive ? "schedule" : dashboardWorkspaceRoute ? "dashboard" : "session",
     onServerSettingsChanged: () => setOfflineGptServerSettingsVersion((value) => value + 1),
     onHostInfo: setOfflineGptServerHostInfoState,
   });
@@ -537,7 +482,6 @@ export function SessionRoute() {
     locationKey: location.key,
     navigationGeneration: routeNavigationRef.current.generation,
   };
-  const archiveDisabledReason = isOpencodeV2BaseUrl(opencodeBaseUrl) ? V2_SESSION_ARCHIVE_UNAVAILABLE : undefined;
   // The dashboard is user-scoped while MCP servers are workspace-scoped: the
   // selected workspace's runtime is primary, and every other available one is
   // a per-tile fallback so tiles keep working when the selected workspace does
@@ -2448,7 +2392,6 @@ export function SessionRoute() {
     canCreateTask,
     offlinegptClient: client,
     opencodeClient,
-    archiveDisabledReason,
     endpointForWorkspace,
     navigateToSession: navigateToSessionForControl,
     navigateToSessionRoot: navigateToSessionRootForControl,
@@ -3263,13 +3206,6 @@ export function SessionRoute() {
     }
   }, [client, local, refreshRouteState]);
 
-  const startAppConversation = async (prompt: string) => {
-    const sessionId = await handleCreateTaskInWorkspaceWithOpenMode(selectedWorkspaceId, "primary");
-    if (!sessionId) throw new Error("Could not start a conversation. Check that your workspace is connected.");
-    saveSessionDraft(sessionDraftScope, selectedWorkspaceId, sessionId, { text: prompt, mode: "prompt" });
-    focusPromptSoon();
-  };
-
   return (
     <WorkspaceProvider
       client={opencodeClient}
@@ -3382,11 +3318,13 @@ export function SessionRoute() {
           }}
         />
       }
-      primaryTitle={appsRouteActive ? "Dashboard" : automationsRouteActive ? "Automations" : dashboardRouteActive ? "Dashboard" : undefined}
-      primarySlot={appsRouteActive ? (
-        <AppsPage onNewApp={startAppConversation} />
-      ) : automationsRouteActive ? (
-        <AutomationsPage providerCatalog={providerCatalog} workspaceId={selectedWorkspaceId} />
+      primaryTitle={scheduleRouteActive ? "Scheduled tasks" : dashboardRouteActive ? "Dashboard" : undefined}
+      primarySlot={scheduleRouteActive ? (
+        <SchedulePage
+          client={selectedWorkspaceEndpoint?.client ?? null}
+          workspaceId={selectedWorkspaceEndpoint?.workspaceId ?? ""}
+          onOpenSession={(sessionId) => navigateToWorkspaceSession(selectedWorkspaceId, sessionId)}
+        />
       ) : dashboardRouteActive ? (
         <WorkspaceProvider
           client={opencodeClient}
@@ -3395,7 +3333,7 @@ export function SessionRoute() {
           workspaceId={dashboardEndpoint?.workspaceId ?? ""}
           selectedWorkspaceRoot={selectedWorkspaceRoot}
         >
-          <DashboardPage fallbackEndpoints={dashboardFallbackEndpoints} onCreateApp={startAppConversation} />
+          <DashboardPage fallbackEndpoints={dashboardFallbackEndpoints} />
         </WorkspaceProvider>
       ) : undefined}
       terminalOpen={terminalOpen}
@@ -3414,14 +3352,9 @@ export function SessionRoute() {
         newTaskDisabled: !canCreateTask,
         sidebarHydratedFromCache: Object.values(sessionsByWorkspaceId).some((list) => list.length > 0),
         startupPhase: effectiveLoading ? "nativeInit" : "ready",
-        automationsActive: automationsRouteActive,
-        automationsNeedAttention,
-        onOpenAutomations: automationsNavigationAvailable
-          ? () => {
-              navigate(automationsRoute());
-            }
-          : undefined,
-        dashboardActive: dashboardRouteActive || appsRouteActive,
+        dashboardActive: dashboardRouteActive,
+        scheduleActive: scheduleRouteActive,
+        onOpenSchedule: () => navigate(scheduleRoute()),
         onOpenDashboard: mcpAppsDashboardEnabled
           ? () => {
               navigate(dashboardRoute());
@@ -3519,9 +3452,13 @@ export function SessionRoute() {
                 },
               }));
               markComposerAutoSend(session.id, {
+                // Key it by the engine URL the session surface uses: with v2 chat
+                // routing that is `/opencode2`, not the endpoint's v1 `/opencode`.
                 scopeKey: composerAutoSendScopeKey({
                   draftScope: sessionDraftScope,
-                  opencodeBaseUrl: endpoint.opencodeBaseUrl,
+                  opencodeBaseUrl: isOpencodeV2BaseUrl(opencodeBaseUrl) && workspace.workspaceType !== "remote"
+                    ? `${endpoint.mountedBaseUrl}/opencode2`
+                    : endpoint.opencodeBaseUrl,
                   workspaceId,
                   sessionId: session.id,
                 }),
@@ -3543,7 +3480,14 @@ export function SessionRoute() {
             }
           }
           rememberPendingCreatedSession(workspaceId, session.id);
-          applyLastUsedModelToSession(session.id);
+          // Send with the model the new-task composer showed when this engine
+          // has it; otherwise keep the previous session's model.
+          const composerModel = local.prefs.defaultModel;
+          if (composerModel?.providerID && composerModel.modelID && resolveModelAvailability(composerModel).status !== "unavailable") {
+            useSessionModelStore.getState().setModel(session.id, composerModel, local.prefs.modelVariant ?? null);
+          } else {
+            applyLastUsedModelToSession(session.id);
+          }
           setSessionsByWorkspaceId((current) => ({
             ...current,
             [workspaceId]: mergeWorkspaceRouteSession(current[workspaceId] ?? [], session),
@@ -3652,7 +3596,6 @@ export function SessionRoute() {
           : undefined
       }
       onArchiveSession={opencodeClient ? handleArchiveSession : undefined}
-      archiveDisabledReason={archiveDisabledReason}
       statusBar={{
         // No per-session loading state here: the account row renders only
         // app-scoped facts. Session loading lives in the pane; an unresolved
@@ -3751,8 +3694,8 @@ export function SessionRoute() {
       onOpenSettings={(route) => handleOpenSettings(route ?? "/settings/general")}
       onOpenExtensions={(section) => handleOpenExtensions(section)}
       onToggleSidebar={toggleSidebar}
-      onOpenAutomations={() => navigate(automationsRoute())}
       onOpenDashboard={() => navigate(dashboardRoute())}
+      onOpenSchedule={() => navigate(scheduleRoute())}
       onCreateWorkspace={handleOpenCreateWorkspace}
       modelOptions={modelPicker.options}
       selectedModel={paletteSelectedModel}
