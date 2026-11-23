@@ -1,3 +1,4 @@
+export * from "./access-policy"
 export * from "./auth"
 export * from "./dashboards"
 export * from "./desktop-policies"
