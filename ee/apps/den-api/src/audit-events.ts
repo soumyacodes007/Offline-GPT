@@ -27,6 +27,8 @@ export const ORGANIZATION_AUDIT_ACTIONS = {
   offlineGptWebComplimentaryAccessGranted: "organization.offlinegpt_web.complimentary_access_granted",
   offlineGptWebComplimentaryAccessRevoked: "organization.offlinegpt_web.complimentary_access_revoked",
   dpaSignedUpdated: "organization.dpa_signed.updated",
+  accessPolicyRuleCreated: "organization.access_policy.rule_created",
+  accessPolicyRuleRemoved: "organization.access_policy.rule_removed",
 }
 
 type OrganizationAuditAction = typeof ORGANIZATION_AUDIT_ACTIONS[keyof typeof ORGANIZATION_AUDIT_ACTIONS]
@@ -73,6 +75,8 @@ export function isOrganizationAuditAlertAction(action: OrganizationAuditAction) 
     case ORGANIZATION_AUDIT_ACTIONS.offlineGptWebComplimentaryAccessGranted:
     case ORGANIZATION_AUDIT_ACTIONS.offlineGptWebComplimentaryAccessRevoked:
     case ORGANIZATION_AUDIT_ACTIONS.dpaSignedUpdated:
+    case ORGANIZATION_AUDIT_ACTIONS.accessPolicyRuleCreated:
+    case ORGANIZATION_AUDIT_ACTIONS.accessPolicyRuleRemoved:
       return true
     case ORGANIZATION_AUDIT_ACTIONS.scimReconciliationRun:
       return false
