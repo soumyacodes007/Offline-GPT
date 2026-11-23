@@ -88,8 +88,53 @@ function plural(count: number, singular: string, pluralForm = `${singular}s`): s
   return `${count} ${count === 1 ? singular : pluralForm}`
 }
 
+/** Split a simple one-line shell command into words; null when it uses shell syntax. */
+function shellWords(command: string): string[] | null {
+  if (command.includes("\n")) return null
+  const pattern = /\s*(?:'([^']*)'|"([^"$`\\]*)"|([^\s'"\\;&|<>`$()]+))/gy
+  const words: string[] = []
+  while (pattern.lastIndex < command.length) {
+    if (!command.slice(pattern.lastIndex).trim()) break
+    const match = pattern.exec(command)
+    if (!match) return null
+    const next = command[pattern.lastIndex]
+    if (next !== undefined && !/\s/.test(next)) return null
+    words.push(match[1] ?? match[2] ?? match[3] ?? "")
+  }
+  return words
+}
+
+/**
+ * A command that only prints a file (`cat x`, `sed -n 1,40p x`, `head x`) is
+ * a read, and one that only lists or greps is a search, so summaries say
+ * "read 3 files" instead of "ran 3 commands".
+ */
+export function shellCommandActivity(command: string): { family: "read"; path: string } | { family: "search" } | null {
+  const words = shellWords(command.trim())
+  if (!words?.length) return null
+  const [program, ...args] = words
+  const operands = args.filter((arg) => !arg.startsWith("-"))
+  if (program === "cat" && args.length === 1 && operands.length === 1) return { family: "read", path: operands[0] ?? "" }
+  if (program === "sed" && args.length === 3 && args[0] === "-n" && /^\d+(?:,\d+)?p$/.test(args[1] ?? "") && !args[2]?.startsWith("-")) {
+    return { family: "read", path: args[2] ?? "" }
+  }
+  if ((program === "head" || program === "tail") && operands.length === 1) return { family: "read", path: operands[0] ?? "" }
+  if (program === "rg" || program === "grep" || program === "ls" || program === "find") return { family: "search" }
+  return null
+}
+
+/** Family and file for counting: shell reads and searches count as what they do. */
+function summaryActivity(part: AnyToolPart): { family: ToolFamily | null; path: string | null } {
+  if (isBashToolPart(part)) {
+    const activity = shellCommandActivity(part.input?.command ?? "")
+    if (activity?.family === "read") return { family: "read", path: activity.path }
+    if (activity?.family === "search") return { family: "search", path: null }
+  }
+  return { family: getToolFamily(part), path: filePathOf(part) }
+}
+
 export function getAggregateCountSummary(parts: AnyToolPart[]): string {
-  const commands = parts.filter((part) => getToolFamily(part) === "command").length
+  const commands = parts.filter((part) => summaryActivity(part).family === "command").length
   const editPaths = new Set<string>()
   let editCalls = 0
   const readPaths = new Set<string>()
@@ -97,14 +142,12 @@ export function getAggregateCountSummary(parts: AnyToolPart[]): string {
   let searches = 0
 
   for (const part of parts) {
-    const family = getToolFamily(part)
+    const { family, path } = summaryActivity(part)
     if (family === "edit") {
       editCalls += 1
-      const path = filePathOf(part)
       if (path) editPaths.add(path)
     } else if (family === "read") {
       readCalls += 1
-      const path = filePathOf(part)
       if (path) readPaths.add(path)
     } else if (family === "search") {
       searches += 1
@@ -124,7 +167,7 @@ export function getAggregateCountSummary(parts: AnyToolPart[]): string {
  * File counts are unique paths; searches and commands are call counts.
  */
 export function getAggregateSummary(parts: AnyToolPart[], tense: "present" | "past"): string {
-  const commands = parts.filter((part) => getToolFamily(part) === "command").length
+  const commands = parts.filter((part) => summaryActivity(part).family === "command").length
   const editPaths = new Set<string>()
   let editCalls = 0
   const readPaths = new Set<string>()
@@ -132,14 +175,12 @@ export function getAggregateSummary(parts: AnyToolPart[], tense: "present" | "pa
   let searches = 0
 
   for (const part of parts) {
-    const family = getToolFamily(part)
+    const { family, path } = summaryActivity(part)
     if (family === "edit") {
       editCalls += 1
-      const path = filePathOf(part)
       if (path) editPaths.add(path)
     } else if (family === "read") {
       readCalls += 1
-      const path = filePathOf(part)
       if (path) readPaths.add(path)
     } else if (family === "search") {
       searches += 1
