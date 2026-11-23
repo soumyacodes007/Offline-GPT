@@ -29,7 +29,6 @@ import { resolvePluginArchGrantRole } from "../routes/org/plugin-system/access.j
 import { offlinegptOrganizationConnectionsUrl, offlinegptYourConnectionsUrl } from "./connection-navigation.js"
 import { parseCodemodeScriptPayload, type CodemodeScriptInputIssue } from "./codemode-script-object.js"
 import { type BuiltCodemodeTools } from "./codemode-tools.js"
-import { executeWorkflow } from "./workflow-service.js"
 import { listPluginMcpRequirementBindings, type PluginMcpRequirementBindingRow } from "./plugin-mcp-requirement-bindings.js"
 import { scoreText, tokenize } from "./search.js"
 import type { McpMemberIdentity } from "./external-capabilities.js"
@@ -1577,69 +1576,13 @@ export async function executeMarketplaceCapability(input: {
   }
 
   if (canonicalConfigObjectType(row.configObject.objectType) === "workflow") {
-    const execution = await executeWorkflow({
-      database: db,
-      organizationId,
-      orgMembershipId: input.member.orgMembershipId,
-      pluginId: row.plugin.id,
-      configObjectId: row.configObject.id,
-      configObjectVersionId: version.id,
-      automationRunId: input.automationRunId,
-      normalizedPayloadJson: version.normalizedPayloadJson,
-      code: version.rawSourceText ?? "",
-      scriptInput: input.body,
-      validateOutput: input.validateScriptOutput === true,
-      buildTools: input.buildTools ?? (async () => ({ tools: {}, manifest: [] })),
-    })
-    if (!execution.ok && execution.error === "unsupported") {
-      return {
-        ok: true,
-        result: {
-          ...basePayload(row),
-          status: "unsupported",
-          hint: unsupportedScriptHint(row, execution.message),
-        },
-      }
-    }
-    if (!execution.ok && (execution.error === "invalid_arguments" || execution.error === "invalid_result")) {
-      return {
-        ok: false,
-        error: "invalid_capability_arguments",
-        message: execution.message,
-        issues: execution.issues,
-        sameArgumentsRetryable: false,
-        retry: { action: "correct_arguments", searchRequired: false },
-        receiptId: execution.receiptId ?? null,
-      }
-    }
-    if (!execution.ok && execution.error === "capability_unavailable") return execution
-    if (!execution.ok && execution.error === "script_failed") {
-      return {
-        ok: false,
-        error: "script_failed",
-        message: execution.message,
-        kind: execution.kind,
-        toolCalls: execution.toolCalls,
-        receiptId: execution.receiptId ?? null,
-      }
-    }
-    if (!execution.ok) return { ok: false, error: "script_failed", message: execution.message, kind: "InvalidDataValue", toolCalls: [] }
+    // Den Workflows were removed; library items of that type are listed but no longer run.
     return {
       ok: true,
       result: {
         ...basePayload(row),
-        status: "executed",
-        value: execution.value,
-        logs: execution.logs,
-        toolCalls: execution.toolCalls,
-        durationMs: execution.durationMs,
-        receiptId: execution.receiptId,
-        canonicalResult: execution.canonicalResult,
-        markdown: execution.markdown,
-        resultDigest: execution.resultDigest,
-        inputSchemaDigest: execution.inputSchemaDigest,
-        outputSchemaDigest: execution.outputSchemaDigest,
-        rendererVersion: execution.rendererVersion,
+        status: "unsupported",
+        hint: unsupportedScriptHint(row, "Workflows are no longer supported. Use the OfflineGPT desktop workflow tool instead."),
       },
     }
   }
