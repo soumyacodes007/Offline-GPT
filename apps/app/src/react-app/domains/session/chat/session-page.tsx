@@ -173,9 +173,8 @@ export type SessionPageSidebarProps = {
   onEditWorkspaceConnection: (workspaceId: string) => void;
   onForgetWorkspace: (workspaceId: string) => void;
   onOpenCreateWorkspace: () => void;
-  automationsActive?: boolean;
-  automationsNeedAttention?: boolean;
-  onOpenAutomations?: () => void;
+  scheduleActive?: boolean;
+  onOpenSchedule?: () => void;
   dashboardActive?: boolean;
   onOpenDashboard?: () => void;
   /** Opens the cross-session message search dialog (Cmd/Ctrl+Shift+F). */
@@ -1398,9 +1397,8 @@ export function SessionPage(props: SessionPageProps) {
           onOpenCreateWorkspace={props.sidebar.onOpenCreateWorkspace}
           onOpenSessionSearch={props.sidebar.onOpenSessionSearch}
           offlinegptServerClient={props.offlinegptServerClient}
-          automationsActive={props.sidebar.automationsActive}
-          automationsNeedAttention={props.sidebar.automationsNeedAttention}
-          onOpenAutomations={props.sidebar.onOpenAutomations}
+          scheduleActive={props.sidebar.scheduleActive}
+          onOpenSchedule={props.sidebar.onOpenSchedule}
           dashboardActive={props.sidebar.dashboardActive}
           onOpenDashboard={props.sidebar.onOpenDashboard}
           conversationHistory={{
