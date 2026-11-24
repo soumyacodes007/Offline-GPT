@@ -166,6 +166,29 @@ with the prefix removed (for example `WORKER_ENV_OPENCODE_MODELS_URL`).
 | `packaging/helm/offlinegpt-ee` | `config.edition`, `config.inference.upstreamUrl` / `models`, an optional in-cluster `vllm` (model from a PVC); example `examples/values.airgapped.yaml` |
 | `scripts/airgap-bundle.mjs` | On a connected machine: builds and pulls every image, `docker save`s them, adds the compose file and optional model weights, writes `SHA256SUMS` and an `install.sh` that verifies and `docker load`s inside the isolated network |
 
+## Deployment model: one Docker host, no Kubernetes
+
+The supported air-gapped deployment is a single Docker host running
+`docker-compose.airgapped.yml`. Kubernetes is not required and is not planned
+until a customer needs it.
+
+- **Capacity**: an idle workspace uses roughly 0.3–1 GB of RAM, so one 64–128 GB
+  server should hold about 50–150 concurrent employees. This is an estimate and
+  has not been load-tested. GPU throughput for the model is the real limit, not
+  where workspaces run.
+- **Operations**: one machine and one `docker compose up -d`, with no cluster
+  for the customer's IT team to run.
+- **When this stops being enough**: more employees than one or two servers can
+  hold, failover of workspaces to another machine, or a customer that only
+  accepts OpenShift/Kubernetes. The first two are cheaper to solve by letting
+  the Docker provisioner place workspaces on several Docker hosts. A
+  `PROVISIONER_MODE=kubernetes` provisioner is built only on a real customer
+  request.
+
+The Helm chart's `config.edition` and `vllm` values stay for customers that
+already run Den on Kubernetes, but per-employee workspaces still need a Docker
+host.
+
 ## Deploying (one host)
 
 On a machine with internet access:
@@ -242,9 +265,6 @@ and catalog (80/80).
 
 ## Not done yet
 
-- **Kubernetes workspaces**: on Kubernetes, the chart runs Den, inference and
-  vLLM, but per-employee workspaces need a `PROVISIONER_MODE=kubernetes`
-  provisioner (Pods and PVCs). Today they run on a Docker host.
 - **Full-stack compose run**: the compose file validates (`docker compose
   config`), and each part is proven separately. A single `up` of every service,
   including den-web and den-gateway images built for the edition, has not been
