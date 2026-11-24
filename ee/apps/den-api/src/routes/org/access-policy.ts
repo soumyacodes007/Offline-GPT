@@ -22,7 +22,18 @@ import { ensureOrganizationSuperAdmin, idParamSchema, orgAccessFailureStatus } f
  * table accepts more kinds for future surfaces; the API refuses a rule that
  * would not be enforced, so an admin never sees a rule that does nothing.
  */
-export const ENFORCED_ACCESS_POLICY_KINDS = ["model", "plugin", "marketplace", "config_object", "connector_instance", "mcp_connection"] as const
+export const ENFORCED_ACCESS_POLICY_KINDS = [
+  "model",
+  "plugin",
+  "marketplace",
+  "config_object",
+  "connector_instance",
+  "mcp_connection",
+  "llm_provider",
+  "capability",
+  "knowledge_document",
+  "knowledge_chunk",
+] as const
 
 const ruleWriteSchema = z.object({
   resourceKind: z.enum(ENFORCED_ACCESS_POLICY_KINDS),
@@ -61,7 +72,7 @@ function serializeRule(row: typeof AccessPolicyRuleTable.$inferSelect, now = new
   }
 }
 
-async function principalExists(organizationId: OrganizationId, kind: z.infer<typeof ruleWriteSchema>["principalKind"], id: string) {
+export async function principalExists(organizationId: OrganizationId, kind: z.infer<typeof ruleWriteSchema>["principalKind"], id: string) {
   if (kind === "role") return /^[a-z0-9][a-z0-9_-]{0,63}$/i.test(id)
   if (kind === "org") return id === organizationId
   try {
@@ -224,7 +235,7 @@ export function registerOrgAccessPolicyRoutes<T extends { Variables: OrgRouteVar
         principals: context.principals,
         resourceKind: input.resourceKind,
         resourceId: input.resourceId,
-        baseline: input.resourceKind === "model" ? "open" : "closed",
+        baseline: input.resourceKind === "model" || input.resourceKind === "capability" || input.resourceKind === "knowledge_chunk" ? "open" : "closed",
       })
       return c.json({ decision, principals: context.principals })
     },
