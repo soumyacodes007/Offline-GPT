@@ -8,6 +8,7 @@ import { db } from "../../db.js"
 import { jsonValidator, orgMemberRoute, paramValidator, queryValidator } from "../../middleware/index.js"
 import { denTypeIdSchema, emptyResponse, forbiddenSchema, invalidRequestSchema, jsonResponse, notFoundSchema, unauthorizedSchema } from "../../openapi.js"
 import { getOfflineGPTWebRuntimeAccess, offlineGptWebAccessRequiredPayload } from "../../offlinegpt-web-runtime-access.js"
+import { env } from "../../env.js"
 import { getOrganizationLimitStatus } from "../../organization-limits.js"
 import { getRequiredUserEmail } from "../../user.js"
 import type { WorkerRouteVariables } from "./shared.js"
@@ -242,8 +243,10 @@ export function registerWorkerCoreRoutes<T extends { Variables: WorkerRouteVaria
         }, 402)
       }
 
-      const workerLimit = await getOrganizationLimitStatus(orgId, "workers")
-      if (workerLimit.exceeded) {
+      // The air-gapped edition runs one workspace per employee on the customer's
+      // own hardware, so the hosted per-org worker cap does not apply there.
+      const workerLimit = env.airgapped ? null : await getOrganizationLimitStatus(orgId, "workers")
+      if (workerLimit?.exceeded) {
         return c.json({
           error: "org_limit_reached",
           limitType: "workers",
