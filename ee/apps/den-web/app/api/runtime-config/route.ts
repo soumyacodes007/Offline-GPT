@@ -82,7 +82,8 @@ export async function GET() {
       singleOrgName: readPublicRuntimeEnv("DEN_SINGLE_ORG_NAME") || "OfflineGPT",
       singleOrgSlug: readPublicRuntimeEnv("DEN_SINGLE_ORG_SLUG") || "default",
       singleOrgAllowPublicSignup: readBooleanEnv("DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP", orgMode === "multi_org"),
-      singleOrgSsoConfigured
+      singleOrgSsoConfigured,
+      airgapped: readPublicRuntimeEnv("OFFLINEGPT_EDITION") === "airgapped"
     },
     {
       headers: {
