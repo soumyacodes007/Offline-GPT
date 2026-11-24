@@ -3,6 +3,8 @@
 export type OfflineGptGatewayMarker = {
   version?: number;
   build?: string;
+  /** Den web app for sign-in, set by self-hosted gateways; unset means the hosted one. */
+  denWebUrl?: string;
 };
 
 declare global {
@@ -21,6 +23,11 @@ export function getOfflineGptGatewayBuild(): string | null {
   if (!isOfflineGptGatewayRuntime()) return null;
   const build = window.__OFFLINEGPT_GATEWAY__?.build?.trim() ?? "";
   return build || null;
+}
+
+export function getOfflineGptGatewayDenWebUrl() {
+  if (!isOfflineGptGatewayRuntime()) return null;
+  return window.__OFFLINEGPT_GATEWAY__?.denWebUrl?.trim() || null;
 }
 
 export function getOfflineGptGatewayOrigin() {
