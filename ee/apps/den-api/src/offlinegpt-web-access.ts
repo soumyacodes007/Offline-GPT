@@ -58,15 +58,18 @@ export function resolveOfflineGPTWebAccess(input: {
 } {
   // The air-gapped edition is the customer's own deployment: web access is
   // included and there is no subscription to buy.
+  // Clients require complimentaryAccess whenever accessSource is
+  // "complimentary", so the edition grant is reported as complimentary too.
+  const complimentaryAccess = input.complimentaryAccess || isAirgapped
   const accessSource: OfflineGPTWebAccessSource = input.deploymentAvailable && input.hasEligibleSubscription
     ? "subscription"
-    : input.complimentaryAccess || isAirgapped
+    : complimentaryAccess
       ? "complimentary"
       : null
 
   return {
     hasAccess: accessSource !== null,
     accessSource,
-    complimentaryAccess: input.complimentaryAccess,
+    complimentaryAccess,
   }
 }
