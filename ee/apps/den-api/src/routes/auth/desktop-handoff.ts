@@ -215,7 +215,9 @@ function resolveWebHandoffReturnUrlCandidate(input: {
   returnUrl: string
   orgMode: DenOrgMode
 }): ApprovedWebHandoffReturnUrlCandidate | null {
-  if (input.orgMode !== "multi_org") {
+  // The air-gapped edition is single-org but serves employees through its own
+  // gateway; only that exact configured origin can match below.
+  if (input.orgMode !== "multi_org" && !env.airgapped) {
     return null
   }
 
