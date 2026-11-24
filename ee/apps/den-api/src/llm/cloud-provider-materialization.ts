@@ -19,6 +19,7 @@ import {
   selectPrimaryCredentialEnvName,
   toRuntimeProviderEnv,
 } from "./provider-credentials.js"
+import { listSelfHostedModels } from "./self-hosted-models.js"
 
 type JsonRecord = Record<string, unknown>
 type OrganizationId = typeof LlmProviderTable.$inferSelect.organizationId
@@ -188,6 +189,10 @@ const databaseMaterializationStore: CloudProviderMaterializationStore = {
       modelsByProvider.set(model.llmProviderId, existing)
     }
 
+    // Air-gapped: the self-hosted models are the inference gateway's catalog.
+    const selfHostedModels = env.airgapped && providers.some((provider) => provider.source === "offlinegpt")
+      ? await listSelfHostedModels()
+      : []
     return providers.map((provider) => ({
       id: provider.id,
       source: provider.source,
@@ -195,7 +200,7 @@ const databaseMaterializationStore: CloudProviderMaterializationStore = {
       name: provider.name,
       providerConfig: provider.providerConfig,
       apiKey: provider.apiKey ?? null,
-      models: modelsByProvider.get(provider.id) ?? [],
+      models: modelsByProvider.get(provider.id) ?? (provider.source === "offlinegpt" ? selfHostedModels : []),
     }))
   },
   async getActiveTokens(workerId) {
