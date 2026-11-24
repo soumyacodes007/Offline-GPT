@@ -673,6 +673,13 @@
       "when": 1795472294080,
       "tag": "0096_access_policy_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "5",
+      "when": 1795550136221,
+      "tag": "0097_access_requests_and_knowledge",
+      "breakpoints": true
     }
   ]
 }
