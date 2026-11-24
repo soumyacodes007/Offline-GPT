@@ -78,7 +78,15 @@ test("a member asks for access in Den Web and an owner approves it from the Acce
   await waitFor(browser, () => Boolean(document.querySelector('a[href="/dashboard/my-access"]')), { timeoutMs: 30_000, label: "Knowledge & access in the sidebar" });
   await navigate(browser.client, `${den.ref.webUrl}/dashboard/my-access?kind=mcp_connection&id=${encodeURIComponent(connectionId)}&label=${encodeURIComponent("Payroll archive")}`);
   await bodyHas("Request access", "request form");
-  await fill(browser, 'textarea[aria-label="Why do you need it?"]', "Monthly payroll reconciliation");
+  // Wait for the page to settle (its request list has loaded) so a late re-render cannot clear the typed reason.
+  await bodyHas("No requests yet", "request list loaded");
+  const sendEnabled = () => evalIn(browser, () => [...document.querySelectorAll("button")].some((button) => button.textContent?.trim() === "Send request" && !button.disabled));
+  for (let attempt = 0; attempt < 5 && !(await sendEnabled()); attempt += 1) {
+    await fill(browser, 'textarea[aria-label="Why do you need it?"]', "Monthly payroll reconciliation");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  await shoot("0-before-send");
+  expect(await sendEnabled(), "Send request enabled after typing a reason").toBe(true);
   await clickButton("Send request");
   await bodyHas("Waiting for an admin", "request listed as waiting");
   await shoot("1-member-requested");
