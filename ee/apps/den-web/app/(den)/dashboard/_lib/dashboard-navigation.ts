@@ -81,6 +81,7 @@ export type BuildDashboardNavSectionsInput = {
   capabilities: DenOrgCapabilities;
   orgMode: DenOrgMode;
   runtimeConfigLoaded: boolean;
+  airgapped?: boolean;
 };
 
 export function buildDashboardNavSections({
@@ -89,6 +90,7 @@ export function buildDashboardNavSections({
   capabilities,
   orgMode,
   runtimeConfigLoaded,
+  airgapped = false,
 }: BuildDashboardNavSectionsInput): DashboardNavSection[] {
   const showWeb = runtimeConfigLoaded && capabilities.offlinegptWeb;
   const workItems: DashboardNavItem[] = [
@@ -112,9 +114,11 @@ export function buildDashboardNavSections({
       : []),
   ];
 
-  // Hosted deployments expose OfflineGPT Models; self-hosted deployments only
-  // expose their own providers. Keep hidden until runtime config is known.
-  const showOfflineGPTModels = runtimeConfigLoaded && orgMode === "multi_org";
+  // Hosted deployments expose OfflineGPT Models, and so does the air-gapped
+  // edition, where they are the customer's own self-hosted models. Other
+  // self-hosted deployments only expose their own providers. Keep hidden until
+  // runtime config is known.
+  const showOfflineGPTModels = runtimeConfigLoaded && (orgMode === "multi_org" || airgapped);
   const modelsGroup: DashboardNavItem | null = access.isAdmin && orgSlug
     ? {
         href: showOfflineGPTModels
