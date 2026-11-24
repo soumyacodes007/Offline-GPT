@@ -48,6 +48,12 @@ function principalKey(principal: AccessPrincipal) {
   return `${principal.kind}:${principal.id}`
 }
 
+/** `*` matches every resource of the kind; `prefix*` matches ids that start with `prefix` (for example `mcp:conn_1:*`). */
+export function resourceMatches(pattern: string, resourceId: string) {
+  if (pattern === ALL_RESOURCES || pattern === resourceId) return true
+  return pattern.endsWith("*") && resourceId.startsWith(pattern.slice(0, -1))
+}
+
 function ruleIsActive(rule: AccessPolicyRule, now: Date) {
   return rule.removedAt === null && (rule.expiresAt === null || rule.expiresAt > now)
 }
@@ -77,7 +83,7 @@ export function decideAccess(input: {
   for (const rule of input.rules) {
     if (!ruleIsActive(rule, now)) continue
     if (rule.resourceKind !== input.resourceKind) continue
-    if (rule.resourceId !== input.resourceId && rule.resourceId !== ALL_RESOURCES) continue
+    if (!resourceMatches(rule.resourceId, input.resourceId)) continue
     if (rule.effect === "allow") restricted = true
     if (!principals.has(`${rule.principalKind}:${rule.principalId}`)) continue
     if (rule.effect === "deny") return { allowed: false, via: "policy", ruleId: rule.id }
