@@ -288,18 +288,47 @@ Move `./offlinegpt-airgapped` into the isolated network, then:
 ```
 ./install.sh
 cat > .env <<'EOF'
-OFFLINEGPT_PUBLIC_URL=https://offlinegpt.example.internal
+OFFLINEGPT_PUBLIC_URL=https://offlinegpt.example.internal       # employee app (den-gateway, port 8080)
+OFFLINEGPT_GATEWAY_ORIGIN=https://offlinegpt.example.internal   # same origin, https only: sign-in returns straight to the app
+OFFLINEGPT_ADMIN_URL=https://admin.offlinegpt.example.internal  # Den web: sign-in and admin console (port 3005)
+OFFLINEGPT_API_URL=https://api.offlinegpt.example.internal      # den-api, called by Den web (port 8788)
+OFFLINEGPT_ADMIN_EMAIL=it-admin@example.internal                # the first owner; /setup accepts the code only with it
 OFFLINEGPT_MYSQL_PASSWORD=...
 OFFLINEGPT_AUTH_SECRET=...            # 32+ characters
 OFFLINEGPT_DB_ENCRYPTION_KEY=...      # 32+ characters
 OFFLINEGPT_GATEWAY_KEY=...            # 32+ characters
 OFFLINEGPT_ADMIN_BOOTSTRAP_CODE=...   # one-time code for /setup
+OFFLINEGPT_MODELS_DIR=/srv/offlinegpt/models
 EOF
-OFFLINEGPT_MODELS_DIR=$PWD/models docker compose -f docker-compose.airgapped.yml up -d
+docker compose -f docker-compose.airgapped.yml up -d
 ```
 
-Then open `$OFFLINEGPT_PUBLIC_URL/setup`, enter the bootstrap code, connect SSO
-and SCIM (Admin → Identity), and add access policy rules.
+Put your TLS reverse proxy (or load balancer) in front of the three published
+ports. Then:
+
+1. Open `$OFFLINEGPT_ADMIN_URL/setup`, enter `OFFLINEGPT_ADMIN_EMAIL` and the
+   bootstrap code, and create the owner account.
+2. Turn on the self-hosted models: Models → OfflineGPT Models → Enable. Every
+   member gets an inference key and the "OfflineGPT Models" provider.
+3. Connect SSO and SCIM (Settings → SSO / SCIM), and add access rules (Team →
+   Access).
+4. Employees open `$OFFLINEGPT_PUBLIC_URL`, sign in, and get their own
+   workspace on first use.
+
+Other settings worth knowing:
+
+| Setting | Default | What |
+|---|---|---|
+| `OFFLINEGPT_MODEL_DIR`, `OFFLINEGPT_MODEL_ALIAS`, `OFFLINEGPT_MODEL_DISPLAY_NAME` | `Qwen2.5-0.5B-Instruct`, `main`, `Self-hosted model` | Which weights vLLM serves and how employees see them. The served models are also declared to the inference gateway (`INFERENCE_MODELS`), so workspaces see them even while vLLM is still loading. |
+| `OFFLINEGPT_MAX_MODEL_LEN` | `16384` | Context length. OpenCode's agent prompt alone is about 9–10k tokens. |
+| `OFFLINEGPT_GPU_MEMORY_UTILIZATION` | `0.85` | Lower it on small GPUs (0.75 on a 4 GB card). |
+| `OFFLINEGPT_INTERNAL_SUBNET` | `172.30.231.0/24` | The internal network. den-api trusts the client IP its proxies forward from it, so each employee gets their own sign-in rate limit. Change it if it overlaps your network. |
+| `OFFLINEGPT_WORKSPACE_MEMORY_MB`, `OFFLINEGPT_WORKSPACE_CPUS` | `4096`, `2` | Limits per employee workspace. |
+
+**Workspace files** live in each container's working copy and are
+checkpointed to the member's volume every 5 minutes (`DEN_CKPT_INTERVAL_SECONDS`,
+3 kept). A replaced or recovered container restores the latest checkpoint, so
+at most the last few minutes of work are lost if a container is killed.
 
 **vLLM notes**: the image's entrypoint needs `--model=/models/<dir>` (a
 positional model argument is ignored and falls back to a Hub download, which
@@ -320,6 +349,7 @@ All run locally on 2026-11-24 with an RTX 3050 (4 GB):
 | `evals/specs/airgapped-workspace.test.ts` (real vLLM via `OFFLINEGPT_EVAL_VLLM_CONTAINER`, or a stand-in) | den-api's Docker provisioner starts the workspace on an internal network; bundled engine 2.3.2 runs; `https://github.com` (DNS) and `1.1.1.1` (IP) unreachable while `vllm` is reachable; Den-style provider delivery returns 200; the agent replies "OFFLINE" from the local model | Passed (vLLM and stand-in) |
 | `evals/specs/access-policy-admin.test.ts` | Rule writes guarded (`403` member, `400` bad principal or kind); a member deny hides an org-wide MCP connection from one member only; `/check` names the rule; removal restores access; a member requests access, the owner approves it for 1 day, and the member can use it on the next request; repeat requests, self-service approval and double approval are refused; a decline is final; a capability deny removes one connection's actions from gateway search and execute; provider rules remove and add model providers; every step audited | Passed |
 | `evals/specs/knowledge-base-permissions.test.ts` | A handbook split into 3 sections; one section limited to HR and one restricted; the same search returns different sections to an HR member and a clerk, through the API and the agent's `search_knowledge` tool; a restricted section needs a named reader; removing the document's readers closes it; sensitive reads, labels and removal audited, sections deleted | Passed |
+| `evals/specs/airgapped-stack.e2e.test.ts` (Chrome against the running compose stack) | The full stack from `docker-compose.airgapped.yml`: the gateway app sends the employee to this deployment's Den web to sign in (never the hosted site); Den web signs them in and gives the one-time code; pasting it in the app opens the member's own Docker workspace, which Den creates (or recovers after its container was removed); a task sent in the browser is answered by vLLM on the GPU through the inference gateway with the member's key ("OFFLINE") | Passed (real vLLM, Qwen2.5-0.5B) |
 | `evals/specs/access-admin-ui.e2e.test.ts` (Den Web in Chrome) | A member asks for a connection from Knowledge & access; the owner sees the request and reason in Access → Requests and approves it; the member can use it; Rules shows "Asha Rao can use Payroll archive" with the quoted reason; the owner adds a document in Knowledge and sees its sections; no horizontal scroll at 1280 px and 390 px | Passed |
 
 Run them with:
@@ -330,6 +360,9 @@ OFFLINEGPT_EVAL_VLLM_URL=http://127.0.0.1:8000/v1 pnpm evals:pr specs/airgapped-
 pnpm evals:pr specs/airgapped-workspace.test.ts          # needs the workspace image
 OFFLINEGPT_EVAL_DEN_RUNTIME_PREPARED=1 pnpm evals:pr specs/access-policy-admin.test.ts   # Windows: prepared runtime
 pnpm evals:pr specs/knowledge-base-permissions.test.ts
+# against a running stack (see "Deploying"):
+OFFLINEGPT_EVAL_E2E_TESTS=1 OFFLINEGPT_EVAL_AIRGAP_STACK_URL=http://localhost:8080 \
+  OFFLINEGPT_EVAL_AIRGAP_EMAIL=... OFFLINEGPT_EVAL_AIRGAP_PASSWORD=... pnpm evals:e2e airgapped-stack
 OFFLINEGPT_EVAL_E2E_TESTS=1 pnpm evals:e2e access-admin-ui   # needs a den-web build in prepared mode
 ```
 
@@ -385,16 +418,49 @@ Left out, on purpose:
   shell, which fails on Windows.
 - An unused Saved Apps fixture in `evals/worlds/library.ts` imported a deleted
   module.
+- The full-stack run (2026-11-25) found and fixed:
+  - **Employees could not get a workspace.** Den's browser path
+    (`/v1/cloud/instance`, `/v1/cloud/gateway/resolve`) worked only in
+    multi-org mode with Daytona. It now resolves Docker workspaces by their
+    fixed internal URL, and waking or recovering a workspace uses the Docker
+    provisioner instead of calling Daytona.
+  - **The app sent employees to the hosted sign-in site** (`app.offlinegptlabs.com`).
+    The gateway now tells the app which Den web to use (`DEN_GATEWAY_DEN_WEB_URL`).
+    Den also accepts the sign-in return to the configured gateway in the
+    air-gapped edition.
+  - **Self-hosted models could not be turned on.** Enabling OfflineGPT Models
+    required a subscription and an OpenRouter key. In the air-gapped edition
+    it needs neither, and members' provider uses the plain OpenAI-compatible
+    client.
+  - **Workspaces had no models.** OpenCode v2 does not fill a custom
+    provider's models from the catalog, so Den now delivers the gateway's
+    model list with the provider. The gateway's catalog comes from
+    configuration, so it is there before vLLM finishes loading.
+  - **Den could not read a v2-only workspace's providers**
+    (`GET /opencode/config` returned 400), which failed every model delivery.
+  - **Only one workspace per organization** (the hosted default cap). The cap
+    does not apply in the air-gapped edition.
+  - **Web access was reported inconsistently** (`complimentary` without
+    `complimentaryAccess`), so the app stayed locked.
+  - **All employees shared one sign-in rate limit**, because den-api could
+    not see client IPs behind its proxies. It now trusts the internal subnet.
+  - **Compose wiring:** the `/setup` owner email, trusted origins for Den
+    web, Den web's own URLs, a published den-api port for Den web,
+    migrations through the production runner, and a context length that
+    fits OpenCode's prompt.
+  - **`Dockerfile.den`** still copied the removed `packages/automations`
+    workspace and could not build.
 - Fresh installs build the schema from a drizzle snapshot, which cannot hold
   a FULLTEXT index. den-db's schema repairs now create the knowledge search
   index there, so fresh and upgraded databases match.
 
 ## Not done yet
 
-- **Full-stack compose run**: the compose file validates (`docker compose
-  config`), and each part is proven separately. A single `up` of every service,
-  including den-web and den-gateway images built for the edition, has not been
-  run yet.
+- **Sign-in on plain HTTP** uses the copy-and-paste sign-in code. With HTTPS
+  and `OFFLINEGPT_GATEWAY_ORIGIN` set, sign-in returns straight to the app,
+  but that path has not been run here (the local stack was HTTP).
+- **Den web's sign-in page** still shows the hosted marketing copy ("OpenAI ·
+  Anthropic · Google").
 - **Usage accounting for self-hosted models**: limits still gate requests, but
   usage settlement comes from OpenRouter's webhook, so self-hosted tokens are
   not yet counted. Counting `usage` from vLLM's responses is the follow-up.
