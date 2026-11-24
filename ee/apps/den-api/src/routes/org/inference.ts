@@ -2,6 +2,7 @@ import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
 import { ManagedModelsPolicyError } from "@offlinegpt/types/den/managed-models-policy"
+import { env } from "../../env.js"
 import { assertOrganizationManagedModelsAllowed } from "../../organization-metadata.js"
 import { getInferenceStatus, setInferenceEnabled } from "../../inference.js"
 import { organizationHasActiveInferenceSubscription } from "../../stripe-billing.js"
@@ -66,7 +67,7 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
       return c.json({
         inference: {
           ...await getInferenceStatus(payload.organization.id),
-          subscribed: await organizationHasActiveInferenceSubscription(payload.organization.id),
+          subscribed: env.airgapped || await organizationHasActiveInferenceSubscription(payload.organization.id),
         },
       })
     },
@@ -100,7 +101,8 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
       try {
         if (input.enabled) {
           await assertOrganizationManagedModelsAllowed(payload.organization.id)
-          const subscribed = await organizationHasActiveInferenceSubscription(payload.organization.id)
+          // Self-hosted models carry no subscription in the air-gapped edition.
+          const subscribed = env.airgapped || await organizationHasActiveInferenceSubscription(payload.organization.id)
           if (!subscribed) {
             return c.json({
               inference: {
@@ -116,7 +118,7 @@ export function registerOrgInferenceRoutes<T extends { Variables: OrgRouteVariab
           enabled: input.enabled,
           tier: input.tier,
         })
-        return c.json({ inference: { ...inference, subscribed: await organizationHasActiveInferenceSubscription(payload.organization.id) } })
+        return c.json({ inference: { ...inference, subscribed: env.airgapped || await organizationHasActiveInferenceSubscription(payload.organization.id) } })
       } catch (error) {
         if (error instanceof ManagedModelsPolicyError) {
           return c.json({ error: error.code, message: error.message }, error.status)
