@@ -10,6 +10,7 @@ import {
   inspectDaytonaSandbox,
   refreshDaytonaSignedPreview,
 } from "./daytona.js"
+import { getDockerWorkspaceRecord, inspectDockerWorkspace } from "./docker.js"
 import { recoverClaimedCloudWorker, wakeCloudWorker } from "./cloud-lifecycle.js"
 import { fetchWithConnectRetry, previewFetch } from "./preview-fetch.js"
 import {
@@ -473,10 +474,11 @@ export async function resolveCloudRuntimeAccess(
   if (!worker) return { status: "missing" }
 
   const store = options.store ?? databaseCloudRuntimeStore
+  const docker = env.provisionerMode === "docker"
   const state = await resolveCloudRuntimeState({ worker, organizationId: ownership.organizationId }, {
-    refreshSignedPreview: options.refreshSignedPreview ?? refreshDaytonaSignedPreview,
-    getSandboxRecord: options.getSandboxRecord ?? getDaytonaSandboxRecord,
-    inspectSandbox: options.inspectSandbox ?? inspectDaytonaSandbox,
+    refreshSignedPreview: options.refreshSignedPreview ?? (docker ? getDockerWorkspaceRecord : refreshDaytonaSignedPreview),
+    getSandboxRecord: options.getSandboxRecord ?? (docker ? getDockerWorkspaceRecord : getDaytonaSandboxRecord),
+    inspectSandbox: options.inspectSandbox ?? (docker ? inspectDockerWorkspace : inspectDaytonaSandbox),
     probeSignedPreview: options.probeSignedPreview ?? probeCloudRuntimeSignedPreview,
     startWake: options.startWake ?? startDefaultWake,
     startRecovery: options.startRecovery ?? startDefaultRecovery,
