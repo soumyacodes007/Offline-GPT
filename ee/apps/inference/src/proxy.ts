@@ -627,7 +627,7 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
     const modelDecision = modelAccess?.decide(prepared.modelAlias)
     if (modelAccess && modelDecision && !modelDecision.allowed) {
       await modelAccess.recordDenied(prepared.modelAlias, modelDecision)
-      return openAiError(403, "model_not_allowed", `Your organization's access policy does not allow model ${prepared.modelAlias}.`)
+      return openAiError(403, "model_not_allowed", `Your organization's access policy does not allow model ${prepared.modelAlias}. Ask for access in OfflineGPT under Knowledge & access → Request access.`)
     }
 
     const limits = await dependencies.ensureUsableBuckets(inferenceKey.organization_id)
