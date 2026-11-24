@@ -539,6 +539,14 @@ export function getManageMembersRoute(orgSlug?: string | null): string {
   return `${getOrgDashboardRoute(orgSlug)}/manage-members`;
 }
 
+export function getAccessRoute(orgSlug?: string | null): string {
+  return `${getOrgDashboardRoute(orgSlug)}/access`;
+}
+
+export function getMyAccessRoute(orgSlug?: string | null): string {
+  return `${getOrgDashboardRoute(orgSlug)}/my-access`;
+}
+
 export function getMembersRoute(orgSlug?: string | null): string {
   return `${getOrgDashboardRoute(orgSlug)}/members`;
 }
