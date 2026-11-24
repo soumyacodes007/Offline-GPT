@@ -1,6 +1,7 @@
 # Air-gapped edition
 
-Status: first working version on `feat/airgapped-edition` (2026-11-24). Every
+Status: first working version on `feat/airgapped-edition` (2026-11-24); access
+page, access requests and the knowledge base added 2026-11-25. Every
 claim below has a passing journey spec or a recorded live run; gaps are listed
 at the end.
 
@@ -75,8 +76,9 @@ Table `access_policy_rule` (migration `0096`), evaluator
 `ee/packages/den-db/src/access-policy.ts`, admin API
 `ee/apps/den-api/src/routes/org/access-policy.ts`.
 
-A rule gives or removes access to one resource, or to every resource of a kind
-(`resourceId: "*"`), for one **principal**:
+A rule gives or removes access to one resource, to every resource of a kind
+(`resourceId: "*"`), or to every resource whose id starts with a prefix
+(`mcp:<connectionId>:*`), for one **principal**:
 
 | Principal | Meaning |
 |---|---|
@@ -107,6 +109,47 @@ policy limits what members can *use*.
 | `plugin`, `marketplace`, `config_object` (skills, commands, agents, MCP configs) | den-api resource role checks and the MCP gateway's capability search/execute |
 | `connector_instance` | den-api resource role checks |
 | `mcp_connection` | Member usable and visible connection lists, including native providers |
+| `llm_provider` | Every member list of usable model providers and provider connect checks |
+| `capability` | MCP gateway: a denied tool action is hidden from `search_capabilities` and from code-mode scripts, and `execute_capability` refuses it with `access_policy_denied` (audited) |
+| `knowledge_document`, `knowledge_chunk` | Knowledge base search, the member document view, and the agent's `search_knowledge` tool (section 4) |
+
+Background work (scheduled tasks) runs with its owner's authority, as in qm,
+and every model call, tool call and knowledge search it makes is checked live
+against the rules at that moment, so a rule change or a leaver's removal
+applies to their next scheduled run without a separate check.
+
+**Admin page**: Den Web → Team → **Access** has four tabs:
+
+- **Requests**: each request reads "Asha wants to use Payroll archive", with
+  the member's reason, how long they asked for, and when it expires. The
+  approver approves it for that time, or for a different one, or declines it
+  with a note.
+- **Rules**: rules are grouped by resource, as sentences ("Finance can't use
+  coder"), with who they apply to, when they end, and the reason. New rules
+  show a preview of what they will do before saving.
+- **Check access**: pick a person and a resource to see the decision, the rule
+  behind it, and every principal the person counts as. Use it for access
+  reviews.
+- **Knowledge**: documents, their readers, and each section's label and rules.
+
+Members get **Knowledge & access** in the sidebar. It holds knowledge search,
+a request form (it can be prefilled from a link,
+`/dashboard/my-access?kind=model&id=coder`), and the status of their own
+requests. Model refusals point people to it.
+
+**Access requests** (as qm's keychain asks):
+
+- A member asks with a reason and a duration: 1, 7, 30 or 90 days, or until
+  removed.
+- A repeat request returns the pending one, and a member can have at most 20
+  waiting.
+- Unanswered requests expire after 7 days.
+- An owner or super-admin approves or declines. Nobody can approve their own
+  request, and two approvers cannot both approve the same request.
+- Approval writes a member allow rule that ends after the approved duration
+  and quotes the request in its reason.
+- Every step is audited: `organization.access_request.created`, `approved` and
+  `declined`.
 
 **Admin API** (owner or super-admin for writes, admin for reads):
 
@@ -115,6 +158,11 @@ GET    /v1/access-policy/rules[?resourceKind=model]
 POST   /v1/access-policy/rules   { resourceKind, resourceId, principalKind, principalId, effect, expiresAt?, reason? }
 DELETE /v1/access-policy/rules/:ruleId
 POST   /v1/access-policy/check   { memberId, resourceKind, resourceId }  → the decision and the member's principals
+POST   /v1/access-requests              (member) { resourceKind, resourceId, resourceLabel?, purpose, requestedDays }
+GET    /v1/access-requests?scope=mine|all&status=…
+POST   /v1/access-requests/:id/approve  { durationDays?, note? }
+POST   /v1/access-requests/:id/decline  { note? }
+POST   /v1/access-requests/:id/cancel   (requester)
 ```
 
 **Audit**: rule creation and removal are org audit events
@@ -122,7 +170,45 @@ POST   /v1/access-policy/check   { memberId, resourceKind, resourceId }  → the
 something a member was otherwise granted (or a model refusal) is recorded as
 `access_policy.denied` with the rule, resource, surface and reason.
 
-### 4. Leavers lose access at once
+### 4. Knowledge base with permissions per section
+
+Tables `knowledge_document` and `knowledge_chunk` (migration `0097`), logic in
+`ee/packages/den-db/src/knowledge.ts`, API in
+`ee/apps/den-api/src/routes/org/knowledge.ts`.
+
+- **Documents** are plain text or Markdown. Each heading starts a section
+  (chunk), and long sections are split at about 1,200 characters.
+- **A document is closed by default.** Adding one writes allow rules for its
+  readers (everyone by default).
+- **Rules per section**: a section can be denied to someone, or limited to
+  certain people. A section rule never opens a document the member cannot
+  read.
+- **Labels per section** (from qm's memory records): `ordinary`, `sensitive`
+  or `restricted`.
+  - Search results that include sensitive sections are audited as
+    `knowledge.sensitive_read`.
+  - A restricted section needs an allow rule on the section itself. Access to
+    the document is not enough.
+- **Search** uses a MySQL FULLTEXT index, so it needs no extra service and no
+  GPU. It only looks at documents the member can read. Each candidate section
+  is checked fresh against the rules, and decisions are never cached, so a
+  removed rule applies on the next search.
+- **The agent** gets the `search_knowledge` tool in Den's MCP gateway. It runs
+  as the member, so the agent sees exactly what that person may read.
+- **Removing a document** deletes its sections, so the text leaves search
+  immediately. Creating and removing documents, and relabelling sections, are
+  audited.
+
+```
+POST   /v1/knowledge/documents        (owner/super-admin) { title, text, audience?, sensitivity? }
+GET    /v1/knowledge/documents        admins: all with readers and labels; members: what they can read
+GET    /v1/knowledge/documents/:id    admins: every section with rules; members: readable sections + hidden count
+PATCH  /v1/knowledge/chunks/:id       { sensitivity }
+DELETE /v1/knowledge/documents/:id
+POST   /v1/knowledge/search           { query, limit? }  as the calling member
+```
+
+### 5. Leavers lose access at once
 
 When a member is removed by an admin or deprovisioned by SCIM:
 
@@ -133,7 +219,7 @@ When a member is removed by an admin or deprovisioned by SCIM:
 This runs on top of the existing removal steps (API keys, sessions, connected
 accounts). See `ee/apps/den-api/src/workers/member-offboarding.ts`.
 
-### 5. One workspace per employee (`PROVISIONER_MODE=docker`)
+### 6. One workspace per employee (`PROVISIONER_MODE=docker`)
 
 `ee/apps/den-api/src/workers/docker.ts` drives the Docker Engine API over its
 socket (no new dependency). For each member it starts the workspace image on
@@ -157,7 +243,7 @@ with the prefix removed (for example `WORKER_ENV_OPENCODE_MODELS_URL`).
 | `DOCKER_WORKER_MEMORY_MB`, `DOCKER_WORKER_CPUS` | unlimited |
 | `DOCKER_WORKER_HEALTH_TIMEOUT_MS` | `180000` |
 
-### 6. Packaging
+### 7. Packaging
 
 | File | What |
 |---|---|
@@ -232,7 +318,9 @@ All run locally on 2026-11-24 with an RTX 3050 (4 GB):
 |---|---|---|
 | `evals/specs/airgapped-inference.test.ts` (real vLLM via `OFFLINEGPT_EVAL_VLLM_URL`, or a stand-in) | Self-hosted catalog and `/models/api.json`; a team-restricted model is hidden, refused (`403`) and audited; the permitted employee gets a vLLM answer ("Ready."); deny beats the team allow; a removed member's key fails on the next request; public upstreams refused at boot | Passed (vLLM and stand-in) |
 | `evals/specs/airgapped-workspace.test.ts` (real vLLM via `OFFLINEGPT_EVAL_VLLM_CONTAINER`, or a stand-in) | den-api's Docker provisioner starts the workspace on an internal network; bundled engine 2.3.2 runs; `https://github.com` (DNS) and `1.1.1.1` (IP) unreachable while `vllm` is reachable; Den-style provider delivery returns 200; the agent replies "OFFLINE" from the local model | Passed (vLLM and stand-in) |
-| `evals/specs/access-policy-admin.test.ts` | Rule writes guarded (`403` member, `400` bad principal or kind); a member deny hides an org-wide MCP connection from one member only; `/check` names the rule; removal restores access; audit holds created then removed | Passed |
+| `evals/specs/access-policy-admin.test.ts` | Rule writes guarded (`403` member, `400` bad principal or kind); a member deny hides an org-wide MCP connection from one member only; `/check` names the rule; removal restores access; a member requests access, the owner approves it for 1 day, and the member can use it on the next request; repeat requests, self-service approval and double approval are refused; a decline is final; a capability deny removes one connection's actions from gateway search and execute; provider rules remove and add model providers; every step audited | Passed |
+| `evals/specs/knowledge-base-permissions.test.ts` | A handbook split into 3 sections; one section limited to HR and one restricted; the same search returns different sections to an HR member and a clerk, through the API and the agent's `search_knowledge` tool; a restricted section needs a named reader; removing the document's readers closes it; sensitive reads, labels and removal audited, sections deleted | Passed |
+| `evals/specs/access-admin-ui.e2e.test.ts` (Den Web in Chrome) | A member asks for a connection from Knowledge & access; the owner sees the request and reason in Access → Requests and approves it; the member can use it; Rules shows "Asha Rao can use Payroll archive" with the quoted reason; the owner adds a document in Knowledge and sees its sections; no horizontal scroll at 1280 px and 390 px | Passed |
 
 Run them with:
 
@@ -241,11 +329,46 @@ pnpm evals:pr specs/airgapped-inference.test.ts
 OFFLINEGPT_EVAL_VLLM_URL=http://127.0.0.1:8000/v1 pnpm evals:pr specs/airgapped-inference.test.ts
 pnpm evals:pr specs/airgapped-workspace.test.ts          # needs the workspace image
 OFFLINEGPT_EVAL_DEN_RUNTIME_PREPARED=1 pnpm evals:pr specs/access-policy-admin.test.ts   # Windows: prepared runtime
+pnpm evals:pr specs/knowledge-base-permissions.test.ts
+OFFLINEGPT_EVAL_E2E_TESTS=1 pnpm evals:e2e access-admin-ui   # needs a den-web build in prepared mode
 ```
 
 The unit and route tests next to the code also pass: edition parsing; den-api
 env refusals; the policy evaluator; Docker provisioner calls; inference proxy
 and catalog (80/80).
+
+## What we took from qm, and what we left
+
+From qm (`src/acl`, `src/credentials/keychain.ts`,
+`docs/memory-records.md`, `docs/SPEC.md`):
+
+| qm | Here | Why |
+|---|---|---|
+| Access is the union of a person's principals (person, channel or group, org) | member, team (SCIM groups), role, org principals | Same model; AD groups already arrive as teams |
+| Breaking isolation needs an explicit, auditable grant | allow rules with reason, expiry and audit | Same principle |
+| Keychain asks: purpose, "once" or "until revoked", expiry, owner approves or declines, approval creates the grant | Access requests with purpose, duration, 7-day expiry, approval writes a time-bound rule | Same flow. Durations replace "once", because one-time use has no meaning for a model or connection |
+| Memory records labelled ordinary, sensitive or restricted; fail closed; nothing cached between reads | Per-section labels, fresh checks on every search, restricted needs a named reader | Same rules, applied to the knowledge base |
+| Background work runs with its owner's authority | Scheduled tasks are checked live at each call | Same; no separate cron permission layer |
+| Durable approvals with atomic claims (its "non-durability" lesson) | Approvals are claimed with a guarded UPDATE in a transaction | Two approvers cannot both approve |
+| Batch authorization per request, no N+1 (its "performance" lesson) | Rules loaded once per request and decided in memory | Same |
+
+Left out, on purpose:
+
+- **Audience checks for shared rooms.** In qm, a grant applies in a shared
+  Slack channel only if *everyone present* may see it. OfflineGPT workspaces
+  have one person each, so there is no shared audience to check. Take this
+  over if shared sessions arrive.
+- **Read vs write on grants.** qm grants say `read` or `write`. Here the
+  resource kinds already carry what "use" means, and Den's grant tables keep
+  their own viewer/editor roles. Add a level only for a resource that needs
+  both.
+- **Principal links** (one person with several sign-ins). In the air-gapped
+  edition, SSO plus SCIM give every person one identity.
+- **Approving in Slack.** There is no Slack in an air-gapped network.
+  Approvals happen in Den Web.
+- **Model-run decision hooks** (allow or block chosen by a model at turn
+  start or end). These are not deterministic permissions, and the regulated
+  customers this edition is for need rules they can audit.
 
 ## Bugs found and fixed on the way
 
@@ -262,6 +385,9 @@ and catalog (80/80).
   shell, which fails on Windows.
 - An unused Saved Apps fixture in `evals/worlds/library.ts` imported a deleted
   module.
+- Fresh installs build the schema from a drizzle snapshot, which cannot hold
+  a FULLTEXT index. den-db's schema repairs now create the knowledge search
+  index there, so fresh and upgraded databases match.
 
 ## Not done yet
 
@@ -272,13 +398,18 @@ and catalog (80/80).
 - **Usage accounting for self-hosted models**: limits still gate requests, but
   usage settlement comes from OpenRouter's webhook, so self-hosted tokens are
   not yet counted. Counting `usage` from vLLM's responses is the follow-up.
-- **den-web screens**:
-  - the access policy has an API but no admin page yet;
-  - billing screens are still visible in the air-gapped edition.
-- **More policy surfaces**:
-  - `llm_provider` and `capability` kinds exist in the table but are refused by
-    the API until they are enforced;
-  - scheduled tasks re-check policy only through the model and connection
-    checks they hit at run time.
-- **Lab doc items** (`docs/self-hosted-inference-lab.md`): the Semantic Router,
-  the GPU manager, and the knowledge base with per-chunk ACLs are later phases.
+- **Billing screens** are still visible in the air-gapped edition.
+- **Knowledge base**:
+  - only text and Markdown can be added, so PDF and Word need converting
+    first;
+  - search is keyword full-text, not semantic. Embeddings from a self-hosted
+    embedding model are the follow-up;
+  - documents are added by owners and super-admins only. There is no separate
+    "knowledge editor" role yet.
+- **Access requests**:
+  - approvers see requests in Den Web only, with no email or chat
+    notification (email is disabled in the air-gapped edition anyway);
+  - the agent cannot file a request itself. It tells the member to use the
+    request form.
+- **Lab doc items** (`docs/self-hosted-inference-lab.md`): the Semantic Router
+  and the GPU manager are later phases.
