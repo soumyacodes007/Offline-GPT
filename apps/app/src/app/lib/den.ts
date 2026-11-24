@@ -23,7 +23,7 @@ import {
   setDesktopBootstrapConfig as setDesktopBootstrapConfigInShell,
   type DesktopBootstrapConfig as ShellDesktopBootstrapConfig,
 } from "./desktop";
-import { getOfflineGptGatewayOrigin } from "./gateway-runtime";
+import { getOfflineGptGatewayDenWebUrl, getOfflineGptGatewayOrigin } from "./gateway-runtime";
 import { clearDesktopSignInIntent, clearOrgSelectionPending } from "./den-sign-in-intent";
 import { clearDashboardTileCacheStorage } from "./dashboard-cache-storage";
 import { isDesktopRuntime } from "./runtime-env";
@@ -811,10 +811,12 @@ export function resolveDenBaseUrls(input: { baseUrl?: string | null; apiBaseUrl?
 
   if (gatewayOrigin) {
     const normalizedGatewayOrigin = normalizeDenBaseUrl(gatewayOrigin) ?? gatewayOrigin;
+    const gatewayDenWebUrl = getOfflineGptGatewayDenWebUrl() ?? DEFAULT_DEN_BASE_URL;
     const gatewayBaseUrl =
       normalizedBaseUrl && denOriginComparisonKey(normalizedBaseUrl) !== denOriginComparisonKey(normalizedGatewayOrigin)
+        && denOriginComparisonKey(normalizedBaseUrl) !== denOriginComparisonKey(DEFAULT_DEN_BASE_URL)
         ? normalizedBaseUrl
-        : DEFAULT_DEN_BASE_URL;
+        : gatewayDenWebUrl;
     const baseUrl = stripDenApiBasePath(gatewayBaseUrl) ?? DEFAULT_DEN_BASE_URL;
 
     return {
