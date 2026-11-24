@@ -16,7 +16,6 @@ ENV PORT=8788
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml /app/
 COPY patches /app/patches
 COPY packages/types/package.json /app/packages/types/package.json
-COPY packages/automations/package.json /app/packages/automations/package.json
 COPY packages/codemode/package.json /app/packages/codemode/package.json
 COPY packages/email/package.json /app/packages/email/package.json
 COPY packages/enterprise-mcp-client/package.json /app/packages/enterprise-mcp-client/package.json
@@ -48,7 +47,6 @@ COPY ee/apps/den-api/package.json /app/ee/apps/den-api/package.json
 RUN pnpm install --frozen-lockfile --trust-lockfile
 
 COPY packages/types /app/packages/types
-COPY packages/automations /app/packages/automations
 COPY packages/codemode /app/packages/codemode
 COPY packages/email /app/packages/email
 COPY packages/enterprise-mcp-client /app/packages/enterprise-mcp-client
