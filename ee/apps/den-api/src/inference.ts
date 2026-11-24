@@ -132,7 +132,9 @@ function buildOfflineGPTProviderConfig() {
   return {
     id: OFFLINEGPT_PROVIDER_ID,
     name: "OfflineGPT",
-    npm: "@openrouter/ai-sdk-provider",
+    // Self-hosted models (air-gapped) speak plain OpenAI-compatible APIs; the
+    // OpenRouter client would also be a package the workspace cannot download.
+    npm: env.airgapped ? "@ai-sdk/openai-compatible" : "@openrouter/ai-sdk-provider",
     env: ["OFFLINEGPT_API_KEY"],
     doc: "OfflineGPT-managed inference proxy for organization models.",
     api: `${env.inferenceProxyBaseUrl.replace(/\/+$/, "")}/api/v1`,
@@ -636,7 +638,7 @@ export async function getInferenceStatus(organizationId: OrgId) {
     tier: inference?.tier ?? "tier1",
     memberCount,
     proxyBaseUrl: env.inferenceProxyBaseUrl,
-    upstreamProviderConfigured: Boolean(env.openRouterManagementApiKey),
+    upstreamProviderConfigured: env.airgapped || Boolean(env.openRouterManagementApiKey),
     buckets,
   }
 }
@@ -657,7 +659,9 @@ export async function setInferenceEnabled(input: { organizationId: OrgId; enable
   }
 
   await assertOrganizationManagedModelsAllowed(input.organizationId)
-  await ensureOrgUpstreamProviderKey(input.organizationId)
+  // The air-gapped inference gateway forwards to the customer's own model
+  // server, so there is no per-org OpenRouter key to create.
+  if (!env.airgapped) await ensureOrgUpstreamProviderKey(input.organizationId)
   await updateOrganizationMetadata(input.organizationId, (metadata) => {
     assertManagedModelsAllowed(metadata)
     const tier = input.tier ?? readInferenceMetadata(metadata)?.tier ?? "tier1"
