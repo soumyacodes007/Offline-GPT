@@ -148,6 +148,7 @@ export function DenCommandPalette({ open, onOpenChange }: DenCommandPaletteProps
       access,
       capabilities,
       orgMode: runtimeConfig.orgMode,
+      airgapped: runtimeConfig.airgapped,
       runtimeConfigLoaded,
     });
     return flattenNavigationForSearch(sections)
