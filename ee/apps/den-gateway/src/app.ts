@@ -350,7 +350,7 @@ function escapeScriptJson(json: string) {
 }
 
 function injectGatewayMarker(html: string, buildVersion: string | undefined) {
-  const gatewayMarker = { version: 1, ...(buildVersion ? { build: buildVersion } : {}) }
+  const gatewayMarker = { version: 1, ...(buildVersion ? { build: buildVersion } : {}), ...(env.denWebUrl ? { denWebUrl: env.denWebUrl } : {}) }
   const marker = escapeScriptJson(JSON.stringify(gatewayMarker))
   const script = `<script>window.__OFFLINEGPT_GATEWAY__ = ${marker}</script>`
   const headCloseIndex = html.toLowerCase().indexOf("</head>")
