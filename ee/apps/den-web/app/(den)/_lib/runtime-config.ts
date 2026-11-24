@@ -12,6 +12,8 @@ export type DenWebRuntimeConfig = {
   singleOrgSlug: string;
   singleOrgAllowPublicSignup: boolean;
   singleOrgSsoConfigured: boolean;
+  /** OFFLINEGPT_EDITION=airgapped: models are self-hosted, so the managed models page applies in single-org mode. */
+  airgapped: boolean;
 };
 
 export const DEFAULT_OFFLINEGPT_WEB_URL = "https://web.offlinegptlabs.com";
@@ -25,7 +27,8 @@ export const EMPTY_RUNTIME_CONFIG: DenWebRuntimeConfig = {
   singleOrgName: "OfflineGPT",
   singleOrgSlug: "default",
   singleOrgAllowPublicSignup: false,
-  singleOrgSsoConfigured: false
+  singleOrgSsoConfigured: false,
+  airgapped: false
 };
 
 let runtimeConfigPromise: Promise<DenWebRuntimeConfig> | null = null;
@@ -59,7 +62,8 @@ function normalizeRuntimeConfig(value: unknown): DenWebRuntimeConfig {
     singleOrgName: singleOrgName || "OfflineGPT",
     singleOrgSlug: singleOrgSlug || "default",
     singleOrgAllowPublicSignup: readBooleanProperty(value, "singleOrgAllowPublicSignup"),
-    singleOrgSsoConfigured: readBooleanProperty(value, "singleOrgSsoConfigured")
+    singleOrgSsoConfigured: readBooleanProperty(value, "singleOrgSsoConfigured"),
+    airgapped: readBooleanProperty(value, "airgapped")
   };
 }
 
