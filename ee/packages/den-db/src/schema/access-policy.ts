@@ -1,4 +1,4 @@
-import { index, mysqlEnum, mysqlTable, timestamp, varchar } from "drizzle-orm/mysql-core"
+import { index, int, mysqlEnum, mysqlTable, timestamp, varchar } from "drizzle-orm/mysql-core"
 import { denTypeIdColumn } from "../columns"
 
 /**
@@ -20,6 +20,8 @@ export const accessPolicyResourceKindValues = [
   "mcp_connection",
   "llm_provider",
   "capability",
+  "knowledge_document",
+  "knowledge_chunk",
 ] as const
 
 export const accessPolicyPrincipalKindValues = ["member", "team", "role", "org"] as const
@@ -49,3 +51,37 @@ export const AccessPolicyRuleTable = mysqlTable(
 )
 
 export const accessPolicyRule = AccessPolicyRuleTable
+
+/**
+ * A member asking for access they do not have, as in qm's keychain asks: the
+ * member says why and for how long; an owner or super-admin approves or
+ * declines. Approval writes a member-level allow rule (time-bound when
+ * `requested_days` is set) and links it in `granted_rule_id`. A pending request
+ * past `expires_at` is expired and can no longer be approved.
+ */
+export const accessRequestStatusValues = ["pending", "approved", "declined", "cancelled"] as const
+
+export const AccessRequestTable = mysqlTable(
+  "access_request",
+  {
+    id: denTypeIdColumn("accessRequest", "id").notNull().primaryKey(),
+    organizationId: denTypeIdColumn("organization", "organization_id").notNull(),
+    requesterOrgMembershipId: denTypeIdColumn("member", "requester_org_membership_id").notNull(),
+    resourceKind: mysqlEnum("resource_kind", accessPolicyResourceKindValues).notNull(),
+    resourceId: varchar("resource_id", { length: 191 }).notNull(),
+    resourceLabel: varchar("resource_label", { length: 300 }),
+    purpose: varchar("purpose", { length: 1000 }).notNull(),
+    requestedDays: int("requested_days"),
+    status: mysqlEnum("status", accessRequestStatusValues).notNull().default("pending"),
+    expiresAt: timestamp("expires_at", { fsp: 3 }).notNull(),
+    decidedByOrgMembershipId: denTypeIdColumn("member", "decided_by_org_membership_id"),
+    decidedAt: timestamp("decided_at", { fsp: 3 }),
+    decisionNote: varchar("decision_note", { length: 1000 }),
+    grantedRuleId: denTypeIdColumn("accessPolicyRule", "granted_rule_id"),
+    createdAt: timestamp("created_at", { fsp: 3 }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("access_request_org_status").on(table.organizationId, table.status, table.createdAt),
+    index("access_request_requester").on(table.organizationId, table.requesterOrgMembershipId, table.status),
+  ],
+)
