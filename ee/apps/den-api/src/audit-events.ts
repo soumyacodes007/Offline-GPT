@@ -29,6 +29,12 @@ export const ORGANIZATION_AUDIT_ACTIONS = {
   dpaSignedUpdated: "organization.dpa_signed.updated",
   accessPolicyRuleCreated: "organization.access_policy.rule_created",
   accessPolicyRuleRemoved: "organization.access_policy.rule_removed",
+  accessRequestCreated: "organization.access_request.created",
+  accessRequestApproved: "organization.access_request.approved",
+  accessRequestDeclined: "organization.access_request.declined",
+  knowledgeDocumentCreated: "organization.knowledge.document_created",
+  knowledgeDocumentRemoved: "organization.knowledge.document_removed",
+  knowledgeChunkLabelled: "organization.knowledge.chunk_labelled",
 }
 
 type OrganizationAuditAction = typeof ORGANIZATION_AUDIT_ACTIONS[keyof typeof ORGANIZATION_AUDIT_ACTIONS]
@@ -77,7 +83,13 @@ export function isOrganizationAuditAlertAction(action: OrganizationAuditAction) 
     case ORGANIZATION_AUDIT_ACTIONS.dpaSignedUpdated:
     case ORGANIZATION_AUDIT_ACTIONS.accessPolicyRuleCreated:
     case ORGANIZATION_AUDIT_ACTIONS.accessPolicyRuleRemoved:
+    case ORGANIZATION_AUDIT_ACTIONS.accessRequestApproved:
+    case ORGANIZATION_AUDIT_ACTIONS.knowledgeDocumentRemoved:
+    case ORGANIZATION_AUDIT_ACTIONS.knowledgeChunkLabelled:
       return true
+    case ORGANIZATION_AUDIT_ACTIONS.accessRequestCreated:
+    case ORGANIZATION_AUDIT_ACTIONS.accessRequestDeclined:
+    case ORGANIZATION_AUDIT_ACTIONS.knowledgeDocumentCreated:
     case ORGANIZATION_AUDIT_ACTIONS.scimReconciliationRun:
       return false
   }
