@@ -1,9 +1,9 @@
 # docker-compose.airgapped.yml — the OfflineGPT air-gapped edition on one host.
 #
 # Every service runs on `offlinegpt-internal`, an internal Docker network with
-# no route to the internet. Only den-gateway (the browser entry) and den-web
-# (the admin console) also join `offlinegpt-edge` so their ports can be
-# published to the customer's LAN.
+# no route to the internet. Only den-gateway (the browser entry), den-web
+# (the admin console) and den-api (which den-web calls) also join
+# `offlinegpt-edge` so their ports can be published to the customer's LAN.
 #
 # Images are built once on a machine with internet access, then moved in with
 # scripts/airgap-bundle.mjs (docker save / docker load):
@@ -17,7 +17,8 @@
 #
 # Required secrets (set in .env next to this file or the shell):
 #   OFFLINEGPT_AUTH_SECRET, OFFLINEGPT_DB_ENCRYPTION_KEY, OFFLINEGPT_GATEWAY_KEY (each ≥ 32 chars),
-#   OFFLINEGPT_MYSQL_PASSWORD, OFFLINEGPT_ADMIN_BOOTSTRAP_CODE (one-time /setup code).
+#   OFFLINEGPT_MYSQL_PASSWORD, OFFLINEGPT_ADMIN_BOOTSTRAP_CODE (one-time /setup code),
+#   OFFLINEGPT_ADMIN_EMAIL (the first owner's email; /setup accepts the code only with it).
 
 x-airgapped-env: &airgapped-env
   OFFLINEGPT_EDITION: airgapped
@@ -47,7 +48,8 @@ services:
   den-api:
     image: offlinegpt-den-api:airgapped
     restart: unless-stopped
-    command: ["sh", "-lc", "cd /app/ee/packages/den-db && yes | node --import tsx ./node_modules/drizzle-kit/bin.cjs push --config drizzle.config.ts && node /app/ee/apps/den-api/dist/main.js"]
+    # Create or upgrade the schema with the production migration runner, then start.
+    command: ["sh", "-c", "node /app/ee/packages/den-db/dist/scripts/bootstrap.js && exec node /app/ee/apps/den-api/dist/main.js"]
     depends_on:
       mysql:
         condition: service_healthy
@@ -60,15 +62,27 @@ services:
       BETTER_AUTH_SECRET: ${OFFLINEGPT_AUTH_SECRET:?set OFFLINEGPT_AUTH_SECRET}
       DEN_DB_ENCRYPTION_KEY: ${OFFLINEGPT_DB_ENCRYPTION_KEY:?set OFFLINEGPT_DB_ENCRYPTION_KEY}
       BETTER_AUTH_URL: ${OFFLINEGPT_PUBLIC_URL:-http://localhost:8080}
+      # Public API URL (MCP and OAuth links): the gateway serves Den under /api/den.
       DEN_API_PUBLIC_URL: ${OFFLINEGPT_PUBLIC_URL:-http://localhost:8080}/api/den
-      CORS_ORIGINS: ${OFFLINEGPT_PUBLIC_URL:-http://localhost:8080}
+      # Both browser entry points: the employee app (gateway) and Den web.
+      CORS_ORIGINS: ${OFFLINEGPT_PUBLIC_URL:-http://localhost:8080},${OFFLINEGPT_ADMIN_URL:-http://localhost:3005}
+      # Sign-in happens on Den web, so its origin must be trusted for auth too.
+      DEN_BETTER_AUTH_TRUSTED_ORIGINS: ${OFFLINEGPT_ADMIN_URL:-http://localhost:3005}
+      # Den web and the gateway forward each browser's IP; without trusting them
+      # every employee shares one sign-in rate-limit bucket.
+      DEN_TRUSTED_PROXIES: ${OFFLINEGPT_INTERNAL_SUBNET:-172.30.231.0/24}
       DEN_ORG_MODE: single_org
       DEN_SINGLE_ORG_NAME: ${OFFLINEGPT_ORG_NAME:-OfflineGPT}
       DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP: "false"
       DEN_REQUIRE_EMAIL_VERIFICATION: "false"
       DEN_INITIAL_ADMIN_BOOTSTRAP_CODE: ${OFFLINEGPT_ADMIN_BOOTSTRAP_CODE:?set OFFLINEGPT_ADMIN_BOOTSTRAP_CODE}
+      # /setup only accepts the bootstrap code together with one of these emails.
+      DEN_SINGLE_ORG_OWNER_EMAILS: ${OFFLINEGPT_ADMIN_EMAIL:?set OFFLINEGPT_ADMIN_EMAIL}
       DEN_ALLOW_PRIVATE_MCP_URLS: "1"
       DEN_GATEWAY_KEY: ${OFFLINEGPT_GATEWAY_KEY:?set OFFLINEGPT_GATEWAY_KEY}
+      # With HTTPS, set this to the gateway's https origin so sign-in returns
+      # employees straight to the app; without it they paste a sign-in code.
+      DEN_GATEWAY_ORIGIN: ${OFFLINEGPT_GATEWAY_ORIGIN:-}
       INFERENCE_PROXY_BASE_URL: http://inference:8791
       # One workspace container per employee, on the internal network.
       PROVISIONER_MODE: docker
@@ -80,7 +94,10 @@ services:
       WORKER_ENV_OPENCODE_MODELS_URL: http://inference:8791/models
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    networks: [internal]
+    # Published for Den web (the admin console), which calls the API directly.
+    ports:
+      - "${OFFLINEGPT_API_PORT:-8788}:8788"
+    networks: [internal, edge]
 
   den-web:
     image: offlinegpt-den-web:airgapped
@@ -92,6 +109,11 @@ services:
       DEN_AUTH_FALLBACK_BASE: http://den-api:8788
       DEN_AUTH_ORIGIN: ${OFFLINEGPT_PUBLIC_URL:-http://localhost:8080}
       DEN_WEB_PUBLIC_ORIGIN: ${OFFLINEGPT_ADMIN_URL:-http://localhost:3005}
+      DEN_BASE_URL: ${OFFLINEGPT_ADMIN_URL:-http://localhost:3005}
+      # Den web's browser code calls the API at the root of its own origin.
+      DEN_API_PUBLIC_URL: ${OFFLINEGPT_API_URL:-http://localhost:8788}
+      # "OfflineGPT Web" opens the employee app on the gateway, not the hosted site.
+      DEN_WEB_OFFLINEGPT_WEB_URL: ${OFFLINEGPT_PUBLIC_URL:-http://localhost:8080}
       DEN_ORG_MODE: single_org
       DEN_SINGLE_ORG_ALLOW_PUBLIC_SIGNUP: "false"
     ports:
@@ -106,6 +128,8 @@ services:
       PORT: "8788"
       DEN_API_BASE: http://den-api:8788
       DEN_GATEWAY_KEY: ${OFFLINEGPT_GATEWAY_KEY}
+      # Employees sign in on this deployment's Den web, never the hosted one.
+      DEN_GATEWAY_DEN_WEB_URL: ${OFFLINEGPT_ADMIN_URL:-http://localhost:3005}
     ports:
       - "${OFFLINEGPT_PORT:-8080}:8788"
     networks: [internal, edge]
@@ -125,6 +149,10 @@ services:
       INFERENCE_WEBHOOK_SECRET: ${OFFLINEGPT_GATEWAY_KEY}
       INFERENCE_UPSTREAM_URL: http://vllm:8000/v1
       INFERENCE_PROXY_BASE_URL: http://inference:8791
+      # The models this deployment serves. Declaring them (rather than asking vLLM)
+      # keeps the workspace model catalog available while vLLM is still loading
+      # weights after a restart. Add an entry per served model.
+      INFERENCE_MODELS: '[{"alias":"${OFFLINEGPT_MODEL_ALIAS:-main}","displayName":"${OFFLINEGPT_MODEL_DISPLAY_NAME:-Self-hosted model}","contextLength":${OFFLINEGPT_MAX_MODEL_LEN:-16384}}]'
     networks: [internal]
 
   vllm:
@@ -134,7 +162,7 @@ services:
     command:
       - --model=/models/${OFFLINEGPT_MODEL_DIR:-Qwen2.5-0.5B-Instruct}
       - --served-model-name=${OFFLINEGPT_MODEL_ALIAS:-main}
-      - --max-model-len=${OFFLINEGPT_MAX_MODEL_LEN:-8192}
+      - --max-model-len=${OFFLINEGPT_MAX_MODEL_LEN:-16384}
       - --gpu-memory-utilization=${OFFLINEGPT_GPU_MEMORY_UTILIZATION:-0.85}
       - --enable-auto-tool-choice
       - --tool-call-parser=${OFFLINEGPT_TOOL_PARSER:-hermes}
@@ -159,6 +187,11 @@ networks:
   internal:
     name: offlinegpt-internal
     internal: true
+    # Fixed so den-api can trust the client IP its proxies forward (see
+    # DEN_TRUSTED_PROXIES). Change it if it overlaps the customer's network.
+    ipam:
+      config:
+        - subnet: ${OFFLINEGPT_INTERNAL_SUBNET:-172.30.231.0/24}
   edge:
     name: offlinegpt-edge
 
