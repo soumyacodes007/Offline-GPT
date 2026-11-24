@@ -14,6 +14,7 @@ import {
   wakeWorkerOnDaytona,
   type StopWorkerOnDaytonaResult,
 } from "./daytona.js"
+import { provisionWorkerOnDocker } from "./docker.js"
 import { withProvisionDeadline } from "./provision-deadline.js"
 import { touchProvisioningWorker, withProvisioningHeartbeat } from "./provisioning-heartbeat.js"
 import {
@@ -176,8 +177,11 @@ async function safelyMarkWorkerFailed(store: CloudLifecycleStore, workerId: Work
 
 async function runClaimedCloudWorkerRecovery(workerId: WorkerId, options: WakeCloudWorkerOptions) {
   const store = options.store ?? databaseCloudLifecycleStore
-  const wakeWorker = options.wakeWorker ?? wakeWorkerOnDaytona
-  const provisionWorker = options.provisionWorker ?? provisionWorkerOnDaytona
+  // A Docker workspace is woken by starting a fresh container on its kept
+  // volumes, which is exactly what provisioning does.
+  const docker = env.provisionerMode === "docker"
+  const wakeWorker = options.wakeWorker ?? (docker ? provisionWorkerOnDocker : wakeWorkerOnDaytona)
+  const provisionWorker = options.provisionWorker ?? (docker ? provisionWorkerOnDocker : provisionWorkerOnDaytona)
   const materializeProviders = options.materializeProviders ?? materializeCloudWorkerProviders
   const deadlineMs = options.deadlineMs ?? env.cloudProvisionDeadlineMs
 
