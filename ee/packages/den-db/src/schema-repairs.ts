@@ -194,6 +194,22 @@ async function ensureInferenceOrgLimitAmountNullable(executor: Executor) {
   console.log("[den-db] inference_org_limit_policies.limit_amount made nullable")
 }
 
+/**
+ * Knowledge search uses a FULLTEXT index that drizzle cannot express, so the
+ * build-time schema snapshot used for fresh installs lacks it. Migration 0097
+ * creates it on upgraded databases; this creates it on fresh ones.
+ */
+async function ensureKnowledgeFulltextIndex(executor: Executor) {
+  if (!(await tableExists(executor, "knowledge_chunk"))) return
+  const rows = await executor.query(
+    `SELECT 1 AS present FROM information_schema.STATISTICS
+     WHERE table_schema = DATABASE() AND table_name = 'knowledge_chunk' AND index_name = 'knowledge_chunk_text' LIMIT 1`,
+  )
+  if (rows.length > 0) return
+  await runDdl(executor, "CREATE FULLTEXT INDEX `knowledge_chunk_text` ON `knowledge_chunk` (`heading`,`text`)")
+  console.log("[den-db] knowledge_chunk full-text index created")
+}
+
 export async function ensureSchemaRepairs(executor: Executor): Promise<void> {
   for (const repair of ORGANIZATION_REPAIRS) {
     if (!(await tableExists(executor, repair.table))) {
@@ -211,4 +227,5 @@ export async function ensureSchemaRepairs(executor: Executor): Promise<void> {
   }
 
   await ensureInferenceOrgLimitAmountNullable(executor)
+  await ensureKnowledgeFulltextIndex(executor)
 }
