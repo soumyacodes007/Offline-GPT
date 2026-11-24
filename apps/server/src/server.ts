@@ -964,6 +964,13 @@ export async function startServer(config: ServerConfig): Promise<ServeResult> {
           const actor = await requireClient(request, config, tokens);
           assertOpencodeProxyAllowed(actor, request.method, url.pathname);
           await managedDesktopPolicy(config).assertRequest(request, url.pathname, true);
+          // A v2-only workspace (the air-gapped image) has no v1 engine to proxy
+          // to, but Den reads managed providers from /opencode/config before and
+          // after delivering them. Answer with the providers this server holds,
+          // which is the config the v2 engine itself loads.
+          if (!proxyBaseUrl && request.method === "GET" && url.pathname === "/opencode/config" && engineV2Preview.status().chatRouting) {
+            return finalize(jsonResponse({ provider: runtimeProviderMap(await readGlobalRuntimeOpencodeConfig(config)) }));
+          }
           proxyService = "opencode";
           const workspace = config.workspaces[0];
           if (workspace) {
