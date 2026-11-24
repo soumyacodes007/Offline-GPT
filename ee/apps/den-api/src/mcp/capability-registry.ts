@@ -5,6 +5,7 @@ import type { Hono } from "hono"
 import { z } from "zod"
 import { memberFacingMcpConnectionsEnabled } from "../capability-sources/external-mcp-rollout.js"
 import { isPlatformAdminUserId } from "../middleware/admin.js"
+import { loadCapabilityPolicy, recordCapabilityDenied } from "./capability-policy.js"
 import type { McpPrincipal } from "./auth.js"
 import type { McpToolOperation } from "./catalog.js"
 import {
@@ -741,7 +742,9 @@ export function createCapabilityRegistry(sources: Record<CapabilitySourceKind, C
       const sourceMatches = await Promise.all(CAPABILITY_SOURCE_KINDS.map((kind) => (
         sources[kind].search(searchContext, input.query, input.limit)
       )))
+      const policy = await loadCapabilityPolicy(ctx)
       const matches = sourceMatches.flat()
+        .filter((match) => !policy || policy.decide(match.name).allowed)
         .sort(compareCapabilityMatches)
         .slice(0, input.limit)
       return {
@@ -753,6 +756,16 @@ export function createCapabilityRegistry(sources: Record<CapabilitySourceKind, C
       ctx: CapabilityRegistryContext,
       input: CapabilityExecuteInput,
     ): Promise<ExecuteCapabilityToolResult> => {
+      const policy = await loadCapabilityPolicy(ctx)
+      const decision = policy?.decide(input.name)
+      if (policy && decision && !decision.allowed) {
+        await recordCapabilityDenied(policy, input.name, decision)
+        return {
+          isError: true,
+          content: textContent(`Your organization's access policy does not allow ${input.name}. Tell the user they can request access in OfflineGPT (Access → Request access); do not try another tool to do the same thing.`),
+          structuredContent: { error: "access_policy_denied", capability: input.name },
+        }
+      }
       for (const kind of CAPABILITY_SOURCE_KINDS) {
         const source = sources[kind]
         const parsed = source.parseName(input.name)
@@ -765,7 +778,8 @@ export function createCapabilityRegistry(sources: Record<CapabilitySourceKind, C
         const result = await sources[kind].enumerate(ctx)
         return "excluded" in result ? [] : result
       }))
-      const leaves = enumerated.flat()
+      const policy = await loadCapabilityPolicy(ctx)
+      const leaves = enumerated.flat().filter((leaf) => !policy || policy.decide(leaf.capabilityName).allowed)
       const namespaceTools = new Map<string, Map<string, Tool.Definition>>()
       for (const leaf of leaves) {
         const tools = namespaceTools.get(leaf.namespace) ?? new Map<string, Tool.Definition>()
