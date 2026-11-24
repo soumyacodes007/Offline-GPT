@@ -17,6 +17,7 @@ import {
   type OfflineGPTWebRuntimeAccessResolver,
 } from "../../offlinegpt-web-runtime-access.js"
 import { currentDaytonaSandboxName, flushWorkerCheckpointOnDaytona, getDaytonaSandboxRecord, inspectDaytonaSandbox, refreshDaytonaSignedPreview, stopWorkerOnDaytona } from "../../workers/daytona.js"
+import { getDockerWorkspaceRecord, inspectDockerWorkspace } from "../../workers/docker.js"
 import { CLOUD_INSTANCE_BACKEND, CLOUD_INSTANCE_NAME } from "../../workers/cloud-constants.js"
 import { recoverClaimedCloudWorker as defaultRecoverCloudWorker, wakeCloudWorker as defaultWakeCloudWorker } from "../../workers/cloud-lifecycle.js"
 import {
@@ -46,7 +47,7 @@ type CloudRouteOptions = {
   daytonaApiKey?: string
   gatewayKey?: string
   continueProvisioning?: typeof continueCloudProvisioning
-  refreshSignedPreview?: typeof refreshDaytonaSignedPreview
+  refreshSignedPreview?: RefreshSignedPreview
   cloudWorkerStore?: CloudWorkerStore
   ensureCloudWorker?: EnsureCloudWorker
   getSandboxRecord?: GetSandboxRecord
@@ -112,6 +113,7 @@ type EnsureCloudWorker = (input: {
   store: CloudWorkerStore
 }) => Promise<CloudWorker>
 type GetSandboxRecord = (workerId: CloudWorker["id"]) => Promise<CloudSandboxRecord | null>
+type RefreshSignedPreview = GetSandboxRecord
 type InspectSandbox = (workerId: CloudWorker["id"]) => Promise<CloudSandboxInspection>
 type ProbeSignedPreview = typeof probeCloudRuntimeSignedPreview
 type WakeCloudWorker = (workerId: CloudWorker["id"]) => Promise<void>
@@ -358,6 +360,9 @@ function hasDaytonaProvisioner(options: CloudRouteOptions) {
 // returned false outside multi_org; organization entitlement is the separate
 // Web access check on each execution route.
 function cloudAvailable(payload: NonNullable<OrgRouteVariables["organizationContext"]>, options: CloudRouteOptions) {
+  // The air-gapped edition serves each member's workspace through the same
+  // gateway, from a Docker container on the customer's host.
+  if ((options.provisionerMode ?? env.provisionerMode) === "docker") return true
   return cloudHostingAvailable({ orgMode: options.orgMode ?? env.orgMode }) && hasDaytonaProvisioner(options)
 }
 
@@ -545,7 +550,7 @@ async function resolveCloudInstanceForMember(input: {
   payload: NonNullable<OrgRouteVariables["organizationContext"]>
   user: CloudRouteUser
   continueProvisioning: typeof continueCloudProvisioning
-  refreshSignedPreview: typeof refreshDaytonaSignedPreview
+  refreshSignedPreview: RefreshSignedPreview
   store: CloudWorkerStore
   ensureWorker: EnsureCloudWorker
   getSandboxRecord: GetSandboxRecord
@@ -630,7 +635,7 @@ async function resolveCloudInstanceForGateway(input: {
   payload: NonNullable<OrgRouteVariables["organizationContext"]>
   user: CloudRouteUser
   continueProvisioning: typeof continueCloudProvisioning
-  refreshSignedPreview: typeof refreshDaytonaSignedPreview
+  refreshSignedPreview: RefreshSignedPreview
   store: CloudWorkerStore
   ensureWorker: EnsureCloudWorker
   getSandboxRecord: GetSandboxRecord
@@ -716,11 +721,12 @@ export function registerCloudRoutes<T extends { Variables: OrgRouteVariables }>(
   const getOfflineGPTWebAccess = options.getOfflineGPTWebAccess ?? getOfflineGPTWebRuntimeAccess
   const continueProvisioning: typeof continueCloudProvisioning = options.continueProvisioning
     ?? ((input, continueOptions = {}) => continueCloudProvisioning(input, { ...continueOptions, materializeProviders }))
-  const refreshSignedPreview = options.refreshSignedPreview ?? refreshDaytonaSignedPreview
+  const docker = (options.provisionerMode ?? env.provisionerMode) === "docker"
+  const refreshSignedPreview = options.refreshSignedPreview ?? (docker ? getDockerWorkspaceRecord : refreshDaytonaSignedPreview)
   const store = options.cloudWorkerStore ?? databaseCloudWorkerStore
   const ensureWorker = options.ensureCloudWorker ?? ensureCloudWorker
-  const getSandboxRecord = options.getSandboxRecord ?? getDaytonaSandboxRecord
-  const inspectSandbox = options.inspectSandbox ?? inspectDaytonaSandbox
+  const getSandboxRecord = options.getSandboxRecord ?? (docker ? getDockerWorkspaceRecord : getDaytonaSandboxRecord)
+  const inspectSandbox = options.inspectSandbox ?? (docker ? inspectDockerWorkspace : inspectDaytonaSandbox)
   const signedPreviewProbe = options.probeSignedPreview ?? probeCloudRuntimeSignedPreview
   const wakeCloudWorker = options.wakeCloudWorker ?? defaultWakeCloudWorker
   const recoverCloudWorker = options.recoverCloudWorker
