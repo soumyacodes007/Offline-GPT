@@ -429,6 +429,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
       workflows: false,
     },
     orgMode: runtimeConfig.orgMode,
+      airgapped: runtimeConfig.airgapped,
     runtimeConfigLoaded,
   });
 
