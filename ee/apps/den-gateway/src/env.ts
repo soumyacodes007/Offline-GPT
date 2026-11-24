@@ -11,6 +11,7 @@ const EnvSchema = z.object({
   DEN_GATEWAY_RESOLVE_TTL_MS: z.string().optional(),
   DEN_GATEWAY_UPSTREAM_CONNECT_TIMEOUT_MS: z.string().optional(),
   DEN_GATEWAY_LOG_REQUESTS: z.string().optional(),
+  DEN_GATEWAY_DEN_WEB_URL: z.string().optional(),
 })
 
 const parsed = EnvSchema.parse(process.env)
@@ -86,4 +87,9 @@ export const env = {
     3_000,
   ),
   logRequests: parseBoolean(parsed.DEN_GATEWAY_LOG_REQUESTS, true),
+  // Where the app sends people to sign in. Unset means the hosted Den web app;
+  // a self-hosted (air-gapped) deployment points it at its own Den web.
+  denWebUrl: optionalString(parsed.DEN_GATEWAY_DEN_WEB_URL)
+    ? normalizeHttpBaseUrl("DEN_GATEWAY_DEN_WEB_URL", optionalString(parsed.DEN_GATEWAY_DEN_WEB_URL) ?? "")
+    : undefined,
 }
