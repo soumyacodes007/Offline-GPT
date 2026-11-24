@@ -1,5 +1,7 @@
 import {
   BarChart3,
+  BookLock,
+  KeyRound,
   Box,
   Globe,
   Home,
@@ -16,6 +18,7 @@ import {
 import {
   type DenOrgAccessFlags,
   type DenOrgCapabilities,
+  getAccessRoute,
   getAnalyticsRoute,
   getApiKeysRoute,
   getBillingRoute,
@@ -29,6 +32,7 @@ import {
   getMarketplacesRoute,
   getMcpConnectionsRoute,
   getMembersRoute,
+  getMyAccessRoute,
   getOrgDashboardRoute,
   getOrgSettingsRoute,
   getPluginsRoute,
@@ -97,6 +101,11 @@ export function buildDashboardNavSections({
       href: orgSlug ? getLibraryRoute(orgSlug) : "#",
       label: "My Library",
       icon: LibraryBig,
+    },
+    {
+      href: orgSlug ? getMyAccessRoute(orgSlug) : "#",
+      label: "Knowledge & access",
+      icon: BookLock,
     },
     ...(showWeb
       ? [{ href: orgSlug ? getWebRoute(orgSlug) : "#", label: "OfflineGPT Web", icon: Globe }]
@@ -178,7 +187,10 @@ export function buildDashboardNavSections({
     : null;
   const teamItems: DashboardNavItem[] = [
     ...(access.isAdmin && orgSlug
-      ? [{ href: getMembersRoute(orgSlug), label: "Members", icon: Users }]
+      ? [
+          { href: getMembersRoute(orgSlug), label: "Members", icon: Users },
+          { href: getAccessRoute(orgSlug), label: "Access", icon: KeyRound },
+        ]
       : []),
     ...(settingsGroup ? [settingsGroup] : []),
   ];
@@ -193,6 +205,8 @@ export function buildDashboardNavSections({
 
 // Alias order is ranking priority in the command palette.
 const PAGE_KEYWORDS: Record<string, string[]> = {
+  Access: ["permissions", "rules", "requests", "approve", "deny", "knowledge", "policy"],
+  "Knowledge & access": ["knowledge base", "documents", "request access", "search"],
   Advanced: ["policy", "desktop policies", "mdm", "lock", "marketplace", "branding"],
   Analytics: ["usage", "stats", "consumption", "history", "langfuse"],
   "API Keys": ["token", "secret"],
