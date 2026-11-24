@@ -172,3 +172,37 @@ export async function deprovisionWorkerOnDocker(workerId: string, deps: { api?: 
   const stopped = await api("POST", `/containers/${name}/stop?t=20`)
   if (stopped.status !== 204 && stopped.status !== 304 && stopped.status !== 404) throw dockerError("stop", stopped)
 }
+
+/**
+ * What the browser gateway's runtime resolver needs to know about a Docker
+ * workspace, shaped like the Daytona sandbox record it already understands: a
+ * Docker workspace lives at a fixed internal URL that never expires, so the
+ * "signed preview" is just that URL. Missing container → null, which the
+ * resolver turns into (re)provisioning.
+ */
+const DOCKER_URL_VALIDITY_MS = 24 * 60 * 60 * 1000
+
+async function dockerContainerState(workerId: string, api: DockerApi) {
+  const inspected = await api("GET", `/containers/${dockerWorkerName(workerId)}/json`)
+  if (inspected.status === 404) return null
+  if (inspected.status !== 200) throw dockerError("inspect", inspected)
+  const state = typeof inspected.body === "object" && inspected.body !== null && "State" in inspected.body ? inspected.body.State : null
+  const running = typeof state === "object" && state !== null && "Running" in state && state.Running === true
+  return running ? "started" : "stopped"
+}
+
+export async function getDockerWorkspaceRecord(workerId: string, deps: { api?: DockerApi } = {}) {
+  const state = await dockerContainerState(workerId, deps.api ?? socketDockerApi(env.docker.socketPath))
+  if (!state) return null
+  const name = dockerWorkerName(workerId)
+  return {
+    sandbox_id: name,
+    signed_preview_url: `http://${name}:${env.docker.workerPort}`,
+    signed_preview_url_expires_at: new Date(Date.now() + DOCKER_URL_VALIDITY_MS),
+  }
+}
+
+export async function inspectDockerWorkspace(workerId: string, deps: { api?: DockerApi } = {}) {
+  const state = await dockerContainerState(workerId, deps.api ?? socketDockerApi(env.docker.socketPath))
+  return state ? { state } : null
+}
