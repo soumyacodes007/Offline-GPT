@@ -10,10 +10,12 @@ import { and, asc, desc, eq, inArray, isNull } from "@offlinegpt-ee/den-db/drizz
 import { AccessPolicyRuleTable, KnowledgeChunkTable, KnowledgeDocumentTable, knowledgeSensitivityValues } from "@offlinegpt-ee/den-db/schema"
 import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { Hono } from "hono"
+import { bodyLimit } from "hono/body-limit"
 import { describeRoute } from "hono-openapi"
 import { z } from "zod"
 import { ORGANIZATION_AUDIT_ACTIONS, recordOrganizationAuditEvent } from "../../audit-events.js"
 import { db } from "../../db.js"
+import { extractKnowledgeText, KnowledgeExtractError, knowledgeSourceMimeTypes } from "../../knowledge-extract.js"
 import { jsonValidator, orgMemberRoute, paramValidator } from "../../middleware/index.js"
 import { forbiddenSchema, invalidRequestSchema, jsonResponse, notFoundSchema } from "../../openapi.js"
 import { principalExists } from "./access-policy.js"
@@ -21,6 +23,7 @@ import type { OrgRouteVariables } from "./shared.js"
 import { ensureOrganizationAdminRole, ensureOrganizationSuperAdmin, idParamSchema, orgAccessFailureStatus } from "./shared.js"
 
 const MAX_DOCUMENT_CHARS = 2_000_000
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 
 const principalSchema = z.object({
   principalKind: z.enum(["member", "team", "role", "org"]),
@@ -31,7 +34,7 @@ const createSchema = z.object({
   title: z.string().trim().min(1).max(300),
   text: z.string().min(1).max(MAX_DOCUMENT_CHARS).describe("Plain text or Markdown. Headings start new chunks."),
   sourceName: z.string().trim().min(1).max(300).optional(),
-  mimeType: z.enum(["text/markdown", "text/plain"]).default("text/markdown"),
+  mimeType: z.enum(knowledgeSourceMimeTypes).default("text/markdown").describe("The source file's type; the text itself is always Markdown or plain text."),
   audience: z.array(principalSchema).min(1).max(50).optional().describe("Who can read the document. Defaults to everyone in the organization."),
   sensitivity: z.enum(knowledgeSensitivityValues).default("ordinary").describe("Label for every chunk; change single chunks afterwards."),
 }).meta({ ref: "KnowledgeDocumentCreate" })
@@ -92,6 +95,41 @@ async function readableChunks(input: { rules: AccessPolicyRule[]; memberId: stri
 }
 
 export function registerOrgKnowledgeRoutes<T extends { Variables: OrgRouteVariables }>(app: Hono<T>) {
+  app.post(
+    "/v1/knowledge/extract",
+    describeRoute({
+      tags: ["Knowledge"],
+      summary: "Read the text out of a file",
+      description: "Upload a PDF, Word (.docx), Markdown or text file as multipart field `file`. Returns its text as Markdown, one section per PDF page or Word heading, for review before it is added. Nothing is stored.",
+      responses: {
+        200: jsonResponse("Extracted text.", z.object({ title: z.string(), text: z.string(), mimeType: z.enum(knowledgeSourceMimeTypes), sourceName: z.string() })),
+        400: jsonResponse("Unreadable file.", invalidRequestSchema),
+        403: jsonResponse("Forbidden.", forbiddenSchema),
+        413: jsonResponse("Too large.", invalidRequestSchema),
+      },
+    }),
+    orgMemberRoute(),
+    bodyLimit({
+      maxSize: MAX_UPLOAD_BYTES,
+      onError: (c) => c.json({ error: "file_too_large", message: "Upload files under 25 MB." }, 413),
+    }),
+    async (c) => {
+      const permission = ensureOrganizationSuperAdmin(c, "Only owners and super-admins can add knowledge, because it sets who can read it.")
+      if (!permission.ok) return c.json(permission.response, orgAccessFailureStatus(permission.response))
+      const body = await c.req.parseBody().catch(() => null)
+      const file = body?.file instanceof File ? body.file : null
+      if (!file) return c.json({ error: "invalid_request", message: "Upload the file as multipart form field \"file\"." }, 400)
+      try {
+        const { text, mimeType } = await extractKnowledgeText(file.name, new Uint8Array(await file.arrayBuffer()))
+        if (text.length > MAX_DOCUMENT_CHARS) return c.json({ error: "document_too_long", message: "This file has more text than one document can hold. Split it into parts." }, 400)
+        return c.json({ title: file.name.replace(/\.(pdf|docx|md|markdown|txt)$/i, "").slice(0, 300), text, mimeType, sourceName: file.name.slice(0, 300) })
+      } catch (error) {
+        if (error instanceof KnowledgeExtractError) return c.json({ error: "unreadable_file", message: error.message }, 400)
+        throw error
+      }
+    },
+  )
+
   app.post(
     "/v1/knowledge/documents",
     describeRoute({
