@@ -92,6 +92,8 @@ services:
       DOCKER_WORKER_CPUS: ${OFFLINEGPT_WORKSPACE_CPUS:-2}
       WORKER_ACTIVITY_BASE_URL: http://den-api:8788
       WORKER_ENV_OPENCODE_MODELS_URL: http://inference:8791/models
+      # Links in "access denied" messages open the request form on Den web.
+      DEN_WEB_PUBLIC_ORIGIN: ${OFFLINEGPT_ADMIN_URL:-http://localhost:3005}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     # Published for Den web (the admin console), which calls the API directly.
@@ -149,6 +151,7 @@ services:
       INFERENCE_WEBHOOK_SECRET: ${OFFLINEGPT_GATEWAY_KEY}
       INFERENCE_UPSTREAM_URL: http://vllm:8000/v1
       INFERENCE_PROXY_BASE_URL: http://inference:8791
+      DEN_WEB_PUBLIC_ORIGIN: ${OFFLINEGPT_ADMIN_URL:-http://localhost:3005}
       # The models this deployment serves. Declaring them (rather than asking vLLM)
       # keeps the workspace model catalog available while vLLM is still loading
       # weights after a restart. Add an entry per served model.
