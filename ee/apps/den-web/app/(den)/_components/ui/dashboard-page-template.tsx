@@ -3,6 +3,7 @@
 import type { ElementType, ReactNode } from "react";
 import { PaperMeshGradient } from "@offlinegpt/ui/react";
 import { useWebGlSupported } from "../../_lib/use-webgl-supported";
+import { useDenFlow } from "../../_providers/den-flow-provider";
 
 /**
  * DashboardPageTemplate
@@ -48,6 +49,21 @@ export function DashboardPageTemplate({
   children,
 }: DashboardPageTemplateProps) {
   const webGlSupported = useWebGlSupported();
+  const { runtimeConfig } = useDenFlow();
+
+  // The air-gapped edition uses the desktop app's quiet header: a plain title
+  // and one line of explanation, no animated banner.
+  if (runtimeConfig.airgapped) {
+    return (
+      <div className="mx-auto max-w-[860px] p-4 sm:p-6 md:p-8">
+        <header className="mb-8 border-b border-gray-100 pb-6">
+          <h1 className="text-[22px] font-semibold leading-[28px] tracking-[-0.02em] text-gray-900">{title}</h1>
+          <p className="mt-1.5 max-w-[640px] text-[14px] leading-6 text-gray-500">{description}</p>
+        </header>
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[860px] p-4 sm:p-6 md:p-8">
