@@ -1,4 +1,5 @@
 import {
+  AppWindow,
   BarChart3,
   BookLock,
   KeyRound,
@@ -9,6 +10,7 @@ import {
   LibraryBig,
   Plug,
   Settings2,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Users,
@@ -27,6 +29,7 @@ import {
   getDesktopPoliciesRoute,
   getDiagnosticsRoute,
   getInferenceRoute,
+  getKnowledgeRoute,
   getLibraryRoute,
   getManagedDashboardsRoute,
   getMarketplacesRoute,
@@ -82,6 +85,8 @@ export type BuildDashboardNavSectionsInput = {
   orgMode: DenOrgMode;
   runtimeConfigLoaded: boolean;
   airgapped?: boolean;
+  /** The employee app's URL, linked from the air-gapped nav. */
+  appUrl?: string;
 };
 
 export function buildDashboardNavSections({
@@ -91,7 +96,9 @@ export function buildDashboardNavSections({
   orgMode,
   runtimeConfigLoaded,
   airgapped = false,
+  appUrl,
 }: BuildDashboardNavSectionsInput): DashboardNavSection[] {
+  if (airgapped) return buildAirgappedNavSections({ orgSlug, access, capabilities, appUrl });
   const showWeb = runtimeConfigLoaded && capabilities.offlinegptWeb;
   const workItems: DashboardNavItem[] = [
     {
@@ -194,6 +201,7 @@ export function buildDashboardNavSections({
       ? [
           { href: getMembersRoute(orgSlug), label: "Members", icon: Users },
           { href: getAccessRoute(orgSlug), label: "Access", icon: KeyRound },
+          { href: getKnowledgeRoute(orgSlug), label: "Knowledge", icon: BookLock },
         ]
       : []),
     ...(settingsGroup ? [settingsGroup] : []),
@@ -207,10 +215,71 @@ export function buildDashboardNavSections({
   ];
 }
 
+/**
+ * The air-gapped edition's nav: what an employee needs (the app, their
+ * library, their access), then what an admin runs (people, access,
+ * knowledge, models, tools). Hosted-only pages (billing, OfflineGPT Web,
+ * bring-your-own-keys, diagnostics upload, usage analytics) are left out
+ * because they need the public internet or do not apply.
+ */
+function buildAirgappedNavSections({ orgSlug, access, capabilities, appUrl }: {
+  orgSlug: string | null;
+  access: DenOrgAccessFlags;
+  capabilities: DenOrgCapabilities;
+  appUrl?: string;
+}): DashboardNavSection[] {
+  if (!orgSlug) return [];
+  const work: DashboardNavItem[] = [
+    { href: getOrgDashboardRoute(orgSlug), label: "Home", icon: Home },
+    ...(appUrl ? [{ href: appUrl, label: "Open OfflineGPT", icon: AppWindow }] : []),
+    { href: getLibraryRoute(orgSlug), label: "My library", icon: LibraryBig },
+    { href: getMyAccessRoute(orgSlug), label: "My access", icon: KeyRound },
+  ];
+  if (!access.isAdmin) return [{ label: "Work", items: work }];
+
+  const admin: DashboardNavItem[] = [
+    { href: getMembersRoute(orgSlug), label: "People", icon: Users },
+    { href: getAccessRoute(orgSlug), label: "Access", icon: ShieldCheck },
+    { href: getKnowledgeRoute(orgSlug), label: "Knowledge", icon: BookLock },
+    { href: getInferenceRoute(orgSlug), label: "Models", icon: Sparkles },
+    { href: getMcpConnectionsRoute(orgSlug), label: "Connectors", icon: Plug },
+    { href: getPluginsRoute(orgSlug), label: "Plugins", icon: Box },
+    ...(capabilities.mcpConnections ? [{ href: getToolTesterRoute(orgSlug), label: "Tool Tester", icon: Wrench }] : []),
+  ];
+  const settingsChildren: DashboardNavChild[] = access.canViewSettings
+    ? [
+        { href: getOrgSettingsRoute(orgSlug), label: "General" },
+        { href: getSsoRoute(orgSlug), label: "SSO" },
+        { href: getScimRoute(orgSlug), label: "SCIM" },
+        { href: getApiKeysRoute(orgSlug), label: "API Keys" },
+        { href: getMarketplacesRoute(orgSlug), label: "Advanced" },
+      ]
+    : [];
+  return [
+    { label: "Work", items: work },
+    {
+      label: "Admin",
+      items: [
+        ...admin,
+        ...(settingsChildren.length > 0
+          ? [{ href: settingsChildren[0].href, label: "Settings", icon: SlidersHorizontal, children: settingsChildren, matchHrefs: [getDesktopPoliciesRoute(orgSlug), getBrandAppearanceRoute(orgSlug)] }]
+          : []),
+      ],
+    },
+  ];
+}
+
 // Alias order is ranking priority in the command palette.
 const PAGE_KEYWORDS: Record<string, string[]> = {
   Access: ["permissions", "rules", "requests", "approve", "deny", "knowledge", "policy"],
   "Knowledge & access": ["knowledge base", "documents", "request access", "search"],
+  Home: ["dashboard", "overview"],
+  Knowledge: ["knowledge base", "documents", "policies", "upload", "sensitive", "restricted"],
+  "My access": ["request access", "permissions", "knowledge", "search", "my requests"],
+  "My library": ["skills", "plugins", "connections"],
+  "Open OfflineGPT": ["app", "chat", "workspace"],
+  People: ["members", "users", "invite", "teams", "roles"],
+  Plugins: ["skills", "plugins", "marketplace"],
   Advanced: ["policy", "desktop policies", "mdm", "lock", "marketplace", "branding"],
   Analytics: ["usage", "stats", "consumption", "history", "langfuse"],
   "API Keys": ["token", "secret"],
