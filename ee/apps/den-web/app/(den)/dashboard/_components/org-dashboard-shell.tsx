@@ -32,6 +32,9 @@ import {
   getMcpConnectionsRoute,
   getManagedBrandIconUrl,
   getMembersRoute,
+  getKnowledgeRoute,
+  getMyAccessRoute,
+  getAccessRoute,
   getToolTesterRoute,
   getYourConnectionsRoute,
   getOrgDashboardRoute,
@@ -225,6 +228,15 @@ function getDashboardPageTitle(pathname: string, orgSlug: string | null) {
   if (pathname.startsWith(getMembersRoute(orgSlug))) {
     return "Members";
   }
+  if (pathname.startsWith(getAccessRoute(orgSlug))) {
+    return "Access";
+  }
+  if (pathname.startsWith(getMyAccessRoute(orgSlug))) {
+    return "My access";
+  }
+  if (pathname.startsWith(getKnowledgeRoute(orgSlug))) {
+    return "Knowledge";
+  }
   if (pathname.startsWith(getApiKeysRoute(orgSlug))) {
     return "API Keys";
   }
@@ -406,13 +418,12 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
     orgContext?.roles,
   );
 
-  const pageTitle = getDashboardPageTitle(pathname, activeOrg?.slug ?? null);
   const shouldShowProfilePrompt = Boolean(
     user &&
       !profilePromptDismissed &&
       user.name?.trim() === DEFAULT_AUTH_NAME,
   );
-  const showFeedbackLink = runtimeConfigLoaded && runtimeConfig.orgMode === "multi_org";
+  const showFeedbackLink = runtimeConfigLoaded && runtimeConfig.orgMode === "multi_org" && !runtimeConfig.airgapped;
   const feedbackHref = buildDenFeedbackUrl({
     pathname,
     orgSlug: activeOrg?.slug,
@@ -429,9 +440,17 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
       workflows: false,
     },
     orgMode: runtimeConfig.orgMode,
-      airgapped: runtimeConfig.airgapped,
+    airgapped: runtimeConfig.airgapped,
+    appUrl: runtimeConfig.offlinegptWebUrl,
     runtimeConfigLoaded,
   });
+  // The top bar names the page the way the sidebar does: the nav entry whose
+  // link is the longest match for this path, else the fixed titles below.
+  const navTitle = navSections
+    .flatMap((section) => section.items.flatMap((item) => [{ href: item.href, label: item.label }, ...(item.children ?? [])]))
+    .filter((entry) => entry.href.startsWith("/") && entry.href !== getOrgDashboardRoute(activeOrg?.slug) && (pathname === entry.href || pathname.startsWith(`${entry.href}/`)))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.label;
+  const pageTitle = (runtimeConfig.airgapped ? navTitle : null) ?? getDashboardPageTitle(pathname, activeOrg?.slug ?? null);
 
   const orgSwitcher = isSingleOrgMode ? (
     <div className="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-2">
@@ -774,7 +793,8 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                 <span className="hidden sm:inline">Feedback</span>
               </a>
             ) : null}
-            <a
+            {/* The public docs site is unreachable from an air-gapped network. */}
+            {runtimeConfig.airgapped ? null : <a
               href={OFFLINEGPT_DOCS_URL}
               target="_blank"
               rel="noreferrer"
@@ -782,7 +802,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
             >
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Docs</span>
-            </a>
+            </a>}
           </div>
         </header>
 
