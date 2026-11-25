@@ -41,6 +41,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const protocol = forwardedProtocol(requestHeaders.get("x-forwarded-proto"));
   const metadataOrigin = configuredOrigin || (host ? `${protocol}://${host}` : "http://localhost:3005");
 
+  if (process.env.OFFLINEGPT_EDITION?.trim().toLowerCase() === "airgapped") {
+    return { metadataBase: metadataBaseFromOrigin(metadataOrigin), title: "OfflineGPT", description: "OfflineGPT, running inside your organization's own network." };
+  }
+
   return {
     metadataBase: metadataBaseFromOrigin(metadataOrigin),
     title: "OfflineGPT Cloud",
