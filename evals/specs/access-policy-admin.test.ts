@@ -19,7 +19,8 @@ test("admins manage qm-style access policy rules and members feel them at once",
     web: false,
     // The harness seeds a multi-org Den, which the air-gapped edition refuses; access
     // policy itself is edition-independent (air-gapped boot rules: den-api env tests).
-    env: { DEN_ALLOW_PRIVATE_MCP_URLS: "1" },
+    // DEN_WEB_PUBLIC_ORIGIN: refusals link to the portal's prefilled request form.
+    env: { DEN_ALLOW_PRIVATE_MCP_URLS: "1", DEN_WEB_PUBLIC_ORIGIN: "http://portal.psu.test" },
     mocks: { archive: mcpMock({ allowUnauthenticatedMcp: true }) },
     org: { name: "Access Policy PSU", members: { asha: {}, ravi: {} } },
   });
@@ -167,9 +168,27 @@ test("admins manage qm-style access policy rules and members feel them at once",
   const blocked = await gateway(asha, "execute_capability", { name: before[0], body: {} });
   expect(blocked.result.isError).toBe(true);
   expect(record(blocked.result.structuredContent)).toEqual({ error: "access_policy_denied", capability: before[0] });
+  const link = /http:\/\/portal\.psu\.test\/\S+/.exec(blocked.text)?.[0];
+  expect(link, blocked.text).toBeDefined();
+  const linkUrl = new URL(link ?? "");
+  expect([linkUrl.pathname, linkUrl.searchParams.get("kind"), linkUrl.searchParams.get("id")]).toEqual(["/dashboard/my-access", "capability", before[0]]);
   const denials = await queryDenDatabase(databaseUrl, "SELECT payload FROM audit_event WHERE org_id = ? AND action = 'access_policy.denied'", [orgId]);
   expect(denials.map((row) => JSON.stringify(record(row).payload)).some((payload) => payload.includes("mcp_execute_capability"))).toBe(true);
-  evidence.recordAssertionEvidence("A capability rule blocks one connection's actions in the MCP gateway", `Before the rule, search_capabilities returned ${before.length} "Tender archive" actions to Asha. A deny on mcp:${connectionId}:* removed all of them from her search while Ravi still saw them; executing ${before[0]} returned access_policy_denied, and the refusal was recorded as access_policy.denied (surface mcp_execute_capability).`, true);
+  evidence.recordAssertionEvidence("A capability rule blocks one connection's actions in the MCP gateway", `Before the rule, search_capabilities returned ${before.length} "Tender archive" actions to Asha. A deny on mcp:${connectionId}:* removed all of them from her search while Ravi still saw them; executing ${before[0]} returned access_policy_denied with a one-click request link (${linkUrl.pathname}?kind=capability&id=…), and the refusal was recorded as access_policy.denied (surface mcp_execute_capability).`, true);
+
+  // The portal names things instead of asking for ids: members get what they could ask for, admins get more.
+  const resourcesOf = async (session: DenSession) => {
+    const listed = await request(session, "/v1/access-policy/resources");
+    expect(listed.response.status, listed.text).toBe(200);
+    const resources = record(listed.body).resources;
+    return (Array.isArray(resources) ? resources : []).map((resource) => record(resource));
+  };
+  const memberView = await resourcesOf(ravi);
+  const adminView = await resourcesOf(owner);
+  expect(memberView).toContainEqual({ kind: "mcp_connection", id: connectionId, label: "Tender archive" });
+  expect(memberView.some((resource) => resource.kind === "capability" || resource.kind === "knowledge_document")).toBe(false);
+  expect(adminView).toContainEqual({ kind: "capability", id: `mcp:${connectionId}:*`, label: "Tender archive (all tools)" });
+  evidence.recordAssertionEvidence("Resources are listed by name for pickers", `GET /v1/access-policy/resources gave Ravi (member) the connection as "Tender archive" and no tools or documents; the owner also got "Tender archive (all tools)" for mcp:${connectionId}:*.`, true);
 
   // Model provider rules: a deny removes a shared provider; an allow gives one nobody was granted.
   const newProvider = async (key: string, allMembers: boolean) => {
