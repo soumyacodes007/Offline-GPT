@@ -18,17 +18,17 @@ export const accessResourceKinds = [
 ] as const;
 export type AccessResourceKind = (typeof accessResourceKinds)[number];
 
-export const accessResourceKindLabels: Record<AccessResourceKind, { label: string; noun: string; hint: string; verb: string }> = {
-  model: { label: "Model", noun: "model", hint: "Model alias, e.g. main or coder", verb: "use" },
-  llm_provider: { label: "Model provider", noun: "provider", hint: "Provider id (llp_…)", verb: "use" },
-  plugin: { label: "Plugin", noun: "plugin", hint: "Plugin id", verb: "use" },
-  marketplace: { label: "Marketplace", noun: "marketplace", hint: "Marketplace id", verb: "use" },
-  config_object: { label: "Skill or command", noun: "skill", hint: "Skill, command or agent id", verb: "use" },
-  connector_instance: { label: "Connector", noun: "connector", hint: "Connector instance id", verb: "use" },
-  mcp_connection: { label: "MCP connection", noun: "connection", hint: "Connection id", verb: "use" },
-  capability: { label: "Tool action", noun: "action", hint: "Capability name, or a prefix ending in * (mcp:<connection>:*)", verb: "run" },
-  knowledge_document: { label: "Knowledge document", noun: "document", hint: "Document id", verb: "read" },
-  knowledge_chunk: { label: "Knowledge section", noun: "section", hint: "Section id", verb: "read" },
+export const accessResourceKindLabels: Record<AccessResourceKind, { label: string; plural: string; noun: string; hint: string; verb: string }> = {
+  model: { label: "Model", plural: "Models", noun: "model", hint: "Model alias, e.g. main", verb: "use" },
+  llm_provider: { label: "Model provider", plural: "Model providers", noun: "model provider", hint: "Provider id (llp_…)", verb: "use" },
+  plugin: { label: "Plugin", plural: "Plugins", noun: "plugin", hint: "Plugin id", verb: "use" },
+  marketplace: { label: "Marketplace", plural: "Marketplaces", noun: "marketplace", hint: "Marketplace id", verb: "use" },
+  config_object: { label: "Skill", plural: "Skills", noun: "skill", hint: "Skill, command or agent id", verb: "use" },
+  connector_instance: { label: "Connector", plural: "Connectors", noun: "connector", hint: "Connector id", verb: "use" },
+  mcp_connection: { label: "Connection", plural: "Connections", noun: "connection", hint: "Connection id", verb: "use" },
+  capability: { label: "Tool", plural: "Tools", noun: "tool", hint: "Tool name, or a prefix ending in * (mcp:<connection>:*)", verb: "use" },
+  knowledge_document: { label: "Document", plural: "Documents", noun: "document", hint: "Document id", verb: "read" },
+  knowledge_chunk: { label: "Section", plural: "Sections", noun: "section", hint: "Section id", verb: "read" },
 };
 
 export const principalKinds = ["member", "team", "role", "org"] as const;
@@ -123,8 +123,16 @@ const searchResultSchema = z.object({
 });
 export type KnowledgeSearchResult = z.infer<typeof searchResultSchema>;
 
-async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit, fallback: string): Promise<T> {
-  const { response, payload } = await requestJson(path, init, 15000);
+const resourceSchema = z.object({
+  kind: z.enum(accessResourceKinds),
+  id: z.string(),
+  label: z.string(),
+  detail: z.string().optional(),
+});
+export type AccessResource = z.infer<typeof resourceSchema>;
+
+async function call<T>(path: string, schema: z.ZodType<T>, init: RequestInit, fallback: string, timeoutMs = 15000): Promise<T> {
+  const { response, payload } = await requestJson(path, init, timeoutMs);
   if (!response.ok) throw getRequestError(payload, response, fallback);
   return schema.parse(payload);
 }
@@ -139,6 +147,7 @@ const json = (method: string, body: unknown): RequestInit => ({ method, body: JS
 export const accessKeys = {
   rules: (orgId: string | null) => ["access", orgId, "rules"] as const,
   requests: (orgId: string | null, scope: "mine" | "all") => ["access", orgId, "requests", scope] as const,
+  resources: (orgId: string | null) => ["access", orgId, "resources"] as const,
   documents: (orgId: string | null) => ["access", orgId, "knowledge"] as const,
   document: (orgId: string | null, id: string) => ["access", orgId, "knowledge", id] as const,
 };
@@ -157,6 +166,16 @@ export function useAccessRequests(orgId: string | null, scope: "mine" | "all") {
     queryKey: accessKeys.requests(orgId, scope),
     queryFn: () => call(`/v1/access-requests?scope=${scope}`, z.object({ requests: z.array(requestSchema) }), { method: "GET" }, "Could not load access requests.").then((r) => r.requests),
     refetchInterval: 30000,
+  });
+}
+
+/** Models, connections, plugins and skills (and, for admins, documents and more) by readable name. */
+export function useAccessResources(orgId: string | null) {
+  return useQuery({
+    enabled: Boolean(orgId),
+    queryKey: accessKeys.resources(orgId),
+    queryFn: () => call("/v1/access-policy/resources", z.object({ resources: z.array(resourceSchema) }), { method: "GET" }, "Could not load the list of resources.").then((r) => r.resources),
+    staleTime: 60000,
   });
 }
 
@@ -202,7 +221,17 @@ export const declineAccessRequest = (id: string, note?: string) =>
   send(`/v1/access-requests/${encodeURIComponent(id)}/decline`, json("POST", note ? { note } : {}), "Could not decline the request.");
 export const cancelAccessRequest = (id: string) => send(`/v1/access-requests/${encodeURIComponent(id)}/cancel`, { method: "POST" }, "Could not cancel the request.");
 
-export const createKnowledgeDocument = (input: { title: string; text: string; sourceName?: string; audience: Principal[]; sensitivity: Sensitivity }) =>
+export const knowledgeSourceMimeTypes = ["text/markdown", "text/plain", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"] as const;
+export type KnowledgeSourceMime = (typeof knowledgeSourceMimeTypes)[number];
+
+/** Reads the text out of a PDF, Word, Markdown or text file on the server, for review before it is added. */
+export function extractKnowledgeFile(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return call("/v1/knowledge/extract", z.object({ title: z.string(), text: z.string(), mimeType: z.enum(knowledgeSourceMimeTypes), sourceName: z.string() }), { method: "POST", body }, "Could not read this file.", 120000);
+}
+
+export const createKnowledgeDocument = (input: { title: string; text: string; sourceName?: string; mimeType?: KnowledgeSourceMime; audience: Principal[]; sensitivity: Sensitivity }) =>
   send("/v1/knowledge/documents", json("POST", input), "Could not add the document.");
 export const removeKnowledgeDocument = (id: string) => send(`/v1/knowledge/documents/${encodeURIComponent(id)}`, { method: "DELETE" }, "Could not remove the document.");
 export const labelKnowledgeChunk = (id: string, sensitivity: Sensitivity) =>
