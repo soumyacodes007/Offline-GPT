@@ -1,12 +1,15 @@
 "use client";
 
 import { getOrgAccessFlags } from "../../_lib/den-org";
+import { useDenFlow } from "../../_providers/den-flow-provider";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
+import { AirgappedHomeScreen } from "./airgapped-home-screen";
 import { DashboardOverviewScreen } from "./dashboard-overview-screen";
 import { MemberDashboardScreen } from "./member-dashboard-screen";
 
 export function DashboardHomeScreen() {
   const { orgContext, orgBusy, mutationBusy } = useOrgDashboard();
+  const { runtimeConfig } = useDenFlow();
 
   // A workspace switch keeps the previous orgContext around while the next one
   // loads. Rendering the neutral placeholder during that window (and while the
@@ -26,5 +29,6 @@ export function DashboardHomeScreen() {
     orgContext.roles,
   );
 
+  if (runtimeConfig.airgapped) return <AirgappedHomeScreen isAdmin={access.isAdmin} />;
   return access.isAdmin ? <DashboardOverviewScreen /> : <MemberDashboardScreen />;
 }
