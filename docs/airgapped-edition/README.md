@@ -127,15 +127,30 @@ applies to their next scheduled run without a separate check.
 - **Rules**: rules are grouped by resource, as sentences ("Finance can't use
   coder"), with who they apply to, when they end, and the reason. New rules
   show a preview of what they will do before saving.
-- **Check access**: pick a person and a resource to see the decision, the rule
-  behind it, and every principal the person counts as. Use it for access
-  reviews.
-- **Knowledge**: documents, their readers, and each section's label and rules.
+- **Check someone's access**: pick a person and a resource to see the
+  decision, the rule behind it, and every principal the person counts as. Use
+  it for access reviews.
 
-Members get **Knowledge & access** in the sidebar. It holds knowledge search,
-a request form (it can be prefilled from a link,
-`/dashboard/my-access?kind=model&id=coder`), and the status of their own
-requests. Model refusals point people to it.
+Every resource is picked by name (models, connections, a connection's tools,
+skills, plugins, documents) from `GET /v1/access-policy/resources`; typing an
+id is a fallback for things not listed.
+
+**Knowledge** has its own page (`/dashboard/knowledge`, one URL per document).
+Admins upload a PDF, Word (.docx), Markdown or text file; den-api reads it in
+process (PDFium for PDFs) and shows the text for review before it is added.
+Each PDF page and each Word heading becomes a section.
+
+Members get **My access** in the sidebar: a request form, the status of their
+own requests, and knowledge search. When a model or tool is refused, the
+message carries a link that opens the form filled in for that resource
+(`/dashboard/my-access?kind=model&id=coder`); den-api and inference build it
+from `DEN_WEB_PUBLIC_ORIGIN`.
+
+The air-gapped portal leaves out what needs the internet or does not apply:
+billing, OfflineGPT Web, bring-your-own-keys, diagnostics upload, usage
+analytics, Google and GitHub sign-in, the public docs link, and the desktop
+download. Home links employees to the browser app and gives admins a setup
+checklist.
 
 **Access requests** (as qm's keychain asks):
 
@@ -350,7 +365,7 @@ All run locally on 2026-11-24 with an RTX 3050 (4 GB):
 | `evals/specs/access-policy-admin.test.ts` | Rule writes guarded (`403` member, `400` bad principal or kind); a member deny hides an org-wide MCP connection from one member only; `/check` names the rule; removal restores access; a member requests access, the owner approves it for 1 day, and the member can use it on the next request; repeat requests, self-service approval and double approval are refused; a decline is final; a capability deny removes one connection's actions from gateway search and execute; provider rules remove and add model providers; every step audited | Passed |
 | `evals/specs/knowledge-base-permissions.test.ts` | A handbook split into 3 sections; one section limited to HR and one restricted; the same search returns different sections to an HR member and a clerk, through the API and the agent's `search_knowledge` tool; a restricted section needs a named reader; removing the document's readers closes it; sensitive reads, labels and removal audited, sections deleted | Passed |
 | `evals/specs/airgapped-stack.e2e.test.ts` (Chrome against the running compose stack) | The full stack from `docker-compose.airgapped.yml`: the gateway app sends the employee to this deployment's Den web to sign in (never the hosted site); Den web signs them in and gives the one-time code; pasting it in the app opens the member's own Docker workspace, which Den creates (or recovers after its container was removed); a task sent in the browser is answered by vLLM on the GPU through the inference gateway with the member's key ("OFFLINE") | Passed (real vLLM, Qwen2.5-0.5B) |
-| `evals/specs/access-admin-ui.e2e.test.ts` (Den Web in Chrome) | A member asks for a connection from Knowledge & access; the owner sees the request and reason in Access → Requests and approves it; the member can use it; Rules shows "Asha Rao can use Payroll archive" with the quoted reason; the owner adds a document in Knowledge and sees its sections; no horizontal scroll at 1280 px and 390 px | Passed |
+| `evals/specs/access-admin-ui.e2e.test.ts` (Den Web in Chrome, air-gapped edition) | Sign-in has no cloud or Google/GitHub wording; the member home opens the browser app; a denial link with only kind and id opens "You don't have access to Payroll archive yet"; the owner home shows "1 person is waiting for access", Approve grants it, and Rules reads "Asha Rao can use Payroll archive"; a rule is built by name (Asha Rao → Can't use → "Payroll archive (all tools)"); a two-page PDF upload becomes 2 sections, opens at its own URL, and Back returns to the list; no horizontal scroll at 1280 px and 390 px | Passed |
 
 Run them with:
 
