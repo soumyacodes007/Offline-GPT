@@ -53,6 +53,8 @@ export interface ServerOptions {
   provision?: boolean;
   web?: boolean;
   env?: Record<string, string | undefined>;
+  /** Extra env for den-web only (local lane), e.g. OFFLINEGPT_EDITION to render the air-gapped portal over a multi-org den-api. */
+  webEnv?: Record<string, string | undefined>;
   reuse?: { apiUrl: string; webUrl?: string };
   reuseMembers?: Record<string, PersonShape>;
   ports?: { api: number; web: number };
@@ -663,6 +665,7 @@ export async function server(options: ServerOptions): Promise<Den> {
   }
 
   if (options.place.kind === "daytona") {
+    if (options.webEnv) throw new SkipError("server({ webEnv }) is local-only; run this spec on the local lane.");
     if (options.seedProfile) {
       throw new Error('Den seedProfile "demo-org" is local-only and cannot seed a Daytona Den.');
     }
@@ -862,6 +865,7 @@ export async function server(options: ServerOptions): Promise<Den> {
           DEN_BASE_URL: ref.webUrl,
           DEN_AUTH_ORIGIN: ref.webUrl,
           DEN_AUTH_FALLBACK_BASE: `http://127.0.0.1:${apiPort}`,
+          ...options.webEnv,
         }, join(logsDir, "web.log"));
     const webStep = web ? steps.step("den-web", "den-web", { log: web.logPath }) : null;
     if (web) {
