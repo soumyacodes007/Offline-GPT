@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { accessRequestUrl } from "@offlinegpt-ee/utils/edition"
 import { inferenceBearerKey } from "@offlinegpt-ee/utils/inference-bearer-key"
 import { ManagedModelsPolicyError } from "@offlinegpt/types/den/managed-models-policy"
 import type { Context, Hono } from "hono"
@@ -627,7 +628,8 @@ export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies =
     const modelDecision = modelAccess?.decide(prepared.modelAlias)
     if (modelAccess && modelDecision && !modelDecision.allowed) {
       await modelAccess.recordDenied(prepared.modelAlias, modelDecision)
-      return openAiError(403, "model_not_allowed", `Your organization's access policy does not allow model ${prepared.modelAlias}. Ask for access in OfflineGPT under Knowledge & access → Request access.`)
+      const link = accessRequestUrl({ kind: "model", id: prepared.modelAlias })
+      return openAiError(403, "model_not_allowed", `You don't have access to the model "${prepared.modelAlias}". ${link ? `Ask an admin for access: ${link}` : "Ask an admin for access in the OfflineGPT admin portal under My access."}`)
     }
 
     const limits = await dependencies.ensureUsableBuckets(inferenceKey.organization_id)
