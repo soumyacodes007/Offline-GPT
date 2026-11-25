@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ArrowRight, ArrowUpRight, ChevronDown, ChevronRight, FileText, Folder, LayoutDashboard, MessageSquare, Network, Paperclip, Play, Plug, Search, Users, Workflow } from "lucide-react";
+import { useDenFlow } from "../_providers/den-flow-provider";
 import styles from "./setup-frame.module.css";
 
 const steps = [
@@ -22,21 +23,21 @@ const exampleCopy: Record<SetupStep, { request: string; reply: string; caption: 
   ready: { request: "Summarize our project updates into a team brief.", reply: "Here’s a draft built with your team’s tools.", caption: "One conversation. Your models, tools, and results." },
 };
 
-function PreviewComposer() {
+function PreviewComposer({ airgapped }: { airgapped: boolean }) {
   return (
     <div className={styles.previewComposer}>
       <div className={styles.composerPlaceholder}>Ask for a change…</div>
       <div className={styles.composerToolbar}>
         <Paperclip size={12} />
-        <span className={styles.composerModel}>OpenAI <ChevronDown size={10} /></span>
+        <span className={styles.composerModel}>{airgapped ? "Your model" : "OpenAI"} <ChevronDown size={10} /></span>
         <span className={styles.composerSend}><ArrowRight size={11} /></span>
       </div>
-      <div className={styles.composerProviders}>Or choose Anthropic, Google, and more</div>
+      {airgapped ? null : <div className={styles.composerProviders}>Or choose Anthropic, Google, and more</div>}
     </div>
   );
 }
 
-function WorkPreview({ step }: { step: SetupStep }) {
+function WorkPreview({ step, airgapped }: { step: SetupStep; airgapped: boolean }) {
   const copy = exampleCopy[step];
   const gateway = step === "tools" || step === "ready";
   return (
@@ -88,8 +89,8 @@ function WorkPreview({ step }: { step: SetupStep }) {
                 <div className={styles.dashboardRow}><span><i /> Launch checklist</span><small>In progress</small></div>
               </div>
             )}
-            {gateway ? <div className={styles.gatewayContext}><Network size={12} /><div><strong>OfflineGPT gateway</strong><small>Team tools in Desktop, Codex, and Claude Code</small></div></div> : null}
-            <PreviewComposer />
+            {gateway && !airgapped ? <div className={styles.gatewayContext}><Network size={12} /><div><strong>OfflineGPT gateway</strong><small>Team tools in Desktop, Codex, and Claude Code</small></div></div> : null}
+            <PreviewComposer airgapped={airgapped} />
           </div>
         </div>
       </div>
@@ -109,10 +110,14 @@ export function SetupFrame({ step, title, description, children, aside, panelVis
   embedded?: boolean;
 }) {
   const current = steps.findIndex((item) => item.id === step);
+  // The air-gapped edition runs the customer's own models on their own servers,
+  // so the hosted story (cloud, public model vendors, desktop) does not apply.
+  const { runtimeConfig } = useDenFlow();
+  const airgapped = runtimeConfig.airgapped;
   return (
     <section className={`${styles.frame} ${embedded ? styles.embedded : ""}`} data-testid="setup-frame" data-step={step}>
       <header className={styles.top}>
-        <div className={styles.brand}><img src="/offlinegpt-mark.svg" alt="" width={25} height={25} /><span>OfflineGPT<span className={styles.cloud}> / Cloud</span></span></div>
+        <div className={styles.brand}><img src="/offlinegpt-mark.svg" alt="" width={25} height={25} /><span>OfflineGPT{airgapped ? null : <span className={styles.cloud}> / Cloud</span>}</span></div>
         <nav className={styles.progress} aria-label="Setup progress">
           <div className={styles.progressSummary}>
             <span>{steps[current]?.label}</span>
@@ -134,16 +139,20 @@ export function SetupFrame({ step, title, description, children, aside, panelVis
       <div className={styles.grid}>
         <aside className={styles.story}>
           <div className={styles.intro}>
-            <p className={styles.eyebrow}>A LITTLE LESS BUSYWORK</p>
+            <p className={styles.eyebrow}>{airgapped ? "PRIVATE BY DESIGN" : "A LITTLE LESS BUSYWORK"}</p>
             <h1>{title}</h1>
             <p className={styles.description}>{description}</p>
             <div className={styles.modelSupport}>
-              <p>Your choice of model. One place to work.</p>
-              <span>OpenAI</span><i aria-hidden="true">·</i><span>Anthropic</span><i aria-hidden="true">·</i><span>Google</span><i aria-hidden="true">·</i><span>and more</span>
+              {airgapped ? <p>Your own models, on your own servers.</p> : (
+                <>
+                  <p>Your choice of model. One place to work.</p>
+                  <span>OpenAI</span><i aria-hidden="true">·</i><span>Anthropic</span><i aria-hidden="true">·</i><span>Google</span><i aria-hidden="true">·</i><span>and more</span>
+                </>
+              )}
             </div>
           </div>
-          {aside ? <div className={styles.customPreview}>{aside}</div> : <WorkPreview step={step} />}
-          <p className={styles.storyNote}>Switch models while keeping your tools and the work in one place.</p>
+          {aside ? <div className={styles.customPreview}>{aside}</div> : <WorkPreview step={step} airgapped={airgapped} />}
+          <p className={styles.storyNote}>{airgapped ? "Chats, files and documents never leave your network." : "Switch models while keeping your tools and the work in one place."}</p>
         </aside>
         <div className={styles.panel} key={step}>
           {panelVisual ? <div className={styles.panelVisual}>{panelVisual}</div> : null}
@@ -151,7 +160,7 @@ export function SetupFrame({ step, title, description, children, aside, panelVis
           {children}
         </div>
       </div>
-      <footer className={styles.footer}><span>Built for work. With room for you.</span><span>Your desktop + your tools + your team</span></footer>
+      <footer className={styles.footer}><span>Built for work. With room for you.</span><span>{airgapped ? "Your network + your models + your team" : "Your desktop + your tools + your team"}</span></footer>
     </section>
   );
 }
