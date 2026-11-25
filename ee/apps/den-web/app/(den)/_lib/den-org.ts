@@ -547,6 +547,10 @@ export function getMyAccessRoute(orgSlug?: string | null): string {
   return `${getOrgDashboardRoute(orgSlug)}/my-access`;
 }
 
+export function getKnowledgeRoute(orgSlug?: string | null, documentId?: string): string {
+  return `${getOrgDashboardRoute(orgSlug)}/knowledge${documentId ? `/${encodeURIComponent(documentId)}` : ""}`;
+}
+
 export function getMembersRoute(orgSlug?: string | null): string {
   return `${getOrgDashboardRoute(orgSlug)}/members`;
 }
