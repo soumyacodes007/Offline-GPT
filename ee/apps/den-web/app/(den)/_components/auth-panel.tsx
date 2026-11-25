@@ -422,7 +422,9 @@ export function AuthPanel({
   const showSingleOrgSso = isSingleOrgMode && Boolean(singleOrgSlug) && !verificationRequired && !isPasswordResetRequest && (!hideSocialAuth || isSingleOrgSsoMode);
   const showSingleOrgSsoDivider = showSingleOrgSso && !isSingleOrgSsoMode;
   const showEmailPasswordAuth = !isSingleOrgSsoMode;
-  const showSocialAuth = showEmailPasswordAuth && !verificationRequired && !isPasswordResetRequest && !hideSocialAuth;
+  // Google and GitHub sign-in need the public internet, which the air-gapped edition never reaches.
+  const noSocialAuth = hideSocialAuth || runtimeConfig.airgapped;
+  const showSocialAuth = showEmailPasswordAuth && !verificationRequired && !isPasswordResetRequest && !noSocialAuth;
 
   useEffect(() => {
     const key = prefillKey ?? prefilledEmail?.trim() ?? null;
@@ -858,7 +860,7 @@ export function AuthPanel({
               {formBusy ? "Working..." : activeContent.submitLabel}
               {!formBusy ? <ArrowRight className="h-4 w-4" /> : null}
             </button>
-            {!hideSocialAuth ? (
+            {!noSocialAuth ? (
               <>
                 <div className="den-divider" aria-hidden="true">
                   <span>or</span>
