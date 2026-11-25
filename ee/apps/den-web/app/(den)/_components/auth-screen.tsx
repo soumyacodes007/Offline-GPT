@@ -49,7 +49,7 @@ export function AuthScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const routingRef = useRef(false);
-  const { user, runtimeConfigLoaded, sessionHydrated, desktopAuthRequested, setupPending, authError, webAuthRequested, resolveUserLandingRoute } = useDenFlow();
+  const { user, runtimeConfig, runtimeConfigLoaded, sessionHydrated, desktopAuthRequested, setupPending, authError, webAuthRequested, resolveUserLandingRoute } = useDenFlow();
   const hasResolvedSession = runtimeConfigLoaded && sessionHydrated && Boolean(user) && !authError && (!desktopAuthRequested || setupPending) && !webAuthRequested;
 
   useEffect(() => {
@@ -79,8 +79,12 @@ export function AuthScreen() {
     <SetupFrame
       step="account"
       panelVisual={<OnboardingTexture />}
-      title="Good work starts here."
-      description="One account for your desktop, your tools, and your team."
+      title={runtimeConfig.airgapped
+        ? runtimeConfig.singleOrgName && runtimeConfig.singleOrgName !== "OfflineGPT" ? `OfflineGPT for ${runtimeConfig.singleOrgName}` : "Sign in to OfflineGPT"
+        : "Good work starts here."}
+      description={runtimeConfig.airgapped
+        ? "Sign in with your work account. Everything runs inside your organization's own network."
+        : "One account for your desktop, your tools, and your team."}
     >
       <div data-testid="auth-landing-frame">
         <div data-testid="auth-landing-form">
