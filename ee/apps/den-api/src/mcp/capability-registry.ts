@@ -5,7 +5,7 @@ import type { Hono } from "hono"
 import { z } from "zod"
 import { memberFacingMcpConnectionsEnabled } from "../capability-sources/external-mcp-rollout.js"
 import { isPlatformAdminUserId } from "../middleware/admin.js"
-import { loadCapabilityPolicy, recordCapabilityDenied } from "./capability-policy.js"
+import { capabilityDeniedMessage, loadCapabilityPolicy, recordCapabilityDenied } from "./capability-policy.js"
 import type { McpPrincipal } from "./auth.js"
 import type { McpToolOperation } from "./catalog.js"
 import {
@@ -762,7 +762,7 @@ export function createCapabilityRegistry(sources: Record<CapabilitySourceKind, C
         await recordCapabilityDenied(policy, input.name, decision)
         return {
           isError: true,
-          content: textContent(`Your organization's access policy does not allow ${input.name}. Tell the user they can request access in OfflineGPT (Access → Request access); do not try another tool to do the same thing.`),
+          content: textContent(capabilityDeniedMessage(input.name)),
           structuredContent: { error: "access_policy_denied", capability: input.name },
         }
       }
