@@ -3,6 +3,7 @@ import type { RequestIdVariables } from "hono/request-id"
 import { delegatedRoute } from "../../middleware/index.js"
 import { registerOrgAccessPolicyRoutes } from "./access-policy.js"
 import { registerOrgAccessRequestRoutes } from "./access-requests.js"
+import { registerOrgAccessResourceRoutes } from "./access-resources.js"
 import { registerOrgKnowledgeRoutes } from "./knowledge.js"
 import { registerOrgApiKeyRoutes } from "./api-keys.js"
 import { registerOrgBillingRoutes } from "./billing.js"
@@ -68,6 +69,7 @@ export function registerOrgRoutes<T extends { Variables: OrgRouteVariables & Req
   registerOrgDesktopPolicyRoutes(app)
   registerOrgAccessPolicyRoutes(app)
   registerOrgAccessRequestRoutes(app)
+  registerOrgAccessResourceRoutes(app)
   registerOrgKnowledgeRoutes(app)
   registerOrgEgressDiagnosticRoutes(app)
   registerOrgInferenceRoutes(app)
