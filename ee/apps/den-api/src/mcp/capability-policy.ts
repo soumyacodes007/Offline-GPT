@@ -1,4 +1,5 @@
 import { decideAccess, loadAccessPolicyRules, recordAccessDenied, resolveMemberAccessContext, type AccessDecision, type MemberAccessContext } from "@offlinegpt-ee/den-db"
+import { accessRequestUrl } from "@offlinegpt-ee/utils/edition"
 import type { DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { db } from "../db.js"
 import type { McpMemberIdentity } from "./external-capabilities.js"
@@ -27,6 +28,15 @@ export async function loadCapabilityPolicy(input: {
     context,
     decide: (name) => decideAccess({ rules, principals: context.principals, resourceKind: "capability", resourceId: name, baseline: "open" }),
   }
+}
+
+/** What the agent tells the member when a capability is refused, with a one-click request link when the portal is known. */
+export function capabilityDeniedMessage(name: string) {
+  const link = accessRequestUrl({ kind: "capability", id: name })
+  const ask = link
+    ? `Tell the user they can ask an admin for access here: ${link}`
+    : "Tell the user they can ask an admin for access in the OfflineGPT admin portal under My access."
+  return `Your organization's access policy does not allow ${name}. ${ask} Do not try another tool to do the same thing.`
 }
 
 export async function recordCapabilityDenied(policy: CapabilityPolicy, name: string, decision: Extract<AccessDecision, { allowed: false }>) {
