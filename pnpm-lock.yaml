@@ -590,6 +590,9 @@ importers:
       '@hono/swagger-ui':
         specifier: ^0.6.1
         version: 0.6.1(hono@4.12.34)
+      '@hyzyla/pdfium':
+        specifier: 2.1.13
+        version: 2.1.13
       '@modelcontextprotocol/ext-apps':
         specifier: ^1.7.5
         version: 1.7.5(@modelcontextprotocol/sdk@1.29.0(patch_hash=b9b29e6a319e94ea968476aa440eb8586b5da9db6b8011ce749c384d186f8a10)(zod@4.3.6))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.3.6)
@@ -710,6 +713,9 @@ importers:
       fast-xml-parser:
         specifier: 5.8.0
         version: 5.8.0
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
       grammy:
         specifier: ^1.44.0
         version: 1.44.0
