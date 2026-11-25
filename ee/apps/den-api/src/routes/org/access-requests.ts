@@ -204,7 +204,7 @@ export function registerOrgAccessRequestRoutes<T extends { Variables: OrgRouteVa
           principalId: request.requesterOrgMembershipId,
           effect: "allow",
           expiresAt: days === null ? null : new Date(now.getTime() + days * 24 * 60 * 60 * 1000),
-          reason: `Approved request: "${request.purpose}" (${request.id})`.slice(0, 1000),
+          reason: `Approved request: "${request.purpose}"`.slice(0, 1000),
           createdByOrgMembershipId: payload.currentMember.id,
           createdAt: now,
           removedAt: null,
