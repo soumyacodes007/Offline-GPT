@@ -77,11 +77,13 @@ export function Knowledge() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
   const [form, setForm] = useState({ path: "", title: "", content: "", everyone: true });
+  const [file, setFile] = useState<{ name: string; format: "pdf" | "docx"; base64: string } | null>(null);
   const documents = useQuery({ queryKey: ["documents"], queryFn: () => api(z.object({ documents: z.array(documentSchema) }), "/v1/knowledge/documents") });
   const upload = useMutation({
-    mutationFn: () => api(z.unknown(), "/v1/knowledge/documents", { method: "POST", body: { path: form.path, title: form.title, content: form.content, audience: form.everyone ? [{ type: "role", id: "member" }, { type: "role", id: "admin" }, { type: "role", id: "owner" }] : [] } }),
+    mutationFn: () => api(z.unknown(), "/v1/knowledge/documents", { method: "POST", body: { path: form.path, title: form.title, ...(file ? { file: { format: file.format, base64: file.base64 } } : { content: form.content }), audience: form.everyone ? [{ type: "role", id: "member" }, { type: "role", id: "admin" }, { type: "role", id: "owner" }] : [] } }),
     onSuccess: async () => {
       setForm({ path: "", title: "", content: "", everyone: true });
+      setFile(null);
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
   });
@@ -89,21 +91,32 @@ export function Knowledge() {
     mutationFn: (id: string) => api(z.unknown(), `/v1/knowledge/documents/${id}`, { method: "DELETE" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["documents"] }),
   });
-  const readFile = async (file: File | undefined) => {
-    if (!file) return;
-    const text = await file.text();
-    setForm((current) => ({ ...current, content: text, title: current.title || file.name.replace(/\.[^.]+$/, "") }));
+  const readFile = async (picked: File | undefined) => {
+    if (!picked) return;
+    const title = picked.name.replace(/\.[^.]+$/, "");
+    const extension = picked.name.split(".").pop()?.toLowerCase();
+    if (extension === "pdf" || extension === "docx") {
+      const bytes = new Uint8Array(await picked.arrayBuffer());
+      let binary = "";
+      for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+      setFile({ name: picked.name, format: extension, base64: btoa(binary) });
+      setForm((current) => ({ ...current, content: "", title: current.title || title }));
+      return;
+    }
+    setFile(null);
+    const text = await picked.text();
+    setForm((current) => ({ ...current, content: text, title: current.title || title }));
   };
   return (
     <div className="grid gap-5">
-      <Card title="Add a document" description="Markdown or plain text. Documents are private until you choose who can read them; add more readers with rules on the Access page.">
+      <Card title="Add a document" description="PDF, Word, Markdown or plain text. Documents are private until you choose who can read them; add more readers with rules on the Access page.">
         <form className="grid gap-3" onSubmit={(event: FormEvent) => { event.preventDefault(); upload.mutate(); }}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Path" hint="Its id for rules, e.g. policies/hr/leave"><input className={inputClass} value={form.path} onChange={(event) => setForm({ ...form, path: event.target.value })} required /></Field>
             <Field label="Title"><input className={inputClass} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required /></Field>
           </div>
-          <Field label="File"><input type="file" accept=".md,.txt,text/markdown,text/plain" onChange={(event) => void readFile(event.target.files?.[0])} /></Field>
-          <Field label="Text"><textarea className={`${inputClass} h-40 font-mono`} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} required /></Field>
+          <Field label="File" hint="PDF, Word (.docx), Markdown or text."><input type="file" accept=".pdf,.docx,.md,.txt,text/markdown,text/plain" onChange={(event) => void readFile(event.target.files?.[0])} /></Field>
+          {file ? <p className="text-sm text-slate-600">{file.name} will be converted to text when you add it.</p> : <Field label="Text"><textarea className={`${inputClass} h-40 font-mono`} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} required /></Field>}
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.everyone} onChange={(event) => setForm({ ...form, everyone: event.target.checked })} /> Everyone in the organization can read it</label>
           <div className="flex items-center gap-3"><Button type="submit" disabled={upload.isPending}>Add document</Button><ErrorText error={upload.error} /></div>
         </form>
