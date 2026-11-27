@@ -1,0 +1,21 @@
+# Control service + admin console for the OfflineGPT Workspace edition.
+# Build from the repository root:
+#   docker build -f packaging/platform/Dockerfile.control -t offlinegpt-platform-control .
+FROM node:24-bookworm-slim AS build
+WORKDIR /src
+RUN npm install -g bun@1.3.14 pnpm@11.4.0
+COPY . .
+RUN pnpm install --frozen-lockfile --filter "@offlinegpt-platform/control..." --filter "@offlinegpt-platform/console..." \
+  && pnpm --filter @offlinegpt-platform/console build
+
+FROM oven/bun:1.3.14-slim
+WORKDIR /app
+COPY --from=build /src/node_modules ./node_modules
+COPY --from=build /src/platform ./platform
+ENV NODE_ENV=production \
+    PORT=8790 \
+    CONSOLE_DIR=/app/platform/apps/console/dist
+USER bun
+EXPOSE 8790
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD bun -e "fetch('http://127.0.0.1:8790/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+CMD ["bun", "platform/apps/control/src/main.ts"]
