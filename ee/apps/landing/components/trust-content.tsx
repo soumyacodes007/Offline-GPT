@@ -87,7 +87,7 @@ export const dataHandlingRows: DataHandlingRow[] = [
   {
     dataType: "Usage telemetry",
     selfHosted: "None",
-    cloud: "Anonymous, via PostHog; can be disabled"
+    cloud: "None"
   },
   {
     dataType: "Authentication",
@@ -109,13 +109,6 @@ export type Subprocessor = {
 };
 
 export const subprocessors: Subprocessor[] = [
-  {
-    name: "PostHog",
-    purpose: "Anonymous website analytics and product telemetry",
-    category: "Analytics",
-    location: "US / EU",
-    href: "https://posthog.com"
-  },
   {
     name: "Polar",
     purpose: "Subscription billing and payment processing",
