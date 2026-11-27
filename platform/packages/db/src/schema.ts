@@ -79,9 +79,30 @@ export const accessRequests = pgTable("access_requests", {
   ruleId: text("rule_id"),
 }, (table) => [index("access_requests_member_idx").on(table.memberId), index("access_requests_status_idx").on(table.status)]);
 
+export const inferenceKeys = pgTable("inference_keys", {
+  id: text("id").primaryKey(),
+  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  /** SHA-256 of the key; the key is shown to the member once. */
+  keyHash: text("key_hash").notNull().unique(),
+  /** The first characters, so people can tell keys apart. */
+  prefix: text("prefix").notNull(),
+  createdAt: createdAt(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}, (table) => [index("inference_keys_member_idx").on(table.memberId)]);
+
+export const usageRecords = pgTable("usage_records", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  model: text("model").notNull(),
+  promptTokens: integer("prompt_tokens"),
+  completionTokens: integer("completion_tokens"),
+  status: text("status", { enum: ["completed", "failed"] }).notNull(),
+}, (table) => [index("usage_records_member_at_idx").on(table.memberId, table.at)]);
+
 export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").$type<unknown>().notNull(),
 });
 
-export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, settings };
+export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, settings };
