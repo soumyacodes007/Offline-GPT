@@ -13,7 +13,6 @@ import { toast } from "@/components/ui/sonner";
 import type { ProviderListResponse } from "@opencode-ai/sdk/v2/client";
 
 import { captureAnalyticsEvent, markTaskRunStart } from "@/app/lib/analytics";
-import { trackSessionActive, trackTaskStarted } from "@/app/lib/den-telemetry";
 import { buildDiagnosticsBundleJson } from "@/app/lib/diagnostics-bundle";
 import { downloadTextAsFile } from "@/app/lib/download";
 import { canCreateWorkspaces } from "@/app/lib/workspace-creation-policy";
@@ -194,7 +193,6 @@ import { useBootState } from "./boot-state";
 import {
   forgetWorkspaceMemory,
   readLastSessionFor,
-  readWorkspaceProjectDimension,
   readWorkspaceOrderIds,
   writeActiveWorkspaceId,
   writeLastSessionFor,
@@ -1337,29 +1335,6 @@ export function SessionRoute() {
                   model_id: sendModel?.modelID ?? null,
                 });
                 markTaskRunStart(targetSessionId);
-                // Den org adoption signals (auth-gated inside; no-op when signed out).
-                // This remains inside the post-readiness send closure so a blocked
-                // Cloud submission cannot create a run or report that one started.
-                const projectDimension = readWorkspaceProjectDimension(selectedWorkspaceId);
-                const modelSelection = sessionModelSelection ? "manual" : "default";
-                const telemetryDimensions = [
-                  ...(projectDimension ? [{
-                    type: "project",
-                    label: projectDimension.label,
-                  }] : []),
-                  ...(sendModel ? [{
-                    type: "model",
-                    value: `${sendModel.providerID}/${sendModel.modelID}`,
-                    label: `${sendModel.providerID}/${sendModel.modelID}`,
-                  }] : []),
-                  {
-                    type: "model_selection",
-                    value: modelSelection,
-                    label: modelSelection,
-                  },
-                ];
-                trackSessionActive(targetSessionId, telemetryDimensions);
-                trackTaskStarted(targetSessionId, telemetryDimensions);
 
                 if (draft.mode === "shell") {
                   onPrepared?.();
@@ -1689,19 +1664,6 @@ export function SessionRoute() {
                   model_id: sendModel?.modelID ?? null,
                 });
                 markTaskRunStart(targetSessionId);
-                const projectDimension = readWorkspaceProjectDimension(workspace.id);
-                const modelSelection = sessionModelSelection ? "manual" : "default";
-                const telemetryDimensions = [
-                  ...(projectDimension ? [{ type: "project", label: projectDimension.label }] : []),
-                  ...(sendModel ? [{
-                    type: "model",
-                    value: `${sendModel.providerID}/${sendModel.modelID}`,
-                    label: `${sendModel.providerID}/${sendModel.modelID}`,
-                  }] : []),
-                  { type: "model_selection", value: modelSelection, label: modelSelection },
-                ];
-                trackSessionActive(targetSessionId, telemetryDimensions);
-                trackTaskStarted(targetSessionId, telemetryDimensions);
                 if (draft.mode === "shell") {
                   onPrepared?.();
                   await shellInSession(workspaceOpencodeClient, targetSessionId, text, { messageID: draft.messageId });
