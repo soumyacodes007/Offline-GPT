@@ -23,6 +23,7 @@ const envSchema = z.object({
   WORKSPACE_MEMORY_MB: z.coerce.number().int().min(512).default(4096),
   WORKSPACE_CPUS: z.coerce.number().positive().max(64).default(2),
   WORKSPACE_IDLE_MINUTES: z.coerce.number().int().min(5).default(60),
+  CONSOLE_DIR: optional,
 });
 
 const workspaceModelsSchema = z.array(z.object({ alias: z.string().min(1), displayName: z.string().min(1), contextLength: z.number().int().positive() })).min(1);
@@ -41,6 +42,8 @@ export type Config = {
   oidc: OidcConfig | null;
   /** Null when this deployment does not run per-member workspaces. */
   workspaces: WorkspaceConfig | null;
+  /** Built console files to serve at `/`; null serves the API only. */
+  consoleDir: string | null;
 };
 
 export function parseConfig(env: Record<string, string | undefined>): Config {
@@ -60,6 +63,7 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
       ? { issuer: parsed.OIDC_ISSUER.replace(/\/+$/, ""), clientId: parsed.OIDC_CLIENT_ID, clientSecret: parsed.OIDC_CLIENT_SECRET, jit: parsed.OIDC_JIT === "1" }
       : null,
     workspaces: parseWorkspaces(parsed),
+    consoleDir: parsed.CONSOLE_DIR ?? null,
   };
 }
 
