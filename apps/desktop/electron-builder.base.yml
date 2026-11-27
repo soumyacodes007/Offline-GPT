@@ -11,8 +11,6 @@ files:
   - from: .electron-runtime/node_modules
     to: node_modules
 extraResources:
-  - from: .electron-runtime/offlinegpt-sentry.json
-    to: offlinegpt-sentry.json
   - from: ../app/dist
     to: app-dist
   - from: server/dist/opencode-plugins
