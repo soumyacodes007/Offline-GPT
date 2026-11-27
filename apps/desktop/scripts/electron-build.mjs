@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, cpSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, readdirSync, rmSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { prepareServerConstants } from "./prepare-server-constants.mjs";
@@ -11,7 +11,6 @@ const electronSidecarDir = resolve(desktopRoot, "resources", "sidecars");
 const electronRoot = resolve(desktopRoot, "electron");
 const packagedServerRoot = resolve(desktopRoot, "server");
 const packagedRuntimeRoot = resolve(desktopRoot, ".electron-runtime", "node_modules");
-const sentryBuildConfigPath = resolve(desktopRoot, ".electron-runtime", "offlinegpt-sentry.json");
 
 const pnpmCmd = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const nodeCmd = process.execPath;
@@ -32,22 +31,8 @@ function run(command, args, cwd, env) {
   }
 }
 
-function writeSentryBuildConfig() {
-  const dsn = process.env.OFFLINEGPT_DESKTOP_SENTRY_DSN?.trim() ?? "";
-  const tracesSampleRateRaw = process.env.OFFLINEGPT_DESKTOP_SENTRY_TRACES_SAMPLE_RATE?.trim() ?? "";
-  const tracesSampleRate = tracesSampleRateRaw ? Number(tracesSampleRateRaw) : 0.01;
-  const config = {
-    dsn: dsn || null,
-    tracesSampleRate: Number.isFinite(tracesSampleRate) && tracesSampleRate >= 0 && tracesSampleRate <= 1
-      ? tracesSampleRate
-      : 0.01,
-  };
-  writeFileSync(sentryBuildConfigPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-}
-
 run(nodeCmd, [resolve(__dirname, "prepare-sidecar.mjs"), "--force", "--outdir", electronSidecarDir], desktopRoot);
 run(nodeCmd, [resolve(__dirname, "prepare-runtime-node-modules.mjs"), "--outdir", packagedRuntimeRoot], desktopRoot);
-writeSentryBuildConfig();
 // Build the server TS → JS so Electron can import it in-process
 // CI already compiles this exact checkout in the required build job.
 if (!process.argv.includes("--server-built")) {
