@@ -3,7 +3,7 @@ import type { Hono } from "hono";
 import { accessRequests, accessRules } from "@offlinegpt-platform/db";
 import { formatTarget, parseTarget } from "@offlinegpt-platform/policy";
 import { z } from "zod";
-import { RESOURCE_KINDS } from "../access";
+import { RESOURCE_KINDS } from "@offlinegpt-platform/access";
 import { audit } from "../audit";
 import { newId } from "../crypto";
 import type { Deps } from "../deps";
