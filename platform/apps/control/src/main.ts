@@ -10,7 +10,7 @@ const database = openDatabase(config.databaseUrl);
 await database.migrate();
 
 const now = () => new Date();
-const workspaces = config.workspaces ? createWorkspaceService(database.db, createDocker(dockerTransport(config.workspaces.dockerUrl)), config.workspaces, now) : null;
+const workspaces = config.workspaces ? createWorkspaceService(database.db, createDocker(dockerTransport(config.workspaces.dockerUrl)), config.workspaces, now, fetch) : null;
 const app = createApp({ db: database.db, config, now, fetch, workspaces });
 const idleTimer = workspaces
   ? setInterval(() => {
