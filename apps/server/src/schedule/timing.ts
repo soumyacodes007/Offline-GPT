@@ -1,8 +1,12 @@
 import { DateTime, IANAZone } from "luxon";
-import rrule from "rrule";
+import { createRequire } from "node:module";
 import type { ScheduleTiming } from "@offlinegpt/types/schedule";
 
-const { rrulestr } = rrule;
+// rrule ships CommonJS for Node and an ES module for bundlers, with different
+// default exports. Loading it through require gives the same module in Node,
+// Electron and the compiled server binary.
+const rruleModule: typeof import("rrule") = createRequire(import.meta.url)("rrule");
+const { rrulestr } = rruleModule;
 
 /** A rejected timing, reported to agents and the UI as an input error. */
 export class ScheduleInputError extends Error {
