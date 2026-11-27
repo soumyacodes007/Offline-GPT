@@ -14,6 +14,8 @@ packages:
   - "packages/*"
   - "ee/apps/*"
   - "ee/packages/*"
+  - "platform/apps/*"
+  - "platform/packages/*"
 
 catalog:
   react: 19.2.8
