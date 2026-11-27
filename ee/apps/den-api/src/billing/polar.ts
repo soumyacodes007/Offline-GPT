@@ -1,5 +1,4 @@
 import { env } from "../env.js"
-import { sendSubscribedToDenEvent } from "../loops.js"
 
 type PolarCustomerState = {
   granted_benefits?: Array<{
@@ -604,10 +603,6 @@ export async function getCloudWorkerBillingStatus(
       subscription: null,
       invoices: [],
     }
-  }
-
-  if (evaluation.hasActivePlan) {
-    await sendSubscribedToDenEvent(input)
   }
 
   const [subscriptionResult, priceResult, portalResult, invoicesResult] = await Promise.all([
