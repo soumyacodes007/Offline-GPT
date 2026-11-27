@@ -9,6 +9,9 @@ import { WORKSPACE_PORT, type WorkspaceService } from "../workspaces/service";
 /** Request headers the container must never see: the member's own credentials and hop-by-hop headers. */
 const DROPPED_HEADERS = ["authorization", "cookie", "host", "connection", "content-length", "transfer-encoding"];
 const TOUCH_INTERVAL_MS = 60_000;
+const STARTING_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="2"><title>Starting your workspace</title>
+<style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;height:100vh;margin:0;color:#334155;background:#f8fafc}</style></head>
+<body><p>Starting your workspace… this page refreshes by itself.</p></body></html>`;
 
 function createForwarder(deps: Deps, service: WorkspaceService) {
   const lastTouch = new Map<string, number>();
@@ -32,6 +35,8 @@ function createForwarder(deps: Deps, service: WorkspaceService) {
       responseHeaders.delete("set-cookie");
       return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
     } catch {
+      // A browser opening the page gets a page that retries by itself while the container starts.
+      if (c.req.method === "GET" && (c.req.header("accept") ?? "").includes("text/html")) return c.html(STARTING_PAGE, 503);
       return c.json({ error: "workspace_unreachable", message: "Your workspace is starting or not responding. Try again in a moment." }, 502);
     }
   };
