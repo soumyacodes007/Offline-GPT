@@ -11,8 +11,8 @@ export type OfflineGptDesktopTelemetry = {
 };
 
 declare global {
-  // Provided by the Electron host when the embedded server runs in desktop mode.
-  // The standalone offlinegpt-server package leaves this unset.
+  // Optional local error hook for embedders and tests. Nothing sets it in the
+  // shipped app, and the server never reports errors over the network.
   var __offlinegptDesktopTelemetry: OfflineGptDesktopTelemetry | undefined;
 }
 
