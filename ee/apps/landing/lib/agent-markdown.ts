@@ -132,12 +132,11 @@ const trust = `# Trust & Security
 | Source code | Local only | Accessed at runtime via your LLM provider; not stored |
 | LLM API keys | Local keychain / env vars | Held by your LLM provider, not by OfflineGPT |
 | Prompts & responses | Local only | Sent to your LLM provider; not logged by OfflineGPT |
-| Usage telemetry | None | Anonymous via PostHog; can be disabled |
+| Usage telemetry | None | None |
 | Authentication | Your SSO / SAML | Google or GitHub OAuth |
 
 ## Subprocessors
 
-- PostHog — analytics (US/EU)
 - Polar — billing (US)
 - Google — OAuth (US)
 - GitHub — OAuth (US)
