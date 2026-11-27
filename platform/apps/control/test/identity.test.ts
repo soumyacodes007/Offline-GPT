@@ -156,3 +156,10 @@ describe("people", () => {
     expect((await h.call("PATCH", `/v1/members/${me}/role`, { token: adaSession, body: { role: "member" } })).status).toBe(403);
   });
 });
+
+test("empty settings count as unset, as compose passes them", async () => {
+  const { parseConfig } = await import("../src/config");
+  const config = parseConfig({ DATABASE_URL: "pglite:memory", PUBLIC_URL: "http://x.test", OWNER_EMAIL: "o@x.test", SETUP_CODE: "setup-code-0123456789", OIDC_ISSUER: "", OIDC_CLIENT_ID: "", OIDC_CLIENT_SECRET: "", WORKSPACE_IMAGE: "" });
+  expect(config.oidc).toBeNull();
+  expect(config.workspaces).toBeNull();
+});
