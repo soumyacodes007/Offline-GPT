@@ -1,4 +1,4 @@
-export type ObservabilityBackend = "none" | "otel" | "sentry"
+export type ObservabilityBackend = "none" | "otel"
 export type ObservabilityEnv = Record<string, string | undefined>
 
 export type OTelProtocol = "http/protobuf"
@@ -37,28 +37,8 @@ export type OTelObservabilityConfig = {
   }
 }
 
-export type SentryBuildVariableValues = {
-  SENTRY_ORG?: string
-  SENTRY_PROJECT?: string
-  SENTRY_URL?: string
-  SENTRY_RELEASE?: string
-  SENTRY_ENVIRONMENT?: string
-  SENTRY_DIST?: string
-}
-
-export type SentryBuildVariables = {
-  values: SentryBuildVariableValues
-  redactedKeys: string[]
-}
-
-export type SentryObservabilityConfig = {
-  dsn: string
-  tracesSampleRate: number
-}
-
 type BaseObservabilityConfig = {
   serviceName: string
-  sentryBuild: SentryBuildVariables
 }
 
 export type NoneObservabilityConfig = BaseObservabilityConfig & {
@@ -70,15 +50,9 @@ export type OTelBackendObservabilityConfig = BaseObservabilityConfig & {
   otel: OTelObservabilityConfig
 }
 
-export type SentryBackendObservabilityConfig = BaseObservabilityConfig & {
-  backend: "sentry"
-  sentry: SentryObservabilityConfig
-}
-
 export type ObservabilityConfig =
   | NoneObservabilityConfig
   | OTelBackendObservabilityConfig
-  | SentryBackendObservabilityConfig
 
 export type JsonPrimitive = string | number | boolean | null
 export type JsonValue = JsonPrimitive | JsonValue[] | JsonObject
@@ -135,11 +109,10 @@ function parseBackend(env: ObservabilityEnv): ObservabilityBackend {
   switch (backend) {
     case "none":
     case "otel":
-    case "sentry":
       return backend
     default:
       throw new ObservabilityConfigError(
-        "must be one of none, otel, sentry",
+        "must be one of none, otel",
         "DEN_OBSERVABILITY_BACKEND",
       )
   }
@@ -166,22 +139,6 @@ function validateHttpUrl(value: string, envKey: string): string {
   }
   if (!parsed.hostname) {
     throw new ObservabilityConfigError("must include a hostname", envKey)
-  }
-
-  return value
-}
-
-function validateSentryDsn(value: string): string {
-  validateHttpUrl(value, "SENTRY_DSN")
-
-  const parsed = new URL(value)
-  if (!parsed.username) {
-    throw new ObservabilityConfigError("must include a public key", "SENTRY_DSN")
-  }
-
-  const projectId = parsed.pathname.split("/").filter(Boolean).at(-1)
-  if (!projectId) {
-    throw new ObservabilityConfigError("must include a project id", "SENTRY_DSN")
   }
 
   return value
@@ -381,78 +338,18 @@ function parseOtelConfig(env: ObservabilityEnv): OTelObservabilityConfig {
   }
 }
 
-function parseSentryConfig(env: ObservabilityEnv): SentryObservabilityConfig {
-  const dsn = envValue(env, "SENTRY_DSN")
-  if (dsn === undefined) {
-    throw new ObservabilityConfigError(
-      "is required when DEN_OBSERVABILITY_BACKEND=sentry",
-      "SENTRY_DSN",
-    )
-  }
-
-  const sampleRate = envValue(env, "SENTRY_TRACES_SAMPLE_RATE")
-
-  return {
-    dsn: validateSentryDsn(dsn),
-    tracesSampleRate: sampleRate === undefined
-      ? 0.01
-      : parseUnitInterval(sampleRate, "SENTRY_TRACES_SAMPLE_RATE"),
-  }
-}
-
-function parseSentryBuildVariables(
-  env: ObservabilityEnv,
-  options: { validateUrls: boolean },
-): SentryBuildVariables {
-  const values: SentryBuildVariableValues = {}
-  const org = envValue(env, "SENTRY_ORG")
-  const project = envValue(env, "SENTRY_PROJECT")
-  const url = envValue(env, "SENTRY_URL")
-  const release = envValue(env, "SENTRY_RELEASE")
-  const environment = envValue(env, "SENTRY_ENVIRONMENT")
-  const dist = envValue(env, "SENTRY_DIST")
-  const authToken = envValue(env, "SENTRY_AUTH_TOKEN")
-
-  if (org !== undefined) {
-    values.SENTRY_ORG = org
-  }
-  if (project !== undefined) {
-    values.SENTRY_PROJECT = project
-  }
-  if (url !== undefined) {
-    values.SENTRY_URL = options.validateUrls ? validateHttpUrl(url, "SENTRY_URL") : url
-  }
-  if (release !== undefined) {
-    values.SENTRY_RELEASE = release
-  }
-  if (environment !== undefined) {
-    values.SENTRY_ENVIRONMENT = environment
-  }
-  if (dist !== undefined) {
-    values.SENTRY_DIST = dist
-  }
-
-  return {
-    values,
-    redactedKeys: authToken === undefined ? [] : ["SENTRY_AUTH_TOKEN"],
-  }
-}
-
 export function parseObservabilityEnv(
   env: ObservabilityEnv,
   options: { serviceName: string },
 ): ObservabilityConfig {
   const serviceName = requireServiceName(options.serviceName)
   const backend = parseBackend(env)
-  const sentryBuild = parseSentryBuildVariables(env, { validateUrls: backend === "sentry" })
 
   switch (backend) {
     case "none":
-      return { backend, serviceName, sentryBuild }
+      return { backend, serviceName }
     case "otel":
-      return { backend, serviceName, sentryBuild, otel: parseOtelConfig(env) }
-    case "sentry":
-      return { backend, serviceName, sentryBuild, sentry: parseSentryConfig(env) }
+      return { backend, serviceName, otel: parseOtelConfig(env) }
   }
 }
 
