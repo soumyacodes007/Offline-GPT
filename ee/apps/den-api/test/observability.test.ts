@@ -4,7 +4,7 @@ import { Hono } from "hono"
 import { parseDenApiObservabilityConfig } from "../src/observability/config.js"
 import { createRequestAccessLogMiddleware, createTelemetryErrorSanitizerMiddleware } from "../src/observability/hono.js"
 import { createAppLogger } from "../src/observability/logger.js"
-import { getRuntimeState, parseSentryTraceHeader, sanitizeSentryEvent, sanitizeSentryLog, sanitizeSentrySpan } from "../src/observability/runtime.js"
+import { getRuntimeState } from "../src/observability/runtime.js"
 import { sanitizeExceptionForTelemetry } from "../src/observability/safe-fields.js"
 import {
   AUDIT_ALERT_OPERATIONAL_MARKER,
@@ -22,15 +22,15 @@ describe("den-api observability backend selection", () => {
     expect(() => parseDenApiObservabilityConfig({ DEN_OBSERVABILITY_BACKEND: "stdout" })).toThrow("DEN_OBSERVABILITY_BACKEND")
   })
 
-  test("selects otel and sentry from the shared contract", () => {
+  test("selects otel and refuses the removed sentry backend", () => {
     expect(parseDenApiObservabilityConfig({
       DEN_OBSERVABILITY_BACKEND: "otel",
       OTEL_EXPORTER_OTLP_ENDPOINT: "https://collector.example.test/otlp",
     }).backend).toBe("otel")
-    expect(parseDenApiObservabilityConfig({
+    expect(() => parseDenApiObservabilityConfig({
       DEN_OBSERVABILITY_BACKEND: "sentry",
       SENTRY_DSN: "https://public@sentry.example.test/123",
-    }).backend).toBe("sentry")
+    })).toThrow("DEN_OBSERVABILITY_BACKEND")
   })
 
   test("honors OTEL_SERVICE_NAME with a den-api default", () => {
@@ -146,104 +146,6 @@ describe("den-api app logger", () => {
         operational_marker: SCIM_MAINTENANCE_FAILED_OPERATIONAL_MARKER,
       },
     ])
-  })
-})
-
-describe("den-api Sentry sanitization", () => {
-  test("sanitizes event requests, exceptions, breadcrumbs, contexts, and transactions", () => {
-    const event = sanitizeSentryEvent({
-      message: "failed token=secret at https://user:pass@example.test/private/user_123?token=secret",
-      transaction: "GET /private/user_123",
-      request: {
-        url: "https://user:pass@example.test/private/user_123?token=secret",
-        query_string: "token=secret",
-        cookies: "session=secret",
-        headers: { authorization: "Bearer secret" },
-        data: { token: "secret" },
-      },
-      contexts: {
-        den_api: { request_id: "request_test", http_route: "unmatched" },
-        custom: { token: "secret", nested: { email: "person@example.test" } },
-      },
-      extra: { body: { token: "secret" } },
-      tags: { safe: "ok", token: "secret" },
-      user: { id: "user_123", email: "person@example.test" },
-      breadcrumbs: [{
-        message: "clicked https://user:pass@example.test/path?token=secret",
-        data: { authorization: "Bearer secret", nested: { body: "secret" } },
-      }],
-      exception: {
-        values: [{
-          type: "Error",
-          value: "token=secret at https://user:pass@example.test/private/user_123?token=secret",
-          stacktrace: {
-            frames: [{
-              filename: "https://user:pass@example.test/app.js?token=secret",
-              context_line: "const token = 'secret'",
-              vars: { token: "secret" },
-            }],
-          },
-        }],
-      },
-    })
-
-    expect(event.request?.url).toBe("https://example.test/unmatched")
-    expect(event.request?.query_string).toBeUndefined()
-    expect(event.request?.cookies).toBeUndefined()
-    expect(event.request?.headers).toBeUndefined()
-    expect(event.request?.data).toBeUndefined()
-    expect(event.transaction).toBe("GET unmatched")
-    expect(event.user).toBeUndefined()
-    expect(event.exception?.values?.[0]?.stacktrace?.frames?.[0]?.context_line).toBeUndefined()
-    expect(event.exception?.values?.[0]?.stacktrace?.frames?.[0]?.vars).toBeUndefined()
-    expect(JSON.stringify(event)).not.toContain("secret")
-    expect(JSON.stringify(event)).not.toContain("user:pass")
-    expect(JSON.stringify(event)).not.toContain("user_123")
-    expect(JSON.stringify(event)).not.toContain("person@example.test")
-  })
-
-  test("sanitizes Sentry logs and spans before provider export", () => {
-    const log = sanitizeSentryLog({
-      message: "failed token=secret",
-      body: { token: "secret" },
-      attributes: {
-        email: "person@example.test",
-        url: "https://user:pass@example.test/path?token=secret",
-      },
-    })
-    const span = sanitizeSentrySpan({
-      description: "GET /private/user_123",
-      data: {
-        "http.route": "/*",
-        url: "https://user:pass@example.test/path?token=secret",
-      },
-    })
-
-    expect(log).toMatchObject({
-      message: "failed token=[redacted]",
-      body: "[redacted]",
-      attributes: {
-        email: "[redacted]",
-        url: "https://example.test/path",
-      },
-    })
-    expect(span).toMatchObject({
-      description: "GET unmatched",
-      data: {
-        "http.route": "unmatched",
-        url: "https://example.test/path",
-      },
-    })
-    expect(JSON.stringify(log)).not.toContain("secret")
-    expect(JSON.stringify(span)).not.toContain("user_123")
-  })
-
-  test("parses Sentry trace headers for stdout correlation", () => {
-    expect(parseSentryTraceHeader("4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-1")).toMatchObject({
-      trace_id: "4bf92f3577b34da6a3ce929d0e0e4736",
-      span_id: "00f067aa0ba902b7",
-      sentry_trace: "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-1",
-    })
   })
 })
 
