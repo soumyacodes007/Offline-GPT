@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router";
 
-import { captureAnalyticsEvent, initAnalytics } from "../../app/lib/analytics";
+import { captureAnalyticsEvent } from "../../app/lib/analytics";
 import {
   readDenBootstrapConfig,
   readDenSettings,
@@ -358,7 +358,6 @@ export function AppRoot() {
   useEffect(() => {
     if (appOpenedCaptured) return;
     appOpenedCaptured = true;
-    initAnalytics();
     captureAnalyticsEvent("app_opened", {});
   }, []);
 
