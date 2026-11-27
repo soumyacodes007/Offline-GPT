@@ -106,6 +106,7 @@ export async function createHarness(options: { oidcJit?: boolean } = {}) {
 
   return {
     app,
+    db: database.db,
     call,
     setupOwner,
     oidcSignIn,
