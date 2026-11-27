@@ -120,9 +120,6 @@ config:
     # Optional JSON list of { alias, upstreamModel?, displayName?, contextLength? };
     # empty means read the upstream's GET /models.
     models: ""
-  web:
-    posthogKey: ""
-    posthogHost: ""
 
 observability:
   backend: none
@@ -144,15 +141,6 @@ observability:
     headers:
       existingSecret: ""
       key: OTEL_EXPORTER_OTLP_HEADERS
-  sentry:
-    dsn: ""
-    dsnSecret:
-      existingSecret: ""
-      key: SENTRY_DSN
-    tracesSampleRate: "0.01"
-    environment: ""
-    release: ""
-    dist: ""
 
 customCa:
   enabled: false
