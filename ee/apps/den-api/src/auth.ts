@@ -33,7 +33,6 @@ import {
 import { DEN_ACCOUNT_CONFIG } from "./account-linking-policy.js";
 import { cache } from "./cache.js";
 import { SCIM_TOKEN_STORAGE_STRATEGY } from "./scim-token-storage.js";
-import { syncDenSignupContact } from "./loops.js";
 import { sendEmail } from "./utils/email/send-email.js";
 import {
   DEN_API_KEY_DEFAULT_PREFIX,
@@ -1057,12 +1056,6 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: env.requireEmailVerification,
     sendOnSignIn: env.requireEmailVerification,
-    afterEmailVerification: async (user) => {
-      await syncDenSignupContact({
-        email: user.email,
-        name: user.name,
-      });
-    },
   },
   emailAndPassword: {
     enabled: true,
