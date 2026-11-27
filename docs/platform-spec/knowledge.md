@@ -3,8 +3,9 @@
 ## Documents and sections
 
 - An admin uploads a document with a **path** (its resource id, e.g.
-  `policies/hr/leave`), a title and its text (Markdown or plain text). PDF and
-  Word upload converts to text first (follow-up).
+  `policies/hr/leave`), a title and its text: Markdown, plain text, PDF or
+  Word (.docx). PDF and Word files are converted to text inside the network;
+  Word headings become section headings.
 - The text is split into **sections** at headings. A section longer than about
   1,200 characters is split again at paragraph breaks.
 - Uploading the same path again replaces the document and its sections.
