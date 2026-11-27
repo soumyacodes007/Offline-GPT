@@ -1,1 +1,2 @@
 packages/sdk/src/gen/** linguist-generated=true
+.dockerignore text eol=lf
