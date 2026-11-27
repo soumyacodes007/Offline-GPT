@@ -148,8 +148,8 @@ app.kubernetes.io/component: {{ .component }}
 
 {{- define "offlinegpt-ee.observabilityBackend" -}}
 {{- $backend := default "none" .Values.observability.backend -}}
-{{- if not (has $backend (list "none" "otel" "sentry")) -}}
-{{- fail "observability.backend must be one of none, otel, sentry" -}}
+{{- if not (has $backend (list "none" "otel")) -}}
+{{- fail "observability.backend must be one of none, otel" -}}
 {{- end -}}
 {{- $backend -}}
 {{- end -}}
@@ -175,7 +175,6 @@ app.kubernetes.io/component: {{ .component }}
 {{- $serviceName := .serviceName -}}
 {{- $backend := include "offlinegpt-ee.observabilityBackend" $root -}}
 {{- $otel := $root.Values.observability.otel -}}
-{{- $sentry := $root.Values.observability.sentry -}}
 - name: DEN_OBSERVABILITY_BACKEND
   value: {{ $backend | quote }}
 - name: OTEL_SERVICE_NAME
@@ -224,36 +223,6 @@ app.kubernetes.io/component: {{ .component }}
     secretKeyRef:
       name: {{ . | quote }}
       key: {{ $otel.headers.key | quote }}
-{{- end }}
-{{- else if eq $backend "sentry" }}
-{{- if and $sentry.dsn $sentry.dsnSecret.existingSecret }}
-{{- fail "observability.sentry.dsn and observability.sentry.dsnSecret.existingSecret are mutually exclusive" -}}
-{{- end }}
-{{- if not (or $sentry.dsn $sentry.dsnSecret.existingSecret) }}
-{{- fail "observability.sentry.dsn or observability.sentry.dsnSecret.existingSecret is required when observability.backend=sentry" -}}
-{{- end }}
-- name: SENTRY_DSN
-{{- if $sentry.dsn }}
-  value: {{ $sentry.dsn | quote }}
-{{- else }}
-  valueFrom:
-    secretKeyRef:
-      name: {{ $sentry.dsnSecret.existingSecret | quote }}
-      key: {{ $sentry.dsnSecret.key | quote }}
-{{- end }}
-- name: SENTRY_TRACES_SAMPLE_RATE
-  value: {{ $sentry.tracesSampleRate | quote }}
-{{- with $sentry.environment }}
-- name: SENTRY_ENVIRONMENT
-  value: {{ . | quote }}
-{{- end }}
-{{- with $sentry.release }}
-- name: SENTRY_RELEASE
-  value: {{ . | quote }}
-{{- end }}
-{{- with $sentry.dist }}
-- name: SENTRY_DIST
-  value: {{ . | quote }}
 {{- end }}
 {{- end }}
 {{- end -}}
