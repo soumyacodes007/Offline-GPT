@@ -1,6 +1,5 @@
 const path = require("path");
 const { denApiRedirects } = require("./next-config-den-api-redirects.cjs");
-const { withObservabilityNextConfig } = require("./observability/next-config-observability.cjs");
 
 // Baseline OWASP security headers (OWASP WSTG-CLNT-09 clickjacking, secure headers).
 // Den Web is never embedded in a frame, so framing is denied outright.
@@ -8,8 +7,8 @@ const { withObservabilityNextConfig } = require("./observability/next-config-obs
 // Deliberately NOT set here (read before adding):
 // - A full Content-Security-Policy (script-src, style-src, connect-src, ...).
 //   The CSP below is frame-ancestors only. A real script CSP needs per-request
-//   nonces generated in proxy.ts and threaded through the root layout, plus an
-//   audit of every inline script (PostHog via /ow, Sentry, next/script). Do not
+//   nonces generated per request and threaded through the root layout, plus an
+//   audit of every inline script (next/script). Do not
 //   add 'unsafe-inline' as a shortcut; it defeats the purpose.
 // - Cross-Origin-Opener-Policy: same-origin. It severs window.opener, which
 //   app/(den)/reauth/complete/page.tsx and
@@ -51,4 +50,4 @@ if (allowedDevOrigins.length > 0) {
   nextConfig.allowedDevOrigins = allowedDevOrigins;
 }
 
-module.exports = withObservabilityNextConfig(nextConfig);
+module.exports = nextConfig;
