@@ -50,7 +50,7 @@ silent outbound call.
 | Service | Refuses | Changes defaults |
 |---|---|---|
 | den-api | Stripe, Polar, Loops, Linear, Resend, Render, Vercel, Daytona, OpenRouter management, Google/GitHub sign-in and GitHub connector keys; `PROVISIONER_MODE=render/daytona`; `DEN_ORG_MODE=multi_org`; breached-password screening; GitHub desktop releases; hosted bot protection | Web access is included (no subscription); breach screening off; desktop releases `static` |
-| inference | `OPENROUTER_UPSTREAM_URL`, OpenAI keys, `SENTRY_DSN`; starting without `INFERENCE_UPSTREAM_URL` or `INFERENCE_PROXY_BASE_URL` | — |
+| inference | `OPENROUTER_UPSTREAM_URL`, OpenAI keys; starting without `INFERENCE_UPSTREAM_URL` or `INFERENCE_PROXY_BASE_URL` | — |
 | offlinegpt-server (workspace) | Downloading the OpenCode v2 engine; the public model catalog | Engine env `OPENCODE_DISABLE_AUTOUPDATE=1`, `OPENCODE_DISABLE_FREE_MODELS=1` (and `OPENCODE_DISABLE_MODELS_FETCH=1` without a catalog URL); engine config `share: "disabled"` |
 
 ### 2. Self-hosted inference
