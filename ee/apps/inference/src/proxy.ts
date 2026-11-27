@@ -10,7 +10,7 @@ import {
   buildInferencePayloadLog,
   buildUnparsedPayloadLog,
   sanitizeIncomingHeaders,
-  sentryInferenceReporter,
+  stdoutInferenceReporter,
 } from "./inference-reporting.js"
 import type { InferenceReporter } from "./inference-reporting.js"
 import { createSelfHostedCatalog, findModelAlias, listModelCatalog, parseConfiguredModels, type ModelCatalogEntry } from "./model-catalog.js"
@@ -509,7 +509,7 @@ function localRouteRejection(path: string, method: string) {
 }
 
 export function registerProxyRoutes(app: Hono, dependencies: ProxyDependencies = defaultProxyDependencies) {
-  const reporter = dependencies.reporter ?? sentryInferenceReporter
+  const reporter = dependencies.reporter ?? stdoutInferenceReporter
   const selfHostedUpstream = dependencies.selfHostedUpstream ?? null
   const modelCatalog = dependencies.modelCatalog ?? (async () => listModelCatalog())
 
