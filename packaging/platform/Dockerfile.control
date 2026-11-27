@@ -3,7 +3,7 @@
 #   docker build -f packaging/platform/Dockerfile.control -t offlinegpt-platform-control .
 FROM node:24-bookworm-slim AS build
 WORKDIR /src
-RUN npm install -g bun@1.3.14 pnpm@11.4.0
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/* \n  && npm install -g bun@1.3.14 pnpm@11.4.0
 COPY . .
 RUN pnpm install --frozen-lockfile --filter "@offlinegpt-platform/control..." --filter "@offlinegpt-platform/console..." \
   && pnpm --filter @offlinegpt-platform/console build
