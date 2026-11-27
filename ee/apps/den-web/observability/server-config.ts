@@ -5,7 +5,7 @@ export const denWebServiceName = "den-web";
 
 export type NextRuntime = string | undefined;
 
-export type InstrumentationAction = "none" | "otel-node" | "sentry-edge" | "sentry-server";
+export type InstrumentationAction = "none" | "otel-node";
 
 export function getDenWebServiceName(env: ObservabilityEnv = process.env): string {
   const serviceName = env.OTEL_SERVICE_NAME?.trim();
@@ -22,11 +22,6 @@ export function resolveInstrumentationActionForBackend(
 ): InstrumentationAction {
   if (backend === "otel") {
     return runtime === "nodejs" ? "otel-node" : "none";
-  }
-
-  if (backend === "sentry") {
-    if (runtime === "nodejs") return "sentry-server";
-    if (runtime === "edge" || runtime === "experimental-edge") return "sentry-edge";
   }
 
   return "none";
