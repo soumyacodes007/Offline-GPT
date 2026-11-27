@@ -10,7 +10,7 @@ const ISSUER = "https://idp.example.test";
 export type IdpUser = { sub: string; email: string; name: string };
 
 /** A tiny OIDC provider behind a fake `fetch`: discovery, JWKS and a token endpoint that signs real ID tokens. */
-async function createMockIdp() {
+async function createMockIdp(clock: () => Date) {
   const { privateKey, publicKey } = await generateKeyPair("RS256");
   const jwk = { ...(await exportJWK(publicKey)), kid: "k1", alg: "RS256", use: "sig" };
   const codes = new Map<string, { user: IdpUser; nonce: string }>();
@@ -31,8 +31,8 @@ async function createMockIdp() {
         .setIssuer(ISSUER)
         .setAudience("control-client")
         .setSubject(grant.user.sub)
-        .setIssuedAt()
-        .setExpirationTime("5m")
+        .setIssuedAt(Math.floor(clock().getTime() / 1000))
+        .setExpirationTime(Math.floor(clock().getTime() / 1000) + 300)
         .sign(privateKey);
       return Response.json({ id_token: idToken, token_type: "Bearer" });
     }
@@ -61,7 +61,8 @@ export type Harness = Awaited<ReturnType<typeof createHarness>>;
 export async function createHarness(options: { oidcJit?: boolean } = {}) {
   const database: DatabaseHandle = openDatabase("pglite:memory");
   await database.migrate();
-  const idp = await createMockIdp();
+  let now = new Date();
+  const idp = await createMockIdp(() => now);
   const config = parseConfig({
     DATABASE_URL: "pglite:memory",
     PUBLIC_URL: "http://control.example.test",
@@ -72,7 +73,6 @@ export async function createHarness(options: { oidcJit?: boolean } = {}) {
     OIDC_CLIENT_SECRET: "control-secret",
     OIDC_JIT: options.oidcJit ? "1" : "0",
   });
-  let now = new Date();
   const app = createApp({ db: database.db, config, now: () => now, fetch: idp.fetch });
 
   const call = async (method: string, path: string, init: { token?: string; scim?: string; body?: unknown; cookie?: string } = {}): Promise<Response> =>
