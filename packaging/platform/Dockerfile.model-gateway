@@ -3,7 +3,7 @@
 #   docker build -f packaging/platform/Dockerfile.model-gateway -t offlinegpt-platform-model-gateway .
 FROM node:24-bookworm-slim AS build
 WORKDIR /src
-RUN npm install -g pnpm@11.4.0
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/* \n  && npm install -g pnpm@11.4.0
 COPY . .
 RUN pnpm install --frozen-lockfile --prod --filter "@offlinegpt-platform/model-gateway..."
 
