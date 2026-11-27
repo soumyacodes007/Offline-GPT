@@ -30,7 +30,7 @@
 #   POLAR_FEATURE_GATE_ENABLED / POLAR_API_BASE / POLAR_ACCESS_TOKEN
 #   POLAR_PRODUCT_ID / POLAR_BENEFIT_ID / POLAR_SUCCESS_URL / POLAR_RETURN_URL
 #                           — optional Polar passthrough vars for billing/paywall testing
-#   DEN_OBSERVABILITY_BACKEND — none, otel, or sentry (default: none)
+#   DEN_OBSERVABILITY_BACKEND — none or otel (default: none)
 #   OTEL_EXPORTER_OTLP_ENDPOINT — OTLP/HTTP base endpoint for den + web, e.g. http://otel-lgtm:4318
 #   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT / OTEL_EXPORTER_OTLP_METRICS_ENDPOINT / OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
 #                           — optional per-signal OTLP/HTTP endpoint overrides
@@ -42,8 +42,6 @@
 #                           — otlp or none per signal (default: otlp)
 #   OTEL_TRACES_SAMPLER / OTEL_TRACES_SAMPLER_ARG
 #                           — standard OpenTelemetry sampler controls
-#   SENTRY_DSN / SENTRY_TRACES_SAMPLE_RATE / SENTRY_ENVIRONMENT / SENTRY_RELEASE / SENTRY_DIST
-#                           — optional Sentry runtime settings (source-map upload is build-time only)
 #   DEN_AUTOMATIONS_POLL_INTERVAL_MS and friends
 #                           — tune Den's always-on in-process Automation loop
 
@@ -66,12 +64,6 @@ x-observability-env: &observability-env
   OTEL_LOGS_EXPORTER: ${OTEL_LOGS_EXPORTER:-otlp}
   OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
   OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-}
-  SENTRY_DSN: ${SENTRY_DSN:-}
-  SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.01}
-  SENTRY_LOG_LEVEL: ${SENTRY_LOG_LEVEL:-warn}
-  SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-}
-  SENTRY_RELEASE: ${SENTRY_RELEASE:-}
-  SENTRY_DIST: ${SENTRY_DIST:-}
 
 services:
   mysql:
