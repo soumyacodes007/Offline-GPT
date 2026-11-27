@@ -57,11 +57,6 @@ export type LocalPreferences = {
    */
   hasCompletedOnboarding: boolean;
   /**
-   * Anonymous product analytics (PostHog). On by default with a visible
-   * opt-out in Settings -> Preferences. Never includes message content.
-   */
-  analyticsEnabled: boolean;
-  /**
    * Native OS notifications from the desktop app. Off by default so upgrading
    * users are not surprised by system popups.
    */
@@ -90,7 +85,6 @@ const INITIAL_PREFS: LocalPreferences = {
   releaseChannel: "stable",
   featureFlags: { microsandboxCreateSandbox: true, workspaceRunMode: false },
   hasCompletedOnboarding: false,
-  analyticsEnabled: true,
   desktopNotifications: DEFAULT_DESKTOP_NOTIFICATION_PREFERENCE,
 };
 
