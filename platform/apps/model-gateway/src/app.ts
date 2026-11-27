@@ -32,6 +32,32 @@ function startOfUtcDay(now: Date): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
+/** OpenCode's catalog entry for the self-hosted provider; the provider id matches the workspace config. */
+export function modelCatalog(models: ModelConfig[]) {
+  return {
+    offlinegpt: {
+      id: "offlinegpt",
+      name: "OfflineGPT Models",
+      npm: "@ai-sdk/openai-compatible",
+      env: [],
+      models: Object.fromEntries(models.map((model) => [model.alias, {
+        id: model.alias,
+        name: model.displayName,
+        attachment: false,
+        reasoning: false,
+        temperature: true,
+        tool_call: true,
+        release_date: "2026-01-01",
+        last_updated: "2026-01-01",
+        modalities: { input: ["text"], output: ["text"] },
+        open_weights: true,
+        cost: { input: 0, output: 0 },
+        limit: { context: model.contextLength, output: Math.min(8192, Math.floor(model.contextLength / 4)) },
+      }])),
+    },
+  };
+}
+
 export function createGateway(deps: GatewayDeps): Hono {
   const app = new Hono();
   const byAlias = new Map(deps.models.map((model) => [model.alias, model]));
@@ -62,6 +88,12 @@ export function createGateway(deps: GatewayDeps): Hono {
   }
 
   app.get("/health", (c) => c.json({ ok: true }));
+
+  /**
+   * The model catalog OpenCode reads (models.dev format) at OPENCODE_MODELS_URL/api.json.
+   * It only describes the configured models; who may use them is checked on each call.
+   */
+  app.get("/models/api.json", (c) => c.json(modelCatalog(deps.models)));
 
   app.get("/v1/models", async (c) => {
     const who = await caller(c);
