@@ -59,6 +59,5 @@ cd evals && OFFLINEGPT_EVAL_E2E_TESTS=1 OFFLINEGPT_EVAL_PLATFORM_URL=http://loca
 ## Not done yet
 
 - SAML sign-in (OIDC works).
-- PDF and Word upload for the knowledge base (Markdown and text work).
 - An org library of skills, plugins and MCP servers for workspaces.
 - A full run of the compose file on a GPU host with real workspace containers.
