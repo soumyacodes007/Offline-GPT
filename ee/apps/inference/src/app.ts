@@ -3,13 +3,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "@offlinegpt-ee/den-db/drizzle";
-import { sentry } from "@sentry/hono/node";
 import { cors } from "hono/cors";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "./db.js";
 import { env } from "./env.js";
-import { isSentryEnabled } from "./instrumentation.js";
 import { buildOpencodeModelsCatalog } from "./model-catalog.js";
 import { defaultModelCatalog, registerProxyRoutes } from "./proxy.js";
 import { registerWebhookRoutes } from "./webhooks.js";
@@ -23,18 +21,6 @@ const app = new Hono();
 
 function healthPath(path: string) {
   return path === "/health" || path === "/ready";
-}
-
-if (isSentryEnabled) {
-  const sentryMiddleware = sentry(app);
-  app.use("*", async (c, next) => {
-    if (healthPath(c.req.path)) {
-      await next();
-      return;
-    }
-
-    await sentryMiddleware(c, next);
-  });
 }
 
 app.use("*", async (c, next) => {
