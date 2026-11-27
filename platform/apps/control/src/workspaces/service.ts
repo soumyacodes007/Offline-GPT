@@ -73,7 +73,8 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
       name: containerName,
       image: settings.image,
       cmd: ["sh", "-c", START_SCRIPT],
-      env: { OGP_WORKSPACE_TOKEN: token, OGP_OPENCODE_CONFIG: opencodeConfig(settings, key) },
+      // OFFLINEGPT_WEB_ROOT makes the workspace server serve the workspace app itself.
+      env: { OGP_WORKSPACE_TOKEN: token, OGP_OPENCODE_CONFIG: opencodeConfig(settings, key), OFFLINEGPT_WEB_ROOT: "/opt/offlinegpt/web" },
       labels: { "offlinegpt.platform": "workspace", "offlinegpt.member": memberId },
       volume: `${containerName}-data`,
       mountPath: "/workspace",
