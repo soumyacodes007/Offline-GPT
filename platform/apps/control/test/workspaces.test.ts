@@ -8,6 +8,13 @@ type FakeContainer = { running: boolean; body: Record<string, unknown> };
 let containers: Map<string, FakeContainer>;
 let dockerCalls: string[];
 let containerRequests: Array<{ url: string; authorization: string | null; cookie: string | null }>;
+let deliveries: Array<{ url: string; hostToken: string | null; body: unknown }>;
+
+/** Stands in for a workspace server accepting its provider. */
+const deliverFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  deliveries.push({ url: input instanceof Request ? input.url : input.toString(), hostToken: new Headers(init?.headers).get("x-offlinegpt-host-token"), body: JSON.parse(typeof init?.body === "string" ? init.body : "null") });
+  return Response.json({ ok: true });
+};
 
 const fakeDocker: DockerTransport = async (method, path, body) => {
   dockerCalls.push(`${method} ${path.split("?")[0]}`);
@@ -36,8 +43,9 @@ beforeEach(async () => {
   containers = new Map();
   dockerCalls = [];
   containerRequests = [];
+  deliveries = [];
   h = await createHarness({
-    workspaces: (db, now) => createWorkspaceService(db, createDocker(fakeDocker), settings, now),
+    workspaces: (db, now) => createWorkspaceService(db, createDocker(fakeDocker), settings, now, deliverFetch, 0),
     route: async (input, init) => {
       const url = new URL(input instanceof Request ? input.url : input.toString());
       if (!url.hostname.startsWith("ogp-ws-")) return null;
@@ -64,8 +72,14 @@ test("the first start creates the member's container with their own model key, a
   expect(env).toMatch(/"apiKey":"ogk_[A-Za-z0-9_-]+"/);
   expect((await h.db.select().from(inferenceKeys)).filter((key) => key.revokedAt === null)).toHaveLength(1);
 
+  expect(deliveries).toHaveLength(1);
+  expect(deliveries[0]?.url).toBe(`http://${name}:8787/runtime-config/providers`);
+  expect(deliveries[0]?.hostToken).toMatch(/^[0-9a-f]{64}$/);
+  expect(JSON.stringify(deliveries[0]?.body)).toContain('"baseURL":"http://model-gateway:8791/v1"');
+
   await h.call("POST", "/v1/me/workspace", { token: owner });
   expect(dockerCalls.filter((call) => call.startsWith("POST /containers/create"))).toHaveLength(1);
+  expect(deliveries).toHaveLength(1);
 });
 
 test("the router sends a member only to their own container, with the container token instead of theirs", async () => {
@@ -99,7 +113,7 @@ test("SCIM deactivation stops the member's workspace", async () => {
 
 test("idle workspaces are stopped and a vanished container is recreated on the next start", async () => {
   await h.call("POST", "/v1/me/workspace", { token: owner });
-  const service = createWorkspaceService(h.db, createDocker(fakeDocker), settings, () => new Date(Date.now() + 2 * 60 * 60 * 1000));
+  const service = createWorkspaceService(h.db, createDocker(fakeDocker), settings, () => new Date(Date.now() + 2 * 60 * 60 * 1000), deliverFetch, 0);
   expect(await service.stopIdle()).toBe(1);
   expect([...containers.values()][0]?.running).toBe(false);
   containers.clear();
@@ -110,7 +124,7 @@ test("idle workspaces are stopped and a vanished container is recreated on the n
 
 test("the workspace origin sends signed-in members to their own container and others to sign-in", async () => {
   const { createWorkspaceOrigin } = await import("../src/routes/workspaces");
-  const service = createWorkspaceService(h.db, createDocker(fakeDocker), settings, () => new Date());
+  const service = createWorkspaceService(h.db, createDocker(fakeDocker), settings, () => new Date(), deliverFetch, 0);
   const origin = createWorkspaceOrigin({ db: h.db, config: (await import("../src/config")).parseConfig({ DATABASE_URL: "pglite:memory", PUBLIC_URL: "http://control.example.test", OWNER_EMAIL: "owner@example.test", SETUP_CODE: "setup-code-0123456789" }), now: () => new Date(), fetch: async (input) => { containerRequests.push({ url: input instanceof Request ? input.url : input.toString(), authorization: null, cookie: null }); return Response.json({ ok: true }); }, workspaces: service }, service);
   const signedOut = await origin.request("/session");
   expect(signedOut.status).toBe(302);
@@ -122,4 +136,16 @@ test("the workspace origin sends signed-in members to their own container and ot
   const apiCall = await origin.request("/workspaces", { headers: { cookie: `ogp_session=${owner}`, authorization: "Bearer container-token" } });
   expect(apiCall.status).toBe(200);
   expect([...containers.values()].some((container) => container.running)).toBe(true);
+});
+
+test("a browser gets a self-refreshing page while the workspace container starts", async () => {
+  const { createWorkspaceOrigin } = await import("../src/routes/workspaces");
+  const service = createWorkspaceService(h.db, createDocker(fakeDocker), settings, () => new Date(), deliverFetch, 0);
+  const config = (await import("../src/config")).parseConfig({ DATABASE_URL: "pglite:memory", PUBLIC_URL: "http://control.example.test", OWNER_EMAIL: "owner@example.test", SETUP_CODE: "setup-code-0123456789" });
+  const origin = createWorkspaceOrigin({ db: h.db, config, now: () => new Date(), fetch: async () => { throw new TypeError("connection refused"); }, workspaces: service }, service);
+  const page = await origin.request("/", { headers: { cookie: `ogp_session=${owner}`, accept: "text/html" } });
+  expect(page.status).toBe(503);
+  expect(await page.text()).toContain('http-equiv="refresh"');
+  const api = await origin.request("/workspaces", { headers: { cookie: `ogp_session=${owner}` } });
+  expect(api.status).toBe(502);
 });
