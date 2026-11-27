@@ -26,7 +26,7 @@ const fakeDocker: DockerTransport = async (method, path, body) => {
   return { status: 500, body: { message: `unexpected ${method} ${path}` } };
 };
 
-const settings = { image: "offlinegpt-workspace:test", network: "ogp-internal", modelGatewayUrl: "http://model-gateway:8791/v1", models: [{ alias: "main", displayName: "Qwen 7B", contextLength: 16384 }], memoryMb: 4096, cpus: 2, idleMs: 60 * 60 * 1000 };
+const settings = { image: "offlinegpt-workspace:test", network: "ogp-internal", modelGatewayUrl: "http://model-gateway:8791/v1", controlUrl: "http://control:8790", models: [{ alias: "main", displayName: "Qwen 7B", contextLength: 16384 }], memoryMb: 4096, cpus: 2, idleMs: 60 * 60 * 1000 };
 
 let h: Harness;
 let owner: string;
