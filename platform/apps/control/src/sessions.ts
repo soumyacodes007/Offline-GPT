@@ -1,5 +1,5 @@
-import { and, eq, gt } from "drizzle-orm";
-import { members, sessions } from "@offlinegpt-platform/db";
+import { and, eq, gt, isNull } from "drizzle-orm";
+import { inferenceKeys, members, sessions } from "@offlinegpt-platform/db";
 import { randomToken, sha256 } from "./crypto";
 import type { Deps } from "./deps";
 
@@ -19,6 +19,17 @@ export async function resolveSession(deps: Deps, token: string): Promise<Member 
     .from(sessions)
     .innerJoin(members, eq(members.id, sessions.memberId))
     .where(and(eq(sessions.tokenHash, sha256(token)), gt(sessions.expiresAt, deps.now()), eq(members.active, true)))
+    .limit(1);
+  return row?.member ?? null;
+}
+
+/** The active member behind an unrevoked inference key, or null. */
+export async function resolveInferenceKey(deps: Deps, key: string): Promise<Member | null> {
+  const [row] = await deps.db
+    .select({ member: members })
+    .from(inferenceKeys)
+    .innerJoin(members, eq(members.id, inferenceKeys.memberId))
+    .where(and(eq(inferenceKeys.keyHash, sha256(key)), isNull(inferenceKeys.revokedAt), eq(members.active, true)))
     .limit(1);
   return row?.member ?? null;
 }
