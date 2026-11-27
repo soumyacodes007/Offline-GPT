@@ -1,0 +1,115 @@
+# OfflineGPT Workspace edition: one Docker host, no internet needed at runtime.
+#
+#   cp packaging/platform/.env.example packaging/platform/.env   # then edit it
+#   docker compose -f packaging/platform/docker-compose.yml --env-file packaging/platform/.env up -d --build
+#
+# Ports published on the host:
+#   8790  control: sign-in, admin console, API and each employee's workspace at /w/
+# Everything else stays on the internal network.
+
+name: offlinegpt-platform
+
+x-model-list: &models '[{"alias":"${MODEL_ALIAS:-main}","displayName":"${MODEL_DISPLAY_NAME:-Self-hosted model}","upstreamUrl":"http://vllm:8000/v1","upstreamModel":"${MODEL_ALIAS:-main}","contextLength":${MODEL_CONTEXT_LENGTH:-16384}}]'
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: offlinegpt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: offlinegpt
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U offlinegpt -d offlinegpt"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  vllm:
+    image: vllm/vllm-openai:v0.11.0
+    restart: unless-stopped
+    command:
+      - --model=/models/${MODEL_DIR:?set MODEL_DIR}
+      - --served-model-name=${MODEL_ALIAS:-main}
+      - --max-model-len=${MODEL_CONTEXT_LENGTH:-16384}
+      - --gpu-memory-utilization=${GPU_MEMORY_UTILIZATION:-0.85}
+    environment:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+    volumes:
+      - ${MODELS_PATH:?set MODELS_PATH}:/models:ro
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks: [internal]
+
+  model-gateway:
+    build:
+      context: ../..
+      dockerfile: packaging/platform/Dockerfile.model-gateway
+    image: offlinegpt-platform-model-gateway:local
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://offlinegpt:${POSTGRES_PASSWORD}@postgres:5432/offlinegpt
+      MODELS: *models
+      DAILY_TOKEN_LIMIT: ${DAILY_TOKEN_LIMIT:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+      control: { condition: service_healthy }
+    networks: [internal]
+
+  control:
+    build:
+      context: ../..
+      dockerfile: packaging/platform/Dockerfile.control
+    image: offlinegpt-platform-control:local
+    restart: unless-stopped
+    # Root is needed to use the Docker socket that starts employee workspaces.
+    user: root
+    environment:
+      DATABASE_URL: postgres://offlinegpt:${POSTGRES_PASSWORD}@postgres:5432/offlinegpt
+      PUBLIC_URL: ${PUBLIC_URL:?set PUBLIC_URL}
+      OWNER_EMAIL: ${OWNER_EMAIL:?set OWNER_EMAIL}
+      SETUP_CODE: ${SETUP_CODE:?set SETUP_CODE}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      WORKSPACE_IMAGE: ${WORKSPACE_IMAGE:-offlinegpt-workspace:local}
+      WORKSPACE_NETWORK: offlinegpt-platform_internal
+      MODEL_GATEWAY_URL: http://model-gateway:8791/v1
+      CONTROL_INTERNAL_URL: http://control:8790
+      MODELS: *models
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "${CONTROL_PORT:-8790}:8790"
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [internal, edge]
+
+  # Built once so control can start one container per employee from it.
+  workspace-image:
+    build:
+      context: ../..
+      dockerfile: packaging/docker/Dockerfile.workspace-airgapped
+    image: ${WORKSPACE_IMAGE:-offlinegpt-workspace:local}
+    entrypoint: ["true"]
+    restart: "no"
+    profiles: [build]
+
+networks:
+  # No route out: models, workspaces and the database never reach the internet.
+  internal:
+    internal: true
+  edge: {}
+
+volumes:
+  postgres-data: {}
