@@ -140,3 +140,19 @@ describe("SCIM and OIDC", () => {
     expect((await h.call("GET", "/v1/me", { token: owner })).status).toBe(200);
   });
 });
+
+describe("people", () => {
+  test("owners change roles, but the last owner cannot step down", async () => {
+    const owner = await h.setupOwner();
+    const scim = await scimToken(owner);
+    const ada = await scimUser(scim, "ada@example.test", "Ada");
+    const list = await json(await h.call("GET", "/v1/members", { token: owner }));
+    expect((list.members as Array<{ email: string }>).map((member) => member.email)).toEqual(["ada@example.test", OWNER_EMAIL]);
+    const me = String((await json(await h.call("GET", "/v1/me", { token: owner }))).id);
+    expect((await h.call("PATCH", `/v1/members/${me}/role`, { token: owner, body: { role: "member" } })).status).toBe(409);
+    expect((await h.call("PATCH", `/v1/members/${ada}/role`, { token: owner, body: { role: "admin" } })).status).toBe(200);
+    const adaSession = sessionFrom(await h.oidcSignIn({ sub: "a", email: "ada@example.test", name: "Ada" }));
+    expect((await h.call("GET", "/v1/members", { token: adaSession })).status).toBe(200);
+    expect((await h.call("PATCH", `/v1/members/${me}/role`, { token: adaSession, body: { role: "member" } })).status).toBe(403);
+  });
+});
