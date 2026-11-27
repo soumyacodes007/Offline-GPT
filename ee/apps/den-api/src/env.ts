@@ -58,8 +58,6 @@ const EnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_SECURE: z.string().optional(),
-  LOOPS_API_KEY: z.string().optional(),
-  LOOPS_MARKETING_ENABLED: z.string().optional(),
   LINEAR_API_KEY: z.string().optional(),
   LINEAR_COMPLIANCE_TEAM_ID: z.string().optional(),
   LINEAR_API_BASE: z.string().optional(),
@@ -261,7 +259,7 @@ const parsed = EnvSchema.parse(process.env)
 // Settings that call public internet services. The air-gapped edition refuses
 // to start with any of them set.
 export const AIRGAPPED_FORBIDDEN_SETTINGS = [
-  "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "POLAR_ACCESS_TOKEN", "LOOPS_API_KEY", "LINEAR_API_KEY",
+  "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "POLAR_ACCESS_TOKEN", "LINEAR_API_KEY",
   "RESEND_API_KEY", "RENDER_API_KEY", "VERCEL_TOKEN", "DAYTONA_API_KEY", "OPENROUTER_MANAGEMENT_API_KEY",
   "GOOGLE_CLIENT_ID", "GITHUB_CLIENT_ID", "GITHUB_CONNECTOR_APP_ID",
 ] as const
@@ -774,10 +772,6 @@ export const env = {
     user: optionalString(parsed.SMTP_USER),
     pass: optionalString(parsed.SMTP_PASS),
     secure: (parsed.SMTP_SECURE ?? "false").toLowerCase() === "true",
-  },
-  loops: {
-    apiKey: optionalString(parsed.LOOPS_API_KEY),
-    marketingEnabled: parsed.LOOPS_MARKETING_ENABLED?.trim() === "1",
   },
   linear: {
     apiKey: optionalString(parsed.LINEAR_API_KEY),
