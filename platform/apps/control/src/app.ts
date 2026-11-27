@@ -5,6 +5,8 @@ import { access, type AppEnv } from "./http";
 import { registerAuditRoutes } from "./routes/audit";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerInferenceRoutes } from "./routes/inference";
+import { registerKnowledgeRoutes } from "./routes/knowledge";
+import { registerMcpRoutes } from "./routes/mcp";
 import { registerOidcRoutes } from "./routes/oidc";
 import { registerRequestRoutes } from "./routes/requests";
 import { registerRuleRoutes } from "./routes/rules";
@@ -23,6 +25,8 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   registerAuditRoutes(app, deps);
   registerInferenceRoutes(app, deps);
   registerWorkspaceRoutes(app, deps);
+  registerKnowledgeRoutes(app, deps);
+  registerMcpRoutes(app, deps);
 
   app.notFound((c) => c.json({ error: "not_found", message: "No such route." }, 404));
   app.onError((error, c) => {
