@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity as ActivityIcon, ArrowLeft, CheckCircle2, Clock3, Coins, Layers, Plug, RefreshCw, ShieldCheck, Sparkles, Zap } from "lucide-react";
+import { Activity as ActivityIcon, ArrowLeft, CheckCircle2, Clock3, Coins, Layers, RefreshCw, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { INFERENCE_MODEL_ALIASES } from "@offlinegpt/types/den/inference";
 import { z } from "zod";
 import { modelsAnalyticsSettingsSchema, modelsAnalyticsActivitySchema, modelsConsumptionSchema, type ModelsAnalyticsSettings } from "@offlinegpt-ee/telemetry-contracts";
 import { DenButton } from "../../_components/ui/button";
-import { DenInput } from "../../_components/ui/input";
 import { DenSelect } from "../../_components/ui/select";
 import { UnderlineTabs } from "../../_components/ui/tabs";
 import { AnalyticsAdoptionLink, AnalyticsEmptyState, analyticsSurfaceClass } from "../_features/analytics/analytics-layout";
@@ -21,7 +20,7 @@ import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 
 type Activity = z.infer<typeof modelsAnalyticsActivitySchema>;
 type Consumption = z.infer<typeof modelsConsumptionSchema>;
-type Tab = "Activity" | "Consumption" | "Integrations";
+type Tab = "Activity" | "Consumption";
 function groupRows<T>(rows: T[], key: (row: T) => string): Map<string, T[]> {
   const groups = new Map<string, T[]>();
   for (const row of rows) { const id = key(row); const group = groups.get(id); if (group) group.push(row); else groups.set(id, [row]); }
@@ -35,59 +34,6 @@ async function request(path: string, init?: RequestInit) {
   return payload;
 }
 
-function LangfuseSettings({ settings, refresh }: { settings: ModelsAnalyticsSettings; refresh: () => Promise<void> }) {
-  const { runReauthableAction } = useOrgDashboard();
-  const [host, setHost] = useState(settings.langfuseHost ?? "https://cloud.langfuse.com");
-  const [region, setRegion] = useState(settings.langfuseHost === "https://us.cloud.langfuse.com" ? "us"
-    : settings.langfuseHost && settings.langfuseHost !== "https://cloud.langfuse.com" ? "custom" : "eu");
-  const [publicKey, setPublicKey] = useState("");
-  const [secretKey, setSecretKey] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  async function act(action: "test" | "connect" | "disconnect") {
-    setBusy(true); setMessage(null);
-    try {
-      await runReauthableAction("models-analytics-export", async () => {
-        await request(action === "disconnect" ? "langfuse" : `langfuse/${action}`, {
-          method: action === "disconnect" ? "DELETE" : "POST",
-          ...(action === "disconnect" ? {} : { body: JSON.stringify({ host, publicKey, secretKey }) }),
-        });
-      });
-      setMessage(action === "test" ? "Connection verified." : action === "connect" ? "Connected. New task analytics will be sent to Langfuse." : "Langfuse disconnected.");
-      if (action !== "test") { setPublicKey(""); setSecretKey(""); await refresh(); }
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not connect to Langfuse."); }
-    finally { setBusy(false); }
-  }
-  return <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-    <div>
-      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#f2ecff] text-[#6F3DFF]"><Plug className="h-5 w-5" aria-hidden="true" /></div>
-      <DenSectionHeader title="Langfuse" description="Keep model activity alongside your team’s other traces. Connect an existing Langfuse project to export new task metadata." />
-      <p className="mt-4 text-xs leading-5 text-[#637291]">Prompts, responses and file contents are excluded. Earlier activity is not exported. You can disconnect at any time.</p>
-    </div>
-    <div className="grid content-start gap-4 rounded-xl border border-[#edf0f5] bg-[#fafbfc] p-5">
-      {settings.exportEnabled ? <>
-        <p className="flex items-center gap-2 text-sm font-medium text-emerald-700"><CheckCircle2 className="h-4 w-4" />Connected</p>
-        <p className="break-all text-xs text-[#637291]">{settings.langfuseHost}</p>
-        <DenButton variant="secondary" disabled={busy} onClick={() => void act("disconnect")}>Disconnect Langfuse</DenButton>
-      </> : <>
-        <div className="grid gap-1.5"><label htmlFor="langfuse-region" className="text-xs font-medium text-[#30405F]">Data region</label>
-          <DenSelect id="langfuse-region" aria-label="Data region" value={region} onChange={(event) => {
-            setRegion(event.target.value);
-            if (event.target.value === "eu") setHost("https://cloud.langfuse.com");
-            if (event.target.value === "us") setHost("https://us.cloud.langfuse.com");
-            if (event.target.value === "custom") setHost("");
-          }}><option value="eu">Europe</option><option value="us">United States</option><option value="custom">Self-hosted</option></DenSelect>
-        </div>
-        {region === "custom" ? <label className="grid gap-1.5 text-xs font-medium text-[#30405F]">Langfuse address<DenInput type="url" value={host} onChange={(event) => setHost(event.target.value)} placeholder="https://langfuse.example.com" /></label> : null}
-        <label className="grid gap-1.5 text-xs font-medium text-[#30405F]">Public key<DenInput autoComplete="off" value={publicKey} onChange={(event) => setPublicKey(event.target.value)} placeholder="pk-lf-…" /></label>
-        <label className="grid gap-1.5 text-xs font-medium text-[#30405F]">Secret key<DenInput type="password" autoComplete="new-password" value={secretKey} onChange={(event) => setSecretKey(event.target.value)} placeholder="sk-lf-…" /></label>
-        <div className="flex flex-wrap gap-2"><DenButton variant="secondary" disabled={busy || !publicKey || !secretKey || !host} onClick={() => void act("test")}>Test connection</DenButton>
-          <DenButton disabled={busy || !publicKey || !secretKey || !host} onClick={() => void act("connect")}>Connect Langfuse</DenButton></div>
-      </>}
-      {message ? <p role="status" className="text-sm leading-5 text-[#30405F]">{message}</p> : null}
-    </div>
-  </div>;
-}
 
 function modelName(value: string) {
   const model = Object.entries(INFERENCE_MODEL_ALIASES).find(([id, model]) => id === value || model.upstreamModel === value);
@@ -133,7 +79,6 @@ export function ModelsAnalyticsPanel() {
   const busy = mutating || dataQuery.isFetching;
   const loading = !dataQuery.data && dataQuery.isPending;
   const memberName = (id: string) => orgContext?.members.find((member) => member.id === id)?.user.name ?? "Former member";
-  async function refreshSettings() { await settingsQuery.refetch(); }
   async function choose(enabled: boolean) {
     setMutating(true); setError(null);
     try {
@@ -193,7 +138,6 @@ export function ModelsAnalyticsPanel() {
   const tabs: { value: Tab; label: string; icon: typeof ActivityIcon }[] = [
     { value: "Activity", label: "Activity", icon: ActivityIcon },
     { value: "Consumption", label: "Consumption", icon: Coins },
-    { value: "Integrations", label: "Integrations", icon: Plug },
   ];
   return <section className="grid gap-5" data-testid="models-task-analytics" aria-label="Task analytics">
     {!settings.enabled ? <div className={`${analyticsSurfaceClass} grid gap-6 p-6 sm:grid-cols-[1fr_220px]`}>
@@ -209,7 +153,6 @@ export function ModelsAnalyticsPanel() {
       <div className="flex flex-col justify-center gap-4 rounded-xl bg-[#faf9fd] p-5 text-sm text-[#30405F]">
         <p className="flex items-center gap-2"><ActivityIcon className="h-4 w-4 text-[#6F3DFF]" />Task and tool activity</p>
         <p className="flex items-center gap-2"><Coins className="h-4 w-4 text-[#6F3DFF]" />Model consumption</p>
-        <p className="flex items-center gap-2"><Plug className="h-4 w-4 text-[#6F3DFF]" />Optional Langfuse export</p>
       </div>
     </div> : <>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -221,7 +164,7 @@ export function ModelsAnalyticsPanel() {
         </div>
       </div>
       <UnderlineTabs tabs={tabs} activeTab={tab} onChange={(value) => { setTab(value); setSelected(null); }} />
-      {tab !== "Integrations" ? <>
+      <>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <DenSelect aria-label="Analytics period" className="h-9 w-40" value={String(days)} onChange={(event) => { setDays(Number(event.target.value)); setExtra(null); setSelected(null); }}>
@@ -241,7 +184,7 @@ export function ModelsAnalyticsPanel() {
           <StatCard icon={<Layers className="text-[#B7791F]" />} title="Reported tokens" value={loading ? "…" : tokens?.toLocaleString() ?? "Unknown"} sub={incomplete ? "Partial · some calls have no accounting" : "Input and output tokens"} tone="amber" />
           <StatCard icon={<Sparkles className="text-[#18A34A]" />} title="Models used" value={loading ? "…" : new Set(usage.flatMap((row) => row.model ? [row.model] : [])).size.toLocaleString()} sub="Through OfflineGPT Models" tone="green" />
         </div> : null}
-      </> : null}
+      </>
       {tab === "Activity" ? <div className={`${analyticsSurfaceClass} overflow-hidden`}>
         <div className="flex items-center justify-between border-b border-[#edf0f5] px-5 py-4">
           <div><h3 className="text-sm font-semibold text-[#07192C]">{selected ? "Task details" : "Recent activity"}</h3><p className="mt-1 text-xs text-[#637291]">{selected ? "Model calls, skills and tools in this task" : "New tasks since analytics was enabled"}</p></div>
@@ -280,7 +223,6 @@ export function ModelsAnalyticsPanel() {
         </>}
         <p className="text-xs leading-5 text-[#637291]">Missing accounting stays unknown. Reported totals may be partial when a call is interrupted. Your subscription’s shared usage limits are shown above.</p>
       </> : null}
-      {tab === "Integrations" ? <div className={`${analyticsSurfaceClass} p-5 sm:p-6`}><LangfuseSettings settings={settings} refresh={refreshSettings} /></div> : null}
       <p className="flex items-start gap-2 text-xs leading-5 text-[#637291]"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />Activity metadata only. Prompts, responses and file contents are excluded. Earlier tasks are not imported.</p>
     </>}
     {message ? <DenNotice tone="error" message={message} /> : null}
