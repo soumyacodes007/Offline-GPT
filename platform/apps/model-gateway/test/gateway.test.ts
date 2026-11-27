@@ -117,3 +117,11 @@ test("the daily token limit refuses requests once it is used up", async () => {
   expect(third.status).toBe(429);
   expect((await call("key-ada", "/v1/chat/completions", { model: "main", messages: [] })).status).toBe(200);
 });
+
+test("the model catalog lists the configured models for OpenCode, without a key", async () => {
+  const response = await gateway().request("/models/api.json");
+  expect(response.status).toBe(200);
+  const catalog = await response.json();
+  expect(Object.keys(catalog.offlinegpt.models)).toEqual(["main", "large"]);
+  expect(catalog.offlinegpt.models.main).toMatchObject({ name: "Qwen 7B", limit: { context: 16384 }, tool_call: true });
+});
