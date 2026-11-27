@@ -52,8 +52,13 @@ export type Config = {
   workspaceOriginPort: number;
 };
 
+/** Compose and many service managers pass unset settings as empty strings; treat them as unset. */
+export function withoutEmpty(env: Record<string, string | undefined>): Record<string, string> {
+  return Object.fromEntries(Object.entries(env).flatMap(([key, value]) => (value === undefined || value.trim() === "" ? [] : [[key, value]])));
+}
+
 export function parseConfig(env: Record<string, string | undefined>): Config {
-  const parsed = envSchema.parse(env);
+  const parsed = envSchema.parse(withoutEmpty(env));
   const oidcParts = [parsed.OIDC_ISSUER, parsed.OIDC_CLIENT_ID, parsed.OIDC_CLIENT_SECRET];
   if (oidcParts.some(Boolean) && !oidcParts.every(Boolean)) {
     throw new Error("Set all of OIDC_ISSUER, OIDC_CLIENT_ID and OIDC_CLIENT_SECRET, or none of them.");
