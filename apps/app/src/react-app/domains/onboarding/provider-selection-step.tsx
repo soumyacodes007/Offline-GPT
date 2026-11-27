@@ -26,9 +26,9 @@ export function ProviderSelectionStep({
 
       <div className="relative z-10 mx-6 w-full max-w-md rounded-3xl border border-border bg-background px-8 py-10">
         <PageHeader className="mb-8 text-center">
-          <PageTitle>Power your first task</PageTitle>
+          <PageTitle>Use your own AI subscription</PageTitle>
           <PageDescription>
-            Connect a model, then try a real task in chat so you can see OfflineGPT work.
+            Sign in with the plan you already pay for. OfflineGPT works on your computer; there is no OfflineGPT account.
           </PageDescription>
         </PageHeader>
 
@@ -41,10 +41,10 @@ export function ProviderSelectionStep({
             <KeyRoundIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
             <div>
               <div className="text-sm font-medium text-foreground">
-                Bring your own API key
+                Sign in with ChatGPT or Claude
               </div>
               <div className="mt-0.5 text-xs text-muted-foreground">
-                Connect OpenAI, Anthropic, Google, or another provider, then run your first task.
+                Use ChatGPT Plus/Pro or Claude Pro/Max, or add an API key for OpenAI, Anthropic, Google or another provider.
               </div>
             </div>
           </button>
