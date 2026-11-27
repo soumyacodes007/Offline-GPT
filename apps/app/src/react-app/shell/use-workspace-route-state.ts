@@ -953,6 +953,9 @@ export function useWorkspaceRouteState(input: UseWorkspaceRouteStateInput) {
   // gates are owned by the app root. Keep the non-desktop welcome path.
   useEffect(() => {
     if (isDesktopRuntime()) return;
+    // Served by a workspace server (it injected its token): that server already
+    // owns the workspace, so there is nothing to set up on a welcome screen.
+    if (typeof window !== "undefined" && typeof window.__OFFLINEGPT_BOOTSTRAP__?.token === "string") return;
     if (loading) return;
     if (workspaces.length > 0) return;
     if (local.prefs.hasCompletedOnboarding) return;
