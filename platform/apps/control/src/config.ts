@@ -24,6 +24,9 @@ const envSchema = z.object({
   WORKSPACE_CPUS: z.coerce.number().positive().max(64).default(2),
   WORKSPACE_IDLE_MINUTES: z.coerce.number().int().min(5).default(60),
   CONSOLE_DIR: optional,
+  /** Where employees open their workspace app; same host as PUBLIC_URL, its own port. */
+  WORKSPACE_PUBLIC_URL: z.url().optional(),
+  WORKSPACE_ORIGIN_PORT: z.coerce.number().int().min(1).max(65535).default(8793),
 });
 
 const workspaceModelsSchema = z.array(z.object({ alias: z.string().min(1), displayName: z.string().min(1), contextLength: z.number().int().positive() })).min(1);
@@ -44,6 +47,9 @@ export type Config = {
   workspaces: WorkspaceConfig | null;
   /** Built console files to serve at `/`; null serves the API only. */
   consoleDir: string | null;
+  /** Public URL of the workspace origin, or null when workspaces are off. */
+  workspaceUrl: URL | null;
+  workspaceOriginPort: number;
 };
 
 export function parseConfig(env: Record<string, string | undefined>): Config {
@@ -64,6 +70,8 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
       : null,
     workspaces: parseWorkspaces(parsed),
     consoleDir: parsed.CONSOLE_DIR ?? null,
+    workspaceUrl: parsed.WORKSPACE_IMAGE && parsed.WORKSPACE_PUBLIC_URL ? new URL(parsed.WORKSPACE_PUBLIC_URL) : null,
+    workspaceOriginPort: parsed.WORKSPACE_ORIGIN_PORT,
   };
 }
 
