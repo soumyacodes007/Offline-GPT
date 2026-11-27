@@ -13,7 +13,7 @@ test("first launch opens an empty signed-out workspace and runs the first prompt
     await user.notSee({ text: "Welcome to OfflineGPT" });
     await user.notSee("Use Without Cloud");
     await user.notSee({ text: /Choose (a )?folder|Choose (a )?model/ });
-    await user.notSee({ text: "Power your first task" });
+    await user.notSee({ text: "Use your own AI subscription" });
     await user.notSee({ text: "How did you hear about OfflineGPT?" });
     await user.notSee({ text: /Something went wrong/ });
     expect(await probe.storage("offlinegpt.den.authToken")).toBeNull();
@@ -60,7 +60,7 @@ test("first launch opens an empty signed-out workspace and runs the first prompt
     await user.notSee({ text: /subscribe to Go/i });
     await user.notSee({ text: /Error from provider/ });
     await user.notSee({ text: /Something went wrong/ });
-    await user.notSee({ text: "Power your first task" });
+    await user.notSee({ text: "Use your own AI subscription" });
     await user.notSee({ text: "How did you hear about OfflineGPT?" });
   });
 });
