@@ -1,4 +1,4 @@
-import { bigserial, boolean, index, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import { bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 
@@ -61,9 +61,27 @@ export const auditEvents = pgTable("audit_events", {
   details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
 }, (table) => [index("audit_events_at_idx").on(table.at)]);
 
+export const accessRequests = pgTable("access_requests", {
+  id: text("id").primaryKey(),
+  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  target: text("target").notNull(),
+  purpose: text("purpose").notNull(),
+  /** How long approved access lasts; null means until someone removes the rule. */
+  durationDays: integer("duration_days"),
+  status: text("status", { enum: ["pending", "approved", "declined", "cancelled"] }).notNull().default("pending"),
+  createdAt: createdAt(),
+  /** A pending request stops being decidable at this instant. */
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  decidedBy: text("decided_by"),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  note: text("note"),
+  ruleId: text("rule_id"),
+}, (table) => [index("access_requests_member_idx").on(table.memberId), index("access_requests_status_idx").on(table.status)]);
+
 export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").$type<unknown>().notNull(),
 });
 
-export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, settings };
+export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, settings };
