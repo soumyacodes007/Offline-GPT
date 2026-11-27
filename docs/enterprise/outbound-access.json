@@ -334,15 +334,6 @@
       "override": null
     },
     {
-      "host": "us.i.posthog.com",
-      "kind": "fetched",
-      "components": ["renderer"],
-      "purpose": "Optional product analytics endpoint when analytics are enabled and a PostHog key is configured.",
-      "requirement": "optional",
-      "blockedEffect": "Analytics events are dropped silently; user-facing app behavior is unaffected.",
-      "override": "VITE_OFFLINEGPT_POSTHOG_HOST; users can disable analytics with the analyticsEnabled preference"
-    },
-    {
       "host": "www.google.com",
       "kind": "fetched",
       "components": ["desktop", "renderer"],
