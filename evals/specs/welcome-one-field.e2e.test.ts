@@ -12,7 +12,7 @@ test("desktop opens directly while the non-desktop welcome join field accepts a 
     expect(await probe.hash()).toMatch(/^#\/workspace\/[^/]+\/session$/);
     await desktopUser.notSee({ text: "Welcome to OfflineGPT" });
     await desktopUser.notSee("Use Without Cloud");
-    await desktopUser.notSee({ text: "Power your first task" });
+    await desktopUser.notSee({ text: "Use your own AI subscription" });
     await desktopUser.notSee({ text: "How did you hear about OfflineGPT?" });
     await desktopUser.click({ testId: "account-status-menu" });
     await desktopUser.see("Sign in to OfflineGPT Cloud");
