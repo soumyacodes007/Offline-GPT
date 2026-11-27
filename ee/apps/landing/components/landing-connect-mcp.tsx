@@ -5,7 +5,6 @@ import { ChevronRight, Plug } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-import { capturePosthogEvent } from "../lib/posthog-client";
 import {
   ANY_CLIENT_COMMAND,
   CHATGPT_SETTINGS_URL,
@@ -205,11 +204,6 @@ export function LandingConnectMcp() {
     setCopyError(!copied);
     setFeedbackClient(install.id);
     if (copied) setRevealed(true);
-    capturePosthogEvent("landing_connect_mcp_copy_clicked", {
-      client: install.id,
-      copied,
-      method
-    });
 
     if (installResetTimer.current) clearTimeout(installResetTimer.current);
     installResetTimer.current = setTimeout(() => {
