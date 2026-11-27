@@ -10,6 +10,8 @@ export type WorkspaceSettings = {
   network: string;
   /** Model gateway URL as seen from inside the workspace network, ending in /v1. */
   modelGatewayUrl: string;
+  /** Control service URL as seen from inside the workspace network; serves the MCP endpoint. */
+  controlUrl: string;
   models: WorkspaceModel[];
   memoryMb: number;
   cpus: number;
@@ -35,6 +37,7 @@ export function opencodeConfig(settings: WorkspaceSettings, inferenceKey: string
         models: Object.fromEntries(settings.models.map((model) => [model.alias, { name: model.displayName, limit: { context: model.contextLength, output: Math.min(8192, Math.floor(model.contextLength / 4)) } }])),
       },
     },
+    mcp: { offlinegpt: { type: "remote", url: `${settings.controlUrl.replace(/\/+$/, "")}/mcp`, headers: { Authorization: `Bearer ${inferenceKey}` }, enabled: true } },
     ...(settings.models[0] ? { model: `offlinegpt/${settings.models[0].alias}` } : {}),
   });
 }
