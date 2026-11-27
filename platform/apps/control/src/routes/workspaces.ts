@@ -1,7 +1,8 @@
 import { Hono, type Context } from "hono";
 import { audit } from "../audit";
 import type { Deps } from "../deps";
-import { access, fail, sessionToken, type AppEnv } from "../http";
+import { getCookie } from "hono/cookie";
+import { access, fail, SESSION_COOKIE, type AppEnv } from "../http";
 import { resolveSession, type Member } from "../sessions";
 import { WORKSPACE_PORT, type WorkspaceService } from "../workspaces/service";
 
@@ -71,7 +72,9 @@ export function createWorkspaceOrigin(deps: Deps, service: WorkspaceService): Ho
   const app = new Hono();
   const forward = createForwarder(deps, service);
   app.all("/*", async (c) => {
-    const token = sessionToken(c);
+    // Only the sign-in cookie counts here: the app sends its container's token
+    // as Authorization, and the forwarder replaces that header anyway.
+    const token = getCookie(c, SESSION_COOKIE);
     const member = token ? await resolveSession(deps, token) : null;
     if (!member) return c.redirect(deps.config.publicUrl.toString(), 302);
     const workspace = await service.get(member.id);
