@@ -4,7 +4,8 @@
 #   docker compose -f packaging/platform/docker-compose.yml --env-file packaging/platform/.env up -d --build
 #
 # Ports published on the host:
-#   8790  control: sign-in, admin console, API and each employee's workspace at /w/
+#   8790  control: sign-in, admin console and API
+#   8793  control: each employee's own workspace app (same host, its own port)
 # Everything else stays on the internal network.
 
 name: offlinegpt-platform
@@ -86,11 +87,13 @@ services:
       WORKSPACE_NETWORK: offlinegpt-platform_internal
       MODEL_GATEWAY_URL: http://model-gateway:8791/v1
       CONTROL_INTERNAL_URL: http://control:8790
+      WORKSPACE_PUBLIC_URL: ${WORKSPACE_PUBLIC_URL:?set WORKSPACE_PUBLIC_URL}
       MODELS: *models
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "${CONTROL_PORT:-8790}:8790"
+      - "${WORKSPACE_PORT:-8793}:8793"
     depends_on:
       postgres: { condition: service_healthy }
     networks: [internal, edge]
