@@ -13,7 +13,7 @@ function WorkspaceCard() {
     mutationFn: () => api(workspaceSchema, "/v1/me/workspace", { method: "POST" }),
     onSuccess: (data) => {
       queryClient.setQueryData(["workspace"], data);
-      window.open("/w/", "_blank", "noopener");
+      if (data.workspace) window.open(data.workspace.url, "_blank", "noopener");
     },
   });
   const running = workspace.data?.workspace?.status === "running";
