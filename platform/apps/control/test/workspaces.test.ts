@@ -118,5 +118,8 @@ test("the workspace origin sends signed-in members to their own container and ot
   const signedIn = await origin.request("/assets/app.js?v=1", { headers: { cookie: `ogp_session=${owner}` } });
   expect(signedIn.status).toBe(200);
   expect(new URL(containerRequests.at(-1)?.url ?? "").pathname).toBe("/assets/app.js");
+  // The app sends its container token as Authorization; the cookie still decides who it is.
+  const apiCall = await origin.request("/workspaces", { headers: { cookie: `ogp_session=${owner}`, authorization: "Bearer container-token" } });
+  expect(apiCall.status).toBe(200);
   expect([...containers.values()].some((container) => container.running)).toBe(true);
 });
