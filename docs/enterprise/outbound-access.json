@@ -334,6 +334,42 @@
       "override": null
     },
     {
+      "host": "claude.ai",
+      "kind": "subprocess",
+      "components": ["renderer"],
+      "purpose": "Claude Code installer that the user runs in the in-app terminal to sign in with their own Claude subscription.",
+      "requirement": "optional",
+      "blockedEffect": "Claude Code cannot be installed from the app; install it another way or use another provider.",
+      "override": null
+    },
+    {
+      "host": "cua.ai",
+      "kind": "subprocess",
+      "components": ["desktop"],
+      "purpose": "Install command for the optional Cua computer-use driver, run only when the user chooses to install it.",
+      "requirement": "optional",
+      "blockedEffect": "The computer-use driver cannot be installed from Settings.",
+      "override": null
+    },
+    {
+      "host": "developer.chrome.com",
+      "kind": "link-only",
+      "components": ["renderer"],
+      "purpose": "Documentation link inside the bundled computer-use skill.",
+      "requirement": "optional",
+      "blockedEffect": "The link does not open; app behavior is unaffected.",
+      "override": null
+    },
+    {
+      "host": "learn.microsoft.com",
+      "kind": "link-only",
+      "components": ["renderer"],
+      "purpose": "Documentation link inside the bundled computer-use skill.",
+      "requirement": "optional",
+      "blockedEffect": "The link does not open; app behavior is unaffected.",
+      "override": null
+    },
+    {
       "host": "www.google.com",
       "kind": "fetched",
       "components": ["desktop", "renderer"],
