@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { automaticDownloadHref } from "../lib/automatic-download";
-import { capturePosthogEvent } from "../lib/posthog-client";
 
 const DownloadContext = createContext<(sourcePath: string) => void>(() => {});
 
@@ -28,12 +27,6 @@ export function DownloadProvider({ installers, children }: {
         new Promise<null>((resolve) => { timeout = setTimeout(() => resolve(null), 1500); })
       ]);
       const href = automaticDownloadHref(installers, detected, navigator.userAgent, navigator.maxTouchPoints);
-      capturePosthogEvent("desktop_download_clicked", {
-        source_path: sourcePath,
-        download_url: href,
-        os: detected?.os,
-        architecture: detected?.arch
-      });
       if (href) setDownload((previous) => ({ href, attempt: (previous?.attempt ?? 0) + 1 }));
     } catch {
       // Detection failure leaves the visitor on /download with manual choices.
