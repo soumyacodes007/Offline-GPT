@@ -88,7 +88,6 @@ ROUTING_DIRS=(
 IGNORE_PREFIXES=(
   "apps/app/scripts/"
   "apps/desktop/scripts/"
-  "scripts/stats"
 )
 
 # ── Colors ──────────────────────────────────────────────────────────────────
