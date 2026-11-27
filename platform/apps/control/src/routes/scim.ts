@@ -97,7 +97,10 @@ async function isLastActiveOwner(deps: Deps, member: Member): Promise<boolean> {
 async function setActive(deps: Deps, member: Member, active: boolean): Promise<void> {
   if (member.active === active) return;
   await deps.db.update(members).set({ active, deactivatedAt: active ? null : deps.now() }).where(eq(members.id, member.id));
-  if (!active) await endMemberSessions(deps, member.id);
+  if (!active) {
+    await endMemberSessions(deps, member.id);
+    await deps.workspaces?.stop(member.id);
+  }
   await audit(deps, "scim", active ? "member.reactivated" : "member.deactivated", { memberId: member.id });
 }
 
