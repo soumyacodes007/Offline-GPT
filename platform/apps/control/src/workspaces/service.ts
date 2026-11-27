@@ -23,20 +23,23 @@ export const WORKSPACE_PORT = 8787;
 type Row = typeof workspaces.$inferSelect;
 export type Workspace = { memberId: string; containerName: string; token: string; status: Row["status"] };
 
-/** OpenCode's global config for a member: one provider that points at the model gateway with the member's own key. */
+/** The member's model provider: the model gateway, with the member's own key. */
+export function providerConfig(settings: WorkspaceSettings, inferenceKey: string) {
+  return {
+    npm: "@ai-sdk/openai-compatible",
+    name: "OfflineGPT Models",
+    options: { baseURL: settings.modelGatewayUrl, apiKey: inferenceKey },
+    models: Object.fromEntries(settings.models.map((model) => [model.alias, { name: model.displayName, limit: { context: model.contextLength, output: Math.min(8192, Math.floor(model.contextLength / 4)) } }])),
+  };
+}
+
+/** OpenCode's global config for a member: the provider above plus the knowledge MCP server. */
 export function opencodeConfig(settings: WorkspaceSettings, inferenceKey: string): string {
   return JSON.stringify({
     $schema: "https://opencode.ai/config.json",
     autoupdate: false,
     share: "disabled",
-    provider: {
-      offlinegpt: {
-        npm: "@ai-sdk/openai-compatible",
-        name: "OfflineGPT Models",
-        options: { baseURL: settings.modelGatewayUrl, apiKey: inferenceKey },
-        models: Object.fromEntries(settings.models.map((model) => [model.alias, { name: model.displayName, limit: { context: model.contextLength, output: Math.min(8192, Math.floor(model.contextLength / 4)) } }])),
-      },
-    },
+    provider: { offlinegpt: providerConfig(settings, inferenceKey) },
     mcp: { offlinegpt: { type: "remote", url: `${settings.controlUrl.replace(/\/+$/, "")}/mcp`, headers: { Authorization: `Bearer ${inferenceKey}` }, enabled: true } },
     ...(settings.models[0] ? { model: `offlinegpt/${settings.models[0].alias}` } : {}),
   });
@@ -48,10 +51,43 @@ const START_SCRIPT = [
   'mkdir -p "$HOME/.config/opencode"',
   'printf "%s" "$OGP_OPENCODE_CONFIG" > "$HOME/.config/opencode/opencode.json"',
   'unset OGP_OPENCODE_CONFIG',
-  `exec offlinegpt-server --host 0.0.0.0 --port ${WORKSPACE_PORT} --token "$OGP_WORKSPACE_TOKEN" --approval auto --workspace /workspace --log-format json`,
+  `exec offlinegpt-server --host 0.0.0.0 --port ${WORKSPACE_PORT} --token "$OGP_WORKSPACE_TOKEN" --host-token "$OGP_HOST_TOKEN" --approval auto --workspace /workspace --log-format json`,
 ].join("\n");
 
-export function createWorkspaceService(db: Database, docker: Docker, settings: WorkspaceSettings, now: () => Date) {
+/** The workspace server's host token, derived from the workspace token so nothing extra is stored. */
+export function hostTokenFor(token: string): string {
+  return sha256(`host:${token}`);
+}
+
+type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
+export function createWorkspaceService(db: Database, docker: Docker, settings: WorkspaceSettings, now: () => Date, fetchImpl: Fetch = fetch, retryDelayMs = 1000) {
+  /**
+   * Give the workspace server the member's provider. Its engine takes providers
+   * from the server's runtime config, not from OpenCode's own config file.
+   * Retries while the new container starts.
+   */
+  async function deliverProvider(containerName: string, token: string, key: string): Promise<void> {
+    const url = `http://${containerName}:${WORKSPACE_PORT}/runtime-config/providers`;
+    let lastError = "not reached";
+    for (let attempt = 0; attempt < 90; attempt += 1) {
+      try {
+        const response = await fetchImpl(url, {
+          method: "PATCH",
+          headers: { "content-type": "application/json", "x-offlinegpt-host-token": hostTokenFor(token) },
+          body: JSON.stringify({ provider: { offlinegpt: providerConfig(settings, key) } }),
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (response.ok) return;
+        lastError = `HTTP ${response.status}`;
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+    throw new Error(`Could not give the workspace its model provider: ${lastError}`);
+  }
+
   async function find(memberId: string): Promise<Row | undefined> {
     const [row] = await db.select().from(workspaces).where(eq(workspaces.memberId, memberId)).limit(1);
     return row;
@@ -75,7 +111,7 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
       cmd: ["sh", "-c", START_SCRIPT],
       // OFFLINEGPT_WEB_ROOT makes the workspace server serve the workspace app itself.
       // OPENCODE_MODELS_URL: the air-gapped engine reads its model catalog from the gateway, never the internet.
-      env: { OGP_WORKSPACE_TOKEN: token, OGP_OPENCODE_CONFIG: opencodeConfig(settings, key), OFFLINEGPT_WEB_ROOT: "/opt/offlinegpt/web", OPENCODE_MODELS_URL: `${settings.modelGatewayUrl.replace(/\/v1\/?$/, "")}/models` },
+      env: { OGP_WORKSPACE_TOKEN: token, OGP_HOST_TOKEN: hostTokenFor(token), OGP_OPENCODE_CONFIG: opencodeConfig(settings, key), OFFLINEGPT_WEB_ROOT: "/opt/offlinegpt/web", OPENCODE_MODELS_URL: `${settings.modelGatewayUrl.replace(/\/v1\/?$/, "")}/models` },
       labels: { "offlinegpt.platform": "workspace", "offlinegpt.member": memberId },
       volume: `${containerName}-data`,
       mountPath: "/workspace",
@@ -83,6 +119,7 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
       memoryMb: settings.memoryMb,
       cpus: settings.cpus,
     });
+    return key;
   }
 
   return {
@@ -98,8 +135,9 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
       const token = existing?.token ?? randomToken(32);
       if (!existing) await db.insert(workspaces).values({ memberId, containerName, token, status: "stopped", createdAt: now(), lastActiveAt: now() });
       const state = await docker.state(containerName);
-      if (state === "missing") await createContainer(memberId, containerName, token);
+      const newKey = state === "missing" ? await createContainer(memberId, containerName, token) : null;
       if (state !== "running") await docker.start(containerName);
+      if (newKey) await deliverProvider(containerName, token, newKey);
       await db.update(workspaces).set({ status: "running", lastActiveAt: now() }).where(eq(workspaces.memberId, memberId));
       return { memberId, containerName, token, status: "running" };
     },
