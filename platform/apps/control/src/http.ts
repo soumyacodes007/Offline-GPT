@@ -4,7 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import type { z } from "zod";
 import { safeEqual, sha256 } from "./crypto";
 import type { Deps } from "./deps";
-import { resolveSession, type Member } from "./sessions";
+import { resolveInferenceKey, resolveSession, type Member } from "./sessions";
 import { readScimTokenHash } from "./settings";
 
 export const SESSION_COOKIE = "ogp_session";
@@ -14,9 +14,9 @@ export type AppEnv = { Variables: { member: Member } };
 /**
  * Who may call a route. `public`: anyone. `member`: any signed-in active
  * member. `admin`: owners and admins. `owner`: owners only. `scim`: the IdP's
- * SCIM token.
+ * SCIM token. `agent`: a member's inference key, used by their workspace.
  */
-export type Access = "public" | "member" | "admin" | "owner" | "scim";
+export type Access = "public" | "member" | "admin" | "owner" | "scim" | "agent";
 
 /** Marks a middleware as the route's access declaration, so a test can prove every route has one. */
 export const ACCESS_TAG = Symbol("access");
@@ -47,6 +47,13 @@ export function access(deps: Deps, level: Access): TaggedMiddleware {
       if (!stored || !token || !safeEqual(sha256(token), stored)) {
         return c.json({ schemas: ["urn:ietf:params:scim:api:messages:2.0:Error"], status: "401", detail: "Invalid SCIM token." }, 401);
       }
+      return next();
+    }
+    if (level === "agent") {
+      const key = bearerToken(c);
+      const agent = key ? await resolveInferenceKey(deps, key) : null;
+      if (!agent) return c.json({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Invalid workspace key." } }, 401);
+      c.set("member", agent);
       return next();
     }
     const token = sessionToken(c);
