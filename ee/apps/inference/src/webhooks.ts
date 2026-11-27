@@ -4,7 +4,6 @@ import { InferenceKeyTable, InferenceOrgLimitPolicyTable, InferenceUsageLedgerBu
 import { createDenTypeId, normalizeDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { DenTypeId } from "@offlinegpt-ee/utils/typeid"
 import { INFERENCE_USAGE_CONVERSION_FACTOR, INFERENCE_WINDOW_TYPES } from "@offlinegpt/types/den/inference"
-import * as Sentry from "@sentry/node"
 import { db } from "./db.js"
 import { env } from "./env.js"
 import { constantTimeEquals } from "./keys.js"
@@ -261,25 +260,14 @@ function isAuthorized(request: Request) {
   return [bearer, signature].some((value) => value !== null && constantTimeEquals(value, webhookSecret))
 }
 
-const sentryWebhookReporter: OpenRouterUsageWebhookReporter = {
+const stdoutWebhookReporter: OpenRouterUsageWebhookReporter = {
   unknownModel(report) {
-    Sentry.captureMessage("OpenRouter usage webhook could not infer cost for reported model", {
-      level: "fatal",
-      tags: {
-        organization_id: report.organizationId,
-        offlinegpt_request_id: report.offlinegptRequestId,
-        external_event_id: report.externalEventId ?? "none",
-        reported_model: report.reportedModel,
-      },
-      contexts: {
-        openrouter_usage_webhook: report,
-      },
-    })
+    console.error(JSON.stringify({ level: "error", service: "inference", message: "OpenRouter usage webhook could not infer cost for reported model", ...report }))
   },
 }
 
 const defaultWebhookDependencies: WebhookDependencies = {
-  reporter: sentryWebhookReporter,
+  reporter: stdoutWebhookReporter,
   async findInferenceKey(inferenceKeyId) {
     const [inferenceKey] = await db.select().from(InferenceKeyTable)
       .where(eq(InferenceKeyTable.id, normalizeDenTypeId("inferenceKey", inferenceKeyId)))
