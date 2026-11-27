@@ -100,9 +100,20 @@ export const usageRecords = pgTable("usage_records", {
   status: text("status", { enum: ["completed", "failed"] }).notNull(),
 }, (table) => [index("usage_records_member_at_idx").on(table.memberId, table.at)]);
 
+export const workspaces = pgTable("workspaces", {
+  memberId: text("member_id").primaryKey().references(() => members.id, { onDelete: "cascade" }),
+  /** Docker container name; also its hostname on the internal network. */
+  containerName: text("container_name").notNull().unique(),
+  /** Bearer token the router presents to the container. Never sent to the browser. */
+  token: text("token").notNull(),
+  status: text("status", { enum: ["running", "stopped"] }).notNull(),
+  createdAt: createdAt(),
+  lastActiveAt: timestamp("last_active_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").$type<unknown>().notNull(),
 });
 
-export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, settings };
+export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, settings };
