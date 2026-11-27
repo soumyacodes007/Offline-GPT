@@ -8,7 +8,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { capturePosthogEvent } from "../lib/posthog-client";
 import { LandingAgentGlyphs } from "./landing-agent-glyphs";
 
 const PROMPT_VARIANT = "hero";
@@ -58,12 +57,6 @@ export function LandingHeroPrompt({ className, compact = false }: Props) {
     setCopyError(!copied);
     setFeedback(true);
     if (copied) setRevealed(true);
-    capturePosthogEvent("landing_copy_prompt_clicked", {
-      copied,
-      method,
-      variant: PROMPT_VARIANT,
-      placement: "hero"
-    });
     if (resetTimer.current) clearTimeout(resetTimer.current);
     resetTimer.current = setTimeout(() => {
       setFeedback(false);
