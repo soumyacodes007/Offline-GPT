@@ -17,6 +17,7 @@ const envSchema = z.object({
   WORKSPACE_IMAGE: optional,
   WORKSPACE_NETWORK: optional,
   MODEL_GATEWAY_URL: z.url().optional(),
+  CONTROL_INTERNAL_URL: z.url().optional(),
   MODELS: optional,
   DOCKER_URL: z.string().default("unix:///var/run/docker.sock"),
   WORKSPACE_MEMORY_MB: z.coerce.number().int().min(512).default(4096),
@@ -64,13 +65,14 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
 
 function parseWorkspaces(parsed: z.infer<typeof envSchema>): WorkspaceConfig | null {
   if (!parsed.WORKSPACE_IMAGE) return null;
-  if (!parsed.WORKSPACE_NETWORK || !parsed.MODEL_GATEWAY_URL || !parsed.MODELS) {
-    throw new Error("WORKSPACE_IMAGE needs WORKSPACE_NETWORK, MODEL_GATEWAY_URL and MODELS too.");
+  if (!parsed.WORKSPACE_NETWORK || !parsed.MODEL_GATEWAY_URL || !parsed.CONTROL_INTERNAL_URL || !parsed.MODELS) {
+    throw new Error("WORKSPACE_IMAGE needs WORKSPACE_NETWORK, MODEL_GATEWAY_URL, CONTROL_INTERNAL_URL and MODELS too.");
   }
   return {
     image: parsed.WORKSPACE_IMAGE,
     network: parsed.WORKSPACE_NETWORK,
     modelGatewayUrl: parsed.MODEL_GATEWAY_URL,
+    controlUrl: parsed.CONTROL_INTERNAL_URL,
     models: workspaceModelsSchema.parse(JSON.parse(parsed.MODELS)),
     memoryMb: parsed.WORKSPACE_MEMORY_MB,
     cpus: parsed.WORKSPACE_CPUS,
