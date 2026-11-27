@@ -181,48 +181,15 @@ test("an existing Models subscriber can decline, enable and disable task analyti
   const webUser = user.on(world.web);
   await world.rollout(true);
   await webUser.reload();
-  await webUser.see({ role: "tab", label: "Integrations" }, { timeoutMs: 60_000 });
-  await webUser.click({ role: "tab", label: "Integrations" });
-  await webUser.click({ role: "button", label: "Data region" });
-  await webUser.click({ role: "option", label: "Self-hosted" });
-  await webUser.type({ role: "textbox", label: "Langfuse address" }, "https://127.0.0.1", { replace: true });
-  await webUser.type({ role: "textbox", label: "Public key" }, "fixture-public", { replace: true });
-  await webUser.type({ label: "Secret key" }, "fixture-secret", { replace: true });
-  await webUser.click({ role: "button", label: "Test connection" });
-  await webUser.see({ text: "Could not connect." });
-  await webUser.type({ role: "textbox", label: "Langfuse address" }, world.witnessUrl, { replace: true });
-  await webUser.click({ role: "button", label: "Test connection" });
-  await webUser.see({ text: "Connection verified." });
-  await webUser.click({ role: "button", label: "Connect Langfuse" });
-  await webUser.see({ role: "button", label: "Disconnect Langfuse" });
-  const snapshot = async () => record(await fetch(`${world.witnessUrl}/fixture/requests`, { signal: AbortSignal.timeout(5_000) }).then((response) => response.json()));
-  const spans = (snapshot: Record<string, unknown>) => list(snapshot.exports).flatMap((batch) => list(batch.resourceSpans).flatMap((resource) => list(resource.scopeSpans).flatMap((scope) => list(scope.spans))));
-  expect(spans(await snapshot())).toEqual([]);
-  await webUser.screenshot();
-  expect((await fetch(`${world.witnessUrl}/fixture/export-hold`, { method: "POST" })).ok).toBe(true);
-  expect((await world.complete({ sessionId: "export-conversation", taskId: "exported-task", prompt: "This private text must never reach Langfuse" })).status).toBe(200);
-  const exported = await probe.eventually(async () => spans(await snapshot()), { within: 70_000, label: "new metadata reaches the Langfuse witness", until: (spans) => spans.length > 0 });
-  const serialized = JSON.stringify(exported);
-  expect(serialized).toContain("exported-task");
-  expect(serialized).toContain("0.0123");
-  expect(serialized).not.toContain("enabled-task");
-  expect(serialized).not.toContain("This private text");
-  expect(serialized).not.toContain("fixture-secret");
-  expect((await snapshot()).exportInFlight).toBe(true);
-  await webUser.click({ role: "button", label: "Turn off analytics" });
-  let disabled = false;
-  const disabledChoice = webUser.see({ role: "button", label: "Enable task analytics" }).then(() => { disabled = true; });
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  expect(disabled).toBe(false);
-  expect((await fetch(`${world.witnessUrl}/fixture/export-release`, { method: "POST" })).ok).toBe(true);
-  await disabledChoice;
-  expect((await world.complete({ sessionId: "export-conversation", taskId: "disabled-export" })).status).toBe(200);
-  // Cover a full export interval; a negative assertion needs an observation window.
-  await new Promise((resolve) => setTimeout(resolve, 35_000));
-  expect(spans(await snapshot())).toHaveLength(exported.length);
-  evidence.recordAssertionEvidence("The Langfuse UI verifies project access, rejects private addresses, and exports only newly collected metadata", "Private address rejected; HTTPS witness connected; new model usage arrived without prompt text, keys or historical activity", true);
-  evidence.recordAssertionEvidence("Turning off task analytics stops export while Models keeps responding", "New Models request returned 200 after disable; no extra spans arrived across a full export interval", true);
-  evidence.recordAssertionEvidence("Opt-out finishes only after an already-authorized export has finished", "The Langfuse witness held an export response; the UI could not confirm opt-out until the response was released, then no later export arrived", true);
+  await webUser.see({ role: "tab", label: "Activity" }, { timeoutMs: 60_000 });
+  await webUser.notSee({ role: "tab", label: "Integrations" });
+  const exportRoute = await denFetch(world.den.admin, "/v1/inference/analytics/langfuse/test", {
+    method: "POST",
+    headers: { authorization: `Bearer ${world.den.admin.token}`, "x-offlinegpt-org-id": world.orgId, "content-type": "application/json" },
+    body: JSON.stringify({ host: world.witnessUrl, publicKey: "fixture-public", secretKey: "fixture-secret" }),
+  });
+  expect(exportRoute.response.status).toBe(404);
+  evidence.recordAssertionEvidence("Task analytics has no external export", "The analytics page shows only Activity and Consumption, and the former Langfuse export endpoint returns 404, so analytics stay inside the deployment.", true);
   }
   {
   const webUser = user.on(world.web);
