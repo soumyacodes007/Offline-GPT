@@ -27,9 +27,6 @@ function healthPath(path: string) {
 
 export function registerObservabilityMiddleware<E extends Env>(app: Hono<E>) {
   const state = getRuntimeState()
-  if (state.honoMiddlewareFactory) {
-    app.use("*", state.honoMiddlewareFactory(app))
-  }
   for (const middleware of state.honoMiddlewares) {
     app.use("*", middleware)
   }
