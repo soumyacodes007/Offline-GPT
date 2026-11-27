@@ -201,9 +201,3 @@ data:
   {{ with .Values.config.public.offlinegptWebUrl }}
   DEN_WEB_OFFLINEGPT_WEB_URL: {{ . | quote }}
   {{ end }}
-  {{ with .Values.config.web.posthogKey }}
-  DEN_WEB_POSTHOG_KEY: {{ . | quote }}
-  {{ end }}
-  {{ with .Values.config.web.posthogHost }}
-  DEN_WEB_POSTHOG_HOST: {{ . | quote }}
-  {{ end }}
