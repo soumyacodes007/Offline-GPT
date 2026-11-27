@@ -3,7 +3,7 @@ import type { Hono } from "hono";
 import { accessRules, members, teams } from "@offlinegpt-platform/db";
 import { decide, decideMany, formatTarget, parseTarget, type Decision } from "@offlinegpt-platform/policy";
 import { z } from "zod";
-import { KIND_BASELINES, loadRules, RESOURCE_KINDS, subjectOf } from "../access";
+import { KIND_BASELINES, loadRules, RESOURCE_KINDS, subjectOf } from "@offlinegpt-platform/access";
 import { audit } from "../audit";
 import { newId } from "../crypto";
 import type { Deps } from "../deps";
@@ -95,7 +95,7 @@ export function registerRuleRoutes(app: Hono<AppEnv>, deps: Deps) {
     const [member] = await deps.db.select().from(members).where(eq(members.id, body.memberId)).limit(1);
     if (!member) fail(404, "not_found", "No member with that id.");
     if (!member.active) return c.json({ allowed: false, cause: { type: "inactive-member" } });
-    const decision = decide({ subject: await subjectOf(deps, member), resource: { kind: body.kind, id: body.id }, rules: await loadRules(deps, body.kind), baseline: KIND_BASELINES[body.kind], now: deps.now() });
+    const decision = decide({ subject: await subjectOf(deps.db, member), resource: { kind: body.kind, id: body.id }, rules: await loadRules(deps.db, body.kind), baseline: KIND_BASELINES[body.kind], now: deps.now() });
     return c.json(explain(decision));
   });
 
@@ -104,7 +104,7 @@ export function registerRuleRoutes(app: Hono<AppEnv>, deps: Deps) {
     const kind = z.enum(RESOURCE_KINDS).safeParse(c.req.query("kind"));
     if (!kind.success) fail(400, "invalid_kind", "Pass ?kind= with a known resource kind.");
     const ids = (c.req.query("ids") ?? "").split(",").map((id) => id.trim()).filter(Boolean).slice(0, 500);
-    const decisions = decideMany({ subject: await subjectOf(deps, c.get("member")), kind: kind.data, ids, rules: await loadRules(deps, kind.data), baseline: KIND_BASELINES[kind.data], now: deps.now() });
+    const decisions = decideMany({ subject: await subjectOf(deps.db, c.get("member")), kind: kind.data, ids, rules: await loadRules(deps.db, kind.data), baseline: KIND_BASELINES[kind.data], now: deps.now() });
     return c.json({ kind: kind.data, decisions: Object.fromEntries([...decisions].map(([id, decision]) => [id, explain(decision)])) });
   });
 }
