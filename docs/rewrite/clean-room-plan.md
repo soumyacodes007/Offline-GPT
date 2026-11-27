@@ -1,6 +1,13 @@
 # Rebuilding `ee/` from scratch: clean-room plan
 
-Status: plan, not started. Branch for the work: `feat/platform-rewrite` (off `main`
+Status (2026-11-28): phases 0–6 built on `feat/platform-rewrite`, see
+`platform/README.md`. Done: specs (`docs/platform-spec/`), policy engine,
+Postgres schema, control service (setup, OIDC, SCIM, rules, check access,
+requests/approvals, audit, knowledge incl. PDF/Word, MCP search tool, Docker
+workspaces with their own origin), model gateway, console, compose packaging,
+desktop first run on the user's own subscription. Open: SAML, org library of
+skills/plugins/MCP, a full GPU run of the compose stack, legal review, then
+deleting `ee/` (phase 8). Branch for the work: `feat/platform-rewrite` (off `main`
 once `feat/airgapped-edition` and `chore/remove-telemetry` land).
 
 ## 1. Why, and the two products
