@@ -2,8 +2,10 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { Deps } from "./deps";
 import { access, type AppEnv } from "./http";
+import { registerAuditRoutes } from "./routes/audit";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerOidcRoutes } from "./routes/oidc";
+import { registerRequestRoutes } from "./routes/requests";
 import { registerRuleRoutes } from "./routes/rules";
 import { registerScimRoutes } from "./routes/scim";
 
@@ -15,6 +17,8 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   registerOidcRoutes(app, deps);
   registerScimRoutes(app, deps);
   registerRuleRoutes(app, deps);
+  registerRequestRoutes(app, deps);
+  registerAuditRoutes(app, deps);
 
   app.notFound((c) => c.json({ error: "not_found", message: "No such route." }, 404));
   app.onError((error, c) => {
