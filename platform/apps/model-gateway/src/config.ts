@@ -23,7 +23,8 @@ const envSchema = z.object({
 export type GatewayConfig = { databaseUrl: string; port: number; models: ModelConfig[]; dailyTokenLimit: number | null };
 
 export function parseGatewayConfig(env: Record<string, string | undefined>): GatewayConfig {
-  const parsed = envSchema.parse(env);
+  // Compose passes unset settings as empty strings; treat them as unset.
+  const parsed = envSchema.parse(Object.fromEntries(Object.entries(env).filter(([, value]) => value !== undefined && value.trim() !== "")));
   const models = z.array(modelSchema).min(1).parse(JSON.parse(parsed.MODELS));
   const aliases = new Set(models.map((model) => model.alias));
   if (aliases.size !== models.length) throw new Error("MODELS has two entries with the same alias.");
