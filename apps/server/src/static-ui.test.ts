@@ -190,6 +190,21 @@ describe("serveStaticUi", () => {
     });
   });
 
+  test("names the deployment's default model when one is configured", async () => {
+    const root = await createWebRoot();
+    const previous = process.env.OFFLINEGPT_WEB_DEFAULT_MODEL;
+    process.env.OFFLINEGPT_WEB_DEFAULT_MODEL = "offlinegpt/main";
+    try {
+      await withWebRoot(root, async () => {
+        const response = await serveStaticUi(new Request("http://127.0.0.1/"), { token: "tok" });
+        expect(await response?.text()).toContain('window.__OFFLINEGPT_BOOTSTRAP__ = {"token":"tok","defaultModel":"offlinegpt/main"}');
+      });
+    } finally {
+      if (previous === undefined) delete process.env.OFFLINEGPT_WEB_DEFAULT_MODEL;
+      else process.env.OFFLINEGPT_WEB_DEFAULT_MODEL = previous;
+    }
+  });
+
   test("can disable bootstrap token injection", async () => {
     const root = await createWebRoot();
     for (const value of ["0", "false"]) {
