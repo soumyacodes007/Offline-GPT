@@ -7,6 +7,7 @@ import { newId } from "../crypto";
 import type { Deps } from "../deps";
 import { access, fail, readJson, type AppEnv } from "../http";
 import { splitIntoSections } from "../knowledge/chunk";
+import { extractUploadText } from "../knowledge/extract";
 import { MAX_RESULTS, searchKnowledge, type SearchHit } from "../knowledge/search";
 import type { Member } from "../sessions";
 
@@ -20,9 +21,11 @@ const audienceSchema = z.discriminatedUnion("type", [
 const uploadSchema = z.object({
   path: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9/_.-]{0,254}$/, "Use letters, numbers, `/`, `-`, `_` and `.` for the path."),
   title: z.string().trim().min(1).max(300),
-  content: z.string().min(1).max(2_000_000),
+  /** Plain text or Markdown. Give this, or `file` for PDF and Word. */
+  content: z.string().min(1).max(2_000_000).optional(),
+  file: z.object({ format: z.enum(["pdf", "docx", "text"]), base64: z.string().min(1).max(28_000_000) }).optional(),
   audience: z.array(audienceSchema).max(50).default([]),
-});
+}).refine((body) => (body.content === undefined) !== (body.file === undefined), "Send either `content` or `file`.");
 const sensitivitySchema = z.object({ sensitivity: z.enum(["ordinary", "sensitive", "restricted"]) });
 const searchSchema = z.object({ query: z.string().trim().min(1).max(500), limit: z.number().int().min(1).max(MAX_RESULTS).default(10) });
 
@@ -37,7 +40,15 @@ export async function searchAsMember(deps: Deps, member: Member, query: string, 
 export function registerKnowledgeRoutes(app: Hono<AppEnv>, deps: Deps) {
   app.post("/v1/knowledge/documents", access(deps, "admin"), async (c) => {
     const body = await readJson(c, uploadSchema);
-    const sections = splitIntoSections(body.title, body.content);
+    let text = body.content ?? "";
+    if (body.file) {
+      try {
+        text = await extractUploadText(body.file.format, Buffer.from(body.file.base64, "base64"));
+      } catch {
+        fail(400, "unreadable_file", `This ${body.file.format.toUpperCase()} file couldn't be read. Check that it isn't damaged or password-protected.`);
+      }
+    }
+    const sections = splitIntoSections(body.title, text);
     if (!sections.length) fail(400, "empty_document", "The document has no text.");
     const memberIds = body.audience.flatMap((entry) => (entry.type === "member" ? [entry.id] : []));
     const teamIds = body.audience.flatMap((entry) => (entry.type === "team" ? [entry.id] : []));
