@@ -12,8 +12,6 @@ const generatedVersionPath = path.join(serviceDir, "src", "generated", "app-vers
 const distDir = path.join(serviceDir, "dist")
 const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm"
 const fallbackAppVersion = "0.0.0"
-export const sentrySourcemapUploadFlag = "DEN_UPLOAD_SENTRY_SOURCEMAPS"
-export const requiredSentrySourcemapEnv = ["SENTRY_AUTH_TOKEN", "SENTRY_ORG", "SENTRY_PROJECT", "SENTRY_RELEASE"]
 
 function readDesktopVersion() {
   if (!existsSync(desktopPackagePath)) {
@@ -53,25 +51,6 @@ function run(command, args) {
 
   if (result.status !== 0) {
     process.exit(result.status ?? 1)
-  }
-}
-
-export function envFlagEnabled(value) {
-  return value === "1" || value === "true" || value === "yes"
-}
-
-export function shouldUploadSentrySourcemaps(env = process.env) {
-  return envFlagEnabled(env[sentrySourcemapUploadFlag])
-}
-
-export function missingSentrySourcemapUploadEnv(env = process.env) {
-  return requiredSentrySourcemapEnv.filter((key) => !env[key]?.trim())
-}
-
-export function requireSentrySourcemapUploadEnv(env = process.env) {
-  const missing = missingSentrySourcemapUploadEnv(env)
-  if (missing.length > 0) {
-    throw new Error(`${sentrySourcemapUploadFlag}=1 requires ${missing.join(", ")}`)
   }
 }
 
@@ -141,31 +120,6 @@ function verifyProductionWorkspaceExports() {
   }
 }
 
-function maybeUploadSentrySourcemaps() {
-  if (!shouldUploadSentrySourcemaps()) {
-    return
-  }
-  requireSentrySourcemapUploadEnv()
-
-  const uploadArgs = [
-    "exec",
-    "sentry-cli",
-    "sourcemaps",
-    "upload",
-    "--release",
-    process.env.SENTRY_RELEASE,
-    "--url-prefix",
-    "~/",
-  ]
-  if (process.env.SENTRY_DIST) {
-    uploadArgs.push("--dist", process.env.SENTRY_DIST)
-  }
-  uploadArgs.push("dist")
-
-  run(pnpmCommand, ["exec", "sentry-cli", "sourcemaps", "inject", "dist"])
-  run(pnpmCommand, uploadArgs)
-}
-
 function main() {
   process.env.DEN_API_LATEST_APP_VERSION = process.env.DEN_API_LATEST_APP_VERSION || readDesktopVersion()
   writeGeneratedVersionFile(process.env.DEN_API_LATEST_APP_VERSION)
@@ -174,7 +128,6 @@ function main() {
   run(pnpmCommand, ["run", "build:workspace-dependencies"])
   verifyProductionWorkspaceExports()
   run(pnpmCommand, ["exec", "tsc", "-p", "tsconfig.json"])
-  maybeUploadSentrySourcemaps()
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
