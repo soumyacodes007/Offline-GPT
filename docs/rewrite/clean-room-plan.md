@@ -38,8 +38,15 @@ So the new platform is written **clean-room**:
    upstream OpenCode, and the journey specs in `evals/specs/**`. They do not
    open `ee/` while implementing. When a spec is unclear, they ask the spec
    author; they do not look it up in `ee/`.
-3. The two roles are different people or different agent sessions. An agent
-   session that has read `ee/` source must not write platform code.
+3. Ideally the two roles are different people or different agent sessions.
+   **Decision (2026-11-28): the owner chose to have one Claude session write
+   both the specs and the code.** That session has already read `ee/` source,
+   so the result is *not* legally clean-room: it can still be argued to derive
+   from `ee/`. The owner accepts this risk. Mitigations: specs are still written
+   first and code is written only against them; no file, identifier or
+   structure is copied from `ee/`; and the legal review in step 7 is a hard gate
+   before any release. Switching implementation to fresh sessions that never
+   open `ee/` restores the protection at any time.
 4. Every platform PR states in its description which spec it implements and
    that `ee/` was not consulted.
 5. The new code lives outside `ee/` (`platform/`), is MIT, and has no
@@ -233,15 +240,14 @@ switches until phase 8.
 Rough size: the new platform should land around 25–35k lines, against about
 180k today, because the hosted, multi-tenant and billing paths are gone.
 
-## 8. Open questions
+## 8. Decisions
 
-1. **Database**: Postgres (most common in PSU IT, better full-text and
-   `pgvector`) or keep MySQL (matches today's stack)? This plan assumes Postgres.
-2. **Spec authors vs implementers**: who plays each role? For agents, it must be
-   separate sessions, and implementer sessions must not read `ee/`.
-3. **Product name and licence** for `platform/`: MIT like the rest of the repo,
-   or a different licence for the Workspace edition?
-4. **Data migration**: is there any existing deployment of the current
-   air-gapped stack whose data must be imported, or is it a fresh start?
-5. **Desktop "Connect to a Workspace"**: needed in the first release, or
-   browser-only for PSUs at first?
+Settled with the owner on 2026-11-28:
+
+| Question | Decision |
+|---|---|
+| Database | **Postgres** (full-text search, `pgvector` for knowledge embeddings). |
+| Who writes specs and code | **One Claude session writes both** (see the risk note in section 2, step 3). |
+| Licence of `platform/` | MIT, like the rest of the repo, subject to the legal review. |
+| Data migration | **Fresh start.** There's no existing deployment to import, so there is no importer. |
+| Desktop "Connect to a Workspace" | **Later.** PSU employees use the browser workspace first; the desktop edition ships on the user's own subscription only. Section 6, item 3 moves after phase 8. |
