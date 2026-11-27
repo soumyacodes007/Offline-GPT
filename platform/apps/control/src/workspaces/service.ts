@@ -74,7 +74,8 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
       image: settings.image,
       cmd: ["sh", "-c", START_SCRIPT],
       // OFFLINEGPT_WEB_ROOT makes the workspace server serve the workspace app itself.
-      env: { OGP_WORKSPACE_TOKEN: token, OGP_OPENCODE_CONFIG: opencodeConfig(settings, key), OFFLINEGPT_WEB_ROOT: "/opt/offlinegpt/web" },
+      // OPENCODE_MODELS_URL: the air-gapped engine reads its model catalog from the gateway, never the internet.
+      env: { OGP_WORKSPACE_TOKEN: token, OGP_OPENCODE_CONFIG: opencodeConfig(settings, key), OFFLINEGPT_WEB_ROOT: "/opt/offlinegpt/web", OPENCODE_MODELS_URL: `${settings.modelGatewayUrl.replace(/\/v1\/?$/, "")}/models` },
       labels: { "offlinegpt.platform": "workspace", "offlinegpt.member": memberId },
       volume: `${containerName}-data`,
       mountPath: "/workspace",
