@@ -21,6 +21,9 @@ COPY . .
 RUN pnpm install --frozen-lockfile --filter offlinegpt-server... --filter @offlinegpt/app...
 
 ARG TARGETARCH
+# 1: the web app asks for an OfflineGPT Cloud sign-in. The platform edition sets 0
+# because its control service signs people in before they reach the workspace.
+ARG WEB_REQUIRE_SIGNIN=1
 RUN set -eux; \
   arch="${TARGETARCH:-$(dpkg --print-architecture)}"; \
   case "$arch" in \
@@ -31,7 +34,7 @@ RUN set -eux; \
   pnpm --filter offlinegpt-server build; \
   pnpm --filter offlinegpt-server exec bun ./script/build.ts --outdir dist/bin --target "$target"; \
   install -m 0755 "apps/server/dist/bin/offlinegpt-server-${target}" /tmp/offlinegpt-server; \
-  pnpm --filter @offlinegpt/app build:web; \
+  VITE_OFFLINEGPT_DEPLOYMENT=web VITE_DEN_REQUIRE_SIGNIN="$WEB_REQUIRE_SIGNIN" pnpm --filter @offlinegpt/app exec vite build; \
   url="$(node -p "require('./apps/server/src/opencode-v2-artifacts.json').platforms['${engine}'].url")"; \
   sha="$(node -p "require('./apps/server/src/opencode-v2-artifacts.json').platforms['${engine}'].sha256")"; \
   curl -fsSL "$url" -o /tmp/opencode2.tar.gz; \
