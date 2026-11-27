@@ -103,6 +103,8 @@ services:
     build:
       context: ../..
       dockerfile: packaging/docker/Dockerfile.workspace-airgapped
+      args:
+        WEB_REQUIRE_SIGNIN: "0"
     image: ${WORKSPACE_IMAGE:-offlinegpt-workspace:local}
     entrypoint: ["true"]
     restart: "no"
