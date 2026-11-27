@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@offlinegpt-platform/access": "workspace:*",
     "@offlinegpt-platform/db": "workspace:*",
     "@offlinegpt-platform/policy": "workspace:*",
     "drizzle-orm": "0.45.2",
