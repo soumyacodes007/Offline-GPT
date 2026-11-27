@@ -107,3 +107,16 @@ test("idle workspaces are stopped and a vanished container is recreated on the n
   expect(containers.size).toBe(1);
   expect([...containers.values()][0]?.running).toBe(true);
 });
+
+test("the workspace origin sends signed-in members to their own container and others to sign-in", async () => {
+  const { createWorkspaceOrigin } = await import("../src/routes/workspaces");
+  const service = createWorkspaceService(h.db, createDocker(fakeDocker), settings, () => new Date());
+  const origin = createWorkspaceOrigin({ db: h.db, config: (await import("../src/config")).parseConfig({ DATABASE_URL: "pglite:memory", PUBLIC_URL: "http://control.example.test", OWNER_EMAIL: "owner@example.test", SETUP_CODE: "setup-code-0123456789" }), now: () => new Date(), fetch: async (input) => { containerRequests.push({ url: input instanceof Request ? input.url : input.toString(), authorization: null, cookie: null }); return Response.json({ ok: true }); }, workspaces: service }, service);
+  const signedOut = await origin.request("/session");
+  expect(signedOut.status).toBe(302);
+  expect(signedOut.headers.get("location")).toBe("http://control.example.test/");
+  const signedIn = await origin.request("/assets/app.js?v=1", { headers: { cookie: `ogp_session=${owner}` } });
+  expect(signedIn.status).toBe(200);
+  expect(new URL(containerRequests.at(-1)?.url ?? "").pathname).toBe("/assets/app.js");
+  expect([...containers.values()].some((container) => container.running)).toBe(true);
+});
