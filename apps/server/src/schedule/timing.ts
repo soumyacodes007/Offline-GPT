@@ -1,12 +1,16 @@
 import { DateTime, IANAZone } from "luxon";
-import { createRequire } from "node:module";
+import * as rruleModule from "rrule";
 import type { ScheduleTiming } from "@offlinegpt/types/schedule";
 
-// rrule ships CommonJS for Node and an ES module for bundlers, with different
-// default exports. Loading it through require gives the same module in Node,
-// Electron and the compiled server binary.
-const rruleModule: typeof import("rrule") = createRequire(import.meta.url)("rrule");
-const { rrulestr } = rruleModule;
+// rrule ships CommonJS for Node (its exports sit on `default`) and an ES
+// module for bundlers (named exports). A static import keeps it in the
+// compiled server binary; the guard picks whichever shape loaded.
+function hasRrulestr(value: unknown): value is Pick<typeof rruleModule, "rrulestr"> {
+  return typeof value === "object" && value !== null && typeof Reflect.get(value, "rrulestr") === "function";
+}
+const rruleExports = [rruleModule, Reflect.get(rruleModule, "default")].find(hasRrulestr);
+if (!rruleExports) throw new Error("The rrule package did not load.");
+const { rrulestr } = rruleExports;
 
 /** A rejected timing, reported to agents and the UI as an input error. */
 export class ScheduleInputError extends Error {
