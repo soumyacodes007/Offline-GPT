@@ -199,18 +199,6 @@ export type OnboardingIntent = {
   authMethod: AuthMethod;
 };
 
-type PosthogClient = {
-  capture?: (eventName: string, properties?: Record<string, unknown>) => void;
-  identify?: (distinctId?: string, properties?: Record<string, unknown>) => void;
-  reset?: () => void;
-};
-
-declare global {
-  interface Window {
-    posthog?: PosthogClient;
-  }
-}
-
 export const LAST_WORKER_STORAGE_KEY = "offlinegpt:web:last-worker";
 export const PENDING_SOCIAL_SIGNUP_STORAGE_KEY = "offlinegpt:web:pending-social-signup";
 export const AUTH_TOKEN_STORAGE_KEY = "offlinegpt:web:auth-token";
@@ -243,45 +231,6 @@ export function getEmailDomain(email: string): string {
     return "unknown";
   }
   return email.slice(atIndex + 1).toLowerCase();
-}
-
-export function trackPosthogEvent(eventName: string, properties: Record<string, unknown> = {}) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.posthog?.capture?.(eventName, properties);
-  } catch {
-    // Ignore analytics delivery failures.
-  }
-}
-
-export function identifyPosthogUser(user: AuthUser) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.posthog?.identify?.(user.id, {
-      email: user.email,
-      name: user.name ?? undefined
-    });
-  } catch {
-    // Ignore analytics delivery failures.
-  }
-}
-
-export function resetPosthogUser() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    window.posthog?.reset?.();
-  } catch {
-    // Ignore analytics delivery failures.
-  }
 }
 
 export function normalizeAuthModeParam(value: string | null | undefined): AuthMode | null {
