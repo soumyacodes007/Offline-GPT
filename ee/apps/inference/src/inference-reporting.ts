@@ -1,5 +1,3 @@
-import * as Sentry from "@sentry/node"
-import { shouldEmitSentryLog } from "./instrumentation.js"
 import type { ChatCompletionReport } from "./chat-response.js"
 
 export type PayloadLogMode = "summary"
@@ -102,58 +100,27 @@ function reportAttributes(report: InferenceRequestReport | InferenceHandledError
   }
 }
 
-function reportTags(report: InferenceRequestReport | InferenceHandledErrorReport) {
-  return {
-    organization_id: report.organizationId,
-    inference_key_id: report.inferenceKeyId,
-    offlinegpt_request_id: report.offlinegptRequestId,
-    route: report.route,
-    method: report.method,
-  }
+function writeLog(level: "info" | "error", message: string, fields: Record<string, unknown>) {
+  const line = JSON.stringify({ timestamp: new Date().toISOString(), level, service: "inference", message, ...fields })
+  if (level === "error") console.error(line)
+  else console.log(line)
 }
 
-export const sentryInferenceReporter: InferenceReporter = {
+// Reports go to this process's stdout only. The gateway sends nothing to an
+// external monitoring service, and request payloads are never logged.
+export const stdoutInferenceReporter: InferenceReporter = {
   completion(report) {
-    if (shouldEmitSentryLog(report.outcome === "completed" ? "info" : "error")) {
-      if (report.outcome === "completed") Sentry.logger.info("OfflineGPT inference completion", report)
-      else Sentry.logger.error("OfflineGPT inference completion", report)
-    }
+    if (report.outcome !== "completed") writeLog("error", "OfflineGPT inference completion", report)
   },
-  request(report) {
-    if (!shouldEmitSentryLog("info")) {
-      return
-    }
-
-    Sentry.logger.info("OfflineGPT chat completions inference request", {
-      ...reportAttributes(report),
-      payloadMode: report.payloadMode,
-      payload: report.payload,
-    })
-  },
+  request() {},
   handledError(report) {
-    const attributes = {
+    writeLog("error", "OfflineGPT inference handled error", {
       ...reportAttributes(report),
       reason: report.reason,
       status: report.status,
       statusText: report.statusText,
       upstreamUrl: report.upstreamUrl,
-      error: report.error,
-    }
-    if (shouldEmitSentryLog("error")) {
-      Sentry.logger.error("OfflineGPT inference handled error", attributes)
-    }
-    if (report.exception === undefined) {
-      Sentry.captureMessage(`OfflineGPT inference handled error: ${report.reason}`, {
-        level: "error",
-        tags: reportTags(report),
-        contexts: { inference: attributes },
-      })
-      return
-    }
-    Sentry.captureException(report.exception, {
-      level: "error",
-      tags: reportTags(report),
-      contexts: { inference: attributes },
+      error: report.error ?? (report.exception instanceof Error ? report.exception.message : undefined),
     })
   },
 }
