@@ -208,65 +208,9 @@ OTEL_TRACES_SAMPLER=parentbased_traceidratio OTEL_TRACES_SAMPLER_ARG=0.25
 
 `docker-compose.den-dev.yml` forwards the full OTLP runtime surface to both Den
 services: base and per-signal endpoints, base and per-signal protocol values,
-headers, per-signal exporters, and sampler settings. It also forwards runtime
-Sentry settings (`SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_LOG_LEVEL`,
-`SENTRY_ENVIRONMENT`, `SENTRY_RELEASE`, and `SENTRY_DIST`) while keeping
-distinct `OTEL_SERVICE_NAME` defaults for Den API and Den Web. Sentry tracing
-defaults to `0.01`; `SENTRY_LOG_LEVEL` defaults to `warn` so successful request
-logs stay on stdout unless explicitly enabled for Sentry.
-
-Sentry source-map upload is build-time only. Runtime Compose and Helm settings
-cannot upload maps after the image is built. The Dockerfiles default their
-upload flags to `0`, so normal builds and PR builds skip Sentry secret reads
-cleanly. To opt in for a trusted build, pass only non-secret upload flags as
-build args and pass credentials as BuildKit secrets; never pass Sentry
-credentials through `ARG`, `ENV`, or Compose runtime env.
-
-For custom Den API images, `DEN_UPLOAD_SENTRY_SOURCEMAPS=1` requires
-`sentry_auth_token`, `sentry_org`, `sentry_project`, and `sentry_release`.
-`sentry_url` and `sentry_dist` are optional:
-
-```bash
-SENTRY_AUTH_TOKEN=... SENTRY_ORG=... SENTRY_PROJECT=... \
-SENTRY_RELEASE=2026.07.11 SENTRY_DIST=den-api \
-docker buildx build \
-  -f packaging/docker/Dockerfile.den \
-  --build-arg DEN_UPLOAD_SENTRY_SOURCEMAPS=1 \
-  --secret id=sentry_auth_token,env=SENTRY_AUTH_TOKEN \
-  --secret id=sentry_org,env=SENTRY_ORG \
-  --secret id=sentry_project,env=SENTRY_PROJECT \
-  --secret id=sentry_release,env=SENTRY_RELEASE \
-  --secret id=sentry_dist,env=SENTRY_DIST \
-  -t offlinegpt-den-api:sentry .
-```
-
-For custom Den Web images, `DEN_WEB_UPLOAD_SENTRY_SOURCEMAPS=1` requires
-`sentry_auth_token`, `sentry_org`, and `sentry_project`. `sentry_url`,
-`sentry_release`, and `sentry_dist` are optional. The Dockerfile exports the
-upload flag and secrets only inside the build step; runtime Sentry still
-requires its own runtime environment configuration:
-
-```bash
-SENTRY_AUTH_TOKEN=... SENTRY_ORG=... SENTRY_PROJECT=... \
-SENTRY_RELEASE=2026.07.11 SENTRY_DIST=den-web SENTRY_URL=... \
-docker buildx build \
-  -f packaging/docker/Dockerfile.den-web \
-  --build-arg DEN_WEB_UPLOAD_SENTRY_SOURCEMAPS=1 \
-  --secret id=sentry_auth_token,env=SENTRY_AUTH_TOKEN \
-  --secret id=sentry_org,env=SENTRY_ORG \
-  --secret id=sentry_project,env=SENTRY_PROJECT \
-  --secret id=sentry_url,env=SENTRY_URL \
-  --secret id=sentry_release,env=SENTRY_RELEASE \
-  --secret id=sentry_dist,env=SENTRY_DIST \
-  -t offlinegpt-den-web:sentry .
-```
-
-The EE image publish workflow never passes repository Sentry secrets to
-`pull_request` builds. On trusted publish events, it checks for the complete
-configuration for each image and uses the Sentry upload build only for that
-configured image; otherwise it publishes the normal image without failing the
-release. Generic prebuilt images cannot perform source-map uploads for a
-deployment-specific Sentry project after publication.
+headers, per-signal exporters, and sampler settings, while keeping distinct
+`OTEL_SERVICE_NAME` defaults for Den API and Den Web. There is no Sentry or
+other third-party monitoring backend; OTLP goes only to the collector you set.
 
 Caveats: `grafana/otel-lgtm` is intended for development, demos, and tests, not production retention or security. The default Grafana credentials are public, and the digest should be refreshed deliberately when updating the image tag. Upstream images are signed with cosign; see the `grafana/docker-otel-lgtm` README if you need signature verification in CI.
 
