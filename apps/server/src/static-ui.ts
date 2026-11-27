@@ -6,6 +6,8 @@ import type { ServerConfig } from "./types.js";
 
 const WEB_ROOT_ENV = "OFFLINEGPT_WEB_ROOT";
 const WEB_BOOTSTRAP_TOKEN_ENV = "OFFLINEGPT_WEB_BOOTSTRAP_TOKEN";
+/** `provider/model` offered to the web app as its default, e.g. a deployment's self-hosted model. */
+const WEB_DEFAULT_MODEL_ENV = "OFFLINEGPT_WEB_DEFAULT_MODEL";
 const ASSET_CACHE = "public, max-age=31536000, immutable";
 const INDEX_CACHE = "no-cache";
 
@@ -125,7 +127,8 @@ function injectBootstrap(html: string, token: string): string {
   const clientToken = token.trim();
   if (!clientToken) return html;
 
-  const bootstrap = escapeScriptJson(JSON.stringify({ token: clientToken }));
+  const defaultModel = process.env[WEB_DEFAULT_MODEL_ENV]?.trim();
+  const bootstrap = escapeScriptJson(JSON.stringify({ token: clientToken, ...(defaultModel ? { defaultModel } : {}) }));
   const script = `<script>window.__OFFLINEGPT_BOOTSTRAP__ = ${bootstrap}</script>`;
   const headCloseIndex = html.toLowerCase().indexOf("</head>");
   if (headCloseIndex < 0) return `${script}${html}`;
