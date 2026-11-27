@@ -9,6 +9,7 @@ import { registerOidcRoutes } from "./routes/oidc";
 import { registerRequestRoutes } from "./routes/requests";
 import { registerRuleRoutes } from "./routes/rules";
 import { registerScimRoutes } from "./routes/scim";
+import { registerWorkspaceRoutes } from "./routes/workspaces";
 
 export function createApp(deps: Deps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -21,6 +22,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   registerRequestRoutes(app, deps);
   registerAuditRoutes(app, deps);
   registerInferenceRoutes(app, deps);
+  registerWorkspaceRoutes(app, deps);
 
   app.notFound((c) => c.json({ error: "not_found", message: "No such route." }, 404));
   app.onError((error, c) => {
