@@ -1011,6 +1011,8 @@ const STORAGE_REMOTE_ACCESS = "offlinegpt.server.remoteAccessEnabled";
 
 type OfflineGptBootstrap = {
   token?: string;
+  /** `provider/model` the serving deployment recommends when the person has not picked one. */
+  defaultModel?: string;
 };
 
 declare global {
