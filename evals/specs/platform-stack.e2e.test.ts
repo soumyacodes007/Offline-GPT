@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect } from "vitest";
-import { evalIn, fill, waitFor } from "@offlinegpt/behaviors";
+import { evalIn, fill, sendComposerMessage, waitFor } from "@offlinegpt/behaviors";
 import { browserScript, navigate } from "@offlinegpt/cdp";
 import { chrome } from "@offlinegpt/hosts";
 import { screenshot } from "@offlinegpt/test-evidence";
@@ -55,18 +55,18 @@ test("an employee signs in, opens their own workspace and the self-hosted model 
   evidence.recordAssertionEvidence("The employee's own workspace opens on its own origin", "After console sign-in, the workspace origin served the member's container and the app reached its task screen without another sign-in.", true);
 
   // 4. A task goes to the self-hosted model through the model gateway.
-  await new Promise((resolve) => setTimeout(resolve, 3000));
-  const composer = await evalIn(browser, () => {
-    const element = document.querySelector('textarea, [contenteditable="true"]');
-    if (!(element instanceof HTMLElement)) return "";
-    element.focus();
-    return element.tagName;
-  });
-  expect(composer).not.toBe("");
-  await browser.client.send("Input.insertText", { text: "Reply with exactly one word: OFFLINE" });
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  await browser.client.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
-  await browser.client.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+  // A first visit shows the app's welcome screen; the workspace is already set up, so skip the cloud choices.
+  await waitFor(browser, () => document.body.innerText.includes("Use Without Cloud") || document.querySelector('[contenteditable="true"], textarea') !== null, { timeoutMs: 120_000, label: "welcome or composer" });
+  if ((await evalIn(browser, () => document.body.innerText)).includes("Use Without Cloud")) {
+    await click("Use Without Cloud");
+    await shoot("2b-after-welcome");
+  }
+  try {
+    await sendComposerMessage(browser, "Reply with exactly one word: OFFLINE");
+  } catch (error) {
+    await shoot("3-send-failed");
+    throw error;
+  }
   await waitFor(browser, () => {
     const text = document.body.innerText;
     const prompt = text.indexOf("Reply with exactly one word: OFFLINE");
