@@ -380,8 +380,8 @@ upgrade after the CA resource is corrected.
 ## Observability
 
 The chart exposes first-class runtime observability settings for `den-api` and
-`den-web` only. `observability.backend` defaults to `none`; set it to `otel` or
-`sentry` to enable the matching runtime environment. The chart injects distinct
+`den-web` only. `observability.backend` defaults to `none`; set it to `otel` to export to
+your own OTLP collector. There is no third-party monitoring backend. The chart injects distinct
 `OTEL_SERVICE_NAME` values directly into each Deployment, so the shared
 ConfigMap is not used for service identity or auth-like observability values.
 
@@ -560,38 +560,6 @@ and active-request metrics.
   `tracesSampler: parentbased_traceidratio` with `tracesSamplerArg: "0.1"` to
   sample approximately ten percent of root traces.
 
-For Sentry runtime capture, configure the DSN directly or through an existing
-Secret. Helm runtime pods intentionally do not receive `SENTRY_AUTH_TOKEN`,
-`SENTRY_ORG`, `SENTRY_PROJECT`, or `SENTRY_URL`; those are build-time source-map
-upload settings, not runtime settings.
-
-```yaml
-observability:
-  backend: sentry
-  sentry:
-    dsnSecret:
-      existingSecret: offlinegpt-sentry-runtime
-      key: SENTRY_DSN
-    tracesSampleRate: "0.01"
-    environment: production
-    release: "2026.07.11"
-```
-
-Sentry Logs default to warning-and-error only through `SENTRY_LOG_LEVEL=warn`.
-Set `SENTRY_LOG_LEVEL=info` only during short debugging windows if you need
-successful request logs in Sentry; stdout JSON logs remain available either way.
-
-Sentry source-map upload is build-time behavior. Helm configures runtime pods
-after images already exist, so it cannot retroactively upload source maps for
-Vercel or CI builds. Set `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`,
-and `SENTRY_URL` in the build environment that creates the image (for example,
-Vercel project build environment variables), not in Helm values or the chart
-ConfigMap. The generic published images cannot upload source maps after they
-are built; build your own image with CI/BuildKit source-map secrets when you
-need uploaded artifacts. `packaging/docker/Dockerfile.den-web` accepts optional
-BuildKit secret IDs `sentry_auth_token`, `sentry_org`, `sentry_project`,
-`sentry_url`, `sentry_release`, and `sentry_dist`; the EE image publish workflow
-wires these IDs from GitHub Secrets when present.
 
 ## GitHub Connector
 
