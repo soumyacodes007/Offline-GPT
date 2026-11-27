@@ -147,13 +147,20 @@ export function parseWorkspaceModelVariants(
   }
 }
 
+/** The default a serving workspace server recommends (e.g. its self-hosted model), if any. */
+function deploymentDefaultModel(): ModelRef | null {
+  if (typeof window === "undefined") return null;
+  const value = window.__OFFLINEGPT_BOOTSTRAP__?.defaultModel;
+  return typeof value === "string" ? parseModelRef(value) : null;
+}
+
 export function readStoredDefaultModel(): ModelRef {
   if (typeof window === "undefined") return DEFAULT_MODEL;
   try {
     const stored = window.localStorage.getItem(MODEL_PREF_KEY);
-    return parseModelRef(stored) ?? DEFAULT_MODEL;
+    return parseModelRef(stored) ?? deploymentDefaultModel() ?? DEFAULT_MODEL;
   } catch {
-    return DEFAULT_MODEL;
+    return deploymentDefaultModel() ?? DEFAULT_MODEL;
   }
 }
 
