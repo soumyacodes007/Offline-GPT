@@ -1,4 +1,5 @@
-import { openDatabase, type DatabaseHandle } from "@offlinegpt-platform/db";
+import { openDatabase, type Database, type DatabaseHandle } from "@offlinegpt-platform/db";
+import type { WorkspaceService } from "../src/workspaces/service";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { createApp } from "../src/app";
 import { parseConfig } from "../src/config";
@@ -58,7 +59,14 @@ async function createMockIdp(clock: () => Date) {
 
 export type Harness = Awaited<ReturnType<typeof createHarness>>;
 
-export async function createHarness(options: { oidcJit?: boolean } = {}) {
+export type HarnessOptions = {
+  oidcJit?: boolean;
+  /** Answer some outgoing requests (e.g. to workspace containers); return null to fall through to the mock IdP. */
+  route?: (input: string | URL | Request, init?: RequestInit) => Promise<Response | null>;
+  workspaces?: (db: Database, now: () => Date) => WorkspaceService;
+};
+
+export async function createHarness(options: HarnessOptions = {}) {
   const database: DatabaseHandle = openDatabase("pglite:memory");
   await database.migrate();
   let now = new Date();
@@ -73,7 +81,7 @@ export async function createHarness(options: { oidcJit?: boolean } = {}) {
     OIDC_CLIENT_SECRET: "control-secret",
     OIDC_JIT: options.oidcJit ? "1" : "0",
   });
-  const app = createApp({ db: database.db, config, now: () => now, fetch: idp.fetch });
+  const app = createApp({ db: database.db, config, now: () => now, fetch: async (input, init) => (await options.route?.(input, init)) ?? idp.fetch(input, init), workspaces: options.workspaces?.(database.db, () => now) ?? null });
 
   const call = async (method: string, path: string, init: { token?: string; scim?: string; body?: unknown; cookie?: string } = {}): Promise<Response> =>
     app.request(path, {
