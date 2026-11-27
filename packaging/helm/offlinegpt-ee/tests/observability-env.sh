@@ -114,31 +114,14 @@ assert_not_contains "$legacy_rendered" 'valueFrom: null'
 assert_not_contains "$legacy_rendered" 'key: DEN_API_NODE_OPTIONS'
 
 sentry_values="$tmp_dir/sentry-values.yaml"
-sentry_rendered="$tmp_dir/sentry.yaml"
 cat > "$sentry_values" <<'YAML'
-inference:
-  enabled: true
 observability:
   backend: sentry
-  sentry:
-    dsnSecret:
-      existingSecret: sentry-runtime
-      key: dsn
-    tracesSampleRate: "0.75"
-    environment: production
-    release: "2026.07.11"
-    dist: web
 YAML
-helm template offlinegpt-ee "$chart_dir" -f "$sentry_values" > "$sentry_rendered"
-assert_count "$sentry_rendered" 'name: DEN_OBSERVABILITY_BACKEND' 2
-assert_count "$sentry_rendered" 'value: "sentry"' 2
-assert_count "$sentry_rendered" 'name: SENTRY_DSN' 2
-assert_contains "$sentry_rendered" 'name: "sentry-runtime"'
-assert_not_contains "$sentry_rendered" 'SENTRY_AUTH_TOKEN'
-assert_not_contains "$sentry_rendered" 'SENTRY_ORG'
-assert_not_contains "$sentry_rendered" 'SENTRY_PROJECT'
-assert_not_contains "$sentry_rendered" 'SENTRY_URL'
-assert_not_contains "$sentry_rendered" 'name: OTEL_EXPORTER_OTLP_HEADERS'
+if helm template offlinegpt-ee "$chart_dir" -f "$sentry_values" > /dev/null 2>&1; then
+  echo "observability.backend=sentry must be rejected" >&2
+  exit 1
+fi
 
 assert_file_contains "$repo_root/packaging/docker/Dockerfile.den" '/app/ee/apps/den-api/dist/main.js'
 assert_file_not_contains "$repo_root/packaging/docker/Dockerfile.den" '/app/ee/apps/den-api/dist/server.js'
