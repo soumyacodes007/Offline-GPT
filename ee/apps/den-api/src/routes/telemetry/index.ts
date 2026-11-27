@@ -7,32 +7,24 @@ import {
 } from "@offlinegpt-ee/den-db/schema"
 import {
   ANALYTICS_TREND_WEEKS,
-  buildSessionDimensionUpsert,
-  isKnownTelemetryEventType,
-  isKnownTelemetrySource,
-  normalizeTelemetrySource,
   readWindowMetrics,
-  sessionDimensionKey,
   telemetryAdoptionResponseSchema,
   telemetryAnalyticsQuerySchema,
   telemetryAnalyticsResponseSchema,
   telemetryDimensionListResponseSchema,
   telemetryDimensionsQuerySchema,
-  telemetryIngestBatchSchema,
   telemetryWindowConditions,
   weekIndexExpression,
   windowMetricsSelection,
   type DimensionFilter,
-  type TelemetryDimensionInput,
   type TelemetryOrgId,
 } from "@offlinegpt-ee/telemetry"
-import { createDenTypeId } from "@offlinegpt-ee/utils/typeid"
 import type { Hono } from "hono"
 import { describeRoute } from "hono-openapi"
 import { db } from "../../db.js"
 import { checkEntitlement } from "../../entitlements.js"
-import { jsonValidator, orgMemberRoute, orgRoleRoute, queryValidator } from "../../middleware/index.js"
-import { enterprisePlanRequiredSchema, invalidRequestSchema, jsonResponse, unauthorizedSchema, emptyResponse } from "../../openapi.js"
+import { orgMemberRoute, orgRoleRoute, queryValidator } from "../../middleware/index.js"
+import { enterprisePlanRequiredSchema, invalidRequestSchema, jsonResponse, unauthorizedSchema } from "../../openapi.js"
 import type { AuthContextVariables } from "../../session.js"
 import type { UserOrganizationsContext, OrganizationContextVariables } from "../../middleware/index.js"
 
@@ -49,80 +41,6 @@ async function queryWindowMetrics(orgId: TelemetryOrgId, since: Date, filter: Di
 }
 
 export function registerTelemetryRoutes<T extends { Variables: TelemetryRouteVariables }>(app: Hono<T>) {
-  // ── POST /v1/telemetry/ingest ─────────────────────────────────────────────
-  app.post(
-    "/v1/telemetry/ingest",
-    describeRoute({
-      tags: ["Telemetry"],
-      summary: "Ingest telemetry events",
-      description: "Receives a batch of telemetry events from the OfflineGPT app or workers. Auth provides org and member identity. Unknown event types and disallowed fields are dropped. Always returns 204.",
-      responses: {
-        204: emptyResponse("Events accepted."),
-        400: jsonResponse("Invalid event payload.", invalidRequestSchema),
-        401: jsonResponse("Caller must be signed in.", unauthorizedSchema),
-      },
-    }),
-    orgMemberRoute(),
-    jsonValidator(telemetryIngestBatchSchema),
-    async (c) => {
-      const orgContext = c.get("organizationContext")
-      const orgId = c.get("activeOrganizationId")
-      if (!orgContext || !orgId) {
-        return c.body(null, 204)
-      }
-
-      const memberId = orgContext.currentMember.id
-      const batch = c.req.valid("json")
-
-      try {
-        const accepted = batch.events.filter((event) => isKnownTelemetryEventType(event.type))
-
-        const eventRows = accepted.map((event) => ({
-          id: createDenTypeId("telemetryEvent"),
-          org_id: orgId,
-          member_id: memberId,
-          event_type: event.type,
-          event_timestamp: new Date(event.timestamp),
-          source: isKnownTelemetrySource(event.source) ? event.source : null,
-          session_id: event.sessionId ?? null,
-          duration_ms: event.durationMs ?? null,
-          success: event.success ?? null,
-        }))
-        if (eventRows.length > 0) {
-          await db.insert(TelemetryEventTable).values(eventRows)
-        }
-
-        // Deduplicate dimension sightings within the batch: last write per
-        // (source, session, dimension type) wins.
-        const pending = new Map<string, { sessionId: string; source: string; dimension: TelemetryDimensionInput; seenAt: Date }>()
-        for (const event of accepted) {
-          if (!event.sessionId || !event.dimensions?.length) continue
-          const source = normalizeTelemetrySource(event.source)
-          const seenAt = new Date(event.timestamp)
-          for (const dimension of event.dimensions) {
-            pending.set(sessionDimensionKey(source, event.sessionId, dimension.type), {
-              sessionId: event.sessionId,
-              source,
-              dimension,
-              seenAt,
-            })
-          }
-        }
-        for (const sighting of pending.values()) {
-          const upsert = buildSessionDimensionUpsert({ orgId, ...sighting })
-          await db
-            .insert(TelemetrySessionDimensionTable)
-            .values(upsert.values)
-            .onDuplicateKeyUpdate({ set: upsert.update })
-        }
-      } catch {
-        // Telemetry must never break the app: drop the batch on any failure.
-      }
-
-      return c.body(null, 204)
-    },
-  )
-
   // ── GET /v1/telemetry/dimensions ──────────────────────────────────────────
   app.get(
     "/v1/telemetry/dimensions",
