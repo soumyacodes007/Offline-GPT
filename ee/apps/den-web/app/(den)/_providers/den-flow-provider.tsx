@@ -30,7 +30,6 @@ import {
   deriveOnboardingWorkerName,
   getAuthInfoForMode,
   getBillingSummary,
-  getEmailDomain,
   getErrorMessage,
   getOrgLimitError,
   getRuntimeServiceLabel,
@@ -49,7 +48,6 @@ import {
   getWorkerSummary,
   getWorkerTokens,
   getWorkersList,
-  identifyPosthogUser,
   isWorkerLaunch,
   listItemToWorker,
   normalizeAuthIntentParam,
@@ -57,12 +55,10 @@ import {
   PENDING_AUTH_INTENT_STORAGE_KEY,
   parseWorkspaceIdFromUrl,
   requestJson,
-  resetPosthogUser,
   resolveOfflineGptWorkspaceUrl,
   withWorkerConnection,
   workerConnectionEquals,
-  workerNeedsConnectionResolution,
-  trackPosthogEvent
+  workerNeedsConnectionResolution
 } from "../_lib/den-flow";
 import { EMPTY_RUNTIME_CONFIG, getRuntimeConfig, type DenWebRuntimeConfig } from "../_lib/runtime-config";
 import {
@@ -511,11 +507,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
       if (!signInResult.response.ok) {
         setAuthError(getErrorMessage(signInResult.payload, `Authentication failed with ${signInResult.response.status}.`));
-        trackPosthogEvent("den_auth_failed", {
-          mode: nextMode,
-          method: "email",
-          status: signInResult.response.status
-        });
         return null;
       }
 
@@ -541,21 +532,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
         appendEvent("success", nextMode === "sign-up" ? "Account created" : "Signed in", refreshed.email);
       } else {
         setAuthInfo("Authentication succeeded, but session details are still syncing.");
-      }
-    }
-
-    if (authenticatedUser) {
-      identifyPosthogUser(authenticatedUser);
-      const analyticsPayload = {
-        mode: nextMode,
-        method: "email",
-        email_domain: getEmailDomain(authenticatedUser.email)
-      };
-
-      if (nextMode === "sign-up") {
-        trackPosthogEvent("den_signup_completed", analyticsPayload);
-      } else {
-        trackPosthogEvent("den_signin_completed", analyticsPayload);
       }
     }
 
@@ -605,10 +581,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
       setAuthInfo(`We sent a fresh verification code to ${trimmedEmail}.`);
       appendEvent("info", "Verification code resent", trimmedEmail);
-      trackPosthogEvent("den_signup_verification_sent", {
-        method: "email",
-        email_domain: getEmailDomain(trimmedEmail),
-      });
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Could not resend the verification code.");
     } finally {
@@ -644,12 +616,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         setAuthError(getErrorMessage(payload, `Verification failed with ${response.status}.`));
-        trackPosthogEvent("den_auth_failed", {
-          mode: authMode,
-          method: "email",
-          status: response.status,
-          reason: "verification_failed"
-        });
         return null;
       }
 
@@ -657,10 +623,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       setVerificationCode("");
       setAuthInfo(`Email verified for ${trimmedEmail}. Finishing sign-in...`);
       appendEvent("success", "Email verified", trimmedEmail);
-      trackPosthogEvent("den_email_verified", {
-        method: "email",
-        email_domain: getEmailDomain(trimmedEmail),
-      });
 
       return await finalizeEmailPasswordSignIn(authMode, trimmedEmail, payload);
     } catch (error) {
@@ -1254,10 +1216,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       && !pendingInvitationId
       ? "sign-in"
       : authMode;
-    trackPosthogEvent("den_auth_submitted", {
-      mode: submitMode,
-      method: "email"
-    });
 
     try {
       const trimmedEmail = email.trim();
@@ -1298,11 +1256,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
         } else {
           setAuthError(message);
         }
-        trackPosthogEvent("den_auth_failed", {
-          mode: submitMode,
-          method: "email",
-          status: response.status
-        });
         return null;
       }
 
@@ -1312,10 +1265,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
         setUser(null);
         openVerificationStep(trimmedEmail, `We emailed a 6-digit verification code to ${trimmedEmail}. Enter it below to finish creating your account.`);
         appendEvent("info", "Verification code sent", trimmedEmail);
-        trackPosthogEvent("den_signup_verification_sent", {
-          method: "email",
-          email_domain: getEmailDomain(trimmedEmail),
-        });
         return null;
       }
       return await finalizeEmailPasswordSignIn(submitMode, trimmedEmail, payload);
@@ -1323,11 +1272,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       const message = error instanceof Error ? error.message : "Unknown network error";
       setAuthError(message);
       setSignupPasswordFeedback([]);
-      trackPosthogEvent("den_auth_failed", {
-        mode: submitMode,
-        method: "email",
-        reason: "network_error"
-      });
       return null;
     } finally {
       setAuthBusy(false);
@@ -1348,10 +1292,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     setAuthError(null);
     setSignupPasswordFeedback([]);
     setAuthInfo(`Redirecting to ${getSocialProviderLabel(provider)}...`);
-    trackPosthogEvent("den_auth_submitted", {
-      mode: authMode,
-      method: provider
-    });
 
     try {
       const trimmedEmail = email.trim();
@@ -1466,8 +1406,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     setWorkerStatusFilter("all");
     setWorkerName(DEFAULT_WORKER_NAME);
     persistOnboardingIntent(null);
-    resetPosthogUser();
-    trackPosthogEvent("den_signout_completed", { method: "manual" });
 
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(LAST_WORKER_STORAGE_KEY);
@@ -1497,7 +1435,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
     }
 
     setUser(nextUser);
-    identifyPosthogUser(nextUser);
     return nextUser;
   }
 
@@ -2071,7 +2008,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    identifyPosthogUser(user);
   }, [user?.id]);
 
   useEffect(() => {
@@ -2089,11 +2025,6 @@ export function DenFlowProvider({ children }: { children: ReactNode }) {
 
     socialSignupHandledRef.current = user.id;
     window.sessionStorage.removeItem(PENDING_SOCIAL_SIGNUP_STORAGE_KEY);
-    trackPosthogEvent("den_signup_completed", {
-      mode: "sign-up",
-      method: pendingSocialSignup,
-      email_domain: getEmailDomain(user.email)
-    });
 
     if (getPendingOrgInvitationId()) {
       return;
