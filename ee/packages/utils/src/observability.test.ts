@@ -10,7 +10,6 @@ describe("observability env contract", () => {
     expect(parseObservabilityEnv({}, { serviceName: "den-api" })).toEqual({
       backend: "none",
       serviceName: "den-api",
-      sentryBuild: { values: {}, redactedKeys: [] },
     })
   })
 
@@ -112,33 +111,11 @@ describe("observability env contract", () => {
     })
   })
 
-  test("preserves inactive malformed Sentry build URLs without crashing none or otel runtimes", () => {
-    expect(parseObservabilityEnv(
-      { SENTRY_URL: "not a url" },
+  test("rejects the removed Sentry backend so a deployment cannot report to Sentry", () => {
+    expect(() => parseObservabilityEnv(
+      { DEN_OBSERVABILITY_BACKEND: "sentry", SENTRY_DSN: "https://public@sentry.example.test/123" },
       { serviceName: "den-api" },
-    )).toEqual({
-      backend: "none",
-      serviceName: "den-api",
-      sentryBuild: {
-        values: { SENTRY_URL: "not a url" },
-        redactedKeys: [],
-      },
-    })
-
-    const config = parseObservabilityEnv(
-      {
-        DEN_OBSERVABILITY_BACKEND: "otel",
-        OTEL_EXPORTER_OTLP_ENDPOINT: "https://collector.example.test",
-        SENTRY_URL: "not a url",
-      },
-      { serviceName: "den-web" },
-    )
-
-    expect(config.backend).toBe("otel")
-    if (config.backend !== "otel") {
-      throw new Error("expected otel backend")
-    }
-    expect(config.sentryBuild.values.SENTRY_URL).toBe("not a url")
+    )).toThrow("must be one of none, otel")
   })
 
   test("rejects invalid OTEL backend values, exporters, protocols, samplers, and endpoint URLs", () => {
@@ -168,84 +145,6 @@ describe("observability env contract", () => {
     )).toThrow("OTEL_EXPORTER_OTLP_ENDPOINT")
   })
 
-  test("parses Sentry runtime config and sanitizes build-only variables", () => {
-    const config = parseObservabilityEnv(
-      {
-        DEN_OBSERVABILITY_BACKEND: "sentry",
-        SENTRY_DSN: "https://public@sentry.example.test/123",
-        SENTRY_TRACES_SAMPLE_RATE: "0.75",
-        SENTRY_ORG: "offlinegpt",
-        SENTRY_PROJECT: "den-api",
-        SENTRY_URL: "https://sentry.example.test",
-        SENTRY_RELEASE: "2026.07.11",
-        SENTRY_AUTH_TOKEN: "do-not-return",
-      },
-      { serviceName: "den-api" },
-    )
-
-    expect(config.backend).toBe("sentry")
-    if (config.backend !== "sentry") {
-      throw new Error("expected sentry backend")
-    }
-
-    expect(config.sentry).toEqual({
-      dsn: "https://public@sentry.example.test/123",
-      tracesSampleRate: 0.75,
-    })
-    expect(config.sentryBuild).toEqual({
-      values: {
-        SENTRY_ORG: "offlinegpt",
-        SENTRY_PROJECT: "den-api",
-        SENTRY_URL: "https://sentry.example.test",
-        SENTRY_RELEASE: "2026.07.11",
-      },
-      redactedKeys: ["SENTRY_AUTH_TOKEN"],
-    })
-  })
-
-  test("defaults Sentry sample rate and rejects invalid DSNs and rates", () => {
-    const config = parseObservabilityEnv(
-      {
-        DEN_OBSERVABILITY_BACKEND: "sentry",
-        SENTRY_DSN: "https://public@sentry.example.test/123",
-      },
-      { serviceName: "den-web" },
-    )
-
-    expect(config.backend).toBe("sentry")
-    if (config.backend !== "sentry") {
-      throw new Error("expected sentry backend")
-    }
-    expect(config.sentry.tracesSampleRate).toBe(0.01)
-
-    expect(() => parseObservabilityEnv(
-      { DEN_OBSERVABILITY_BACKEND: "sentry" },
-      { serviceName: "den-api" },
-    )).toThrow("SENTRY_DSN")
-
-    expect(() => parseObservabilityEnv(
-      { DEN_OBSERVABILITY_BACKEND: "sentry", SENTRY_DSN: "not-a-url" },
-      { serviceName: "den-api" },
-    )).toThrow("SENTRY_DSN")
-
-    expect(() => parseObservabilityEnv(
-      {
-        DEN_OBSERVABILITY_BACKEND: "sentry",
-        SENTRY_DSN: "https://public@sentry.example.test/123",
-        SENTRY_TRACES_SAMPLE_RATE: "2",
-      },
-      { serviceName: "den-api" },
-    )).toThrow("SENTRY_TRACES_SAMPLE_RATE")
-
-    expect(() => parseObservabilityEnv(
-      {
-        DEN_OBSERVABILITY_BACKEND: "sentry",
-        SENTRY_DSN: "https://public@sentry.example.test/123",
-        SENTRY_URL: "not a url",
-      },
-      { serviceName: "den-api" },
-    )).toThrow("SENTRY_URL")
-  })
 })
 
 describe("json stdout logger", () => {
