@@ -1,4 +1,5 @@
-import { bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { bigserial, boolean, customType, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 
@@ -111,9 +112,34 @@ export const workspaces = pgTable("workspaces", {
   lastActiveAt: timestamp("last_active_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
+
+export const knowledgeDocuments = pgTable("knowledge_documents", {
+  id: text("id").primaryKey(),
+  /** The policy resource id, e.g. `policies/hr/leave`. */
+  path: text("path").notNull().unique(),
+  title: text("title").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: createdAt(),
+});
+
+export const knowledgeSections = pgTable("knowledge_sections", {
+  id: text("id").primaryKey(),
+  documentId: text("document_id").notNull().references(() => knowledgeDocuments.id, { onDelete: "cascade" }),
+  /** 1-based; the section's policy id is `<path>#<position>`. */
+  position: integer("position").notNull(),
+  heading: text("heading").notNull(),
+  body: text("body").notNull(),
+  sensitivity: text("sensitivity", { enum: ["ordinary", "sensitive", "restricted"] }).notNull().default("ordinary"),
+  search: tsvector("search").notNull().generatedAlwaysAs(sql`to_tsvector('simple', heading || ' ' || body)`),
+}, (table) => [
+  index("knowledge_sections_document_idx").on(table.documentId),
+  index("knowledge_sections_search_idx").using("gin", table.search),
+]);
+
 export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").$type<unknown>().notNull(),
 });
 
-export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, settings };
+export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, knowledgeDocuments, knowledgeSections, settings };
