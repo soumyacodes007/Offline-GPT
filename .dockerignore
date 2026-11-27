@@ -8,3 +8,10 @@ dist
 **/dist
 .env
 .env.*
+# Local test output and build caches; never needed in an image.
+evals/results
+evals/tmp
+apps/desktop/resources/sidecars
+**/.next
+**/.electron-runtime
+**/*.tsbuildinfo
