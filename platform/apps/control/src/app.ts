@@ -11,6 +11,8 @@ import { registerLibraryRoutes } from "./routes/library";
 import { registerPluginRoutes } from "./routes/plugins";
 import { registerMcpRoutes } from "./routes/mcp";
 import { registerOidcRoutes } from "./routes/oidc";
+import { registerSamlRoutes } from "./routes/saml";
+import { registerSsoRoutes } from "./routes/sso";
 import { registerPeopleRoutes } from "./routes/people";
 import { registerRequestRoutes } from "./routes/requests";
 import { registerRuleRoutes } from "./routes/rules";
@@ -24,6 +26,8 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.get("/health", access(deps, "public"), (c) => c.json({ ok: true }));
   registerAuthRoutes(app, deps);
   registerOidcRoutes(app, deps);
+  registerSamlRoutes(app, deps);
+  registerSsoRoutes(app, deps);
   registerScimRoutes(app, deps);
   registerRuleRoutes(app, deps);
   registerRequestRoutes(app, deps);
