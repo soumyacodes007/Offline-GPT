@@ -11,7 +11,7 @@ import { MAX_PLUGIN_BYTES, parsePlugin, type ParsedPlugin } from "../plugins/par
 const installSchema = z.object({ base64: z.string().min(1).max(Math.ceil((MAX_PLUGIN_BYTES * 4) / 3) + 4) });
 
 export function registerPluginRoutes(app: Hono<AppEnv>, deps: Deps) {
-  app.post("/v1/library/plugins", access(deps, "admin"), async (c) => {
+  app.post("/v1/library/plugins", access(deps, { permission: "library" }), async (c) => {
     const body = await readJson(c, installSchema);
     let plugin: ParsedPlugin;
     try {
@@ -70,7 +70,7 @@ export function registerPluginRoutes(app: Hono<AppEnv>, deps: Deps) {
     }, 201);
   });
 
-  app.get("/v1/library/plugins", access(deps, "admin"), async (c) => {
+  app.get("/v1/library/plugins", access(deps, { permission: "library" }), async (c) => {
     const plugins = await deps.db.select().from(libraryPlugins).orderBy(asc(libraryPlugins.title));
     const skills = await deps.db.select({ slug: librarySkills.slug, plugin: librarySkills.pluginSlug }).from(librarySkills);
     const connections = await deps.db.select({ slug: mcpConnections.slug, plugin: mcpConnections.pluginSlug }).from(mcpConnections);
@@ -87,7 +87,7 @@ export function registerPluginRoutes(app: Hono<AppEnv>, deps: Deps) {
     });
   });
 
-  app.delete("/v1/library/plugins/:slug", access(deps, "admin"), async (c) => {
+  app.delete("/v1/library/plugins/:slug", access(deps, { permission: "library" }), async (c) => {
     const slug = c.req.param("slug");
     // Its skills and connections go with it (foreign keys cascade).
     const deleted = await deps.db.delete(libraryPlugins).where(eq(libraryPlugins.slug, slug)).returning({ slug: libraryPlugins.slug });
