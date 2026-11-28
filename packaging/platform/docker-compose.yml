@@ -87,6 +87,9 @@ services:
       OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      SAML_ENTRY_POINT: ${SAML_ENTRY_POINT:-}
+      SAML_IDP_CERT: ${SAML_IDP_CERT:-}
+      SAML_JIT: ${SAML_JIT:-0}
       WORKSPACE_IMAGE: ${WORKSPACE_IMAGE:-offlinegpt-workspace:local}
       WORKSPACE_NETWORK: offlinegpt-platform_internal
       MODEL_GATEWAY_URL: http://model-gateway:8791/v1
