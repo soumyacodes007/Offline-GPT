@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
-import { api, auditSchema, documentSchema, memberSchema, sectionSchema, teamSchema, usageSchema, type Me } from "../api";
+import { api, auditSchema, documentSchema, memberSchema, sectionSchema, teamSchema, usageSchema, type Me, type MemberRow } from "../api";
 import { Badge, Button, Card, Empty, ErrorText, Field, formatDate, inputClass } from "../ui";
 
 export function People({ me }: { me: Me }) {
@@ -16,7 +16,7 @@ export function People({ me }: { me: Me }) {
   const teamName = (id: string) => teams.data?.teams.find((team) => team.id === id)?.name ?? id;
   return (
     <div className="grid gap-5">
-      <Card title="People" description="People and teams come from your directory (SCIM). Deactivate people there; they lose access at once.">
+      <Card title="People" description="People come from your directory (SCIM). Deactivate people there; they lose access at once.">
         <ErrorText error={setRole.error} />
         <table className="w-full text-left text-sm">
           <thead className="text-xs text-slate-500"><tr><th className="py-2">Person</th><th>Teams</th><th>Status</th><th>Role</th></tr></thead>
@@ -38,6 +38,7 @@ export function People({ me }: { me: Me }) {
           </tbody>
         </table>
       </Card>
+      <Teams people={members.data?.members ?? []} />
       {me.role === "owner" ? (
         <Card title="Directory sync (SCIM)" description="Paste this token into your identity provider's provisioning settings. Making a new one stops the old one.">
           <Button onClick={() => scimToken.mutate()} disabled={scimToken.isPending}>Make a new SCIM token</Button>
@@ -350,5 +351,56 @@ function Plugins() {
         </div>
       </Card>
     </>
+  );
+}
+
+function Teams({ people }: { people: MemberRow[] }) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [editing, setEditing] = useState<{ id: string; memberIds: string[] } | null>(null);
+  const teams = useQuery({ queryKey: ["teams"], queryFn: () => api(z.object({ teams: z.array(teamSchema) }), "/v1/teams") });
+  const refresh = () => Promise.all(["teams", "members"].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
+  const create = useMutation({ mutationFn: () => api(z.unknown(), "/v1/teams", { method: "POST", body: { name } }), onSuccess: async () => { setName(""); await refresh(); } });
+  const save = useMutation({
+    mutationFn: (team: { id: string; memberIds: string[] }) => api(z.unknown(), `/v1/teams/${team.id}/members`, { method: "PUT", body: { memberIds: team.memberIds } }),
+    onSuccess: async () => { setEditing(null); await refresh(); },
+  });
+  const remove = useMutation({ mutationFn: (id: string) => api(z.unknown(), `/v1/teams/${id}`, { method: "DELETE" }), onSuccess: refresh });
+  const membersOf = (id: string) => people.filter((person) => person.teamIds.includes(id)).map((person) => person.id);
+  const toggle = (memberId: string) => editing && setEditing({ ...editing, memberIds: editing.memberIds.includes(memberId) ? editing.memberIds.filter((id) => id !== memberId) : [...editing.memberIds, memberId] });
+  return (
+    <Card title="Teams" description="Directory teams come from SCIM and change there. Make your own teams here, for example for a project, and use them in rules on the Access page.">
+      <form className="mb-3 flex flex-wrap items-end gap-3" onSubmit={(event: FormEvent) => { event.preventDefault(); create.mutate(); }}>
+        <Field label="New team"><input className={inputClass} value={name} onChange={(event) => setName(event.target.value)} required /></Field>
+        <Button type="submit" disabled={create.isPending}>Create team</Button>
+        <ErrorText error={create.error ?? save.error ?? remove.error} />
+      </form>
+      <div className="grid gap-2">
+        {teams.data?.teams.map((team) => (
+          <div key={team.id} className="rounded-lg border border-slate-200 p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium">{team.name} <Badge tone={team.source === "manual" ? "amber" : "slate"}>{team.source === "manual" ? "Made here" : "Directory"}</Badge> <span className="text-xs text-slate-500">{team.members} people</span></p>
+              {team.source === "manual" ? (
+                <div className="flex gap-2">
+                  <Button onClick={() => setEditing(editing?.id === team.id ? null : { id: team.id, memberIds: membersOf(team.id) })}>{editing?.id === team.id ? "Close" : "Choose people"}</Button>
+                  <Button tone="danger" onClick={() => remove.mutate(team.id)}>Delete</Button>
+                </div>
+              ) : null}
+            </div>
+            {editing?.id === team.id ? (
+              <div className="mt-3 grid gap-2">
+                <div className="grid max-h-60 gap-1 overflow-y-auto sm:grid-cols-2">
+                  {people.filter((person) => person.active).map((person) => (
+                    <label key={person.id} className="flex items-center gap-2"><input type="checkbox" checked={editing.memberIds.includes(person.id)} onChange={() => toggle(person.id)} />{person.name} <span className="text-xs text-slate-500">{person.email}</span></label>
+                  ))}
+                </div>
+                <div><Button onClick={() => save.mutate(editing)} disabled={save.isPending}>Save members</Button></div>
+              </div>
+            ) : null}
+          </div>
+        ))}
+        {teams.data?.teams.length === 0 ? <Empty>No teams yet.</Empty> : null}
+      </div>
+    </Card>
   );
 }
