@@ -49,6 +49,9 @@ export type ContainerSpec = {
   cpus: number;
 };
 
+/** A one-off job: runs `script` with these volumes, without network, then is removed. */
+export type TaskSpec = { name: string; image: string; script: string; binds: string[] };
+
 export function createDocker(transport: DockerTransport) {
   async function expect(operation: string, ok: number[], method: string, path: string, body?: unknown): Promise<DockerResponse> {
     const response = await transport(method, path, body);
@@ -90,6 +93,25 @@ export function createDocker(transport: DockerTransport) {
     },
     async remove(name: string): Promise<void> {
       await expect("remove", [204, 404], "DELETE", `/containers/${encodeURIComponent(name)}?force=true`);
+    },
+    /** Run a task to completion and return its exit code. */
+    async runTask(task: TaskSpec): Promise<number> {
+      const name = encodeURIComponent(task.name);
+      await expect("task create", [201], "POST", `/containers/create?name=${name}`, {
+        Image: task.image,
+        Entrypoint: ["sh", "-c"],
+        Cmd: [task.script],
+        User: "0:0",
+        HostConfig: { Binds: task.binds, NetworkMode: "none", SecurityOpt: ["no-new-privileges"] },
+      });
+      try {
+        await expect("task start", [204], "POST", `/containers/${name}/start`);
+        const waited = await expect("task wait", [200], "POST", `/containers/${name}/wait`);
+        const body = waited.body;
+        return typeof body === "object" && body !== null && "StatusCode" in body && typeof body.StatusCode === "number" ? body.StatusCode : -1;
+      } finally {
+        await expect("task remove", [204, 404], "DELETE", `/containers/${name}?force=true`);
+      }
     },
     async removeVolume(name: string): Promise<void> {
       await expect("volume remove", [204, 404], "DELETE", `/volumes/${encodeURIComponent(name)}`);
