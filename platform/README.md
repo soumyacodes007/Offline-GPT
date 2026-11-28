@@ -68,6 +68,3 @@ member's own key.
 
 - SAML sign-in (OIDC works).
 - An org library of skills, plugins and MCP servers for workspaces.
-- The workspace app still shows the desktop's "Sign in to OfflineGPT Cloud"
-  buttons and, on a first visit, its welcome choices; both should be hidden
-  in this edition.
