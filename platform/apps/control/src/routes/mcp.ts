@@ -2,7 +2,7 @@ import type { Hono } from "hono";
 import { z } from "zod";
 import type { Deps } from "../deps";
 import { audit } from "../audit";
-import { callUpstream } from "../connections/client";
+import { callUpstream, PLATFORM_HOP_HEADER } from "../connections/client";
 import { access, type AppEnv } from "../http";
 import { MAX_RESULTS } from "../knowledge/search";
 import { searchAsMember } from "./knowledge";
@@ -78,6 +78,8 @@ export function registerMcpRoutes(app: Hono<AppEnv>, deps: Deps) {
       case "ping":
         return reply({});
       case "tools/list":
+        // A request the platform itself made (through a connection) gets only the platform's own tools.
+        if (c.req.header(PLATFORM_HOP_HEADER)) return reply({ tools: TOOLS });
         return reply({ tools: [...TOOLS, ...(await connectionTools(deps, await connectionsFor(deps, c.get("member"))))] });
       case "tools/call": {
         const call = callParams.safeParse(params);
