@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, isNotNull, sql } from "drizzle-orm";
 import { KIND_BASELINES, loadRules, subjectOf } from "@offlinegpt-platform/access";
 import { knowledgeDocuments, knowledgeSections, type Database } from "@offlinegpt-platform/db";
 import { decideMany } from "@offlinegpt-platform/policy";
@@ -13,29 +13,68 @@ export type SearchHit = {
 };
 
 const CANDIDATES = 200;
+/** Reciprocal rank fusion constant: how much lower ranks still count. */
+const FUSION_K = 60;
+/** Below this cosine similarity a section isn't about the question at all. */
+const MIN_SIMILARITY = 0.2;
 export const MAX_RESULTS = 20;
 
 export function sectionId(path: string, position: number): string {
   return `${path}#${position}`;
 }
 
-/** Full-text search, then keep only what this member may read right now. See docs/platform-spec/knowledge.md. */
-export async function searchKnowledge(db: Database, member: { id: string; role: "owner" | "admin" | "member" }, query: string, now: Date, limit = MAX_RESULTS): Promise<SearchHit[]> {
+const candidateColumns = {
+  path: knowledgeDocuments.path,
+  title: knowledgeDocuments.title,
+  position: knowledgeSections.position,
+  heading: knowledgeSections.heading,
+  body: knowledgeSections.body,
+  sensitivity: knowledgeSections.sensitivity,
+};
+type Candidate = { path: string; title: string; position: number; heading: string; body: string; sensitivity: SearchHit["sensitivity"] };
+
+/** Sections nearest in meaning to the question's vector, best first. */
+async function semanticCandidates(db: Database, queryVector: number[]): Promise<Candidate[]> {
+  const vector = `{${queryVector.map((value) => (Number.isFinite(value) ? value : 0)).join(",")}}`;
+  const similarity = sql<number>`(select sum(e * q) from unnest(${knowledgeSections.embedding}, ${vector}::real[]) as pairs(e, q))`;
+  const rows = await db
+    .select({ ...candidateColumns, similarity })
+    .from(knowledgeSections)
+    .innerJoin(knowledgeDocuments, eq(knowledgeDocuments.id, knowledgeSections.documentId))
+    .where(isNotNull(knowledgeSections.embedding))
+    .orderBy(sql`${similarity} desc`)
+    .limit(CANDIDATES);
+  return rows.filter((row) => Number(row.similarity) >= MIN_SIMILARITY);
+}
+
+/** Merge ranked lists by reciprocal rank fusion, keeping each section once. */
+function fuse(lists: Candidate[][]): Candidate[] {
+  const scores = new Map<string, { row: Candidate; score: number }>();
+  for (const list of lists) {
+    for (const [rank, row] of list.entries()) {
+      const key = sectionId(row.path, row.position);
+      const entry = scores.get(key) ?? { row, score: 0 };
+      entry.score += 1 / (FUSION_K + rank + 1);
+      scores.set(key, entry);
+    }
+  }
+  return [...scores.values()].sort((a, b) => b.score - a.score).map((entry) => entry.row);
+}
+
+/**
+ * Keyword search, plus meaning-based search when a query vector is given, then
+ * keep only what this member may read right now. See docs/platform-spec/knowledge.md.
+ */
+export async function searchKnowledge(db: Database, member: { id: string; role: "owner" | "admin" | "member" }, query: string, now: Date, limit = MAX_RESULTS, queryVector?: number[]): Promise<SearchHit[]> {
   const terms = sql`websearch_to_tsquery('simple', ${query})`;
-  const candidates = await db
-    .select({
-      path: knowledgeDocuments.path,
-      title: knowledgeDocuments.title,
-      position: knowledgeSections.position,
-      heading: knowledgeSections.heading,
-      body: knowledgeSections.body,
-      sensitivity: knowledgeSections.sensitivity,
-    })
+  const keyword = await db
+    .select(candidateColumns)
     .from(knowledgeSections)
     .innerJoin(knowledgeDocuments, eq(knowledgeDocuments.id, knowledgeSections.documentId))
     .where(sql`${knowledgeSections.search} @@ ${terms}`)
     .orderBy(sql`ts_rank(${knowledgeSections.search}, ${terms}) desc`, knowledgeDocuments.path, knowledgeSections.position)
     .limit(CANDIDATES);
+  const candidates = queryVector ? fuse([keyword, await semanticCandidates(db, queryVector)]) : keyword;
   if (!candidates.length) return [];
 
   const subject = await subjectOf(db, member);
