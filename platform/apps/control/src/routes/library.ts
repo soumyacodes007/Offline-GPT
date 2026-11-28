@@ -48,7 +48,7 @@ async function refusePluginItem(deps: Deps, slug: string): Promise<void> {
 }
 
 export function registerLibraryRoutes(app: Hono<AppEnv>, deps: Deps) {
-  app.post("/v1/library/skills", access(deps, "admin"), async (c) => {
+  app.post("/v1/library/skills", access(deps, { permission: "library" }), async (c) => {
     const body = await readJson(c, skillSchema);
     await refusePluginItem(deps, body.slug);
     const actor = c.get("member").id;
@@ -59,12 +59,12 @@ export function registerLibraryRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ skill: { slug: body.slug, title: body.title, description: body.description } }, 201);
   });
 
-  app.get("/v1/library/skills", access(deps, "admin"), async (c) => {
+  app.get("/v1/library/skills", access(deps, { permission: "library" }), async (c) => {
     const rows = await deps.db.select({ slug: librarySkills.slug, title: librarySkills.title, description: librarySkills.description, updatedAt: librarySkills.updatedAt }).from(librarySkills).orderBy(asc(librarySkills.title));
     return c.json({ skills: rows });
   });
 
-  app.delete("/v1/library/skills/:slug", access(deps, "admin"), async (c) => {
+  app.delete("/v1/library/skills/:slug", access(deps, { permission: "library" }), async (c) => {
     const slug = c.req.param("slug");
     await refusePluginItem(deps, slug);
     const deleted = await deps.db.delete(librarySkills).where(eq(librarySkills.slug, slug)).returning({ slug: librarySkills.slug });
