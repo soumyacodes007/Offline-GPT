@@ -150,9 +150,23 @@ export const librarySkills = pgTable("library_skills", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const mcpConnections = pgTable("mcp_connections", {
+  id: text("id").primaryKey(),
+  /** The policy resource id for kind `mcp-connection`, and the tool name prefix. */
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  url: text("url").notNull(),
+  headerName: text("header_name"),
+  /** The header value, encrypted with SECRETS_KEY. */
+  headerValueSealed: text("header_value_sealed"),
+  createdBy: text("created_by").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").$type<unknown>().notNull(),
 });
 
-export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, knowledgeDocuments, knowledgeSections, librarySkills, settings };
+export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, knowledgeDocuments, knowledgeSections, librarySkills, mcpConnections, settings };
