@@ -29,7 +29,7 @@ export function SignIn() {
       <p className="mt-1 text-sm text-slate-500">Sign in with your organization account.</p>
       {mode === "sso" ? (
         <div className="mt-6 grid gap-3">
-          <a href="/auth/oidc/start" className="rounded-lg bg-slate-900 px-3 py-2 text-center text-sm font-medium text-white hover:bg-slate-700">Sign in with single sign-on</a>
+          <a href="/auth/sso/start" className="rounded-lg bg-slate-900 px-3 py-2 text-center text-sm font-medium text-white hover:bg-slate-700">Sign in with single sign-on</a>
           <button type="button" onClick={() => setMode("password")} className="text-xs text-slate-500 underline">Administrator password sign-in</button>
           <button type="button" onClick={() => setMode("setup")} className="text-xs text-slate-500 underline">First-time setup</button>
         </div>
