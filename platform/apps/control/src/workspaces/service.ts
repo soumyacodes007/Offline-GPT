@@ -97,8 +97,8 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
   async function issueKey(memberId: string): Promise<string> {
     const key = `ogk_${randomToken(32)}`;
     await db.transaction(async (tx) => {
-      await tx.update(inferenceKeys).set({ revokedAt: now() }).where(and(eq(inferenceKeys.memberId, memberId), isNull(inferenceKeys.revokedAt)));
-      await tx.insert(inferenceKeys).values({ id: newId("ikey"), memberId, keyHash: sha256(key), prefix: key.slice(0, 10), createdAt: now() });
+      await tx.update(inferenceKeys).set({ revokedAt: now() }).where(and(eq(inferenceKeys.memberId, memberId), eq(inferenceKeys.purpose, "workspace"), isNull(inferenceKeys.revokedAt)));
+      await tx.insert(inferenceKeys).values({ id: newId("ikey"), memberId, keyHash: sha256(key), prefix: key.slice(0, 10), purpose: "workspace", createdAt: now() });
     });
     return key;
   }
