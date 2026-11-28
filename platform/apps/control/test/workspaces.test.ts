@@ -6,6 +6,7 @@ import { createHarness, json, sessionFrom, type Harness } from "./harness";
 
 type FakeContainer = { running: boolean; body: Record<string, unknown> };
 let containers: Map<string, FakeContainer>;
+let volumes: Set<string>;
 let dockerCalls: string[];
 let containerRequests: Array<{ url: string; authorization: string | null; cookie: string | null }>;
 let deliveries: Array<{ url: string; hostToken: string | null; body: unknown }>;
@@ -23,7 +24,13 @@ const deliverFetch = async (input: string | URL | Request, init?: RequestInit): 
 const fakeDocker: DockerTransport = async (method, path, body) => {
   dockerCalls.push(`${method} ${path.split("?")[0]}`);
   const name = decodeURIComponent(/\/containers\/([^/?]+)/.exec(path)?.[1] ?? "");
-  if (path === "/volumes/create") return { status: 201, body: {} };
+  if (path === "/volumes/create") {
+    const volume = typeof body === "object" && body !== null && "Name" in body && typeof body.Name === "string" ? body.Name : "";
+    volumes.add(volume);
+    return { status: 201, body: {} };
+  }
+  if (method === "DELETE" && path.startsWith("/volumes/")) return { status: volumes.delete(decodeURIComponent(path.slice("/volumes/".length))) ? 204 : 404, body: null };
+  if (method === "DELETE" && path.startsWith("/containers/")) return { status: containers.delete(name) ? 204 : 404, body: null };
   if (path.startsWith("/containers/create")) {
     const created = decodeURIComponent(/name=([^&]+)/.exec(path)?.[1] ?? "");
     containers.set(created, { running: false, body: typeof body === "object" && body !== null ? Object.fromEntries(Object.entries(body)) : {} });
@@ -45,6 +52,7 @@ let scim: string;
 
 beforeEach(async () => {
   containers = new Map();
+  volumes = new Set();
   dockerCalls = [];
   containerRequests = [];
   deliveries = [];
@@ -171,4 +179,24 @@ test("issuing a personal key leaves the member's workspace key working", async (
   expect((await listTools(second)).status).toBe(200);
   // A new personal key still replaces the previous personal key.
   expect((await listTools(first)).status).toBe(401);
+});
+
+test("a leaver's workspace is deleted after the retention period, not before", async () => {
+  const id = String((await json(await h.call("POST", "/scim/v2/Users", { scim, body: { userName: "bob@example.test" } }))).id);
+  const bob = sessionFrom(await h.oidcSignIn({ sub: "b", email: "bob@example.test", name: "Bob" }));
+  await h.call("POST", "/v1/me/workspace", { token: bob });
+  expect(volumes.size).toBe(1);
+  await h.call("PATCH", `/scim/v2/Users/${id}`, { scim, body: { Operations: [{ op: "replace", path: "active", value: false }] } });
+
+  const day = 24 * 60 * 60 * 1000;
+  const at = (offset: number) => createWorkspaceService(h.db, createDocker(fakeDocker), settings, () => new Date(Date.now() + offset), deliverFetch, 0);
+  expect(await at(29 * day).purgeLeavers(30 * day)).toEqual([]);
+  expect(volumes.size).toBe(1);
+
+  const purged = await at(31 * day).purgeLeavers(30 * day);
+  expect(purged.map((leaver) => leaver.memberId)).toEqual([id]);
+  expect(containers.size).toBe(0);
+  expect(volumes.size).toBe(0);
+  expect(await h.db.select().from(workspaceRows)).toEqual([]);
+  expect((await h.db.select().from(inferenceKeys)).filter((key) => key.memberId === id && key.purpose === "workspace" && key.revokedAt === null)).toEqual([]);
 });
