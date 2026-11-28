@@ -8,6 +8,12 @@ export { runtimeDbPath, runtimeStorageDir } from "./runtime-db.js";
 
 export type RuntimeOpencodeConfig = {
   managedPolicy?: DesktopConfig;
+  /**
+   * Set when the host that runs this server (a self-hosted workspace platform,
+   * via the host-token API) delivered `managedPolicy`, rather than a verified
+   * Den session. Such a policy is enforced without a Den sign-in.
+   */
+  managedPolicySource?: "host";
   default_agent?: string;
   plugin?: string[];
   disabled_providers?: string[];
@@ -17,6 +23,9 @@ export type RuntimeOpencodeConfig = {
   };
   provider?: Record<string, unknown>;
 };
+
+/** What ordinary runtime-config writers may change: everything except the managed policy. */
+export type EditableRuntimeConfig = Omit<RuntimeOpencodeConfig, "managedPolicy" | "managedPolicySource">;
 
 export const ENGINE_GLOBAL_RUNTIME_CONFIG_ID = "__offlinegpt_engine_global__";
 
@@ -41,6 +50,7 @@ function normalizeRuntimeOpencodeConfig(value: unknown): RuntimeOpencodeConfig {
   return {
     ...(defaultAgent ? { default_agent: defaultAgent } : {}),
     ...(value.managedPolicy !== undefined ? { managedPolicy: desktopConfigSchema.parse(value.managedPolicy) } : {}),
+    ...(value.managedPolicy !== undefined && value.managedPolicySource === "host" ? { managedPolicySource: "host" as const } : {}),
     ...(plugin ? { plugin } : {}),
     ...(disabledProviders ? { disabled_providers: disabledProviders } : {}),
     ...(mcp ? { mcp } : {}),
@@ -211,7 +221,7 @@ export async function listRuntimeOpencodeConfigRows(config: ServerConfig): Promi
 
 export async function writeGlobalRuntimeOpencodeConfig(
   config: ServerConfig,
-  updater: (current: Omit<RuntimeOpencodeConfig, "managedPolicy">) => Omit<RuntimeOpencodeConfig, "managedPolicy">,
+  updater: (current: EditableRuntimeConfig) => EditableRuntimeConfig,
 ): Promise<{ config: RuntimeOpencodeConfig; changed: boolean }> {
   return await writeRuntimeOpencodeConfig(config, ENGINE_GLOBAL_RUNTIME_CONFIG_ID, updater);
 }
@@ -259,6 +269,7 @@ export function mergeRuntimeOpencodeConfigLayers(
 
   return normalizeRuntimeOpencodeConfig({
     ...(base.managedPolicy ? { managedPolicy: base.managedPolicy } : {}),
+    ...(base.managedPolicy && base.managedPolicySource ? { managedPolicySource: base.managedPolicySource } : {}),
     ...(base.default_agent || overlay.default_agent ? { default_agent: overlay.default_agent ?? base.default_agent } : {}),
     ...(plugin.length ? { plugin } : {}),
     ...(disabledProviders.length ? { disabled_providers: disabledProviders } : {}),
@@ -542,18 +553,32 @@ function updateRuntimeConfig(
 export function writeRuntimeOpencodeConfig(
   config: ServerConfig,
   workspaceId: string,
-  updater: (current: Omit<RuntimeOpencodeConfig, "managedPolicy">) => Omit<RuntimeOpencodeConfig, "managedPolicy">,
+  updater: (current: EditableRuntimeConfig) => EditableRuntimeConfig,
 ): Promise<{ config: RuntimeOpencodeConfig; changed: boolean }> {
   return updateRuntimeConfig(config, workspaceId, (current) => {
-    const { managedPolicy, ...editable } = current;
-    return { ...updater(editable), managedPolicy };
+    const { managedPolicy, managedPolicySource, ...editable } = current;
+    return { ...updater(editable), managedPolicy, ...(managedPolicySource ? { managedPolicySource } : {}) };
   });
 }
 
-// Only the verified Den-session boundary may call this writer.
+// Only the verified Den-session boundary may call this writer. A Den-verified
+// policy replaces any host-delivered one.
 export function writeManagedDesktopPolicy(config: ServerConfig, policy: DesktopConfig) {
   const validated = desktopConfigSchema.parse(policy);
-  return updateRuntimeConfig(config, ENGINE_GLOBAL_RUNTIME_CONFIG_ID, (current) => ({ ...current, managedPolicy: validated }));
+  return updateRuntimeConfig(config, ENGINE_GLOBAL_RUNTIME_CONFIG_ID, (current) => {
+    const { managedPolicySource: _replaced, ...rest } = current;
+    return { ...rest, managedPolicy: validated };
+  });
+}
+
+// Only the host-token API may call this writer. `null` removes a host policy;
+// a Den-verified policy is never removed this way.
+export function writeHostManagedPolicy(config: ServerConfig, policy: DesktopConfig | null) {
+  return updateRuntimeConfig(config, ENGINE_GLOBAL_RUNTIME_CONFIG_ID, (current) => {
+    const { managedPolicy, managedPolicySource, ...rest } = current;
+    if (policy) return { ...rest, managedPolicy: desktopConfigSchema.parse(policy), managedPolicySource: "host" };
+    return managedPolicySource === "host" ? rest : { ...rest, ...(managedPolicy ? { managedPolicy } : {}) };
+  });
 }
 
 export function mergeOpencodeConfigs(
