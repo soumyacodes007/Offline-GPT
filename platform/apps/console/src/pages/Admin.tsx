@@ -96,10 +96,7 @@ export function Knowledge() {
     const title = picked.name.replace(/\.[^.]+$/, "");
     const extension = picked.name.split(".").pop()?.toLowerCase();
     if (extension === "pdf" || extension === "docx") {
-      const bytes = new Uint8Array(await picked.arrayBuffer());
-      let binary = "";
-      for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
-      setFile({ name: picked.name, format: extension, base64: btoa(binary) });
+      setFile({ name: picked.name, format: extension, base64: await fileToBase64(picked) });
       setForm((current) => ({ ...current, content: "", title: current.title || title }));
       return;
     }
@@ -227,6 +224,7 @@ export function Library() {
           ))}
         </div>
       </Card>
+      <Plugins />
       <Connections />
     </div>
   );
@@ -281,6 +279,69 @@ function Connections() {
                 <p className="text-xs text-slate-500">{connection.url} · updated {formatDate(connection.updatedAt)}</p>
               </div>
               <Button tone="danger" onClick={() => remove.mutate(connection.slug)}>Delete</Button>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </>
+  );
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  return btoa(binary);
+}
+
+const pluginSchema = z.object({ slug: z.string(), title: z.string(), description: z.string(), version: z.string().nullable(), updatedAt: z.string(), skills: z.array(z.string()), connections: z.array(z.string()) });
+const installReportSchema = z.object({
+  plugin: z.object({ slug: z.string(), title: z.string() }),
+  skills: z.array(z.string()),
+  connections: z.array(z.object({ slug: z.string(), needsCredential: z.boolean() })),
+  skipped: z.array(z.string()),
+});
+
+function Plugins() {
+  const queryClient = useQueryClient();
+  const plugins = useQuery({ queryKey: ["plugins"], queryFn: () => api(z.object({ plugins: z.array(pluginSchema) }), "/v1/library/plugins") });
+  const refresh = () => Promise.all(["plugins", "skills", "connections"].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
+  const install = useMutation({
+    mutationFn: async (file: File) => api(installReportSchema, "/v1/library/plugins", { method: "POST", body: { base64: await fileToBase64(file) } }),
+    onSuccess: refresh,
+  });
+  const remove = useMutation({
+    mutationFn: (slug: string) => api(z.unknown(), `/v1/library/plugins/${slug}`, { method: "DELETE" }),
+    onSuccess: refresh,
+  });
+  const report = install.data;
+  const needCredential = report?.connections.filter((connection) => connection.needsCredential) ?? [];
+  return (
+    <>
+      <Card title="Install a plugin" description="A .zip in the Claude plugin layout: skills and tool connections installed together. Nobody gets them until a rule on the Access page (kind: plugin) allows them. Installing the same plugin again updates it.">
+        <div className="flex flex-wrap items-center gap-3">
+          <input type="file" accept=".zip" className="text-sm" disabled={install.isPending} onChange={(event) => { const picked = event.target.files?.[0]; if (picked) install.mutate(picked); event.target.value = ""; }} />
+          {install.isPending ? <span className="text-sm text-slate-500">Installing…</span> : null}
+          <ErrorText error={install.error} />
+        </div>
+        {report ? (
+          <div className="mt-3 grid gap-1 rounded-lg bg-slate-50 p-3 text-sm">
+            <p className="font-medium">Installed {report.plugin.title}: {report.skills.length} skills, {report.connections.length} connections.</p>
+            {needCredential.length ? <p className="text-amber-700">Add a credential under Connections for: {needCredential.map((connection) => connection.slug).join(", ")}.</p> : null}
+            {report.skipped.map((reason) => <p key={reason} className="text-slate-500">Skipped {reason}</p>)}
+          </div>
+        ) : null}
+      </Card>
+      <Card title="Plugins">
+        {plugins.data?.plugins.length === 0 ? <Empty>No plugins installed.</Empty> : null}
+        <div className="grid gap-2">
+          {plugins.data?.plugins.map((plugin) => (
+            <div key={plugin.slug} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 text-sm">
+              <div>
+                <p className="font-medium">{plugin.title} <span className="font-mono text-xs text-slate-400">{plugin.slug}{plugin.version ? ` v${plugin.version}` : ""}</span></p>
+                <p className="text-xs text-slate-500">{plugin.description} · {plugin.skills.length} skills · {plugin.connections.length} connections · updated {formatDate(plugin.updatedAt)}</p>
+              </div>
+              <Button tone="danger" onClick={() => remove.mutate(plugin.slug)}>Uninstall</Button>
             </div>
           ))}
         </div>
