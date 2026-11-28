@@ -66,5 +66,5 @@ member's own key.
 
 ## Not done yet
 
-- SAML sign-in (OIDC works).
-- Library: skills, shared MCP connections and plugins (Claude plugin `.zip`) are done.
+- A legal review of how this code was written (see
+  `docs/rewrite/clean-room-plan.md`), then deleting `ee/`.
