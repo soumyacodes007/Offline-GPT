@@ -203,4 +203,40 @@ describe("global runtime providers", () => {
     const globalRuntime = await readGlobalRuntimeOpencodeConfig(config);
     expect(runtimeProviderMap(globalRuntime)).toEqual({});
   });
+
+  test("the host delivers MCP servers into the engine config, and null removes one", async () => {
+    const root = await createTempRoot();
+    const engineRequests: string[] = [];
+    const config = serverConfig(root);
+    const engine = Bun.serve({
+      port: 0,
+      fetch(request) {
+        const path = new URL(request.url).pathname;
+        engineRequests.push(`${request.method} ${path}`);
+        return request.method === "POST" && path === "/instance/dispose" ? Response.json({ ok: true }) : Response.json({ error: "not_found" }, { status: 404 });
+      },
+    });
+    stops.push(() => engine.stop(true));
+    config.workspaces[0].baseUrl = `http://127.0.0.1:${engine.port}`;
+    const server = await startServer(config);
+    stops.push(() => server.stop());
+    const base = `http://127.0.0.1:${server.port}`;
+    const company = { type: "remote", url: "http://control:8790/mcp", headers: { Authorization: "Bearer ogk_test" }, enabled: true };
+    const patch = (headers: Record<string, string>, mcp: unknown) => fetch(`${base}/runtime-config/mcp`, { method: "PATCH", headers, body: JSON.stringify({ mcp }) });
+
+    expect((await patch(clientHeaders(), { company })).status).toBe(401);
+    expect((await patch(hostHeaders(), { company: "not an object" })).status).toBe(400);
+
+    const delivered = await patch(hostHeaders(), { company });
+    expect(delivered.status).toBe(200);
+    expect(await readJsonObject(delivered)).toMatchObject({ ok: true, changed: true, reload: "reloaded" });
+    const engineConfig: unknown = JSON.parse(await readFile(offlinegptRuntimeConfigFilePath(config), "utf8"));
+    expect(isRecord(engineConfig) && engineConfig.mcp).toEqual({ company });
+    expect(engineRequests).toContain("POST /instance/dispose");
+
+    const removed = await patch(hostHeaders(), { company: null });
+    expect(await readJsonObject(removed)).toMatchObject({ ok: true, changed: true });
+    const after: unknown = JSON.parse(await readFile(offlinegptRuntimeConfigFilePath(config), "utf8"));
+    expect(isRecord(after) && after.mcp).toEqual({});
+  });
 });
