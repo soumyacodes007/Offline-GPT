@@ -3,6 +3,7 @@ import { inferenceKeys, members, workspaces, type Database } from "@offlinegpt-p
 import { newId, randomToken, sha256 } from "../crypto";
 import { z } from "zod";
 import type { Docker } from "./docker";
+import { managedPolicyOf, readWorkspacePolicy } from "./policy";
 
 export type WorkspaceModel = { alias: string; displayName: string; contextLength: number };
 
@@ -106,10 +107,15 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
     }
   }
 
-  async function deliver(containerName: string, token: string, part: "providers" | "mcp", body: unknown): Promise<void> {
+  /** The admin's workspace policy, every time the workspace server starts (it keeps it, but a change may have been missed while stopped). */
+  async function deliverPolicy(containerName: string, token: string, attempts = 90): Promise<void> {
+    await deliver(containerName, token, "managed-policy", { policy: managedPolicyOf(await readWorkspacePolicy(db)) }, attempts);
+  }
+
+  async function deliver(containerName: string, token: string, part: "providers" | "mcp" | "managed-policy", body: unknown, attempts = 90): Promise<void> {
     const url = `http://${containerName}:${WORKSPACE_PORT}/runtime-config/${part}`;
     let lastError = "not reached";
-    for (let attempt = 0; attempt < 90; attempt += 1) {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
       try {
         const response = await fetchImpl(url, {
           method: "PATCH",
@@ -178,12 +184,19 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
       const state = await docker.state(containerName);
       const newKey = state === "missing" ? await createContainer(memberId, containerName, token) : null;
       if (state !== "running") await docker.start(containerName);
-      if (newKey) {
-        await deliverProvider(containerName, token, newKey);
-        await warmEngine(containerName, token);
-      }
+      if (newKey) await deliverProvider(containerName, token, newKey);
+      if (state !== "running") await deliverPolicy(containerName, token);
+      if (newKey) await warmEngine(containerName, token);
       await db.update(workspaces).set({ status: "running", lastActiveAt: now() }).where(eq(workspaces.memberId, memberId));
       return { memberId, containerName, token, status: "running" };
+    },
+
+    /** Push the current policy to every running workspace. Returns how many didn't take it. */
+    async applyPolicy(): Promise<number> {
+      const running = await db.select().from(workspaces).where(eq(workspaces.status, "running"));
+      // Running workspaces answer at once; don't wait long on one that died.
+      const results = await Promise.allSettled(running.map((row) => deliverPolicy(row.containerName, row.token, 3)));
+      return results.filter((result) => result.status === "rejected").length;
     },
 
     async touch(memberId: string): Promise<void> {
