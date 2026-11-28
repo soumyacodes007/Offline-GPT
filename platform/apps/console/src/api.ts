@@ -75,7 +75,7 @@ export const memberSchema = z.object({
 });
 export type MemberRow = z.infer<typeof memberSchema>;
 
-export const teamSchema = z.object({ id: z.string(), name: z.string(), members: z.number() });
+export const teamSchema = z.object({ id: z.string(), name: z.string(), source: z.enum(["directory", "manual"]), members: z.number() });
 
 export const documentSchema = z.object({ id: z.string(), path: z.string(), title: z.string(), sections: z.number(), createdAt: z.string() });
 export const sectionSchema = z.object({ id: z.string(), position: z.number(), heading: z.string(), body: z.string(), sensitivity: z.enum(["ordinary", "sensitive", "restricted"]), resourceId: z.string() });
