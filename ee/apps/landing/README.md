@@ -14,7 +14,6 @@
 - `RESEND_API_KEY` - Resend API key for feedback emails
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` - SMTP fallback for feedback emails when Resend is not configured
 - `OFFLINEGPT_FEEDBACK_EMAIL` - optional override for the internal feedback recipient (defaults to `team@offlinegptlabs.com`)
-- `LOOPS_API_KEY` - Loops API key for enterprise contact submissions
 - `LOOPS_INTERNAL_FEEDBACK_EMAIL` - legacy feedback recipient override, used only when `OFFLINEGPT_FEEDBACK_EMAIL` is not set
 - `LANDING_FORM_ALLOWED_ORIGINS` - optional comma-separated origin allowlist for feedback/contact form posts
 
