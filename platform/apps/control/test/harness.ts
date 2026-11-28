@@ -64,6 +64,7 @@ export type HarnessOptions = {
   /** Answer some outgoing requests (e.g. to workspace containers); return null to fall through to the mock IdP. */
   route?: (input: string | URL | Request, init?: RequestInit) => Promise<Response | null>;
   workspaces?: (db: Database, now: () => Date) => WorkspaceService;
+  secretsKey?: string;
 };
 
 export async function createHarness(options: HarnessOptions = {}) {
@@ -80,6 +81,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     OIDC_CLIENT_ID: "control-client",
     OIDC_CLIENT_SECRET: "control-secret",
     OIDC_JIT: options.oidcJit ? "1" : "0",
+    SECRETS_KEY: options.secretsKey,
   });
   const app = createApp({ db: database.db, config, now: () => now, fetch: async (input, init) => (await options.route?.(input, init)) ?? idp.fetch(input, init), workspaces: options.workspaces?.(database.db, () => now) ?? null });
 
