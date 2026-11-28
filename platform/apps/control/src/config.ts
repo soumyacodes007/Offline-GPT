@@ -36,6 +36,9 @@ const envSchema = z.object({
   /** Where employees open their workspace app; same host as PUBLIC_URL, its own port. */
   WORKSPACE_PUBLIC_URL: z.url().optional(),
   WORKSPACE_ORIGIN_PORT: z.coerce.number().int().min(1).max(65535).default(8793),
+  /** An OpenAI-compatible embeddings endpoint (e.g. a second vLLM model) for meaning-based knowledge search. */
+  EMBEDDINGS_URL: z.url().optional(),
+  EMBEDDINGS_MODEL: optional,
   /** Encrypts stored secrets such as connection credentials. At least 32 characters. */
   /** Forward every audit event to syslog: udp://host:514 or tcp://host:514. */
   AUDIT_SYSLOG: z.string().regex(/^(udp|tcp):\/\/[^/]+$/, "AUDIT_SYSLOG must look like udp://host:514 or tcp://host:514").optional(),
@@ -68,6 +71,8 @@ export type Config = {
   /** Null when no SECRETS_KEY is set: secrets can't be stored. */
   secretsKey: string | null;
   auditSyslog: string | null;
+  /** Null when knowledge search is keyword-only. */
+  embeddings: { url: string; model: string } | null;
 };
 
 /** Compose and many service managers pass unset settings as empty strings; treat them as unset. */
@@ -98,7 +103,13 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
     workspaceOriginPort: parsed.WORKSPACE_ORIGIN_PORT,
     secretsKey: parsed.SECRETS_KEY ?? null,
     auditSyslog: parsed.AUDIT_SYSLOG ?? null,
+    embeddings: parseEmbeddings(parsed),
   };
+}
+
+function parseEmbeddings(parsed: z.infer<typeof envSchema>): Config["embeddings"] {
+  if (Boolean(parsed.EMBEDDINGS_URL) !== Boolean(parsed.EMBEDDINGS_MODEL)) throw new Error("Set both EMBEDDINGS_URL and EMBEDDINGS_MODEL, or neither.");
+  return parsed.EMBEDDINGS_URL && parsed.EMBEDDINGS_MODEL ? { url: parsed.EMBEDDINGS_URL.replace(/\/+$/, ""), model: parsed.EMBEDDINGS_MODEL } : null;
 }
 
 function parseSaml(parsed: z.infer<typeof envSchema>): SamlConfig | null {
