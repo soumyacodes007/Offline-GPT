@@ -67,5 +67,4 @@ member's own key.
 ## Not done yet
 
 - SAML sign-in (OIDC works).
-- Library: skills are done (publish, permissions, `list_skills`/`use_skill`
-  for the agent); plugins and shared MCP connections are not yet.
+- Library: skills and shared MCP connections are done; plugins are not yet.
