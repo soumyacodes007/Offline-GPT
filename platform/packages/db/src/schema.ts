@@ -22,6 +22,8 @@ export const teams = pgTable("teams", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
   externalId: text("external_id").unique(),
+  /** `directory` teams are owned by SCIM; `manual` teams are made in the console. */
+  source: text("source", { enum: ["directory", "manual"] }).notNull().default("directory"),
   createdAt: createdAt(),
 });
 
