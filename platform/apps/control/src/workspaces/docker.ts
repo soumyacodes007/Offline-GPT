@@ -91,6 +91,9 @@ export function createDocker(transport: DockerTransport) {
     async remove(name: string): Promise<void> {
       await expect("remove", [204, 404], "DELETE", `/containers/${encodeURIComponent(name)}?force=true`);
     },
+    async removeVolume(name: string): Promise<void> {
+      await expect("volume remove", [204, 404], "DELETE", `/volumes/${encodeURIComponent(name)}`);
+    },
   };
 }
 
