@@ -87,6 +87,8 @@ export const inferenceKeys = pgTable("inference_keys", {
   keyHash: text("key_hash").notNull().unique(),
   /** The first characters, so people can tell keys apart. */
   prefix: text("prefix").notNull(),
+  /** A member holds one live key per purpose: issuing a personal key must not cut off their workspace. */
+  purpose: text("purpose", { enum: ["personal", "workspace"] }).notNull().default("personal"),
   createdAt: createdAt(),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
 }, (table) => [index("inference_keys_member_idx").on(table.memberId)]);
