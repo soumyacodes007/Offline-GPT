@@ -59,9 +59,18 @@ export const DEFAULT_SHELL_CONFIG: ShellConfig = {
 
 const STORAGE_KEY = "offlinegpt.shell-config";
 
+/** Served by an organization's workspace server, which already signed the person in. */
+function servedByWorkspaceServer(): boolean {
+  return !isDesktopRuntime() && typeof window !== "undefined" && typeof window.__OFFLINEGPT_BOOTSTRAP__?.token === "string";
+}
+
 function effectiveShellConfig(config: ShellConfig): ShellConfig {
   if (isDesktopRuntime() && readDesktopDistributionInfo().flavor === "public") {
     return { ...config, cloudSignin: false };
+  }
+  if (servedByWorkspaceServer()) {
+    // The organization signs people in; OfflineGPT Cloud and first-run choices do not apply.
+    return { ...config, cloudSignin: false, welcomePage: false };
   }
   return config;
 }
