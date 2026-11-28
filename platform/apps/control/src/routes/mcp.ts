@@ -4,6 +4,7 @@ import type { Deps } from "../deps";
 import { access, type AppEnv } from "../http";
 import { MAX_RESULTS } from "../knowledge/search";
 import { searchAsMember } from "./knowledge";
+import { skillFor, skillsFor } from "./library";
 
 /**
  * A minimal MCP server (Streamable HTTP, JSON responses) for workspaces. It
@@ -17,6 +18,7 @@ const requestSchema = z.object({
 });
 
 const searchArgs = z.object({ query: z.string().trim().min(1).max(500), limit: z.number().int().min(1).max(MAX_RESULTS).optional() });
+const useSkillArgs = z.object({ slug: z.string().min(1).max(64) });
 const callParams = z.object({ name: z.string(), arguments: z.unknown().optional() });
 const initParams = z.object({ protocolVersion: z.string().optional() }).optional();
 
@@ -34,6 +36,18 @@ const TOOLS = [
       required: ["query"],
       additionalProperties: false,
     },
+  },
+  {
+    name: "list_skills",
+    title: "List company skills",
+    description: "List the company's published skills you may use: reusable instructions for common tasks. Call use_skill to read one.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "use_skill",
+    title: "Use a company skill",
+    description: "Read a company skill's instructions by its short name, then follow them.",
+    inputSchema: { type: "object", properties: { slug: { type: "string", description: "The skill's short name from list_skills." } }, required: ["slug"], additionalProperties: false },
   },
 ];
 
@@ -64,7 +78,20 @@ export function registerMcpRoutes(app: Hono<AppEnv>, deps: Deps) {
         return reply({ tools: TOOLS });
       case "tools/call": {
         const call = callParams.safeParse(params);
-        if (!call.success || call.data.name !== "search_knowledge") return error(-32602, "Unknown tool.");
+        if (!call.success) return error(-32602, "Unknown tool.");
+        if (call.data.name === "list_skills") {
+          const skills = await skillsFor(deps, c.get("member"));
+          const text = skills.length ? skills.map((skill) => `- ${skill.slug}: ${skill.title} — ${skill.description}`).join("\n") : "No company skills are available to you.";
+          return reply({ content: [{ type: "text", text }], structuredContent: { skills } });
+        }
+        if (call.data.name === "use_skill") {
+          const args = useSkillArgs.safeParse(call.data.arguments);
+          if (!args.success) return reply({ isError: true, content: [{ type: "text", text: "Pass a `slug` from list_skills." }] });
+          const skill = await skillFor(deps, c.get("member"), args.data.slug);
+          if (!skill) return reply({ isError: true, content: [{ type: "text", text: "That skill doesn't exist or isn't available to you. Ask for access on your workspace's \"My access\" page." }] });
+          return reply({ content: [{ type: "text", text: `# ${skill.title}\n\n${skill.instructions}` }] });
+        }
+        if (call.data.name !== "search_knowledge") return error(-32602, "Unknown tool.");
         const args = searchArgs.safeParse(call.data.arguments);
         if (!args.success) return reply({ isError: true, content: [{ type: "text", text: "Pass a `query` string." }] });
         const results = await searchAsMember(deps, c.get("member"), args.data.query, args.data.limit ?? 8);
