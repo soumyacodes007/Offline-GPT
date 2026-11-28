@@ -24,7 +24,7 @@ export function registerInferenceRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ key, prefix }, 201);
   });
 
-  app.get("/v1/usage", access(deps, "admin"), async (c) => {
+  app.get("/v1/usage", access(deps, { permission: "usage" }), async (c) => {
     const query = usageQuery.safeParse(c.req.query());
     if (!query.success) fail(400, "invalid_query", "`days` must be between 1 and 366.");
     const since = new Date(deps.now().getTime() - query.data.days * 24 * 60 * 60 * 1000);
