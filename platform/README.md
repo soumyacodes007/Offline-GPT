@@ -67,4 +67,4 @@ member's own key.
 ## Not done yet
 
 - SAML sign-in (OIDC works).
-- Library: skills and shared MCP connections are done; plugins are not yet.
+- Library: skills, shared MCP connections and plugins (Claude plugin `.zip`) are done.
