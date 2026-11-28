@@ -38,7 +38,7 @@ export async function searchAsMember(deps: Deps, member: Member, query: string, 
 }
 
 export function registerKnowledgeRoutes(app: Hono<AppEnv>, deps: Deps) {
-  app.post("/v1/knowledge/documents", access(deps, "admin"), async (c) => {
+  app.post("/v1/knowledge/documents", access(deps, { permission: "knowledge" }), async (c) => {
     const body = await readJson(c, uploadSchema);
     let text = body.content ?? "";
     if (body.file) {
@@ -74,7 +74,7 @@ export function registerKnowledgeRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ document: { id, path: body.path, title: body.title, sections: sections.length } }, 201);
   });
 
-  app.get("/v1/knowledge/documents", access(deps, "admin"), async (c) => {
+  app.get("/v1/knowledge/documents", access(deps, { permission: "knowledge" }), async (c) => {
     const rows = await deps.db
       .select({ id: knowledgeDocuments.id, path: knowledgeDocuments.path, title: knowledgeDocuments.title, createdAt: knowledgeDocuments.createdAt, sections: count(knowledgeSections.id) })
       .from(knowledgeDocuments)
@@ -84,7 +84,7 @@ export function registerKnowledgeRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ documents: rows });
   });
 
-  app.get("/v1/knowledge/documents/:id", access(deps, "admin"), async (c) => {
+  app.get("/v1/knowledge/documents/:id", access(deps, { permission: "knowledge" }), async (c) => {
     const [document] = await deps.db.select().from(knowledgeDocuments).where(eq(knowledgeDocuments.id, c.req.param("id"))).limit(1);
     if (!document) fail(404, "not_found", "No document with that id.");
     const sections = await deps.db
@@ -95,14 +95,14 @@ export function registerKnowledgeRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ document, sections: sections.map((section) => ({ ...section, resourceId: `${document.path}#${section.position}` })) });
   });
 
-  app.delete("/v1/knowledge/documents/:id", access(deps, "admin"), async (c) => {
+  app.delete("/v1/knowledge/documents/:id", access(deps, { permission: "knowledge" }), async (c) => {
     const deleted = await deps.db.delete(knowledgeDocuments).where(eq(knowledgeDocuments.id, c.req.param("id"))).returning({ id: knowledgeDocuments.id, path: knowledgeDocuments.path });
     if (!deleted[0]) fail(404, "not_found", "No document with that id.");
     await audit(deps, c.get("member").id, "knowledge.document.deleted", { documentId: deleted[0].id, path: deleted[0].path });
     return c.body(null, 204);
   });
 
-  app.patch("/v1/knowledge/sections/:id", access(deps, "admin"), async (c) => {
+  app.patch("/v1/knowledge/sections/:id", access(deps, { permission: "knowledge" }), async (c) => {
     const body = await readJson(c, sensitivitySchema);
     const updated = await deps.db.update(knowledgeSections).set({ sensitivity: body.sensitivity }).where(eq(knowledgeSections.id, c.req.param("id"))).returning({ id: knowledgeSections.id });
     if (!updated[0]) fail(404, "not_found", "No section with that id.");
