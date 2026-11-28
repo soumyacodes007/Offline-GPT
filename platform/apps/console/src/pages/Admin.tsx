@@ -184,3 +184,49 @@ export function Audit() {
     </Card>
   );
 }
+
+const skillSchema = z.object({ slug: z.string(), title: z.string(), description: z.string(), updatedAt: z.string() });
+
+export function Library() {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({ slug: "", title: "", description: "", instructions: "" });
+  const skills = useQuery({ queryKey: ["skills"], queryFn: () => api(z.object({ skills: z.array(skillSchema) }), "/v1/library/skills") });
+  const publish = useMutation({
+    mutationFn: () => api(z.unknown(), "/v1/library/skills", { method: "POST", body: form }),
+    onSuccess: async () => {
+      setForm({ slug: "", title: "", description: "", instructions: "" });
+      await queryClient.invalidateQueries({ queryKey: ["skills"] });
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (slug: string) => api(z.unknown(), `/v1/library/skills/${slug}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["skills"] }),
+  });
+  const set = (key: keyof typeof form) => (event: { target: { value: string } }) => setForm({ ...form, [key]: event.target.value });
+  return (
+    <div className="grid gap-5">
+      <Card title="Publish a skill" description="Reusable instructions the assistant can follow in everyone's workspace. Everyone can use a skill unless a rule on the Access page (kind: skill) limits it.">
+        <form className="grid gap-3" onSubmit={(event: FormEvent) => { event.preventDefault(); publish.mutate(); }}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Short name" hint="Lowercase letters, numbers and -, e.g. weekly-report"><input className={inputClass} value={form.slug} onChange={set("slug")} required /></Field>
+            <Field label="Title"><input className={inputClass} value={form.title} onChange={set("title")} required /></Field>
+          </div>
+          <Field label="One-line description"><input className={inputClass} value={form.description} onChange={set("description")} required /></Field>
+          <Field label="Instructions" hint="Markdown. Publishing the same short name again replaces it."><textarea className={`${inputClass} h-40 font-mono`} value={form.instructions} onChange={set("instructions")} required /></Field>
+          <div className="flex items-center gap-3"><Button type="submit" disabled={publish.isPending}>Publish skill</Button><ErrorText error={publish.error} /></div>
+        </form>
+      </Card>
+      <Card title="Skills">
+        {skills.data?.skills.length === 0 ? <Empty>No skills yet.</Empty> : null}
+        <div className="grid gap-2">
+          {skills.data?.skills.map((skill) => (
+            <div key={skill.slug} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 text-sm">
+              <div><p className="font-medium">{skill.title} <span className="font-mono text-xs text-slate-400">{skill.slug}</span></p><p className="text-xs text-slate-500">{skill.description} · updated {formatDate(skill.updatedAt)}</p></div>
+              <Button tone="danger" onClick={() => remove.mutate(skill.slug)}>Delete</Button>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
