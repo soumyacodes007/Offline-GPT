@@ -29,12 +29,22 @@ const idleTimer = workspaces
       }
     }, 5 * 60 * 1000)
   : null;
+const checkpointMs = config.workspaces?.checkpointMs;
+const checkpointTimer = workspaces && checkpointMs
+  ? setInterval(() => {
+      const kept = config.workspaces?.checkpointsKept ?? 7;
+      workspaces.checkpointAll(kept)
+        .then((failed) => (failed ? console.error(JSON.stringify({ level: "error", service: "control", message: "some workspace checkpoints failed", failed })) : undefined))
+        .catch((error: unknown) => console.error(JSON.stringify({ level: "error", service: "control", message: "checkpoints failed", error: String(error) })));
+    }, checkpointMs)
+  : null;
 const server = Bun.serve({ port: config.port, hostname: "0.0.0.0", fetch: app.fetch });
 const origin = workspaces ? Bun.serve({ port: config.workspaceOriginPort, hostname: "0.0.0.0", fetch: createWorkspaceOrigin(deps, workspaces).fetch, idleTimeout: 255 }) : null;
 console.log(JSON.stringify({ level: "info", service: "control", message: "listening", port: server.port, workspacePort: origin?.port ?? null }));
 
 async function shutdown() {
   if (idleTimer) clearInterval(idleTimer);
+  if (checkpointTimer) clearInterval(checkpointTimer);
   await server.stop();
   await origin?.stop();
   syslog?.close();
