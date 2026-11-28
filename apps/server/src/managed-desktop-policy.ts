@@ -53,6 +53,8 @@ class ManagedDesktopPolicy {
     const session = this.session;
     if (!session) {
       const persisted = await readGlobalRuntimeOpencodeConfig(this.config);
+      // A policy the host delivered over the host-token API needs no Den sign-in.
+      if (persisted.managedPolicy && persisted.managedPolicySource === "host") return persisted.managedPolicy;
       if (persisted.managedPolicy) throw new ApiError(403, "policy_unavailable", "Sign in to verify your organization's policy before continuing.");
       return null;
     }
