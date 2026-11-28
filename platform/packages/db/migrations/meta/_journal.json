@@ -50,6 +50,13 @@
       "when": 1795833322976,
       "tag": "0006_key_purpose",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795846215244,
+      "tag": "0007_connections",
+      "breakpoints": true
     }
   ]
 }
