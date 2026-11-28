@@ -1,5 +1,5 @@
-import { and, eq, isNull, lt } from "drizzle-orm";
-import { inferenceKeys, members, workspaces, type Database } from "@offlinegpt-platform/db";
+import { and, desc, eq, isNull, lt } from "drizzle-orm";
+import { inferenceKeys, members, workspaceCheckpoints, workspaces, type Database } from "@offlinegpt-platform/db";
 import { newId, randomToken, sha256 } from "../crypto";
 import { z } from "zod";
 import type { Docker } from "./docker";
@@ -28,6 +28,9 @@ type Row = typeof workspaces.$inferSelect;
 export type Workspace = { memberId: string; containerName: string; token: string; status: Row["status"] };
 
 /** The member's model provider: the model gateway, with the member's own key. */
+/** Every member's checkpoints live in this one volume, as `<container>-<time>.tgz`. */
+export const CHECKPOINT_VOLUME = "offlinegpt-checkpoints";
+
 /** The member's files live on this Docker volume. */
 export function volumeOf(containerName: string): string {
   return `${containerName}-data`;
@@ -85,6 +88,22 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
   async function deliverProvider(containerName: string, token: string, key: string): Promise<void> {
     await deliver(containerName, token, "providers", { provider: { offlinegpt: providerConfig(settings, key) } });
     await deliver(containerName, token, "mcp", { mcp: { offlinegpt: mcpConfig(settings, key) } });
+  }
+
+  /** Run a file job with the member's files at /data (read-only unless restoring) and the checkpoints at /checkpoints. */
+  function runFileTask(prefix: string, containerName: string, script: string, readOnly = true): Promise<number> {
+    return docker.runTask({
+      name: `${prefix}-${randomToken(4).toLowerCase().replace(/[^a-z0-9]/g, "")}`,
+      image: settings.image,
+      script,
+      binds: [`${volumeOf(containerName)}:/data${readOnly ? ":ro" : ""}`, `${CHECKPOINT_VOLUME}:/checkpoints`],
+    });
+  }
+
+  async function deleteCheckpoints(containerName: string, rows: Array<{ id: string; file: string }>): Promise<void> {
+    if (!rows.length) return;
+    const code = await runFileTask(`prune-${containerName}`, containerName, `rm -f ${rows.map((row) => `/checkpoints/${row.file}`).join(" ")}`);
+    if (code === 0) for (const row of rows) await db.delete(workspaceCheckpoints).where(eq(workspaceCheckpoints.id, row.id));
   }
 
   /**
@@ -225,6 +244,39 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
      * Delete the workspaces of people deactivated more than `retentionMs` ago:
      * container, files volume and model key. Returns whose were deleted.
      */
+    /** Snapshot every workspace's files, keeping the newest `keep` per member. Returns how many failed. */
+    async checkpointAll(keep: number): Promise<number> {
+      let failed = 0;
+      for (const row of await db.select().from(workspaces)) {
+        const file = `${row.containerName}-${now().toISOString().replace(/[:.]/g, "-")}.tgz`;
+        const code = await runFileTask(`checkpoint-${row.containerName}`, row.containerName, `tar czf /checkpoints/${file} -C /data .`).catch(() => -1);
+        if (code !== 0) {
+          failed += 1;
+          continue;
+        }
+        await db.insert(workspaceCheckpoints).values({ id: newId("ckpt"), memberId: row.memberId, file, createdAt: now() });
+        const old = (await db.select().from(workspaceCheckpoints).where(eq(workspaceCheckpoints.memberId, row.memberId)).orderBy(desc(workspaceCheckpoints.createdAt))).slice(keep);
+        await deleteCheckpoints(row.containerName, old);
+      }
+      return failed;
+    },
+
+    async checkpoints(memberId: string): Promise<Array<{ file: string; createdAt: Date }>> {
+      return db.select({ file: workspaceCheckpoints.file, createdAt: workspaceCheckpoints.createdAt }).from(workspaceCheckpoints).where(eq(workspaceCheckpoints.memberId, memberId)).orderBy(desc(workspaceCheckpoints.createdAt));
+    },
+
+    /** Replace the member's files with their newest checkpoint. The workspace is stopped first; it starts again on next use. */
+    async restoreLatest(memberId: string): Promise<{ file: string; createdAt: Date } | null> {
+      const row = await find(memberId);
+      const [latest] = await db.select().from(workspaceCheckpoints).where(eq(workspaceCheckpoints.memberId, memberId)).orderBy(desc(workspaceCheckpoints.createdAt)).limit(1);
+      if (!row || !latest) return null;
+      await docker.stop(row.containerName);
+      await db.update(workspaces).set({ status: "stopped" }).where(eq(workspaces.memberId, memberId));
+      const code = await runFileTask(`restore-${row.containerName}`, row.containerName, `find /data -mindepth 1 -delete && tar xzf /checkpoints/${latest.file} -C /data`, false);
+      if (code !== 0) throw new Error(`Restoring the checkpoint failed (exit ${code}).`);
+      return { file: latest.file, createdAt: latest.createdAt };
+    },
+
     async purgeLeavers(retentionMs: number): Promise<Array<{ memberId: string; containerName: string }>> {
       const cutoff = new Date(now().getTime() - retentionMs);
       const leavers = await db
@@ -234,6 +286,8 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
         .where(and(eq(members.active, false), lt(members.deactivatedAt, cutoff)));
       for (const leaver of leavers) {
         await docker.remove(leaver.containerName);
+        // Checkpoints first: the prune task mounts the files volume, which must still exist.
+        await deleteCheckpoints(leaver.containerName, await db.select().from(workspaceCheckpoints).where(eq(workspaceCheckpoints.memberId, leaver.memberId)));
         await docker.removeVolume(volumeOf(leaver.containerName));
         await db.update(inferenceKeys).set({ revokedAt: now() }).where(and(eq(inferenceKeys.memberId, leaver.memberId), eq(inferenceKeys.purpose, "workspace"), isNull(inferenceKeys.revokedAt)));
         await db.delete(workspaces).where(eq(workspaces.memberId, leaver.memberId));
