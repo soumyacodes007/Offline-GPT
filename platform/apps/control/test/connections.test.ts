@@ -8,12 +8,15 @@ const BROKEN = "http://broken.internal.test/mcp";
 
 type Seen = { method: string; authorization: string | null; session: string | null };
 let seen: Seen[] = [];
+/** Answers the loopback test's requests with this same app. */
+let loopback: ((init?: RequestInit) => Response | Promise<Response>) | null = null;
 let h: Harness;
 
 /** A company tool server: issues a session, answers as an event stream, and checks its credential. */
 async function trackerServer(input: string | URL | Request, init?: RequestInit): Promise<Response | null> {
   const url = input instanceof Request ? input.url : input.toString();
   if (url === BROKEN) return new Response("down", { status: 502 });
+  if (url === "http://control.internal.test/mcp" && loopback) return loopback(init);
   if (url !== TRACKER) return null;
   const headers = new Headers(init?.headers);
   const request = JSON.parse(typeof init?.body === "string" ? init.body : "{}");
@@ -42,6 +45,7 @@ async function setup(secretsKey: string | null = "a-deployment-secrets-key-of-32
   return { owner, adaId, adaKey: await keyOf(ada), bobKey: await keyOf(bob) };
 }
 afterEach(async () => {
+  loopback = null;
   await h.close();
 });
 
@@ -101,4 +105,16 @@ test("a broken server hides only its own tools, and credentials need SECRETS_KEY
   const plain = await setup(null);
   const refused = await h.call("POST", "/v1/library/connections", { token: plain.owner, body: { slug: "tracker", title: "t", description: "x", url: TRACKER, header: { name: "Authorization", value: SECRET } } });
   expect(refused.status).toBe(400);
+});
+
+test("a connection pointing back at the platform lists without looping", async () => {
+  const { owner, adaId, adaKey } = await setup();
+  // Route the platform's own MCP URL back into this app, as a loopback connection would.
+  const self = "http://control.internal.test/mcp";
+  await h.call("POST", "/v1/library/connections", { token: owner, body: { slug: "self", title: "Self", description: "loop", url: self, header: { name: "Authorization", value: `Bearer ${adaKey}` } } });
+  await h.call("POST", "/v1/rules", { token: owner, body: { kind: "mcp-connection", target: "self", effect: "allow", principal: { type: "member", id: adaId }, reason: "test" } });
+  loopback = (init) => h.app.request("/mcp", init ?? {});
+  const names = await toolNames(adaKey);
+  expect(names).toContain("self__search_knowledge");
+  expect(names.filter((name) => name.startsWith("self__self__"))).toEqual([]);
 });
