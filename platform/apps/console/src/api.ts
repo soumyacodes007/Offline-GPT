@@ -33,6 +33,7 @@ export const meSchema = z.object({
   name: z.string(),
   role: z.enum(["owner", "admin", "member"]),
   teams: z.array(z.object({ id: z.string(), name: z.string() })),
+  permissions: z.array(z.string()),
 });
 export type Me = z.infer<typeof meSchema>;
 
@@ -72,6 +73,7 @@ export const memberSchema = z.object({
   active: z.boolean(),
   fromDirectory: z.boolean(),
   teamIds: z.array(z.string()),
+  customRoleId: z.string().nullable(),
 });
 export type MemberRow = z.infer<typeof memberSchema>;
 
