@@ -149,3 +149,18 @@ test("a browser gets a self-refreshing page while the workspace container starts
   const api = await origin.request("/workspaces", { headers: { cookie: `ogp_session=${owner}` } });
   expect(api.status).toBe(502);
 });
+
+test("issuing a personal key leaves the member's workspace key working", async () => {
+  await h.call("POST", "/v1/me/workspace", { token: owner });
+  const env = ((containers.values().next().value?.body.Env ?? []) as string[]).join("\n");
+  const workspaceKey = /"apiKey":"(ogk_[A-Za-z0-9_-]+)"/.exec(env)?.[1] ?? "";
+  const listTools = (key: string) => h.app.request("/mcp", { method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) });
+  expect((await listTools(workspaceKey)).status).toBe(200);
+
+  const first = String((await json(await h.call("POST", "/v1/me/inference-key", { token: owner }))).key);
+  const second = String((await json(await h.call("POST", "/v1/me/inference-key", { token: owner }))).key);
+  expect((await listTools(workspaceKey)).status).toBe(200);
+  expect((await listTools(second)).status).toBe(200);
+  // A new personal key still replaces the previous personal key.
+  expect((await listTools(first)).status).toBe(401);
+});
