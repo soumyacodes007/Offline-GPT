@@ -1,5 +1,5 @@
 import { and, eq, isNull, lt } from "drizzle-orm";
-import { inferenceKeys, workspaces, type Database } from "@offlinegpt-platform/db";
+import { inferenceKeys, members, workspaces, type Database } from "@offlinegpt-platform/db";
 import { newId, randomToken, sha256 } from "../crypto";
 import { z } from "zod";
 import type { Docker } from "./docker";
@@ -27,6 +27,11 @@ type Row = typeof workspaces.$inferSelect;
 export type Workspace = { memberId: string; containerName: string; token: string; status: Row["status"] };
 
 /** The member's model provider: the model gateway, with the member's own key. */
+/** The member's files live on this Docker volume. */
+export function volumeOf(containerName: string): string {
+  return `${containerName}-data`;
+}
+
 export function providerConfig(settings: WorkspaceSettings, inferenceKey: string) {
   return {
     npm: "@ai-sdk/openai-compatible",
@@ -149,7 +154,7 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
       // OPENCODE_MODELS_URL: the air-gapped engine reads its model catalog from the gateway, never the internet.
       env: { OGP_WORKSPACE_TOKEN: token, OGP_HOST_TOKEN: hostTokenFor(token), OGP_OPENCODE_CONFIG: opencodeConfig(settings, key), OFFLINEGPT_WEB_ROOT: "/opt/offlinegpt/web", ...(settings.models[0] ? { OFFLINEGPT_WEB_DEFAULT_MODEL: `offlinegpt/${settings.models[0].alias}` } : {}), OPENCODE_MODELS_URL: `${settings.modelGatewayUrl.replace(/\/v1\/?$/, "")}/models` },
       labels: { "offlinegpt.platform": "workspace", "offlinegpt.member": memberId },
-      volume: `${containerName}-data`,
+      volume: volumeOf(containerName),
       mountPath: "/workspace",
       network: settings.network,
       memoryMb: settings.memoryMb,
@@ -201,6 +206,26 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
         await db.update(workspaces).set({ status: "stopped" }).where(eq(workspaces.memberId, row.memberId));
       }
       return idle.length;
+    },
+
+    /**
+     * Delete the workspaces of people deactivated more than `retentionMs` ago:
+     * container, files volume and model key. Returns whose were deleted.
+     */
+    async purgeLeavers(retentionMs: number): Promise<Array<{ memberId: string; containerName: string }>> {
+      const cutoff = new Date(now().getTime() - retentionMs);
+      const leavers = await db
+        .select({ memberId: workspaces.memberId, containerName: workspaces.containerName })
+        .from(workspaces)
+        .innerJoin(members, eq(members.id, workspaces.memberId))
+        .where(and(eq(members.active, false), lt(members.deactivatedAt, cutoff)));
+      for (const leaver of leavers) {
+        await docker.remove(leaver.containerName);
+        await docker.removeVolume(volumeOf(leaver.containerName));
+        await db.update(inferenceKeys).set({ revokedAt: now() }).where(and(eq(inferenceKeys.memberId, leaver.memberId), eq(inferenceKeys.purpose, "workspace"), isNull(inferenceKeys.revokedAt)));
+        await db.delete(workspaces).where(eq(workspaces.memberId, leaver.memberId));
+      }
+      return leavers;
     },
   };
 }
