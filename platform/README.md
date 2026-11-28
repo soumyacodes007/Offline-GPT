@@ -67,4 +67,5 @@ member's own key.
 ## Not done yet
 
 - SAML sign-in (OIDC works).
-- An org library of skills, plugins and MCP servers for workspaces.
+- Library: skills are done (publish, permissions, `list_skills`/`use_skill`
+  for the agent); plugins and shared MCP connections are not yet.
