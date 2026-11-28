@@ -56,8 +56,18 @@ cd evals && OFFLINEGPT_EVAL_E2E_TESTS=1 OFFLINEGPT_EVAL_PLATFORM_URL=http://loca
   pnpm exec vitest run --config vitest.config.ts --project e2e specs/platform-console.e2e.test.ts
 ```
 
+## Verified
+
+`evals/specs/platform-stack.e2e.test.ts` passed against this compose file on a
+single GPU host (RTX 3050, Qwen 2.5 0.5B): the owner signs in on the console,
+starts their workspace, the workspace app opens on its own port, and a task
+sent in the browser is answered by vLLM through the model gateway with the
+member's own key.
+
 ## Not done yet
 
 - SAML sign-in (OIDC works).
 - An org library of skills, plugins and MCP servers for workspaces.
-- A full run of the compose file on a GPU host with real workspace containers.
+- The workspace app still shows the desktop's "Sign in to OfflineGPT Cloud"
+  buttons and, on a first visit, its welcome choices; both should be hidden
+  in this edition.
