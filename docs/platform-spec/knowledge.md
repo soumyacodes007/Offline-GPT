@@ -35,8 +35,9 @@
 ## For the agent
 
 - The control service exposes an MCP endpoint at `/mcp` for workspaces,
-  authenticated with the member's inference key. It offers one tool,
-  `search_knowledge`, which runs the search above as that member.
+  authenticated with the member's inference key. Its `search_knowledge` tool
+  runs the search above as that member (the library adds skill and
+  connection tools; see library.md and connections.md).
 
 ## Meaning-based search (optional)
 
