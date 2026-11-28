@@ -10,15 +10,15 @@ import { access, fail, type AppEnv } from "../http";
 const usageQuery = z.object({ days: z.coerce.number().int().min(1).max(366).default(7) });
 
 export function registerInferenceRoutes(app: Hono<AppEnv>, deps: Deps) {
-  /** Issue the member's inference key; any previous key stops working. */
+  /** Issue the member's personal inference key; their previous personal key stops working. */
   app.post("/v1/me/inference-key", access(deps, "member"), async (c) => {
     const member = c.get("member");
     const key = `ogk_${randomToken(32)}`;
     const prefix = key.slice(0, 10);
     const now = deps.now();
     await deps.db.transaction(async (tx) => {
-      await tx.update(inferenceKeys).set({ revokedAt: now }).where(and(eq(inferenceKeys.memberId, member.id), isNull(inferenceKeys.revokedAt)));
-      await tx.insert(inferenceKeys).values({ id: newId("ikey"), memberId: member.id, keyHash: sha256(key), prefix, createdAt: now });
+      await tx.update(inferenceKeys).set({ revokedAt: now }).where(and(eq(inferenceKeys.memberId, member.id), eq(inferenceKeys.purpose, "personal"), isNull(inferenceKeys.revokedAt)));
+      await tx.insert(inferenceKeys).values({ id: newId("ikey"), memberId: member.id, keyHash: sha256(key), prefix, purpose: "personal", createdAt: now });
     });
     await audit(deps, member.id, "inference_key.issued", { prefix });
     return c.json({ key, prefix }, 201);
