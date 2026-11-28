@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
-import { api, decisionSchema, describeCause, KINDS, memberSchema, requestSchema, ruleSchema, teamSchema, type AccessRule } from "../api";
+import { api, decisionSchema, describeCause, KINDS, memberSchema, requestSchema, ruleSchema, teamSchema, type AccessRule, type Me } from "../api";
 import { Badge, Button, Card, Empty, ErrorText, Field, formatDate, inputClass } from "../ui";
 
 const membersQuery = { queryKey: ["members"], queryFn: () => api(z.object({ members: z.array(memberSchema) }), "/v1/members") };
@@ -138,13 +138,14 @@ function CheckAccess() {
   );
 }
 
-export function Access() {
+export function Access({ me }: { me: Me }) {
+  const rules = me.permissions.includes("access");
   return (
     <div className="grid gap-5">
-      <PendingRequests />
-      <CheckAccess />
-      <NewRule />
-      <RuleList />
+      {me.permissions.includes("requests") ? <PendingRequests /> : null}
+      {rules ? <CheckAccess /> : null}
+      {rules ? <NewRule /> : null}
+      {rules ? <RuleList /> : null}
     </div>
   );
 }
