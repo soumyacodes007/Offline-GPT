@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@node-saml/node-saml": "5.1.0",
     "@offlinegpt-platform/access": "workspace:*",
     "@offlinegpt-platform/db": "workspace:*",
     "@offlinegpt-platform/policy": "workspace:*",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@types/bun": "1.3.14",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "xml-crypto": "6.1.2"
   }
 }
