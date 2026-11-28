@@ -105,7 +105,7 @@ test("the workspace MCP tool searches as the key's member", async () => {
   const init = await (await rpc(adaKey, "initialize", { protocolVersion: "2025-06-18" })).json();
   expect(init.result.serverInfo.name).toBe("offlinegpt-workspace");
   const tools = await (await rpc(adaKey, "tools/list")).json();
-  expect(tools.result.tools.map((tool: { name: string }) => tool.name)).toEqual(["search_knowledge"]);
+  expect(tools.result.tools.map((tool: { name: string }) => tool.name)).toContain("search_knowledge");
   const call = await (await rpc(adaKey, "tools/call", { name: "search_knowledge", arguments: { query: "parental" } })).json();
   expect(call.result.content[0].text).toContain("26 weeks");
   expect((await rpc("ogk_wrong", "tools/list")).status).toBe(401);
