@@ -13,13 +13,18 @@ export function People({ me }: { me: Me }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["members"] }),
   });
   const scimToken = useMutation({ mutationFn: () => api(z.object({ token: z.string() }), "/v1/settings/scim-token", { method: "POST" }) });
+  const roles = useQuery({ queryKey: ["roles"], queryFn: () => api(rolesSchema, "/v1/roles") });
+  const setCustomRole = useMutation({
+    mutationFn: ({ id, customRoleId }: { id: string; customRoleId: string | null }) => api(z.unknown(), `/v1/members/${id}/custom-role`, { method: "PATCH", body: { customRoleId } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["members"] }),
+  });
   const teamName = (id: string) => teams.data?.teams.find((team) => team.id === id)?.name ?? id;
   return (
     <div className="grid gap-5">
       <Card title="People" description="People come from your directory (SCIM). Deactivate people there; they lose access at once.">
-        <ErrorText error={setRole.error} />
+        <ErrorText error={setRole.error ?? setCustomRole.error} />
         <table className="w-full text-left text-sm">
-          <thead className="text-xs text-slate-500"><tr><th className="py-2">Person</th><th>Teams</th><th>Status</th><th>Role</th></tr></thead>
+          <thead className="text-xs text-slate-500"><tr><th className="py-2">Person</th><th>Teams</th><th>Status</th><th>Role</th><th>Extra permissions</th></tr></thead>
           <tbody>
             {members.data?.members.map((member) => (
               <tr key={member.id} className="border-t border-slate-100">
@@ -33,12 +38,21 @@ export function People({ me }: { me: Me }) {
                     </select>
                   ) : member.role}
                 </td>
+                <td>
+                  {member.role !== "member" ? <span className="text-xs text-slate-500">All</span> : me.role === "owner" ? (
+                    <select className={inputClass} value={member.customRoleId ?? ""} onChange={(event) => setCustomRole.mutate({ id: member.id, customRoleId: event.target.value || null })}>
+                      <option value="">None</option>
+                      {roles.data?.roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
+                    </select>
+                  ) : <span className="text-xs">{roles.data?.roles.find((role) => role.id === member.customRoleId)?.name ?? "None"}</span>}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
       <Teams people={members.data?.members ?? []} />
+      {me.role === "owner" ? <Roles /> : null}
       {me.role === "owner" ? (
         <Card title="Directory sync (SCIM)" description="Paste this token into your identity provider's provisioning settings. Making a new one stops the old one.">
           <Button onClick={() => scimToken.mutate()} disabled={scimToken.isPending}>Make a new SCIM token</Button>
@@ -400,6 +414,50 @@ function Teams({ people }: { people: MemberRow[] }) {
           </div>
         ))}
         {teams.data?.teams.length === 0 ? <Empty>No teams yet.</Empty> : null}
+      </div>
+    </Card>
+  );
+}
+
+const rolesSchema = z.object({ permissions: z.array(z.string()), roles: z.array(z.object({ id: z.string(), name: z.string(), permissions: z.array(z.string()) })) });
+const PERMISSION_LABELS: Record<string, string> = {
+  people: "People and teams",
+  access: "Access rules (can grant anything, including to themselves)",
+  requests: "Decide access requests",
+  knowledge: "Knowledge base",
+  library: "Library: skills, connections, plugins",
+  audit: "Audit log",
+  usage: "Model usage",
+};
+
+function Roles() {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [chosen, setChosen] = useState<string[]>([]);
+  const roles = useQuery({ queryKey: ["roles"], queryFn: () => api(rolesSchema, "/v1/roles") });
+  const refresh = () => Promise.all(["roles", "members"].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
+  const create = useMutation({ mutationFn: () => api(z.unknown(), "/v1/roles", { method: "POST", body: { name, permissions: chosen } }), onSuccess: async () => { setName(""); setChosen([]); await refresh(); } });
+  const remove = useMutation({ mutationFn: (id: string) => api(z.unknown(), `/v1/roles/${id}`, { method: "DELETE" }), onSuccess: refresh });
+  const toggle = (permission: string) => setChosen(chosen.includes(permission) ? chosen.filter((item) => item !== permission) : [...chosen, permission]);
+  return (
+    <Card title="Roles" description="Give someone part of the admin console without making them an admin. Owners and admins always have everything.">
+      <form className="mb-3 grid gap-3" onSubmit={(event: FormEvent) => { event.preventDefault(); create.mutate(); }}>
+        <Field label="Role name" hint="e.g. Knowledge editor, Auditor"><input className={inputClass} value={name} onChange={(event) => setName(event.target.value)} required /></Field>
+        <div className="grid gap-1 sm:grid-cols-2">
+          {roles.data?.permissions.map((permission) => (
+            <label key={permission} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={chosen.includes(permission)} onChange={() => toggle(permission)} />{PERMISSION_LABELS[permission] ?? permission}</label>
+          ))}
+        </div>
+        <div className="flex items-center gap-3"><Button type="submit" disabled={create.isPending || chosen.length === 0}>Create role</Button><ErrorText error={create.error ?? remove.error} /></div>
+      </form>
+      <div className="grid gap-2">
+        {roles.data?.roles.map((role) => (
+          <div key={role.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 text-sm">
+            <div><p className="font-medium">{role.name}</p><p className="text-xs text-slate-500">{role.permissions.map((permission) => PERMISSION_LABELS[permission] ?? permission).join(" · ")}</p></div>
+            <Button tone="danger" onClick={() => remove.mutate(role.id)}>Delete</Button>
+          </div>
+        ))}
+        {roles.data?.roles.length === 0 ? <Empty>No roles yet.</Empty> : null}
       </div>
     </Card>
   );
