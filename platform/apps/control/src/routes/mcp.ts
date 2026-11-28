@@ -1,9 +1,12 @@
 import type { Hono } from "hono";
 import { z } from "zod";
 import type { Deps } from "../deps";
+import { audit } from "../audit";
+import { callUpstream } from "../connections/client";
 import { access, type AppEnv } from "../http";
 import { MAX_RESULTS } from "../knowledge/search";
 import { searchAsMember } from "./knowledge";
+import { connectionsFor, connectionTools, TOOL_SEPARATOR } from "./connections";
 import { skillFor, skillsFor } from "./library";
 
 /**
@@ -75,10 +78,25 @@ export function registerMcpRoutes(app: Hono<AppEnv>, deps: Deps) {
       case "ping":
         return reply({});
       case "tools/list":
-        return reply({ tools: TOOLS });
+        return reply({ tools: [...TOOLS, ...(await connectionTools(deps, await connectionsFor(deps, c.get("member"))))] });
       case "tools/call": {
         const call = callParams.safeParse(params);
         if (!call.success) return error(-32602, "Unknown tool.");
+        const separator = call.data.name.indexOf(TOOL_SEPARATOR);
+        if (separator > 0) {
+          const slug = call.data.name.slice(0, separator);
+          const tool = call.data.name.slice(separator + TOOL_SEPARATOR.length);
+          const member = c.get("member");
+          const connection = (await connectionsFor(deps, member)).find((candidate) => candidate.slug === slug);
+          if (!connection) return reply({ isError: true, content: [{ type: "text", text: `The connection "${slug}" doesn't exist or isn't available to you.` }] });
+          await audit(deps, member.id, "connection.tool_called", { slug, tool });
+          try {
+            return reply(await callUpstream(deps, connection.upstream, "tools/call", { name: tool, arguments: call.data.arguments ?? {} }));
+          } catch (failure) {
+            const reason = failure instanceof Error ? failure.message : String(failure);
+            return reply({ isError: true, content: [{ type: "text", text: `${connection.title} couldn't run ${tool}: ${reason}` }] });
+          }
+        }
         if (call.data.name === "list_skills") {
           const skills = await skillsFor(deps, c.get("member"));
           const text = skills.length ? skills.map((skill) => `- ${skill.slug}: ${skill.title} — ${skill.description}`).join("\n") : "No company skills are available to you.";
