@@ -70,7 +70,7 @@ export async function connectionTools(deps: Deps, connections: AllowedConnection
 }
 
 export function registerConnectionRoutes(app: Hono<AppEnv>, deps: Deps) {
-  app.post("/v1/library/connections", access(deps, "admin"), async (c) => {
+  app.post("/v1/library/connections", access(deps, { permission: "library" }), async (c) => {
     const body = await readJson(c, connectionSchema);
     if (body.header && !deps.config.secretsKey) fail(400, "secrets_key_missing", "Set SECRETS_KEY on the server before saving a connection credential.");
     const actor = c.get("member").id;
@@ -82,14 +82,14 @@ export function registerConnectionRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ connection: { slug: body.slug, title: body.title } }, 201);
   });
 
-  app.get("/v1/library/connections", access(deps, "admin"), async (c) => {
+  app.get("/v1/library/connections", access(deps, { permission: "library" }), async (c) => {
     const rows = await deps.db.select().from(mcpConnections).orderBy(asc(mcpConnections.slug));
     return c.json({
       connections: rows.map((row) => ({ slug: row.slug, title: row.title, description: row.description, url: row.url, headerName: row.headerName, hasSecret: row.headerValueSealed !== null, plugin: row.pluginSlug, updatedAt: row.updatedAt })),
     });
   });
 
-  app.delete("/v1/library/connections/:slug", access(deps, "admin"), async (c) => {
+  app.delete("/v1/library/connections/:slug", access(deps, { permission: "library" }), async (c) => {
     const slug = c.req.param("slug");
     const [existing] = await deps.db.select({ plugin: mcpConnections.pluginSlug }).from(mcpConnections).where(eq(mcpConnections.slug, slug)).limit(1);
     if (existing?.plugin) fail(409, "plugin_item", `This connection comes from the ${existing.plugin} plugin; uninstall the plugin instead.`);
