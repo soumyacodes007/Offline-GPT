@@ -143,9 +143,50 @@ export function Access({ me }: { me: Me }) {
   return (
     <div className="grid gap-5">
       {me.permissions.includes("requests") ? <PendingRequests /> : null}
+      {rules ? <WorkspacePolicy /> : null}
       {rules ? <CheckAccess /> : null}
       {rules ? <NewRule /> : null}
       {rules ? <RuleList /> : null}
     </div>
+  );
+}
+
+const policySchema = z.object({ commands: z.enum(["allow", "deny"]), blockedCommands: z.array(z.string()), browserOrigins: z.array(z.string()).nullable(), blockBrowserUploads: z.boolean() });
+
+function WorkspacePolicy() {
+  const queryClient = useQueryClient();
+  const current = useQuery({ queryKey: ["workspace-policy"], queryFn: () => api(z.object({ policy: policySchema }), "/v1/settings/workspace-policy") });
+  const [draft, setDraft] = useState<{ commands: "allow" | "deny"; blocked: string; limitBrowser: boolean; origins: string; blockUploads: boolean } | null>(null);
+  const loaded = current.data?.policy;
+  const form = draft ?? (loaded ? { commands: loaded.commands, blocked: loaded.blockedCommands.join("\n"), limitBrowser: loaded.browserOrigins !== null, origins: (loaded.browserOrigins ?? []).join("\n"), blockUploads: loaded.blockBrowserUploads } : null);
+  const lines = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
+  const save = useMutation({
+    mutationFn: () => {
+      if (!form) throw new Error("Still loading.");
+      return api(z.object({ missed: z.number() }), "/v1/settings/workspace-policy", { method: "PUT", body: { commands: form.commands, blockedCommands: lines(form.blocked), browserOrigins: form.limitBrowser ? lines(form.origins) : null, blockBrowserUploads: form.blockUploads } });
+    },
+    onSuccess: async () => { setDraft(null); await queryClient.invalidateQueries({ queryKey: ["workspace-policy"] }); },
+  });
+  if (!form) return null;
+  const set = (patch: Partial<typeof form>) => setDraft({ ...form, ...patch });
+  return (
+    <Card title="Workspace rules" description="What everyone's assistant may do inside their workspace. Running workspaces follow a change at once.">
+      <form className="grid gap-3" onSubmit={(event: FormEvent) => { event.preventDefault(); save.mutate(); }}>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.commands === "deny"} onChange={(event) => set({ commands: event.target.checked ? "deny" : "allow" })} />Don't let the assistant run commands</label>
+        {form.commands === "allow" ? (
+          <Field label="Commands it may never run" hint="One per line, * as a wildcard, e.g. curl *"><textarea className={`${inputClass} h-24 font-mono`} value={form.blocked} onChange={(event) => set({ blocked: event.target.value })} /></Field>
+        ) : null}
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.limitBrowser} onChange={(event) => set({ limitBrowser: event.target.checked })} />Only let the browser open these sites (turns off web search)</label>
+        {form.limitBrowser ? (
+          <Field label="Allowed sites" hint="One per line, e.g. https://intranet.example.gov"><textarea className={`${inputClass} h-24 font-mono`} value={form.origins} onChange={(event) => set({ origins: event.target.value })} /></Field>
+        ) : null}
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.blockUploads} onChange={(event) => set({ blockUploads: event.target.checked })} />Don't let the browser upload files</label>
+        <div className="flex items-center gap-3">
+          <Button type="submit" disabled={save.isPending}>Save workspace rules</Button>
+          {save.data && save.data.missed > 0 ? <span className="text-sm text-amber-700">{save.data.missed} workspaces didn't answer; they'll follow the rules when they next start.</span> : null}
+          <ErrorText error={save.error} />
+        </div>
+      </form>
+    </Card>
   );
 }
