@@ -8,6 +8,8 @@ import type { Deps } from "../deps";
  */
 const PROTOCOL_VERSION = "2025-06-18";
 const TIMEOUT_MS = 30_000;
+/** Marks requests the platform makes as a client, so a connection that points back at the platform can't loop. */
+export const PLATFORM_HOP_HEADER = "x-offlinegpt-platform-hop";
 
 const rpcResponse = z.object({
   jsonrpc: z.literal("2.0"),
@@ -51,6 +53,7 @@ async function post(deps: Deps, upstream: Upstream, body: unknown, session: stri
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
       "mcp-protocol-version": PROTOCOL_VERSION,
+      [PLATFORM_HOP_HEADER]: "1",
       ...(session ? { "mcp-session-id": session } : {}),
     },
     body: JSON.stringify(body),
