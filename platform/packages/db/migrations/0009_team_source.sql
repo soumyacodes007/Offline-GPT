@@ -1,0 +1,1 @@
+ALTER TABLE "teams" ADD COLUMN "source" text DEFAULT 'directory' NOT NULL;
