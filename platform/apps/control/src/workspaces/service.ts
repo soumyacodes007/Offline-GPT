@@ -33,14 +33,19 @@ export function providerConfig(settings: WorkspaceSettings, inferenceKey: string
   };
 }
 
-/** OpenCode's global config for a member: the provider above plus the knowledge MCP server. */
+/** The platform's MCP server (knowledge, skills), called with the member's own key. */
+export function mcpConfig(settings: WorkspaceSettings, inferenceKey: string) {
+  return { type: "remote", url: `${settings.controlUrl.replace(/\/+$/, "")}/mcp`, headers: { Authorization: `Bearer ${inferenceKey}` }, enabled: true };
+}
+
+/** OpenCode's global config for a member: the provider above plus the platform MCP server. */
 export function opencodeConfig(settings: WorkspaceSettings, inferenceKey: string): string {
   return JSON.stringify({
     $schema: "https://opencode.ai/config.json",
     autoupdate: false,
     share: "disabled",
     provider: { offlinegpt: providerConfig(settings, inferenceKey) },
-    mcp: { offlinegpt: { type: "remote", url: `${settings.controlUrl.replace(/\/+$/, "")}/mcp`, headers: { Authorization: `Bearer ${inferenceKey}` }, enabled: true } },
+    mcp: { offlinegpt: mcpConfig(settings, inferenceKey) },
     ...(settings.models[0] ? { model: `offlinegpt/${settings.models[0].alias}` } : {}),
   });
 }
@@ -67,25 +72,33 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
    * from the server's runtime config, not from OpenCode's own config file.
    * Retries while the new container starts.
    */
+  /** The engine ignores the config file, so the provider and MCP server go through the workspace server's host API. */
   async function deliverProvider(containerName: string, token: string, key: string): Promise<void> {
-    const url = `http://${containerName}:${WORKSPACE_PORT}/runtime-config/providers`;
+    await deliver(containerName, token, "providers", { provider: { offlinegpt: providerConfig(settings, key) } });
+    await deliver(containerName, token, "mcp", { mcp: { offlinegpt: mcpConfig(settings, key) } });
+  }
+
+  async function deliver(containerName: string, token: string, part: "providers" | "mcp", body: unknown): Promise<void> {
+    const url = `http://${containerName}:${WORKSPACE_PORT}/runtime-config/${part}`;
     let lastError = "not reached";
     for (let attempt = 0; attempt < 90; attempt += 1) {
       try {
         const response = await fetchImpl(url, {
           method: "PATCH",
           headers: { "content-type": "application/json", "x-offlinegpt-host-token": hostTokenFor(token) },
-          body: JSON.stringify({ provider: { offlinegpt: providerConfig(settings, key) } }),
+          body: JSON.stringify(body),
           signal: AbortSignal.timeout(10_000),
         });
         if (response.ok) return;
+        if (response.status === 404) throw new Error(`the workspace image is too old to accept ${part}; rebuild it`);
         lastError = `HTTP ${response.status}`;
       } catch (error) {
+        if (error instanceof Error && error.message.startsWith("the workspace image")) throw new Error(`Could not configure the workspace: ${error.message}`);
         lastError = error instanceof Error ? error.message : String(error);
       }
       await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
     }
-    throw new Error(`Could not give the workspace its model provider: ${lastError}`);
+    throw new Error(`Could not configure the workspace's ${part}: ${lastError}`);
   }
 
   async function find(memberId: string): Promise<Row | undefined> {
