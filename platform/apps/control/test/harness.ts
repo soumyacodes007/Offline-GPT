@@ -1,3 +1,4 @@
+import type { AuditLine } from "../src/syslog";
 import { openDatabase, type Database, type DatabaseHandle } from "@offlinegpt-platform/db";
 import type { WorkspaceService } from "../src/workspaces/service";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -67,6 +68,7 @@ export type HarnessOptions = {
   secretsKey?: string;
   /** Turns on SAML sign-in, trusting this IdP certificate (PEM). */
   saml?: { idpCert: string; jit?: boolean };
+  auditSink?: (event: AuditLine) => void;
 };
 
 export async function createHarness(options: HarnessOptions = {}) {
@@ -86,7 +88,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     SECRETS_KEY: options.secretsKey,
     ...(options.saml ? { SAML_ENTRY_POINT: "http://idp.example.test/sso", SAML_IDP_CERT: options.saml.idpCert, SAML_JIT: options.saml.jit ? "1" : "0" } : {}),
   });
-  const app = createApp({ db: database.db, config, now: () => now, fetch: async (input, init) => (await options.route?.(input, init)) ?? idp.fetch(input, init), workspaces: options.workspaces?.(database.db, () => now) ?? null });
+  const app = createApp({ db: database.db, config, now: () => now, fetch: async (input, init) => (await options.route?.(input, init)) ?? idp.fetch(input, init), workspaces: options.workspaces?.(database.db, () => now) ?? null, ...(options.auditSink ? { auditSink: options.auditSink } : {}) });
 
   const call = async (method: string, path: string, init: { token?: string; scim?: string; body?: unknown; cookie?: string } = {}): Promise<Response> =>
     app.request(path, {
