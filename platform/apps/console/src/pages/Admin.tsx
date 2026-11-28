@@ -165,9 +165,12 @@ export function Audit() {
   const events = useQuery({ queryKey: ["audit", filter], queryFn: () => api(z.object({ events: z.array(auditSchema), nextBefore: z.number().nullable() }), `/v1/audit?limit=100${filter ? `&action=${encodeURIComponent(filter)}` : ""}`) });
   return (
     <Card title="Audit log" description="Every change and every sensitive read, newest first." actions={
-      <select className={inputClass} value={filter} onChange={(event) => setFilter(event.target.value)}>
-        <option value="">Everything</option><option value="rule.">Rules</option><option value="request.">Requests</option><option value="member.">People</option><option value="knowledge.">Knowledge</option><option value="auth.">Sign-ins</option><option value="workspace.">Workspaces</option>
-      </select>
+      <div className="flex items-center gap-3">
+        <a href="/v1/audit/export" className="text-sm text-slate-600 underline">Download (JSON Lines)</a>
+        <select className={inputClass} value={filter} onChange={(event) => setFilter(event.target.value)}>
+          <option value="">Everything</option><option value="rule.">Rules</option><option value="request.">Requests</option><option value="member.">People</option><option value="knowledge.">Knowledge</option><option value="library.">Library</option><option value="connection.">Connections</option><option value="plugin.">Plugins</option><option value="auth.">Sign-ins</option><option value="workspace.">Workspaces</option>
+        </select>
+      </div>
     }>
       <ErrorText error={events.error} />
       <table className="w-full text-left text-sm">
