@@ -1,3 +1,4 @@
+import { desktopConfigSchema } from "@offlinegpt/types/den/desktop-policies-runtime";
 import { managedDesktopPolicy } from "./managed-desktop-policy.js";
 import { createTaskRecovery, setTaskRecovery } from "./task-recovery.js";
 import { managedPolicyActionSchema } from "./managed-policy-rules.js";
@@ -149,6 +150,7 @@ import {
   runtimeProviderMap,
   type RuntimeOpencodeConfig,
   writeGlobalRuntimeOpencodeConfig,
+  writeHostManagedPolicy,
   writeRuntimeOpencodeConfig,
 } from "./runtime-opencode-config-store.js";
 import {
@@ -3175,6 +3177,25 @@ function createRoutes(
       runtimeConfigPath: offlinegptRuntimeConfigFilePath(config),
       reload: shouldReload ? (reloadDeferred ? "deferred" : "reloaded") : "skipped",
     });
+  });
+
+  /**
+   * Lets the host that runs this server (a self-hosted workspace platform)
+   * set the managed policy its members work under: the same controls a Den
+   * organization sets for desktops. `null` removes it. A Den-verified policy
+   * always wins over one set here.
+   */
+  addRoute(routes, "PATCH", "/runtime-config/managed-policy", "host-token", async (ctx) => {
+    ensureWritable(config);
+    const workspace = resolveEngineRuntimeWorkspace(config);
+    const body = await readJsonBody(ctx.request);
+    const parsed = body.policy === null ? null : desktopConfigSchema.safeParse(body.policy);
+    if (parsed && !parsed.success) throw new ApiError(400, "invalid_payload", "policy must be a valid managed policy or null");
+    const result = await writeHostManagedPolicy(config, parsed ? parsed.data : null);
+    const fileResult = await writeOfflineGptRuntimeConfigFile(config);
+    const shouldReload = result.changed || fileResult.changed;
+    const reloadDeferred = shouldReload && (await applyManagedProviderReload(workspace)) === "deferred";
+    return jsonResponse({ ok: true, changed: result.changed, reload: shouldReload ? (reloadDeferred ? "deferred" : "reloaded") : "skipped" });
   });
 
   /**
