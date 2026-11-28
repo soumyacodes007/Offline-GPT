@@ -1,16 +1,13 @@
 import { createHash } from "node:crypto";
-import { eq, or } from "drizzle-orm";
 import type { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createRemoteJWKSet, customFetch, jwtVerify, type JWTVerifyGetKey } from "jose";
-import { members } from "@offlinegpt-platform/db";
 import { z } from "zod";
-import { audit } from "../audit";
 import type { OidcConfig } from "../config";
-import { newId, randomToken, safeEqual } from "../crypto";
+import { randomToken, safeEqual } from "../crypto";
 import type { Deps } from "../deps";
 import { access, fail, type AppEnv } from "../http";
-import { signIn } from "./auth";
+import { completeSsoSignIn } from "./sso";
 
 const FLOW_COOKIE = "ogp_oidc";
 const FLOW_MS = 10 * 60 * 1000;
@@ -128,24 +125,6 @@ export function registerOidcRoutes(app: Hono<AppEnv>, deps: Deps) {
     const claims = claimsSchema.safeParse(verified?.payload);
     if (!claims.success || !safeEqual(claims.data.nonce, flow.data.nonce)) fail(401, "invalid_id_token", "The identity provider's answer could not be verified.");
 
-    const email = emailClaim(claims.data);
-    const idpIds = [claims.data.sub, claims.data.oid].filter((value): value is string => Boolean(value));
-    const [byId] = await deps.db.select().from(members).where(or(...idpIds.map((id) => eq(members.externalId, id)))).limit(1);
-    const [byEmail] = byId || !email ? [] : await deps.db.select().from(members).where(eq(members.email, email)).limit(1);
-    let member = byId ?? byEmail;
-
-    if (!member && oidc.jit && email) {
-      const id = newId("mem");
-      await deps.db.insert(members).values({ id, email, name: claims.data.name?.trim() || email, externalId: claims.data.oid ?? claims.data.sub, createdAt: deps.now() });
-      await audit(deps, "system", "member.created_jit", { memberId: id, email });
-      [member] = await deps.db.select().from(members).where(eq(members.id, id)).limit(1);
-    }
-    if (!member || !member.active) {
-      await audit(deps, "system", "auth.oidc.refused", { email, reason: member ? "inactive" : "unknown" });
-      fail(403, "not_provisioned", "Your account isn't set up for this workspace. Ask your IT admin for access.");
-    }
-    await audit(deps, member.id, "auth.oidc.signed_in");
-    await signIn(deps, c, member.id);
-    return c.redirect(new URL("/", deps.config.publicUrl).toString(), 302);
+    return completeSsoSignIn(deps, c, "oidc", { ids: [claims.data.oid, claims.data.sub].filter((value): value is string => Boolean(value)), email: emailClaim(claims.data), name: claims.data.name ?? null }, oidc.jit);
   });
 }
