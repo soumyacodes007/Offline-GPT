@@ -1,0 +1,1 @@
+ALTER TABLE "inference_keys" ADD COLUMN "purpose" text DEFAULT 'personal' NOT NULL;
