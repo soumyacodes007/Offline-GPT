@@ -3,7 +3,7 @@ import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { api, ApiError, empty, meSchema, type Me } from "./api";
 import { Access } from "./pages/Access";
-import { Audit, Knowledge, People, Usage } from "./pages/Admin";
+import { Audit, Knowledge, Library, People, Usage } from "./pages/Admin";
 import { Home } from "./pages/Home";
 import { SignIn } from "./pages/SignIn";
 import "./styles.css";
@@ -13,6 +13,7 @@ const PAGES = [
   { id: "access", label: "Access", admin: true },
   { id: "people", label: "People", admin: true },
   { id: "knowledge", label: "Knowledge", admin: true },
+  { id: "library", label: "Library", admin: true },
   { id: "usage", label: "Usage", admin: true },
   { id: "audit", label: "Audit log", admin: true },
 ] as const;
@@ -51,6 +52,7 @@ function Shell({ me }: { me: Me }) {
         {current === "access" ? <Access /> : null}
         {current === "people" ? <People me={me} /> : null}
         {current === "knowledge" ? <Knowledge /> : null}
+        {current === "library" ? <Library /> : null}
         {current === "usage" ? <Usage /> : null}
         {current === "audit" ? <Audit /> : null}
       </main>
