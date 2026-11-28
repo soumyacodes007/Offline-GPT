@@ -7,6 +7,8 @@ import { createHarness, json, sessionFrom, type Harness } from "./harness";
 type FakeContainer = { running: boolean; body: Record<string, unknown> };
 let containers: Map<string, FakeContainer>;
 let volumes: Set<string>;
+/** Scripts run by one-off task containers, with their mounts. */
+let tasks: Array<{ script: string; binds: string[] }>;
 let dockerCalls: string[];
 let containerRequests: Array<{ url: string; authorization: string | null; cookie: string | null }>;
 let deliveries: Array<{ url: string; hostToken: string | null; body: unknown }>;
@@ -39,6 +41,14 @@ const fakeDocker: DockerTransport = async (method, path, body) => {
   const container = containers.get(name);
   if (!container) return { status: 404, body: { message: "No such container" } };
   if (path.endsWith("/json")) return { status: 200, body: { State: { Running: container.running } } };
+  if (path.endsWith("/wait")) {
+    const spec = container.body;
+    const script = Array.isArray(spec.Cmd) ? String(spec.Cmd[0]) : "";
+    const hostConfig = typeof spec.HostConfig === "object" && spec.HostConfig !== null ? spec.HostConfig : {};
+    const binds = "Binds" in hostConfig && Array.isArray(hostConfig.Binds) ? hostConfig.Binds.map(String) : [];
+    tasks.push({ script, binds });
+    return { status: 200, body: { StatusCode: 0 } };
+  }
   if (path.includes("/start")) { const was = container.running; container.running = true; return { status: was ? 304 : 204, body: null }; }
   if (path.includes("/stop")) { container.running = false; return { status: 204, body: null }; }
   return { status: 500, body: { message: `unexpected ${method} ${path}` } };
@@ -53,6 +63,7 @@ let scim: string;
 beforeEach(async () => {
   containers = new Map();
   volumes = new Set();
+  tasks = [];
   dockerCalls = [];
   containerRequests = [];
   deliveries = [];
@@ -224,4 +235,33 @@ test("the admin's workspace policy reaches running workspaces at once and every 
 
   expect((await h.call("PUT", "/v1/settings/workspace-policy", { token: owner, body: { ...policy, browserOrigins: ["https://intranet.example.gov/path"] } })).status).toBe(400);
   expect((await json(await h.call("GET", "/v1/settings/workspace-policy", { token: owner }))).policy).toEqual({ ...policy, browserOrigins: ["https://intranet.example.gov"] });
+});
+
+test("checkpoints keep the newest few, and an admin restores the latest", async () => {
+  await h.call("POST", "/v1/me/workspace", { token: owner });
+  const [row] = await h.db.select().from(workspaceRows);
+  const name = String(row?.containerName);
+  const minute = 60 * 1000;
+  for (const offset of [1, 2, 3]) {
+    const service = createWorkspaceService(h.db, createDocker(fakeDocker), settings, () => new Date(Date.now() + offset * minute), deliverFetch, 0);
+    expect(await service.checkpointAll(2)).toBe(0);
+  }
+  const snapshots = tasks.filter((task) => task.script.startsWith("tar czf"));
+  expect(snapshots).toHaveLength(3);
+  // The member's files are mounted read-only for a snapshot.
+  expect(snapshots[0]?.binds).toEqual([`${name}-data:/data:ro`, "offlinegpt-checkpoints:/checkpoints"]);
+  // The oldest was pruned once a third existed.
+  const prune = tasks.find((task) => task.script.startsWith("rm -f"));
+  expect(prune?.script).toContain(snapshots[0]?.script.split(" ")[2] ?? "missing");
+  const ownerId = String(row?.memberId);
+  const listed = await json(await h.call("GET", `/v1/workspaces/${ownerId}/checkpoints`, { token: owner }));
+  expect((listed.checkpoints as unknown[]).length).toBe(2);
+
+  const restored = await h.call("POST", `/v1/workspaces/${ownerId}/restore`, { token: owner });
+  expect(restored.status).toBe(200);
+  const restore = tasks.at(-1);
+  expect(restore?.script).toMatch(/^find \/data -mindepth 1 -delete && tar xzf \/checkpoints\/ogp-ws-.*\.tgz -C \/data$/);
+  expect(restore?.binds[0]).toBe(`${name}-data:/data`);
+  expect([...containers.values()].find((container) => !container.body.Entrypoint)?.running).toBe(false);
+  expect((await h.call("POST", "/v1/workspaces/mem_nobody/restore", { token: owner })).status).toBe(404);
 });
