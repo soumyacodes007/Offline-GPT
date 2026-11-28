@@ -227,6 +227,64 @@ export function Library() {
           ))}
         </div>
       </Card>
+      <Connections />
     </div>
+  );
+}
+
+const connectionSchema = z.object({ slug: z.string(), title: z.string(), description: z.string(), url: z.string(), headerName: z.string().nullable(), hasSecret: z.boolean(), updatedAt: z.string() });
+const EMPTY_CONNECTION = { slug: "", title: "", description: "", url: "", headerName: "Authorization", headerValue: "" };
+
+function Connections() {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState(EMPTY_CONNECTION);
+  const connections = useQuery({ queryKey: ["connections"], queryFn: () => api(z.object({ connections: z.array(connectionSchema) }), "/v1/library/connections") });
+  const save = useMutation({
+    mutationFn: () => {
+      const { headerName, headerValue, ...rest } = form;
+      return api(z.unknown(), "/v1/library/connections", { method: "POST", body: headerValue ? { ...rest, header: { name: headerName, value: headerValue } } : rest });
+    },
+    onSuccess: async () => {
+      setForm(EMPTY_CONNECTION);
+      await queryClient.invalidateQueries({ queryKey: ["connections"] });
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (slug: string) => api(z.unknown(), `/v1/library/connections/${slug}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["connections"] }),
+  });
+  const set = (key: keyof typeof form) => (event: { target: { value: string } }) => setForm({ ...form, [key]: event.target.value });
+  return (
+    <>
+      <Card title="Connect a company tool" description="An MCP server the assistant can use, such as a ticket tracker or an internal database. Nobody can use a connection until a rule on the Access page (kind: mcp-connection) allows them. The credential is stored encrypted and never shown again.">
+        <form className="grid gap-3" onSubmit={(event: FormEvent) => { event.preventDefault(); save.mutate(); }}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Short name" hint="Lowercase letters, numbers and -, e.g. tracker"><input className={inputClass} value={form.slug} onChange={set("slug")} required /></Field>
+            <Field label="Title"><input className={inputClass} value={form.title} onChange={set("title")} required /></Field>
+          </div>
+          <Field label="What it's for"><input className={inputClass} value={form.description} onChange={set("description")} required /></Field>
+          <Field label="Server URL" hint="Its MCP endpoint, reachable from this server, e.g. http://tracker.internal:8080/mcp"><input className={inputClass} type="url" value={form.url} onChange={set("url")} required /></Field>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Credential header"><input className={inputClass} value={form.headerName} onChange={set("headerName")} /></Field>
+            <Field label="Credential value" hint="Optional. Leave empty to keep the stored one."><input className={inputClass} type="password" value={form.headerValue} onChange={set("headerValue")} autoComplete="off" /></Field>
+          </div>
+          <div className="flex items-center gap-3"><Button type="submit" disabled={save.isPending}>Save connection</Button><ErrorText error={save.error} /></div>
+        </form>
+      </Card>
+      <Card title="Connections">
+        {connections.data?.connections.length === 0 ? <Empty>No connections yet.</Empty> : null}
+        <div className="grid gap-2">
+          {connections.data?.connections.map((connection) => (
+            <div key={connection.slug} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3 text-sm">
+              <div>
+                <p className="font-medium">{connection.title} <span className="font-mono text-xs text-slate-400">{connection.slug}</span>{connection.hasSecret ? <Badge tone="green">credential set</Badge> : null}</p>
+                <p className="text-xs text-slate-500">{connection.url} · updated {formatDate(connection.updatedAt)}</p>
+              </div>
+              <Button tone="danger" onClick={() => remove.mutate(connection.slug)}>Delete</Button>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </>
   );
 }
