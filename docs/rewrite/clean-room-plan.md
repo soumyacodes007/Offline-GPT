@@ -7,7 +7,9 @@ requests/approvals, audit, knowledge incl. PDF/Word, MCP search tool, Docker
 workspaces with their own origin), model gateway, console, compose packaging,
 desktop first run on the user's own subscription. The compose stack passed a
 full GPU run (employee chats with vLLM in their own workspace). Company library done: skills, shared MCP connections and plugins.
-SAML sign-in done. Open: legal review, then deleting `ee/` (phase 8). Branch for the work: `feat/platform-rewrite` (off `main`
+SAML sign-in, audit export, leaver retention, manual teams, custom roles,
+workspace rules, checkpoints and meaning-based knowledge search done. Open:
+legal review, then deleting `ee/` (phase 8). Branch for the work: `feat/platform-rewrite` (off `main`
 once `feat/airgapped-edition` and `chore/remove-telemetry` land).
 
 ## 1. Why, and the two products
