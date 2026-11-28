@@ -9,6 +9,7 @@ import { listUpstreamTools, type Upstream, type UpstreamTool } from "../connecti
 import { decryptSecret, encryptSecret, newId } from "../crypto";
 import type { Deps } from "../deps";
 import { access, fail, readJson, type AppEnv } from "../http";
+import { allowedPlugins } from "../plugins/access";
 import type { Member } from "../sessions";
 
 /** Separates a connection's slug from its tool's name in the names the agent sees. */
@@ -35,9 +36,12 @@ function upstreamOf(deps: Deps, row: ConnectionRow): Upstream {
 export async function connectionsFor(deps: Deps, member: Member): Promise<AllowedConnection[]> {
   const rows = await deps.db.select().from(mcpConnections).orderBy(asc(mcpConnections.slug));
   if (!rows.length) return [];
-  const decisions = decideMany({ subject: await subjectOf(deps.db, member), kind: "mcp-connection", ids: rows.map((row) => row.slug), rules: await loadRules(deps.db, "mcp-connection"), baseline: KIND_BASELINES["mcp-connection"], now: deps.now() });
+  const subject = await subjectOf(deps.db, member);
+  const decisions = decideMany({ subject, kind: "mcp-connection", ids: rows.map((row) => row.slug), rules: await loadRules(deps.db, "mcp-connection"), baseline: KIND_BASELINES["mcp-connection"], now: deps.now() });
+  // A plugin's connections follow the plugin's rule.
+  const plugins = await allowedPlugins(deps, subject, rows.map((row) => row.pluginSlug));
   return rows.flatMap((row) => {
-    if (!decisions.get(row.slug)?.allowed) return [];
+    if (!(row.pluginSlug === null ? decisions.get(row.slug)?.allowed : plugins.has(row.pluginSlug))) return [];
     try {
       return [{ slug: row.slug, title: row.title, upstream: upstreamOf(deps, row) }];
     } catch {
@@ -81,12 +85,14 @@ export function registerConnectionRoutes(app: Hono<AppEnv>, deps: Deps) {
   app.get("/v1/library/connections", access(deps, "admin"), async (c) => {
     const rows = await deps.db.select().from(mcpConnections).orderBy(asc(mcpConnections.slug));
     return c.json({
-      connections: rows.map((row) => ({ slug: row.slug, title: row.title, description: row.description, url: row.url, headerName: row.headerName, hasSecret: row.headerValueSealed !== null, updatedAt: row.updatedAt })),
+      connections: rows.map((row) => ({ slug: row.slug, title: row.title, description: row.description, url: row.url, headerName: row.headerName, hasSecret: row.headerValueSealed !== null, plugin: row.pluginSlug, updatedAt: row.updatedAt })),
     });
   });
 
   app.delete("/v1/library/connections/:slug", access(deps, "admin"), async (c) => {
     const slug = c.req.param("slug");
+    const [existing] = await deps.db.select({ plugin: mcpConnections.pluginSlug }).from(mcpConnections).where(eq(mcpConnections.slug, slug)).limit(1);
+    if (existing?.plugin) fail(409, "plugin_item", `This connection comes from the ${existing.plugin} plugin; uninstall the plugin instead.`);
     const deleted = await deps.db.delete(mcpConnections).where(eq(mcpConnections.slug, slug)).returning({ slug: mcpConnections.slug });
     if (!deleted.length) fail(404, "not_found", "No connection with that name.");
     await audit(deps, c.get("member").id, "connection.deleted", { slug });
