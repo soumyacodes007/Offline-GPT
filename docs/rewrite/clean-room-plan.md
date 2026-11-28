@@ -5,9 +5,10 @@ Status (2026-11-28): phases 0–6 built on `feat/platform-rewrite`, see
 Postgres schema, control service (setup, OIDC, SCIM, rules, check access,
 requests/approvals, audit, knowledge incl. PDF/Word, MCP search tool, Docker
 workspaces with their own origin), model gateway, console, compose packaging,
-desktop first run on the user's own subscription. Open: SAML, org library of
-skills/plugins/MCP, a full GPU run of the compose stack, legal review, then
-deleting `ee/` (phase 8). Branch for the work: `feat/platform-rewrite` (off `main`
+desktop first run on the user's own subscription. The compose stack passed a
+full GPU run (employee chats with vLLM in their own workspace). Open: SAML,
+org library of skills/plugins/MCP, hiding desktop cloud prompts in the
+workspace app, legal review, then deleting `ee/` (phase 8). Branch for the work: `feat/platform-rewrite` (off `main`
 once `feat/airgapped-edition` and `chore/remove-telemetry` land).
 
 ## 1. Why, and the two products
