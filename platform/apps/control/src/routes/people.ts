@@ -1,14 +1,17 @@
 import { and, asc, count, eq, inArray, ne } from "drizzle-orm";
 import type { Hono } from "hono";
-import { members, teamMembers, teams } from "@offlinegpt-platform/db";
+import { customRoles, members, teamMembers, teams } from "@offlinegpt-platform/db";
 import { z } from "zod";
 import { audit } from "../audit";
 import { newId } from "../crypto";
 import type { Deps } from "../deps";
 import { access, fail, readJson, type AppEnv } from "../http";
+import { PERMISSIONS } from "../permissions";
 
 const roleSchema = z.object({ role: z.enum(["owner", "admin", "member"]) });
 const teamSchema = z.object({ name: z.string().trim().min(1).max(100) });
+const customRoleSchema = z.object({ name: z.string().trim().min(1).max(100), permissions: z.array(z.enum(PERMISSIONS)).min(1) });
+const assignRoleSchema = z.object({ customRoleId: z.string().min(1).nullable() });
 const teamMembersSchema = z.object({ memberIds: z.array(z.string().min(1)).max(10_000) });
 
 /** A team admins can change: made in the console, not synced from the directory. */
@@ -20,9 +23,9 @@ async function manualTeam(deps: Deps, id: string) {
 }
 
 export function registerPeopleRoutes(app: Hono<AppEnv>, deps: Deps) {
-  app.get("/v1/members", access(deps, "admin"), async (c) => {
+  app.get("/v1/members", access(deps, { permission: "people" }), async (c) => {
     const rows = await deps.db
-      .select({ id: members.id, email: members.email, name: members.name, role: members.role, active: members.active, fromDirectory: members.externalId, createdAt: members.createdAt })
+      .select({ id: members.id, email: members.email, name: members.name, role: members.role, customRoleId: members.customRoleId, active: members.active, fromDirectory: members.externalId, createdAt: members.createdAt })
       .from(members)
       .orderBy(asc(members.email));
     const memberships = await deps.db.select().from(teamMembers);
@@ -31,7 +34,7 @@ export function registerPeopleRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ members: rows.map((row) => ({ ...row, fromDirectory: row.fromDirectory !== null, teamIds: teamsByMember.get(row.id) ?? [] })) });
   });
 
-  app.get("/v1/teams", access(deps, "admin"), async (c) => {
+  app.get("/v1/teams", access(deps, { permission: "people" }), async (c) => {
     const rows = await deps.db
       .select({ id: teams.id, name: teams.name, source: teams.source, members: count(teamMembers.memberId) })
       .from(teams)
@@ -41,7 +44,7 @@ export function registerPeopleRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ teams: rows });
   });
 
-  app.post("/v1/teams", access(deps, "admin"), async (c) => {
+  app.post("/v1/teams", access(deps, { permission: "people" }), async (c) => {
     const body = await readJson(c, teamSchema);
     const [taken] = await deps.db.select({ id: teams.id }).from(teams).where(eq(teams.name, body.name)).limit(1);
     if (taken) fail(409, "name_taken", "A team with that name already exists.");
@@ -52,7 +55,7 @@ export function registerPeopleRoutes(app: Hono<AppEnv>, deps: Deps) {
   });
 
   /** Replace a manual team's members. */
-  app.put("/v1/teams/:id/members", access(deps, "admin"), async (c) => {
+  app.put("/v1/teams/:id/members", access(deps, { permission: "people" }), async (c) => {
     const team = await manualTeam(deps, c.req.param("id"));
     const body = await readJson(c, teamMembersSchema);
     const ids = [...new Set(body.memberIds)];
@@ -66,11 +69,59 @@ export function registerPeopleRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ team: { id: team.id, memberIds: ids } });
   });
 
-  app.delete("/v1/teams/:id", access(deps, "admin"), async (c) => {
+  app.delete("/v1/teams/:id", access(deps, { permission: "people" }), async (c) => {
     const team = await manualTeam(deps, c.req.param("id"));
     await deps.db.delete(teams).where(eq(teams.id, team.id));
     await audit(deps, c.get("member").id, "team.deleted", { teamId: team.id, name: team.name });
     return c.body(null, 204);
+  });
+
+  app.get("/v1/roles", access(deps, { permission: "people" }), async (c) => {
+    const roles = await deps.db.select().from(customRoles).orderBy(asc(customRoles.name));
+    return c.json({ permissions: PERMISSIONS, roles });
+  });
+
+  app.post("/v1/roles", access(deps, "owner"), async (c) => {
+    const body = await readJson(c, customRoleSchema);
+    const [taken] = await deps.db.select({ id: customRoles.id }).from(customRoles).where(eq(customRoles.name, body.name)).limit(1);
+    if (taken) fail(409, "name_taken", "A role with that name already exists.");
+    const id = newId("role");
+    const permissions = [...new Set(body.permissions)];
+    await deps.db.insert(customRoles).values({ id, name: body.name, permissions, createdAt: deps.now() });
+    await audit(deps, c.get("member").id, "role.created", { roleId: id, name: body.name, permissions });
+    return c.json({ role: { id, name: body.name, permissions } }, 201);
+  });
+
+  app.put("/v1/roles/:id", access(deps, "owner"), async (c) => {
+    const body = await readJson(c, customRoleSchema);
+    const id = c.req.param("id");
+    const permissions = [...new Set(body.permissions)];
+    const updated = await deps.db.update(customRoles).set({ name: body.name, permissions }).where(eq(customRoles.id, id)).returning({ id: customRoles.id });
+    if (!updated.length) fail(404, "not_found", "No role with that id.");
+    await audit(deps, c.get("member").id, "role.changed", { roleId: id, name: body.name, permissions });
+    return c.json({ role: { id, name: body.name, permissions } });
+  });
+
+  app.delete("/v1/roles/:id", access(deps, "owner"), async (c) => {
+    const id = c.req.param("id");
+    // Holders lose the role's permissions (the foreign key sets their role to null).
+    const deleted = await deps.db.delete(customRoles).where(eq(customRoles.id, id)).returning({ name: customRoles.name });
+    if (!deleted.length) fail(404, "not_found", "No role with that id.");
+    await audit(deps, c.get("member").id, "role.deleted", { roleId: id, name: deleted[0]?.name ?? null });
+    return c.body(null, 204);
+  });
+
+  app.patch("/v1/members/:id/custom-role", access(deps, "owner"), async (c) => {
+    const body = await readJson(c, assignRoleSchema);
+    const id = c.req.param("id");
+    if (body.customRoleId) {
+      const [role] = await deps.db.select({ id: customRoles.id }).from(customRoles).where(eq(customRoles.id, body.customRoleId)).limit(1);
+      if (!role) fail(404, "not_found", "No role with that id.");
+    }
+    const updated = await deps.db.update(members).set({ customRoleId: body.customRoleId }).where(eq(members.id, id)).returning({ id: members.id });
+    if (!updated.length) fail(404, "not_found", "No member with that id.");
+    await audit(deps, c.get("member").id, "member.custom_role_changed", { memberId: id, customRoleId: body.customRoleId });
+    return c.json({ id, customRoleId: body.customRoleId });
   });
 
   app.patch("/v1/members/:id/role", access(deps, "owner"), async (c) => {
