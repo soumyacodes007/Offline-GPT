@@ -42,12 +42,12 @@ function explain(decision: Decision) {
 }
 
 export function registerRuleRoutes(app: Hono<AppEnv>, deps: Deps) {
-  app.get("/v1/rules", access(deps, "admin"), async (c) => {
+  app.get("/v1/rules", access(deps, { permission: "access" }), async (c) => {
     const rows = await deps.db.select().from(accessRules).orderBy(desc(accessRules.createdAt));
     return c.json({ rules: rows });
   });
 
-  app.post("/v1/rules", access(deps, "admin"), async (c) => {
+  app.post("/v1/rules", access(deps, { permission: "access" }), async (c) => {
     const body = await readJson(c, createRuleSchema);
     const target = parseTarget(body.target);
     if (!target.ok) fail(400, "invalid_target", target.error);
@@ -81,7 +81,7 @@ export function registerRuleRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ rule: row }, 201);
   });
 
-  app.delete("/v1/rules/:id", access(deps, "admin"), async (c) => {
+  app.delete("/v1/rules/:id", access(deps, { permission: "access" }), async (c) => {
     const id = c.req.param("id");
     const deleted = await deps.db.delete(accessRules).where(eq(accessRules.id, id)).returning({ id: accessRules.id });
     if (!deleted.length) fail(404, "not_found", "No rule with that id.");
@@ -90,7 +90,7 @@ export function registerRuleRoutes(app: Hono<AppEnv>, deps: Deps) {
   });
 
   /** Admin "check access": would this member get this resource, and why? */
-  app.post("/v1/access/check", access(deps, "admin"), async (c) => {
+  app.post("/v1/access/check", access(deps, { permission: "access" }), async (c) => {
     const body = await readJson(c, checkSchema);
     const [member] = await deps.db.select().from(members).where(eq(members.id, body.memberId)).limit(1);
     if (!member) fail(404, "not_found", "No member with that id.");
