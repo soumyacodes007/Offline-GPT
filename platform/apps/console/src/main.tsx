@@ -8,14 +8,15 @@ import { Home } from "./pages/Home";
 import { SignIn } from "./pages/SignIn";
 import "./styles.css";
 
+/** Each page and the permissions that open it (any one is enough; none means everyone). */
 const PAGES = [
-  { id: "home", label: "Home", admin: false },
-  { id: "access", label: "Access", admin: true },
-  { id: "people", label: "People", admin: true },
-  { id: "knowledge", label: "Knowledge", admin: true },
-  { id: "library", label: "Library", admin: true },
-  { id: "usage", label: "Usage", admin: true },
-  { id: "audit", label: "Audit log", admin: true },
+  { id: "home", label: "Home", needs: [] },
+  { id: "access", label: "Access", needs: ["access", "requests"] },
+  { id: "people", label: "People", needs: ["people"] },
+  { id: "knowledge", label: "Knowledge", needs: ["knowledge"] },
+  { id: "library", label: "Library", needs: ["library"] },
+  { id: "usage", label: "Usage", needs: ["usage"] },
+  { id: "audit", label: "Audit log", needs: ["audit"] },
 ] as const;
 type PageId = (typeof PAGES)[number]["id"];
 
@@ -27,20 +28,20 @@ function readPage(): PageId {
 function Shell({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState<PageId>(readPage);
-  const isAdmin = me.role !== "member";
+  const visible = PAGES.filter((item) => item.needs.length === 0 || item.needs.some((permission) => me.permissions.includes(permission)));
   const signOut = useMutation({ mutationFn: () => api(empty, "/auth/logout", { method: "POST" }), onSettled: () => queryClient.invalidateQueries({ queryKey: ["me"] }) });
   const go = (id: PageId) => {
     window.location.hash = id;
     setPage(id);
   };
-  const current = isAdmin ? page : "home";
+  const current = visible.some((item) => item.id === page) ? page : "home";
   return (
     <div className="min-h-screen">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex flex-wrap items-center gap-1">
             <span className="mr-4 font-semibold">OfflineGPT Workspace</span>
-            {PAGES.filter((item) => isAdmin || !item.admin).map((item) => (
+            {visible.map((item) => (
               <button key={item.id} onClick={() => go(item.id)} className={`rounded-lg px-3 py-1.5 text-sm ${current === item.id ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>{item.label}</button>
             ))}
           </div>
@@ -49,7 +50,7 @@ function Shell({ me }: { me: Me }) {
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6">
         {current === "home" ? <Home me={me} /> : null}
-        {current === "access" ? <Access /> : null}
+        {current === "access" ? <Access me={me} /> : null}
         {current === "people" ? <People me={me} /> : null}
         {current === "knowledge" ? <Knowledge /> : null}
         {current === "library" ? <Library /> : null}
