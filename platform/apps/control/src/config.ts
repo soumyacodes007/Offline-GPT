@@ -27,6 +27,8 @@ const envSchema = z.object({
   /** Where employees open their workspace app; same host as PUBLIC_URL, its own port. */
   WORKSPACE_PUBLIC_URL: z.url().optional(),
   WORKSPACE_ORIGIN_PORT: z.coerce.number().int().min(1).max(65535).default(8793),
+  /** Encrypts stored secrets such as connection credentials. At least 32 characters. */
+  SECRETS_KEY: z.string().min(32, "SECRETS_KEY must be at least 32 characters").optional(),
 });
 
 const workspaceModelsSchema = z.array(z.object({ alias: z.string().min(1), displayName: z.string().min(1), contextLength: z.number().int().positive() })).min(1);
@@ -50,6 +52,8 @@ export type Config = {
   /** Public URL of the workspace origin, or null when workspaces are off. */
   workspaceUrl: URL | null;
   workspaceOriginPort: number;
+  /** Null when no SECRETS_KEY is set: secrets can't be stored. */
+  secretsKey: string | null;
 };
 
 /** Compose and many service managers pass unset settings as empty strings; treat them as unset. */
@@ -77,6 +81,7 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
     consoleDir: parsed.CONSOLE_DIR ?? null,
     workspaceUrl: parsed.WORKSPACE_IMAGE && parsed.WORKSPACE_PUBLIC_URL ? new URL(parsed.WORKSPACE_PUBLIC_URL) : null,
     workspaceOriginPort: parsed.WORKSPACE_ORIGIN_PORT,
+    secretsKey: parsed.SECRETS_KEY ?? null,
   };
 }
 
