@@ -2,8 +2,9 @@ import { Hono, type Context } from "hono";
 import { audit } from "../audit";
 import type { Deps } from "../deps";
 import { getCookie } from "hono/cookie";
-import { access, fail, SESSION_COOKIE, type AppEnv } from "../http";
+import { access, fail, readJson, SESSION_COOKIE, type AppEnv } from "../http";
 import { resolveSession, type Member } from "../sessions";
+import { readWorkspacePolicy, workspacePolicySchema, writeWorkspacePolicy } from "../workspaces/policy";
 import { WORKSPACE_PORT, type WorkspaceService } from "../workspaces/service";
 
 /** Request headers the container must never see: the member's own credentials and hop-by-hop headers. */
@@ -45,6 +46,17 @@ function createForwarder(deps: Deps, service: WorkspaceService) {
 export function registerWorkspaceRoutes(app: Hono<AppEnv>, deps: Deps) {
   const service = deps.workspaces;
   const forward = service ? createForwarder(deps, service) : null;
+
+  app.get("/v1/settings/workspace-policy", access(deps, { permission: "access" }), async (c) => c.json({ policy: await readWorkspacePolicy(deps.db) }));
+
+  app.put("/v1/settings/workspace-policy", access(deps, { permission: "access" }), async (c) => {
+    const policy = await readJson(c, workspacePolicySchema);
+    await writeWorkspacePolicy(deps.db, policy);
+    await audit(deps, c.get("member").id, "workspace.policy_changed", policy);
+    // Running workspaces take it now; the rest get it when they next start.
+    const missed = deps.workspaces ? await deps.workspaces.applyPolicy() : 0;
+    return c.json({ policy, missed });
+  });
 
   app.get("/v1/me/workspace", access(deps, "member"), async (c) => {
     if (!service) fail(404, "workspaces_disabled", "Workspaces are not set up on this deployment.");
