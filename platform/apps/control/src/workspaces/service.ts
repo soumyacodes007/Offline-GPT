@@ -1,6 +1,7 @@
 import { and, eq, isNull, lt } from "drizzle-orm";
 import { inferenceKeys, workspaces, type Database } from "@offlinegpt-platform/db";
 import { newId, randomToken, sha256 } from "../crypto";
+import { z } from "zod";
 import type { Docker } from "./docker";
 
 export type WorkspaceModel = { alias: string; displayName: string; contextLength: number };
@@ -19,6 +20,8 @@ export type WorkspaceSettings = {
 };
 
 export const WORKSPACE_PORT = 8787;
+
+const workspaceList = z.object({ items: z.array(z.object({ id: z.string() })) });
 
 type Row = typeof workspaces.$inferSelect;
 export type Workspace = { memberId: string; containerName: string; token: string; status: Row["status"] };
@@ -76,6 +79,26 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
   async function deliverProvider(containerName: string, token: string, key: string): Promise<void> {
     await deliver(containerName, token, "providers", { provider: { offlinegpt: providerConfig(settings, key) } });
     await deliver(containerName, token, "mcp", { mcp: { offlinegpt: mcpConfig(settings, key) } });
+  }
+
+  /**
+   * The chat engine reloads itself after the config above changes and answers
+   * slowly at first. Wait for it (best effort) so the first message isn't sent
+   * into a workspace that isn't ready.
+   */
+  async function warmEngine(containerName: string, token: string): Promise<void> {
+    const base = `http://${containerName}:${WORKSPACE_PORT}`;
+    const headers = { authorization: `Bearer ${token}` };
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      try {
+        const listed = workspaceList.safeParse(await (await fetchImpl(`${base}/workspaces`, { headers, signal: AbortSignal.timeout(10_000) })).json());
+        const id = listed.success ? listed.data.items[0]?.id : undefined;
+        if (id && (await fetchImpl(`${base}/workspace/${id}/opencode2/api/session`, { headers, signal: AbortSignal.timeout(10_000) })).ok) return;
+      } catch {
+        // Not up yet.
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
   }
 
   async function deliver(containerName: string, token: string, part: "providers" | "mcp", body: unknown): Promise<void> {
@@ -150,7 +173,10 @@ export function createWorkspaceService(db: Database, docker: Docker, settings: W
       const state = await docker.state(containerName);
       const newKey = state === "missing" ? await createContainer(memberId, containerName, token) : null;
       if (state !== "running") await docker.start(containerName);
-      if (newKey) await deliverProvider(containerName, token, newKey);
+      if (newKey) {
+        await deliverProvider(containerName, token, newKey);
+        await warmEngine(containerName, token);
+      }
       await db.update(workspaces).set({ status: "running", lastActiveAt: now() }).where(eq(workspaces.memberId, memberId));
       return { memberId, containerName, token, status: "running" };
     },
