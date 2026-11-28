@@ -3,6 +3,14 @@ import { bigserial, boolean, customType, index, integer, jsonb, pgTable, primary
 
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 
+/** Named sets of admin permissions an owner can give to members. */
+export const customRoles = pgTable("custom_roles", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  permissions: jsonb("permissions").$type<string[]>().notNull().default([]),
+  createdAt: createdAt(),
+});
+
 export const members = pgTable("members", {
   id: text("id").primaryKey(),
   /** Stored lowercased; the sign-in identity across OIDC, SAML and SCIM. */
@@ -11,6 +19,8 @@ export const members = pgTable("members", {
   /** The IdP's stable id for this person (SCIM externalId or OIDC `sub`). */
   externalId: text("external_id").unique(),
   role: text("role", { enum: ["owner", "admin", "member"] }).notNull().default("member"),
+  /** Extra permissions for a `member`; owners and admins already have all of them. */
+  customRoleId: text("custom_role_id").references(() => customRoles.id, { onDelete: "set null" }),
   active: boolean("active").notNull().default(true),
   /** Only for the local break-glass owner; IdP users never have one. */
   passwordHash: text("password_hash"),
@@ -186,4 +196,4 @@ export const settings = pgTable("settings", {
   value: jsonb("value").$type<unknown>().notNull(),
 });
 
-export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, knowledgeDocuments, knowledgeSections, libraryPlugins, librarySkills, mcpConnections, settings };
+export const schema = { customRoles, members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, knowledgeDocuments, knowledgeSections, libraryPlugins, librarySkills, mcpConnections, settings };
