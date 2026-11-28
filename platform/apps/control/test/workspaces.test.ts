@@ -85,7 +85,9 @@ test("the first start creates the member's container with their own model key, a
   expect(env).toMatch(/"apiKey":"ogk_[A-Za-z0-9_-]+"/);
   expect((await h.db.select().from(inferenceKeys)).filter((key) => key.revokedAt === null)).toHaveLength(1);
 
-  expect(deliveries.map((delivery) => delivery.url)).toEqual([`http://${name}:8787/runtime-config/providers`, `http://${name}:8787/runtime-config/mcp`]);
+  expect(deliveries.map((delivery) => delivery.url)).toEqual([`http://${name}:8787/runtime-config/providers`, `http://${name}:8787/runtime-config/mcp`, `http://${name}:8787/runtime-config/managed-policy`]);
+  // Nothing is restricted until an admin sets a policy, and that clears any old one.
+  expect(deliveries[2]?.body).toEqual({ policy: null });
   expect(deliveries[0]?.hostToken).toMatch(/^[0-9a-f]{64}$/);
   expect(JSON.stringify(deliveries[0]?.body)).toContain('"baseURL":"http://model-gateway:8791/v1"');
   // The engine reaches the platform's knowledge and skills tools with the member's own key.
@@ -95,7 +97,7 @@ test("the first start creates the member's container with their own model key, a
 
   await h.call("POST", "/v1/me/workspace", { token: owner });
   expect(dockerCalls.filter((call) => call.startsWith("POST /containers/create"))).toHaveLength(1);
-  expect(deliveries).toHaveLength(2);
+  expect(deliveries).toHaveLength(3);
 });
 
 test("the router sends a member only to their own container, with the container token instead of theirs", async () => {
@@ -199,4 +201,27 @@ test("a leaver's workspace is deleted after the retention period, not before", a
   expect(volumes.size).toBe(0);
   expect(await h.db.select().from(workspaceRows)).toEqual([]);
   expect((await h.db.select().from(inferenceKeys)).filter((key) => key.memberId === id && key.purpose === "workspace" && key.revokedAt === null)).toEqual([]);
+});
+
+test("the admin's workspace policy reaches running workspaces at once and every workspace on start", async () => {
+  await h.call("POST", "/v1/me/workspace", { token: owner });
+  deliveries = [];
+  const policy = { commands: "allow", blockedCommands: ["curl *", "scp *"], browserOrigins: ["https://intranet.example.gov/"], blockBrowserUploads: true };
+  const saved = await h.call("PUT", "/v1/settings/workspace-policy", { token: owner, body: policy });
+  expect(saved.status).toBe(200);
+  expect((await json(saved)).missed).toBe(0);
+  expect(deliveries.map((delivery) => new URL(delivery.url).pathname)).toEqual(["/runtime-config/managed-policy"]);
+  expect(deliveries[0]?.body).toEqual({ policy: { execution: { commands: "allow", blockedCommands: ["curl *", "scp *"], browserOrigins: ["https://intranet.example.gov"], blockBrowserUploads: true } } });
+
+  // A stopped workspace gets the current policy when it starts again.
+  const [row] = await h.db.select().from(workspaceRows);
+  for (const container of containers.values()) container.running = false;
+  await h.db.update(workspaceRows).set({ status: "stopped" });
+  deliveries = [];
+  await h.call("POST", "/v1/me/workspace", { token: owner });
+  expect(deliveries.map((delivery) => new URL(delivery.url).hostname)).toEqual([String(row?.containerName)]);
+  expect(JSON.stringify(deliveries[0]?.body)).toContain("curl *");
+
+  expect((await h.call("PUT", "/v1/settings/workspace-policy", { token: owner, body: { ...policy, browserOrigins: ["https://intranet.example.gov/path"] } })).status).toBe(400);
+  expect((await json(await h.call("GET", "/v1/settings/workspace-policy", { token: owner }))).policy).toEqual({ ...policy, browserOrigins: ["https://intranet.example.gov"] });
 });
