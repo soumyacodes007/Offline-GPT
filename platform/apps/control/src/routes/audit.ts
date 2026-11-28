@@ -17,7 +17,7 @@ const exportSchema = z.object({ from: z.iso.datetime({ offset: true }).optional(
 const EXPORT_BATCH = 1000;
 
 export function registerAuditRoutes(app: Hono<AppEnv>, deps: Deps) {
-  app.get("/v1/audit", access(deps, "admin"), async (c) => {
+  app.get("/v1/audit", access(deps, { permission: "audit" }), async (c) => {
     const query = querySchema.safeParse(c.req.query());
     if (!query.success) fail(400, "invalid_query", query.error.issues[0]?.message ?? "Invalid query.");
     const { limit, before, actor, action } = query.data;
@@ -32,7 +32,7 @@ export function registerAuditRoutes(app: Hono<AppEnv>, deps: Deps) {
   });
 
   /** The whole log (or a time window) as JSON Lines, oldest first, streamed in batches. */
-  app.get("/v1/audit/export", access(deps, "admin"), async (c) => {
+  app.get("/v1/audit/export", access(deps, { permission: "audit" }), async (c) => {
     const query = exportSchema.safeParse(c.req.query());
     if (!query.success) fail(400, "invalid_query", "`from` and `to` must be ISO date-times, e.g. 2026-01-01T00:00:00Z.");
     const window = [
