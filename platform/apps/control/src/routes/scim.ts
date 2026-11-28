@@ -109,8 +109,9 @@ async function findMember(deps: Deps, id: string): Promise<Member | undefined> {
   return member;
 }
 
+/** SCIM sees and manages directory teams only; console-made teams are invisible to it. */
 async function findTeam(deps: Deps, id: string): Promise<Team | undefined> {
-  const [team] = await deps.db.select().from(teams).where(eq(teams.id, id)).limit(1);
+  const [team] = await deps.db.select().from(teams).where(and(eq(teams.id, id), eq(teams.source, "directory"))).limit(1);
   return team;
 }
 
@@ -217,7 +218,8 @@ export function registerScimRoutes(app: Hono<AppEnv>, deps: Deps) {
   app.get("/scim/v2/Groups", scim, async (c) => {
     const displayName = parseEqFilter(c.req.query("filter"), "displayName");
     if (displayName === null) return scimError(c, 400, "Only `displayName eq \"...\"` filters are supported.", "invalidFilter");
-    const rows = displayName === undefined ? await deps.db.select().from(teams).orderBy(teams.createdAt) : await deps.db.select().from(teams).where(eq(teams.name, displayName));
+    const directory = eq(teams.source, "directory");
+    const rows = displayName === undefined ? await deps.db.select().from(teams).where(directory).orderBy(teams.createdAt) : await deps.db.select().from(teams).where(and(directory, eq(teams.name, displayName)));
     return c.json(listResponse(await Promise.all(rows.map((team) => groupResource(deps, team)))));
   });
 
