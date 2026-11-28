@@ -93,6 +93,7 @@ export function Knowledge() {
   const [open, setOpen] = useState<string | null>(null);
   const [form, setForm] = useState({ path: "", title: "", content: "", everyone: true });
   const [file, setFile] = useState<{ name: string; format: "pdf" | "docx"; base64: string } | null>(null);
+  const reindex = useMutation({ mutationFn: () => api(z.object({ embedded: z.number() }), "/v1/knowledge/reindex", { method: "POST", body: {} }) });
   const documents = useQuery({ queryKey: ["documents"], queryFn: () => api(z.object({ documents: z.array(documentSchema) }), "/v1/knowledge/documents") });
   const upload = useMutation({
     mutationFn: () => api(z.unknown(), "/v1/knowledge/documents", { method: "POST", body: { path: form.path, title: form.title, ...(file ? { file: { format: file.format, base64: file.base64 } } : { content: form.content }), audience: form.everyone ? [{ type: "role", id: "member" }, { type: "role", id: "admin" }, { type: "role", id: "owner" }] : [] } }),
@@ -133,7 +134,13 @@ export function Knowledge() {
           <div className="flex items-center gap-3"><Button type="submit" disabled={upload.isPending}>Add document</Button><ErrorText error={upload.error} /></div>
         </form>
       </Card>
-      <Card title="Documents">
+      <Card title="Documents" actions={
+        <div className="flex items-center gap-2">
+          {reindex.data ? <span className="text-xs text-slate-500">{reindex.data.embedded} sections indexed</span> : null}
+          <ErrorText error={reindex.error} />
+          <Button onClick={() => reindex.mutate()} disabled={reindex.isPending}>Index for meaning-based search</Button>
+        </div>
+      }>
         {documents.data?.documents.length === 0 ? <Empty>No documents yet.</Empty> : null}
         <div className="grid gap-2">
           {documents.data?.documents.map((document) => (
