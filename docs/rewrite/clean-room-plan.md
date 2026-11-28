@@ -6,8 +6,8 @@ Postgres schema, control service (setup, OIDC, SCIM, rules, check access,
 requests/approvals, audit, knowledge incl. PDF/Word, MCP search tool, Docker
 workspaces with their own origin), model gateway, console, compose packaging,
 desktop first run on the user's own subscription. The compose stack passed a
-full GPU run (employee chats with vLLM in their own workspace). Company skills library and shared MCP connections done. Open: SAML,
-library plugins, legal review, then deleting `ee/` (phase 8). Branch for the work: `feat/platform-rewrite` (off `main`
+full GPU run (employee chats with vLLM in their own workspace). Company library done: skills, shared MCP connections and plugins.
+Open: SAML, legal review, then deleting `ee/` (phase 8). Branch for the work: `feat/platform-rewrite` (off `main`
 once `feat/airgapped-edition` and `chore/remove-telemetry` land).
 
 ## 1. Why, and the two products
