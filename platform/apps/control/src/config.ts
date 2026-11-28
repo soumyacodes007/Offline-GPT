@@ -14,6 +14,10 @@ const envSchema = z.object({
   OIDC_CLIENT_ID: optional,
   OIDC_CLIENT_SECRET: optional,
   OIDC_JIT: z.enum(["0", "1"]).default("0"),
+  SAML_ENTRY_POINT: z.url().optional(),
+  SAML_IDP_CERT: optional,
+  SAML_ENTITY_ID: optional,
+  SAML_JIT: z.enum(["0", "1"]).default("0"),
   WORKSPACE_IMAGE: optional,
   WORKSPACE_NETWORK: optional,
   MODEL_GATEWAY_URL: z.url().optional(),
@@ -34,6 +38,7 @@ const envSchema = z.object({
 const workspaceModelsSchema = z.array(z.object({ alias: z.string().min(1), displayName: z.string().min(1), contextLength: z.number().int().positive() })).min(1);
 
 export type OidcConfig = { issuer: string; clientId: string; clientSecret: string; jit: boolean };
+export type SamlConfig = { entryPoint: string; idpCert: string; entityId: string; jit: boolean };
 
 export type WorkspaceConfig = WorkspaceSettings & { dockerUrl: string };
 
@@ -45,6 +50,7 @@ export type Config = {
   setupCode: string;
   sessionMs: number;
   oidc: OidcConfig | null;
+  saml: SamlConfig | null;
   /** Null when this deployment does not run per-member workspaces. */
   workspaces: WorkspaceConfig | null;
   /** Built console files to serve at `/`; null serves the API only. */
@@ -77,11 +83,25 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
     oidc: parsed.OIDC_ISSUER && parsed.OIDC_CLIENT_ID && parsed.OIDC_CLIENT_SECRET
       ? { issuer: parsed.OIDC_ISSUER.replace(/\/+$/, ""), clientId: parsed.OIDC_CLIENT_ID, clientSecret: parsed.OIDC_CLIENT_SECRET, jit: parsed.OIDC_JIT === "1" }
       : null,
+    saml: parseSaml(parsed),
     workspaces: parseWorkspaces(parsed),
     consoleDir: parsed.CONSOLE_DIR ?? null,
     workspaceUrl: parsed.WORKSPACE_IMAGE && parsed.WORKSPACE_PUBLIC_URL ? new URL(parsed.WORKSPACE_PUBLIC_URL) : null,
     workspaceOriginPort: parsed.WORKSPACE_ORIGIN_PORT,
     secretsKey: parsed.SECRETS_KEY ?? null,
+  };
+}
+
+function parseSaml(parsed: z.infer<typeof envSchema>): SamlConfig | null {
+  if (Boolean(parsed.SAML_ENTRY_POINT) !== Boolean(parsed.SAML_IDP_CERT)) throw new Error("Set both SAML_ENTRY_POINT and SAML_IDP_CERT, or neither.");
+  if (!parsed.SAML_ENTRY_POINT || !parsed.SAML_IDP_CERT) return null;
+  // Accept a PEM certificate or its bare base64 body.
+  const idpCert = parsed.SAML_IDP_CERT.replace(/-----(BEGIN|END) CERTIFICATE-----/g, "").replace(/\s+/g, "");
+  return {
+    entryPoint: parsed.SAML_ENTRY_POINT,
+    idpCert,
+    entityId: parsed.SAML_ENTITY_ID ?? new URL("/auth/saml/metadata", parsed.PUBLIC_URL).toString(),
+    jit: parsed.SAML_JIT === "1",
   };
 }
 
