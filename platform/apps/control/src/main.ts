@@ -2,6 +2,7 @@ import { openDatabase } from "@offlinegpt-platform/db";
 import { createApp } from "./app";
 import { createWorkspaceOrigin } from "./routes/workspaces";
 import { parseConfig } from "./config";
+import { audit } from "./audit";
 import { createSyslogSender, parseSyslogTarget } from "./syslog";
 import { createDocker, dockerTransport } from "./workspaces/docker";
 import { createWorkspaceService } from "./workspaces/service";
@@ -20,6 +21,12 @@ const app = createApp(deps);
 const idleTimer = workspaces
   ? setInterval(() => {
       workspaces.stopIdle().catch((error: unknown) => console.error(JSON.stringify({ level: "error", service: "control", message: "idle stop failed", error: String(error) })));
+      const retentionMs = config.workspaces?.retentionMs;
+      if (retentionMs) {
+        workspaces.purgeLeavers(retentionMs)
+          .then((purged) => Promise.all(purged.map((leaver) => audit(deps, "system", "workspace.purged", { memberId: leaver.memberId, reason: "leaver retention ended" }))))
+          .catch((error: unknown) => console.error(JSON.stringify({ level: "error", service: "control", message: "leaver purge failed", error: String(error) })));
+      }
     }, 5 * 60 * 1000)
   : null;
 const server = Bun.serve({ port: config.port, hostname: "0.0.0.0", fetch: app.fetch });
