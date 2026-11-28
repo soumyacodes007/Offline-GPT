@@ -9,6 +9,7 @@ import { access, fail, readJson, type AppEnv } from "../http";
 import { splitIntoSections } from "../knowledge/chunk";
 import { extractUploadText } from "../knowledge/extract";
 import { MAX_RESULTS, searchKnowledge, type SearchHit } from "../knowledge/search";
+import { clearEmbeddings, embedMissingSections, embedTexts } from "../knowledge/embed";
 import type { Member } from "../sessions";
 
 const audienceSchema = z.discriminatedUnion("type", [
@@ -26,12 +27,15 @@ const uploadSchema = z.object({
   file: z.object({ format: z.enum(["pdf", "docx", "text"]), base64: z.string().min(1).max(28_000_000) }).optional(),
   audience: z.array(audienceSchema).max(50).default([]),
 }).refine((body) => (body.content === undefined) !== (body.file === undefined), "Send either `content` or `file`.");
+const reindexSchema = z.object({ all: z.boolean().default(false) });
 const sensitivitySchema = z.object({ sensitivity: z.enum(["ordinary", "sensitive", "restricted"]) });
 const searchSchema = z.object({ query: z.string().trim().min(1).max(500), limit: z.number().int().min(1).max(MAX_RESULTS).default(10) });
 
 /** Search as a member and audit any sensitive or restricted text it returns. Shared with the MCP tool. */
 export async function searchAsMember(deps: Deps, member: Member, query: string, limit: number): Promise<SearchHit[]> {
-  const hits = await searchKnowledge(deps.db, member, query, deps.now(), limit);
+  // Meaning-based search when an embeddings model is set up; keyword search alone if it's unavailable.
+  const queryVector = deps.config.embeddings ? (await embedTexts(deps, [query]).catch(() => []))[0] : undefined;
+  const hits = await searchKnowledge(deps.db, member, query, deps.now(), limit, queryVector);
   const sensitive = hits.filter((hit) => hit.sensitivity !== "ordinary").map((hit) => hit.section);
   if (sensitive.length) await audit(deps, member.id, "knowledge.sensitive_read", { query, sections: sensitive });
   return hits;
@@ -70,8 +74,25 @@ export function registerKnowledgeRoutes(app: Hono<AppEnv>, deps: Deps) {
         })));
       }
     });
+    // The document is searchable by keyword at once; a failed embedding only delays meaning-based search until a re-index.
+    const embedded = deps.config.embeddings ? await embedMissingSections(deps, id).then(() => true, () => false) : null;
     await audit(deps, actor, "knowledge.document.uploaded", { documentId: id, path: body.path, sections: sections.length });
-    return c.json({ document: { id, path: body.path, title: body.title, sections: sections.length } }, 201);
+    return c.json({ document: { id, path: body.path, title: body.title, sections: sections.length, embedded } }, 201);
+  });
+
+  /** Embed sections that have no vector yet, or every section again with `{ "all": true }` (after changing models). */
+  app.post("/v1/knowledge/reindex", access(deps, { permission: "knowledge" }), async (c) => {
+    if (!deps.config.embeddings) fail(409, "embeddings_off", "No embeddings model is set up (EMBEDDINGS_URL).");
+    const body = await readJson(c, reindexSchema);
+    if (body.all) await clearEmbeddings(deps);
+    let embedded: number;
+    try {
+      embedded = await embedMissingSections(deps);
+    } catch (error) {
+      fail(409, "embeddings_failed", error instanceof Error ? error.message : "The embeddings model failed.");
+    }
+    await audit(deps, c.get("member").id, "knowledge.reindexed", { all: body.all, sections: embedded });
+    return c.json({ embedded });
   });
 
   app.get("/v1/knowledge/documents", access(deps, { permission: "knowledge" }), async (c) => {
