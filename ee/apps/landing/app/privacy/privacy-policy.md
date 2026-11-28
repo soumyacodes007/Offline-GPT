@@ -31,7 +31,7 @@ The information we collect depends on which part of our Service you use. We dist
 
 ### Website
 
-When you visit our Website, we collect anonymous usage data (such as pages visited, interactions, and general navigation patterns) through PostHog, a third-party analytics platform. When you subscribe to our newsletter, we collect your email address. When you create an account or subscribe to a paid plan, we may collect:
+When you subscribe to our newsletter, we collect your email address. When you create an account or subscribe to a paid plan, we may collect:
 
 - Name / Username
 - Email address
@@ -68,7 +68,7 @@ The Cloud Service does not track or profile user behavior. Like the Desktop App,
 We collect Personal Data about you from the following categories of sources:
 
 - **Directly from you:** when you create an account, subscribe to a paid plan, subscribe to our newsletter, submit a bug report, or otherwise contact us.
-- **Automatically:** when you visit our Website, through cookies and similar technologies (PostHog analytics), and through operational telemetry in the Cloud Service.
+- **Automatically:** through operational telemetry in the Cloud Service.
 - **Third-party authentication providers:** when you sign in using Google or GitHub, we receive profile information (name, email, profile identifier) in accordance with the permissions you grant.
 - **Third-party payment processors:** when you subscribe to a paid plan, we receive transaction confirmation data from Polar.
 
@@ -91,7 +91,7 @@ We process personal data only where a valid legal ground applies under each appl
 
 - **Performance of a Contract:** We process your data to provide, maintain, and support the Service you have requested under our Terms of Use, including account creation, subscription management, and customer support.
 - **Legitimate Interests:** We use personal data to secure the platform, detect fraud, monitor Cloud Service reliability through operational telemetry, and improve our Website based on anonymous analytics, where these interests are not outweighed by your privacy rights.
-- **Consent:** We rely on your consent for newsletter subscriptions, non-essential analytics cookies (PostHog), and customer audience targeting on advertising platforms. You may withdraw consent at any time without affecting the lawfulness of prior processing.
+- **Consent:** We rely on your consent for newsletter subscriptions and customer audience targeting on advertising platforms. You may withdraw consent at any time without affecting the lawfulness of prior processing.
 - **Legal Obligations:** We retain and disclose information as necessary to comply with applicable laws, regulations, court orders, or other legal duties.
 
 ## When does OfflineGPT use information from third parties?
@@ -106,7 +106,6 @@ We do not sell, rent, or trade your personal information to third parties for th
 
 We engage trusted third-party service providers ("sub-processors") to perform functions and provide services to us. Our current sub-processors are:
 
-- **PostHog** (analytics): collects anonymous website usage data on our behalf.
 - **Polar Software, Inc.** (payments): processes subscription billing and credit card transactions.
 - **Google** (authentication): provides OAuth sign-in services.
 - **GitHub** (authentication): provides OAuth sign-in services.
@@ -141,7 +140,6 @@ We retain personal information only as long as necessary to fulfill the purposes
 - **Customer account data** (name, email, authentication data): retained for the duration of your account. Upon account deletion, personal data is deleted within thirty (30) days, except where retention is required for fraud prevention, legal compliance, or legal defense.
 - **Payment information:** retained by our third-party payment processor (Polar) for the duration of your subscription and as required by applicable financial regulations.
 - **Bug report diagnostic data:** retained temporarily and deleted once the related issue is resolved.
-- **Website analytics data:** retained by PostHog in accordance with PostHog's data retention policies.
 - **Cloud Service operational telemetry:** retained only as long as necessary for monitoring and reliability purposes.
 - **Backups:** deleted data may persist in backups for up to ninety (90) days before being permanently removed.
 
@@ -214,7 +212,6 @@ This Privacy Policy applies only to the Services. The Services may contain links
 We use "Cookies" to identify the areas of our Website that you have visited. A Cookie is a small piece of data stored on your computer or mobile device by your web browser. We deploy the following categories of cookies on our Website:
 
 - **Strictly Necessary Cookies:** These cookies support core functions such as sign-in, session management, and security. They are essential for the Website to function and do not require consent.
-- **Analytics and Performance Cookies:** We use PostHog to collect anonymous usage data (pages visited, interactions, navigation patterns) to measure feature adoption, diagnose errors, and improve the Website. These cookies are non-essential.
 - **Functional Cookies:** These cookies remember your preferences (such as language or theme settings) to provide a more personalized experience.
 
 The Desktop App and Cloud Service do not use cookies for tracking or analytics purposes. We never place Personally Identifiable Information in Cookies.
@@ -247,7 +244,7 @@ We may display, include or make available third-party content (including data, i
 
 ### Cookies
 
-Our Website uses cookies in connection with PostHog analytics to collect anonymous usage data and to enhance the performance and functionality of the Website. These cookies are non-essential to the use of the Website. However, without these cookies, certain functionality may become unavailable or you would be required to enter your login details every time you visit the Website as we would not be able to remember that you had logged in previously. The Desktop App and Cloud Service do not use cookies for tracking or analytics purposes.
+Our Website uses cookies to enhance the performance and functionality of the Website. These cookies are non-essential to the use of the Website. However, without these cookies, certain functionality may become unavailable or you would be required to enter your login details every time you visit the Website as we would not be able to remember that you had logged in previously. The Desktop App and Cloud Service do not use cookies for tracking or analytics purposes.
 
 ### Local Storage
 
