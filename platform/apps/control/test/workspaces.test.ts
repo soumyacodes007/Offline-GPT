@@ -9,9 +9,13 @@ let containers: Map<string, FakeContainer>;
 let dockerCalls: string[];
 let containerRequests: Array<{ url: string; authorization: string | null; cookie: string | null }>;
 let deliveries: Array<{ url: string; hostToken: string | null; body: unknown }>;
+let warmups = 0;
 
 /** Stands in for a workspace server accepting its provider. */
 const deliverFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  const url = input instanceof Request ? input.url : input.toString();
+  if (url.endsWith("/workspaces")) return Response.json({ items: [{ id: "ws_1" }] });
+  if (url.endsWith("/opencode2/api/session")) { warmups += 1; return Response.json([]); }
   deliveries.push({ url: input instanceof Request ? input.url : input.toString(), hostToken: new Headers(init?.headers).get("x-offlinegpt-host-token"), body: JSON.parse(typeof init?.body === "string" ? init.body : "null") });
   return Response.json({ ok: true });
 };
@@ -44,6 +48,7 @@ beforeEach(async () => {
   dockerCalls = [];
   containerRequests = [];
   deliveries = [];
+  warmups = 0;
   h = await createHarness({
     workspaces: (db, now) => createWorkspaceService(db, createDocker(fakeDocker), settings, now, deliverFetch, 0),
     route: async (input, init) => {
@@ -76,6 +81,8 @@ test("the first start creates the member's container with their own model key, a
   expect(deliveries[0]?.hostToken).toMatch(/^[0-9a-f]{64}$/);
   expect(JSON.stringify(deliveries[0]?.body)).toContain('"baseURL":"http://model-gateway:8791/v1"');
   // The engine reaches the platform's knowledge and skills tools with the member's own key.
+  // The engine is warmed before the workspace is reported as running.
+  expect(warmups).toBe(1);
   expect(deliveries[1]?.body).toEqual({ mcp: { offlinegpt: { type: "remote", url: "http://control:8790/mcp", headers: { Authorization: expect.stringMatching(/^Bearer ogk_/) }, enabled: true } } });
 
   await h.call("POST", "/v1/me/workspace", { token: owner });
