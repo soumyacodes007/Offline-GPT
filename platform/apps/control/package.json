@@ -14,6 +14,7 @@
     "@offlinegpt-platform/db": "workspace:*",
     "@offlinegpt-platform/policy": "workspace:*",
     "drizzle-orm": "0.45.2",
+    "fflate": "0.8.2",
     "hono": "4.12.34",
     "jose": "6.2.8",
     "mammoth": "1.13.0",
