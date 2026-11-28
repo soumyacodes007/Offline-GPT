@@ -60,7 +60,7 @@ export function buildOfflineGptRuntimeConfigObjectFromSnapshot(
 ): Record<string, unknown> {
   const disabledProviders = runtimeDisabledProviderList(runtimeConfig);
   const permissions = legacyExecutionPermissions(runtimeConfig.managedPolicy?.execution);
-  const { managedPolicy: _managedPolicy, ...engineConfig } = runtimeConfig;
+  const { managedPolicy: _managedPolicy, managedPolicySource: _managedPolicySource, ...engineConfig } = runtimeConfig;
   const provider = runtimeProviderMap(runtimeConfig);
   return {
     ...engineConfig,
