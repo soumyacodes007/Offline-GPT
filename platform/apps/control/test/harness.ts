@@ -69,6 +69,8 @@ export type HarnessOptions = {
   /** Turns on SAML sign-in, trusting this IdP certificate (PEM). */
   saml?: { idpCert: string; jit?: boolean };
   auditSink?: (event: AuditLine) => void;
+  /** Turns on meaning-based knowledge search against this embeddings URL. */
+  embeddingsUrl?: string;
 };
 
 export async function createHarness(options: HarnessOptions = {}) {
@@ -86,6 +88,7 @@ export async function createHarness(options: HarnessOptions = {}) {
     OIDC_CLIENT_SECRET: "control-secret",
     OIDC_JIT: options.oidcJit ? "1" : "0",
     SECRETS_KEY: options.secretsKey,
+    ...(options.embeddingsUrl ? { EMBEDDINGS_URL: options.embeddingsUrl, EMBEDDINGS_MODEL: "test-embedder" } : {}),
     ...(options.saml ? { SAML_ENTRY_POINT: "http://idp.example.test/sso", SAML_IDP_CERT: options.saml.idpCert, SAML_JIT: options.saml.jit ? "1" : "0" } : {}),
   });
   const app = createApp({ db: database.db, config, now: () => now, fetch: async (input, init) => (await options.route?.(input, init)) ?? idp.fetch(input, init), workspaces: options.workspaces?.(database.db, () => now) ?? null, ...(options.auditSink ? { auditSink: options.auditSink } : {}) });
