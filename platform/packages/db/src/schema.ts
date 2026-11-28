@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigserial, boolean, customType, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import { bigserial, boolean, customType, index, integer, jsonb, pgTable, primaryKey, real, text, timestamp } from "drizzle-orm/pg-core";
 
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 
@@ -155,6 +155,8 @@ export const knowledgeSections = pgTable("knowledge_sections", {
   body: text("body").notNull(),
   sensitivity: text("sensitivity", { enum: ["ordinary", "sensitive", "restricted"] }).notNull().default("ordinary"),
   search: tsvector("search").notNull().generatedAlwaysAs(sql`to_tsvector('simple', heading || ' ' || body)`),
+  /** Unit-length embedding of heading and body, when the deployment has an embeddings model. */
+  embedding: real("embedding").array(),
 }, (table) => [
   index("knowledge_sections_document_idx").on(table.documentId),
   index("knowledge_sections_search_idx").using("gin", table.search),
