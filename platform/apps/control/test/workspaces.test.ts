@@ -72,14 +72,15 @@ test("the first start creates the member's container with their own model key, a
   expect(env).toMatch(/"apiKey":"ogk_[A-Za-z0-9_-]+"/);
   expect((await h.db.select().from(inferenceKeys)).filter((key) => key.revokedAt === null)).toHaveLength(1);
 
-  expect(deliveries).toHaveLength(1);
-  expect(deliveries[0]?.url).toBe(`http://${name}:8787/runtime-config/providers`);
+  expect(deliveries.map((delivery) => delivery.url)).toEqual([`http://${name}:8787/runtime-config/providers`, `http://${name}:8787/runtime-config/mcp`]);
   expect(deliveries[0]?.hostToken).toMatch(/^[0-9a-f]{64}$/);
   expect(JSON.stringify(deliveries[0]?.body)).toContain('"baseURL":"http://model-gateway:8791/v1"');
+  // The engine reaches the platform's knowledge and skills tools with the member's own key.
+  expect(deliveries[1]?.body).toEqual({ mcp: { offlinegpt: { type: "remote", url: "http://control:8790/mcp", headers: { Authorization: expect.stringMatching(/^Bearer ogk_/) }, enabled: true } } });
 
   await h.call("POST", "/v1/me/workspace", { token: owner });
   expect(dockerCalls.filter((call) => call.startsWith("POST /containers/create"))).toHaveLength(1);
-  expect(deliveries).toHaveLength(1);
+  expect(deliveries).toHaveLength(2);
 });
 
 test("the router sends a member only to their own container, with the container token instead of theirs", async () => {
