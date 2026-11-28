@@ -137,9 +137,20 @@ export const knowledgeSections = pgTable("knowledge_sections", {
   index("knowledge_sections_search_idx").using("gin", table.search),
 ]);
 
+export const librarySkills = pgTable("library_skills", {
+  id: text("id").primaryKey(),
+  /** The policy resource id for kind `skill`. */
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  instructions: text("instructions").notNull(),
+  createdBy: text("created_by").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").$type<unknown>().notNull(),
 });
 
-export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, knowledgeDocuments, knowledgeSections, settings };
+export const schema = { members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, knowledgeDocuments, knowledgeSections, librarySkills, settings };
