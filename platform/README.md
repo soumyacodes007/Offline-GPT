@@ -64,6 +64,11 @@ starts their workspace, the workspace app opens on its own port, and a task
 sent in the browser is answered by vLLM through the model gateway with the
 member's own key.
 
+Also checked live on that stack: the workspace engine connects to the
+platform's MCP server; a shared connection's tools reach the agent and run;
+a plugin installs and its items appear only after a plugin rule; workspace
+rules reach the engine (shell denied) without asking for a cloud sign-in.
+
 ## Not done yet
 
 - A legal review of how this code was written (see
