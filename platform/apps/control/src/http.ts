@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import type { z } from "zod";
 import { safeEqual, sha256 } from "./crypto";
 import type { Deps } from "./deps";
+import { permissionsOf, type Permission } from "./permissions";
 import { resolveInferenceKey, resolveSession, type Member } from "./sessions";
 import { readScimTokenHash } from "./settings";
 
@@ -15,8 +16,9 @@ export type AppEnv = { Variables: { member: Member } };
  * Who may call a route. `public`: anyone. `member`: any signed-in active
  * member. `admin`: owners and admins. `owner`: owners only. `scim`: the IdP's
  * SCIM token. `agent`: a member's inference key, used by their workspace.
+ * `{ permission }`: owners, admins, and members whose custom role grants it.
  */
-export type Access = "public" | "member" | "admin" | "owner" | "scim" | "agent";
+export type Access = "public" | "member" | "admin" | "owner" | "scim" | "agent" | { permission: Permission };
 
 /** Marks a middleware as the route's access declaration, so a test can prove every route has one. */
 export const ACCESS_TAG = Symbol("access");
@@ -59,6 +61,11 @@ export function access(deps: Deps, level: Access): TaggedMiddleware {
     const token = sessionToken(c);
     const member = token ? await resolveSession(deps, token) : null;
     if (!member) fail(401, "unauthenticated", "Sign in first.");
+    if (typeof level === "object") {
+      if (!(await permissionsOf(deps, member)).includes(level.permission)) fail(403, "forbidden", "You don't have permission to do this.");
+      c.set("member", member);
+      return next();
+    }
     const needed = level === "owner" ? roleRank.owner : level === "admin" ? roleRank.admin : roleRank.member;
     if (roleRank[member.role] < needed) fail(403, "forbidden", "You don't have permission to do this.");
     c.set("member", member);
