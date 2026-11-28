@@ -6,6 +6,7 @@ import { registerAuditRoutes } from "./routes/audit";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerInferenceRoutes } from "./routes/inference";
 import { registerKnowledgeRoutes } from "./routes/knowledge";
+import { registerLibraryRoutes } from "./routes/library";
 import { registerMcpRoutes } from "./routes/mcp";
 import { registerOidcRoutes } from "./routes/oidc";
 import { registerPeopleRoutes } from "./routes/people";
@@ -29,6 +30,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   registerWorkspaceRoutes(app, deps);
   registerKnowledgeRoutes(app, deps);
   registerMcpRoutes(app, deps);
+  registerLibraryRoutes(app, deps);
   registerPeopleRoutes(app, deps);
   if (deps.config.consoleDir) registerConsoleRoutes(app, deps, deps.config.consoleDir);
 
