@@ -58,6 +58,21 @@ export function registerWorkspaceRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ policy, missed });
   });
 
+  app.get("/v1/workspaces/:memberId/checkpoints", access(deps, { permission: "people" }), async (c) => {
+    if (!service) fail(404, "workspaces_disabled", "Workspaces are not set up on this deployment.");
+    return c.json({ checkpoints: await service.checkpoints(c.req.param("memberId")) });
+  });
+
+  /** Put a member's files back as they were at their newest checkpoint. */
+  app.post("/v1/workspaces/:memberId/restore", access(deps, { permission: "people" }), async (c) => {
+    if (!service) fail(404, "workspaces_disabled", "Workspaces are not set up on this deployment.");
+    const memberId = c.req.param("memberId");
+    const restored = await service.restoreLatest(memberId);
+    if (!restored) fail(404, "no_checkpoint", "This person has no workspace checkpoint yet.");
+    await audit(deps, c.get("member").id, "workspace.restored", { memberId, checkpoint: restored.file });
+    return c.json({ restored });
+  });
+
   app.get("/v1/me/workspace", access(deps, "member"), async (c) => {
     if (!service) fail(404, "workspaces_disabled", "Workspaces are not set up on this deployment.");
     const workspace = await service.get(c.get("member").id);
