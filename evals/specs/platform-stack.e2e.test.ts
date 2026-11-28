@@ -74,5 +74,7 @@ test("an employee signs in, opens their own workspace and the self-hosted model 
     return prompt >= 0 && text.slice(prompt + 36).includes("OFFLINE");
   }, { timeoutMs: 300_000, label: "reply from the self-hosted model" });
   await shoot("3-reply");
+  // The organization signs people in, so the desktop's OfflineGPT Cloud prompts are hidden.
+  expect(await evalIn(browser, () => document.body.innerText)).not.toContain("Sync with OfflineGPT Cloud");
   evidence.recordAssertionEvidence("The self-hosted model answers in the employee's workspace", "The task \"Reply with exactly one word: OFFLINE\" got a reply containing OFFLINE from vLLM via the model gateway with the member's key.", true);
 });
