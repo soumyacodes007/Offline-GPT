@@ -3177,6 +3177,39 @@ function createRoutes(
     });
   });
 
+  /**
+   * Lets the host that runs this server (for example a self-hosted workspace
+   * platform) deliver MCP servers the same way it delivers providers. A null
+   * value removes that server.
+   */
+  addRoute(routes, "PATCH", "/runtime-config/mcp", "host-token", async (ctx) => {
+    ensureWritable(config);
+    const workspace = resolveEngineRuntimeWorkspace(config);
+    const body = await readJsonBody(ctx.request);
+    if (!isRecord(body.mcp)) throw new ApiError(400, "invalid_payload", "mcp must be an object");
+    const updates = Object.entries(body.mcp);
+    if (updates.some(([name, value]) => !name.trim() || (value !== null && !isRecord(value)))) {
+      throw new ApiError(400, "invalid_payload", "mcp must map non-empty names to objects or null");
+    }
+    const result = await writeGlobalRuntimeOpencodeConfig(config, (current) => {
+      const next = { ...runtimeMcpMap(current) };
+      for (const [name, value] of updates) {
+        if (isRecord(value)) next[name] = value;
+        else delete next[name];
+      }
+      return { ...current, mcp: Object.keys(next).length ? next : undefined };
+    });
+    const fileResult = await writeOfflineGptRuntimeConfigFile(config);
+    const shouldReload = result.changed || fileResult.changed;
+    const reloadDeferred = shouldReload && (await applyManagedProviderReload(workspace)) === "deferred";
+    return jsonResponse({
+      ok: true,
+      changed: result.changed,
+      mcp: runtimeMcpMap(result.config),
+      reload: shouldReload ? (reloadDeferred ? "deferred" : "reloaded") : "skipped",
+    });
+  });
+
   addRoute(routes, "GET", "/workspace/:id/runtime-config", "client", async (ctx) => {
     const workspace = await resolveWorkspace(config, ctx.params.id);
     const runtime = await readRuntimeOpencodeConfig(config, workspace.id);
