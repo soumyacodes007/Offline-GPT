@@ -105,6 +105,15 @@ export const inferenceKeys = pgTable("inference_keys", {
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
 }, (table) => [index("inference_keys_member_idx").on(table.memberId)]);
 
+/** Snapshots of members' workspace files, newest last. */
+export const workspaceCheckpoints = pgTable("workspace_checkpoints", {
+  id: text("id").primaryKey(),
+  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  /** File name inside the checkpoints volume. */
+  file: text("file").notNull().unique(),
+  createdAt: createdAt(),
+}, (table) => [index("workspace_checkpoints_member_idx").on(table.memberId, table.createdAt)]);
+
 export const usageRecords = pgTable("usage_records", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
@@ -196,4 +205,4 @@ export const settings = pgTable("settings", {
   value: jsonb("value").$type<unknown>().notNull(),
 });
 
-export const schema = { customRoles, members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, knowledgeDocuments, knowledgeSections, libraryPlugins, librarySkills, mcpConnections, settings };
+export const schema = { customRoles, members, teams, teamMembers, sessions, accessRules, auditEvents, accessRequests, inferenceKeys, usageRecords, workspaces, workspaceCheckpoints, knowledgeDocuments, knowledgeSections, libraryPlugins, librarySkills, mcpConnections, settings };
