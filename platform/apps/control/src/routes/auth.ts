@@ -7,6 +7,7 @@ import { audit } from "../audit";
 import { hashPassword, newId, randomToken, safeEqual, sha256, verifyPassword } from "../crypto";
 import type { Deps } from "../deps";
 import { access, fail, readJson, SESSION_COOKIE, sessionToken, type AppEnv } from "../http";
+import { permissionsOf } from "../permissions";
 import { createSession, endSession } from "../sessions";
 import { writeScimTokenHash } from "../settings";
 
@@ -78,7 +79,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>, deps: Deps) {
       .from(teamMembers)
       .innerJoin(teams, eq(teams.id, teamMembers.teamId))
       .where(eq(teamMembers.memberId, member.id));
-    return c.json({ id: member.id, email: member.email, name: member.name, role: member.role, teams: memberTeams });
+    return c.json({ id: member.id, email: member.email, name: member.name, role: member.role, teams: memberTeams, permissions: await permissionsOf(deps, member) });
   });
 
   app.post("/v1/settings/scim-token", access(deps, "owner"), async (c) => {
