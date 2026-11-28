@@ -37,6 +37,9 @@ services:
       - --served-model-name=${MODEL_ALIAS:-main}
       - --max-model-len=${MODEL_CONTEXT_LENGTH:-16384}
       - --gpu-memory-utilization=${GPU_MEMORY_UTILIZATION:-0.85}
+      # The agent calls tools; vLLM needs a parser that matches the model family.
+      - --enable-auto-tool-choice
+      - --tool-call-parser=${MODEL_TOOL_PARSER:-hermes}
     environment:
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"
