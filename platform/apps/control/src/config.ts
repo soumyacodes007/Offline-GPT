@@ -29,6 +29,9 @@ const envSchema = z.object({
   WORKSPACE_IDLE_MINUTES: z.coerce.number().int().min(5).default(60),
   /** Days a leaver's workspace files are kept after deactivation; 0 keeps them forever. */
   WORKSPACE_RETENTION_DAYS: z.coerce.number().int().min(0).max(3650).default(90),
+  /** Hours between snapshots of every workspace's files; 0 turns them off. */
+  WORKSPACE_CHECKPOINT_HOURS: z.coerce.number().int().min(0).max(720).default(24),
+  WORKSPACE_CHECKPOINTS_KEPT: z.coerce.number().int().min(1).max(365).default(7),
   CONSOLE_DIR: optional,
   /** Where employees open their workspace app; same host as PUBLIC_URL, its own port. */
   WORKSPACE_PUBLIC_URL: z.url().optional(),
@@ -44,7 +47,7 @@ const workspaceModelsSchema = z.array(z.object({ alias: z.string().min(1), displ
 export type OidcConfig = { issuer: string; clientId: string; clientSecret: string; jit: boolean };
 export type SamlConfig = { entryPoint: string; idpCert: string; entityId: string; jit: boolean };
 
-export type WorkspaceConfig = WorkspaceSettings & { dockerUrl: string; retentionMs: number | null };
+export type WorkspaceConfig = WorkspaceSettings & { dockerUrl: string; retentionMs: number | null; checkpointMs: number | null; checkpointsKept: number };
 
 export type Config = {
   databaseUrl: string;
@@ -126,6 +129,8 @@ function parseWorkspaces(parsed: z.infer<typeof envSchema>): WorkspaceConfig | n
     cpus: parsed.WORKSPACE_CPUS,
     idleMs: parsed.WORKSPACE_IDLE_MINUTES * 60 * 1000,
     dockerUrl: parsed.DOCKER_URL,
+    checkpointMs: parsed.WORKSPACE_CHECKPOINT_HOURS === 0 ? null : parsed.WORKSPACE_CHECKPOINT_HOURS * 60 * 60 * 1000,
+    checkpointsKept: parsed.WORKSPACE_CHECKPOINTS_KEPT,
     retentionMs: parsed.WORKSPACE_RETENTION_DAYS === 0 ? null : parsed.WORKSPACE_RETENTION_DAYS * 24 * 60 * 60 * 1000,
   };
 }
