@@ -7,6 +7,7 @@ import { RESOURCE_KINDS } from "@offlinegpt-platform/access";
 import { audit } from "../audit";
 import { newId } from "../crypto";
 import type { Deps } from "../deps";
+import { permissionsOf } from "../permissions";
 import { access, fail, readJson, type AppEnv } from "../http";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -56,7 +57,7 @@ export function registerRequestRoutes(app: Hono<AppEnv>, deps: Deps) {
     const query = listQuery.safeParse(c.req.query());
     if (!query.success) fail(400, "invalid_query", "Unknown status filter.");
     const member = c.get("member");
-    const everyone = query.data.all === "1" && member.role !== "member";
+    const everyone = query.data.all === "1" && (await permissionsOf(deps, member)).includes("requests");
     const filters = [
       ...(everyone ? [] : [eq(accessRequests.memberId, member.id)]),
       ...(query.data.status ? [eq(accessRequests.status, query.data.status)] : []),
@@ -66,7 +67,7 @@ export function registerRequestRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ requests: rows.map((row) => view(row, now)) });
   });
 
-  app.post("/v1/requests/:id/approve", access(deps, "admin"), async (c) => {
+  app.post("/v1/requests/:id/approve", access(deps, { permission: "requests" }), async (c) => {
     const id = c.req.param("id");
     const admin = c.get("member");
     const now = deps.now();
@@ -97,7 +98,7 @@ export function registerRequestRoutes(app: Hono<AppEnv>, deps: Deps) {
     return c.json({ approved: true, ruleId: result.ruleId });
   });
 
-  app.post("/v1/requests/:id/decline", access(deps, "admin"), async (c) => {
+  app.post("/v1/requests/:id/decline", access(deps, { permission: "requests" }), async (c) => {
     const id = c.req.param("id");
     const admin = c.get("member");
     const body = await readJson(c, noteSchema);
