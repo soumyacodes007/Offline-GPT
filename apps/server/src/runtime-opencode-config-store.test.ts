@@ -13,10 +13,12 @@ import {
   readGlobalRuntimeOpencodeConfig,
   readRuntimeOpencodeConfig,
   writeGlobalRuntimeOpencodeConfig,
+  writeHostManagedPolicy,
   writeManagedDesktopPolicy,
   readEffectiveRuntimeOpencodeConfig,
   writeRuntimeOpencodeConfig,
 } from "./runtime-opencode-config-store.js";
+import { managedDesktopPolicy } from "./managed-desktop-policy.js";
 import { startServer } from "./server.js";
 import type { ServerConfig } from "./types.js";
 
@@ -325,6 +327,44 @@ describe("runtime OpenCode config store", () => {
       } finally {
         await server.stop(true);
       }
+    });
+  });
+});
+
+describe("host-managed policy", () => {
+  const hostPolicy: import("@offlinegpt/types/den/desktop-policies").DesktopConfig = { execution: { commands: "deny", blockedCommands: [], blockBrowserUploads: false } };
+
+  test("is enforced without a Den sign-in, survives ordinary writes, and reaches the engine", async () => {
+    await withWorkspace(async ({ config }) => {
+      await writeHostManagedPolicy(config, hostPolicy);
+      await writeGlobalRuntimeOpencodeConfig(config, (current) => ({ ...current, provider: { extra: { name: "Extra" } } }));
+      const stored = await readGlobalRuntimeOpencodeConfig(config);
+      expect(stored.managedPolicy).toEqual(hostPolicy);
+      expect(stored.managedPolicySource).toBe("host");
+      expect(await managedDesktopPolicy(config).current()).toEqual(hostPolicy);
+      const engine = JSON.parse(await buildOfflineGptRuntimeConfig(config));
+      expect(engine.permission.bash).toEqual({ "*": "deny" });
+      expect(engine.managedPolicySource).toBeUndefined();
+
+      await writeHostManagedPolicy(config, null);
+      expect((await readGlobalRuntimeOpencodeConfig(config)).managedPolicy).toBeUndefined();
+      expect(await managedDesktopPolicy(config).current()).toBeNull();
+    });
+  });
+
+  test("a Den-verified policy replaces it, and the host can't remove a Den policy", async () => {
+    await withWorkspace(async ({ config }) => {
+      await writeHostManagedPolicy(config, hostPolicy);
+      const denPolicy: import("@offlinegpt/types/den/desktop-policies").DesktopConfig = { allowManageExtensions: false };
+      await writeManagedDesktopPolicy(config, denPolicy);
+      const stored = await readGlobalRuntimeOpencodeConfig(config);
+      expect(stored.managedPolicy).toEqual(denPolicy);
+      expect(stored.managedPolicySource).toBeUndefined();
+      // Without the Den session that verified it, a Den policy still demands sign-in.
+      await expect(managedDesktopPolicy(config).current()).rejects.toThrow(/Sign in/);
+
+      await writeHostManagedPolicy(config, null);
+      expect((await readGlobalRuntimeOpencodeConfig(config)).managedPolicy).toEqual(denPolicy);
     });
   });
 });
