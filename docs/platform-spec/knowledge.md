@@ -37,3 +37,19 @@
 - The control service exposes an MCP endpoint at `/mcp` for workspaces,
   authenticated with the member's inference key. It offers one tool,
   `search_knowledge`, which runs the search above as that member.
+
+## Meaning-based search (optional)
+
+- With `EMBEDDINGS_URL` and `EMBEDDINGS_MODEL` set (any OpenAI-compatible
+  embeddings endpoint inside the network), every section also gets a vector,
+  and search merges keyword and meaning-based rankings (reciprocal rank
+  fusion). Sections below 0.2 cosine similarity don't count as matches.
+- Permission and sensitivity filtering apply to every result exactly as for
+  keyword search.
+- If the embeddings model is down, uploads still succeed (`embedded: false`)
+  and search falls back to keywords. `POST /v1/knowledge/reindex` embeds
+  missing sections; `{ "all": true }` redoes all of them after a model change.
+- Vectors are stored as plain `real[]` with the similarity computed in SQL, not
+  with `pgvector`: it needs no database extension or different Postgres image
+  in an air-gapped install, and is fast enough for tens of thousands of
+  sections. Switch to `pgvector` if a deployment outgrows that.
